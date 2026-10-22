@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-folding-branching-data.html" rel="next">
+<link href="./cases-accumulating-list-results.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Representing a dictionary as a list · Ash</title><meta name="description" content="The preceding case placed new list elements at the front of an accumulated result. A dictionary can use the same front construction for key-value entries. Insertion then needs no search: it places the new entry…"><meta name="robots" content="index, follow"><meta property="og:title" content="Representing a dictionary as a list · Ash"><meta property="og:description" content="The preceding case placed new list elements at the front of an accumulated result. A dictionary can use the same front construction for key-value entries. Insertion then needs no search: it places the new entry…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Representing a dictionary as a list · Ash"><meta name="twitter:description" content="The preceding case placed new list elements at the front of an accumulated result. A dictionary can use the same front construction for key-value entries. Insertion then needs no search: it places the new entry…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-dictionary-as-list.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-dictionary-as-list.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Representing a dictionary as a list","headline":"Representing a dictionary as a list","description":"The preceding case placed new list elements at the front of an accumulated result. A dictionary can use the same front construction for key-value entries. Insertion then needs no search: it places the new entry…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-dictionary-as-list.html","@id":"https://dikini.github.io/ash/study/latest/cases-dictionary-as-list.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/dictionary-as-list/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-dictionary-as-list.html"><span class="chapter-title">Representing a dictionary as a list</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#put-the-newest-entry-first" id="toc-put-the-newest-entry-first" class="nav-link active" data-scroll-target="#put-the-newest-entry-first">Put the newest entry first</a></li>
+  <li><a href="#stop-at-the-first-matching-key" id="toc-stop-at-the-first-matching-key" class="nav-link" data-scroll-target="#stop-at-the-first-matching-key">Stop at the first matching key</a></li>
+  <li><a href="#count-the-comparisons-that-lookup-enters" id="toc-count-the-comparisons-that-lookup-enters" class="nav-link" data-scroll-target="#count-the-comparisons-that-lookup-enters">Count the comparisons that lookup enters</a></li>
+  <li><a href="#compare-selective-lookup-with-a-strict-fold" id="toc-compare-selective-lookup-with-a-strict-fold" class="nav-link" data-scroll-target="#compare-selective-lookup-with-a-strict-fold">Compare selective lookup with a strict fold</a></li>
+  <li><a href="#keep-both-dictionary-versions" id="toc-keep-both-dictionary-versions" class="nav-link" data-scroll-target="#keep-both-dictionary-versions">Keep both dictionary versions</a></li>
+  <li><a href="#practice-change-the-front" id="toc-practice-change-the-front" class="nav-link" data-scroll-target="#practice-change-the-front">Practice: change the front</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-dictionary-as-list.html"><span class="chapter-title">Representing a dictionary as a list</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Representing a dictionary as a list</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The preceding case placed new list elements at the front of an accumulated result. A dictionary can use the same front construction for key-value entries. Insertion then needs no search: it places the new entry before the previous dictionary. Lookup supplies the choice. It can return at the first matching entry, or it can follow the rest after a mismatch.</p>
+<p>This newest-to-oldest order gives duplicate keys a meaning. If we insert key <code>1</code> with value <code>10</code>, then later insert key <code>1</code> with value <code>11</code>, lookup reaches <code>11</code> first. The older entry remains behind it. The new value <em>shadows</em> the old one; insertion does not delete the old entry.</p>
+<section id="put-the-newest-entry-first" class="level2">
+<h2 class="anchored" data-anchor-id="put-the-newest-entry-first">Put the newest entry first</h2>
+<p>The shared module gives each key and value one <code>Entry&lt;K, V&gt;</code>. A <code>Dictionary&lt;K, V&gt;</code> is either <code>Empty</code> or a <code>More</code> containing an entry and the rest of the dictionary. <code>Option&lt;A&gt;</code> separates an absent result, <code>None</code>, from a present result, <code>Some(A)</code>.</p>
+<p>The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/syntax.md#grammar">syntax grammar</a> provides these parameterized nominal declarations and constructor forms. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#type-and-constructor-scope">type and constructor scope</a> makes <code>Dictionary</code> visible in its own <code>More</code> payload and binds each constructor to its nominal type. Under the static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#tuples-and-constructors">tuple and constructor rules</a>, applying a payload constructor such as <code>Entry</code>, <code>More</code>, or <code>Some</code> produces a value of its declared nominal type.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub type Entry&lt;K, V&gt; =
+    Entry(K, V)
+
+pub type Dictionary&lt;K, V&gt; =
+    Empty
+    | More(Entry&lt;K, V&gt;, Dictionary&lt;K, V&gt;)
+
+pub type Option&lt;A&gt; =
+    None
+    | Some(A)
+
+pub empty : Unit -&gt; Dictionary&lt;K, V&gt;
+empty () = Empty
+
+pub insert : K -&gt; V -&gt; Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt;
+insert key value dictionary = More(Entry(key, value), dictionary)
+
+pub lookup : (K -&gt; K -&gt; Bool) -&gt; K -&gt; Dictionary&lt;K, V&gt; -&gt; Option&lt;V&gt;
+lookup same_key query Empty = None
+lookup same_key query More(Entry(key, value), rest) = match same_key query key {
+    true =&gt; Some(value)
+    false =&gt; lookup same_key query rest
+}
+
+pub lookup_counted : (K -&gt; K -&gt; Bool) -&gt; K -&gt; Dictionary&lt;K, V&gt; -&gt; (Option&lt;V&gt;, Int)
+lookup_counted same_key query Empty = (None, 0)
+lookup_counted same_key query More(Entry(key, value), rest) = match same_key query key {
+    true =&gt; (Some(value), 1)
+    false =&gt; {
+        let (found, later_comparisons) = lookup_counted same_key query rest
+        (found, later_comparisons + 1)
+    }
+}
+
+fold_entries : (Entry&lt;K, V&gt; -&gt; B -&gt; B) -&gt; B -&gt; Dictionary&lt;K, V&gt; -&gt; B
+fold_entries combine base Empty = base
+fold_entries combine base More(entry, rest) = {
+    let folded_rest = fold_entries combine base rest
+    combine entry folded_rest
+}
+
+prefer_current : (K -&gt; K -&gt; Bool) -&gt; K -&gt; Entry&lt;K, V&gt; -&gt; (Option&lt;V&gt;, Int) -&gt; (Option&lt;V&gt;, Int)
+prefer_current same_key query Entry(key, value) (found, comparisons) = match same_key query key {
+    true =&gt; (Some(value), comparisons + 1)
+    false =&gt; (found, comparisons + 1)
+}
+
+pub lookup_through_fold_counted : (K -&gt; K -&gt; Bool) -&gt; K -&gt; Dictionary&lt;K, V&gt; -&gt; (Option&lt;V&gt;, Int)
+lookup_through_fold_counted same_key query dictionary = fold_entries (prefer_current same_key query) (None, 0) dictionary</code></pre>
+<p>Each shared function uses the pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/syntax.md#global-function-presentations">equational global presentation</a>: a signature followed by its contiguous clauses. Module-wide <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#global-scope">global scope</a> makes recursive functions such as <code>lookup</code> and <code>fold_entries</code> available in their own bodies. The static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#globals-and-modules">global and module rules</a> check each clause against its declared function scheme.</p>
+<p>Start from <code>Empty</code> and apply the three insertions used throughout this chapter. Expanding only the <code>insert</code> equation predicts the complete order:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>insert 1 11 (insert 2 20 (insert 1 10 Empty))
+=&gt; More(Entry(1, 11), More(Entry(2, 20), More(Entry(1, 10), Empty)))</code></pre>
+<p>This newest-to-oldest lookup order is a property of these equations, not a general property of Ash data.</p>
+<p>Each <code>insert</code> evaluates one <code>Entry(key, value)</code> constructor application and one front <code>More(entry, dictionary)</code> constructor application. The complete previous dictionary is the new <code>More</code> tail. The pinned dynamic <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#application">application rules</a> and <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#tuples-constructors-and-matches">constructor rules</a> govern those evaluations. The construction account names source operations; it does not yet make a claim about physical storage.</p>
+<p>This way of deriving a recursive function from the forms of its input is inspired by HtDP’s <a href="https://htdp.org/2026-2-25/Book/part_two.html">design with self-referential data definitions</a>.</p>
+</section>
+<section id="stop-at-the-first-matching-key" class="level2">
+<h2 class="anchored" data-anchor-id="stop-at-the-first-matching-key">Stop at the first matching key</h2>
+<p><code>lookup</code> receives equality as an explicit function because <code>K</code> can be any type. The pinned static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#functions-and-application">function and application rules</a> check <code>same_key query key</code> against that supplied function type. At <code>Empty</code>, there is no entry to return. At <code>More</code>, lookup applies equality exactly once. The static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#patterns-matches-and-coverage">pattern, match, and coverage rules</a> require the <code>Empty</code> and <code>More</code> equations to cover the dictionary and the <code>true</code> and <code>false</code> arms to cover the equality result. The true arm returns <code>Some(value)</code> and has no recursive call. Only the false arm follows <code>rest</code>. Ash’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#tuples-constructors-and-matches">dynamic match rules</a> evaluate the scrutinee once and enter only the selected arm.</p>
+<p>The first complete entry defines integer equality and asks for the newest key <code>1</code> and the absent key <code>3</code>.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries as Dictionaries
+
+int_equal : Int -&gt; Int -&gt; Bool
+int_equal left right = left == right
+
+main : Unit -&gt; (Dictionaries.Option&lt;Int&gt;, Dictionaries.Option&lt;Int&gt;)
+main () = {
+    let empty_dictionary = Dictionaries.empty ()
+    let first_dictionary = Dictionaries.insert 1 10 empty_dictionary
+    let second_dictionary = Dictionaries.insert 2 20 first_dictionary
+    let dictionary = Dictionaries.insert 1 11 second_dictionary
+    (
+        Dictionaries.lookup int_equal 1 dictionary,
+        Dictionaries.lookup int_equal 3 dictionary
+    )
+}</code></pre>
+<p>Before running it, predict the two branches. Query <code>1</code> matches the first entry, so its result should be <code>Some(11)</code>. Query <code>3</code> should cross all three false arms and reach <code>Empty</code>, so its result should be <code>None</code>.</p>
+<p>Run the entry from <code>content/cases</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash dictionary-as-list/src/01-ordinary-lookup.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(Some(11), None) : (Option&lt;Int&gt;, Option&lt;Int&gt;)</code></pre>
+<p>The first field confirms that front insertion makes the later duplicate win. The second field is an accepted missing result after the complete traversal, not a rejected program or diagnostic. The checked result type distinguishes both outcomes with <code>Option&lt;Int&gt;</code>.</p>
+<p>The definition of <code>int_equal</code> uses Ash’s primitive integer equality. The pinned static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#primitive-operations">primitive operation rule</a> requires two <code>Int</code> operands and produces <code>Bool</code>; the dynamic <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#primitive-operations">integer equality rules</a> produce <code>true</code> exactly when those integer values are equal.</p>
+</section>
+<section id="count-the-comparisons-that-lookup-enters" class="level2">
+<h2 class="anchored" data-anchor-id="count-the-comparisons-that-lookup-enters">Count the comparisons that lookup enters</h2>
+<p><code>lookup_counted</code> preserves the same branches while returning the number of equality applications it entered. <code>Empty</code> contributes zero. A current match contributes one. After a mismatch, the recursive result supplies the later count, and the current comparison adds one.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries as Dictionaries
+
+int_equal : Int -&gt; Int -&gt; Bool
+int_equal left right = left == right
+
+main : Unit -&gt; ((Dictionaries.Option&lt;Int&gt;, Int), (Dictionaries.Option&lt;Int&gt;, Int))
+main () = {
+    let empty_dictionary = Dictionaries.empty ()
+    let first_dictionary = Dictionaries.insert 1 10 empty_dictionary
+    let second_dictionary = Dictionaries.insert 2 20 first_dictionary
+    let dictionary = Dictionaries.insert 1 11 second_dictionary
+    (
+        Dictionaries.lookup_counted int_equal 1 dictionary,
+        Dictionaries.lookup_counted int_equal 3 dictionary
+    )
+}</code></pre>
+<p>Predict one comparison for query <code>1</code>, because it matches at the front. Predict three comparisons and <code>None</code> for query <code>3</code>, because every key differs.</p>
+<p>Run the counted entry:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash dictionary-as-list/src/02-counted-lookup.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>((Some(11), 1), (None, 3)) : ((Option&lt;Int&gt;, Int), (Option&lt;Int&gt;, Int))</code></pre>
+<p>The counters confirm the selective control flow: a front hit enters one equality application, while a complete miss enters three. The result <code>None</code> after count <code>3</code> is the chapter’s negative semantic observation. Each field’s <code>(Option&lt;Int&gt;, Int)</code> type pairs an optional value with this source counter.</p>
+<p>For a fixed query <code>q</code>, let <code>m</code> be the first matching position in front-to-back order, or the dictionary length when no key matches. Direct lookup visits exactly <code>m</code> <code>More</code> forms and performs exactly <code>m</code> equality applications. In the worst case, both named counts grow linearly with the number <code>n</code> of entries.</p>
+<p>The counter does not reveal the work inside an arbitrary supplied equality function. Let <code>E_q(k_i)</code> name the source work performed by the complete application <code>same_key q k_i</code> at visited entry <code>i</code>. For a finite dictionary, assuming each required equality application returns, equality sub-work is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>E_q(k_1) + E_q(k_2) + ... + E_q(k_m)</code></pre>
+<p>Including constant inspection and branching work for each visited entry gives:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>O(m + sum E_q(k_i))</code></pre>
+<p>Only under a uniform bound <code>E_q(k_i) &lt;= Emax</code> may we abbreviate this as:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>O(m * (1 + Emax))
+worst case: O(n * (1 + Emax))</code></pre>
+<p>For this entry, <code>int_equal</code> performs one pinned primitive integer equality at each visited entry. The reported <code>Int</code> counts equality applications. It is not elapsed time, a machine-instruction count, or a measurement of the internal work of the supplied equality function.</p>
+<p>This source-operation account is inspired by HtDP’s <a href="https://htdp.org/2026-2-25/Book/i5-6.html">cost-of-computation method</a>: name the operation and the input feature that causes it before summarizing its growth.</p>
+</section>
+<section id="compare-selective-lookup-with-a-strict-fold" class="level2">
+<h2 class="anchored" data-anchor-id="compare-selective-lookup-with-a-strict-fold">Compare selective lookup with a strict fold</h2>
+<p>The direct function can stop because its recursive call occurs only after a mismatch. <code>fold_entries</code> makes a different dependency. In its <code>More</code> equation, the <code>folded_rest</code> binding completes the fold of the complete tail before <code>combine entry folded_rest</code> runs. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#bindings">dynamic binding rules</a> evaluate a binding initializer before extending the environment and continuing with the block.</p>
+<p><code>prefer_current</code> receives the result already folded from older entries. A matching current entry replaces that older result with <code>Some(value)</code>; a nonmatching current entry retains <code>found</code>. Because the newest entry combines last, its match still shadows an older match. The fold nevertheless applies equality once at every entry.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries as Dictionaries
+
+int_equal : Int -&gt; Int -&gt; Bool
+int_equal left right = left == right
+
+main : Unit -&gt; ((Dictionaries.Option&lt;Int&gt;, Int), (Dictionaries.Option&lt;Int&gt;, Int))
+main () = {
+    let empty_dictionary = Dictionaries.empty ()
+    let first_dictionary = Dictionaries.insert 1 10 empty_dictionary
+    let second_dictionary = Dictionaries.insert 2 20 first_dictionary
+    let dictionary = Dictionaries.insert 1 11 second_dictionary
+    (
+        Dictionaries.lookup_counted int_equal 1 dictionary,
+        Dictionaries.lookup_through_fold_counted int_equal 1 dictionary
+    )
+}</code></pre>
+<p>Both calls receive query <code>1</code> and the same three-entry dictionary. Predict the same <code>Some(11)</code> result from each. Predict count <code>1</code> for selective lookup and count <code>3</code> for the strict fold.</p>
+<p>Run the comparison:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash dictionary-as-list/src/03-selective-and-fold.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>((Some(11), 1), (Some(11), 3)) : ((Option&lt;Int&gt;, Int), (Option&lt;Int&gt;, Int))</code></pre>
+<p>Both algorithms select the front match, but their source dependencies differ. Selective lookup does not enter the older equality applications after a front match. The strict fold completes them before it can combine that front entry. The result type pairs each <code>Option&lt;Int&gt;</code> selection with its comparison count. This comparison assumes a finite dictionary and that every equality application required by the chosen algorithm returns. The fold can therefore enter older equality work that selective lookup skips.</p>
+</section>
+<section id="keep-both-dictionary-versions" class="level2">
+<h2 class="anchored" data-anchor-id="keep-both-dictionary-versions">Keep both dictionary versions</h2>
+<p>The final entry gives names to the two-entry and three-entry dictionaries. <code>newer_dictionary</code> uses <code>older_dictionary</code> directly as the tail supplied to <code>insert</code>, and both values remain available to later expressions.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries as Dictionaries
+
+int_equal : Int -&gt; Int -&gt; Bool
+int_equal left right = left == right
+
+main : Unit -&gt; ((Dictionaries.Option&lt;Int&gt;, Int), (Dictionaries.Option&lt;Int&gt;, Int))
+main () = {
+    let empty_dictionary = Dictionaries.empty ()
+    let first_dictionary = Dictionaries.insert 1 10 empty_dictionary
+    let older_dictionary = Dictionaries.insert 2 20 first_dictionary
+    let newer_dictionary = Dictionaries.insert 1 11 older_dictionary
+    (
+        Dictionaries.lookup_counted int_equal 1 older_dictionary,
+        Dictionaries.lookup_counted int_equal 1 newer_dictionary
+    )
+}</code></pre>
+<p>Before running it, follow the two visible chains. In <code>older_dictionary</code>, query <code>1</code> first crosses key <code>2</code> and then finds value <code>10</code>, for two comparisons. In <code>newer_dictionary</code>, the new front entry immediately supplies value <code>11</code>, for one comparison.</p>
+<p>Run the retained-version entry:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash dictionary-as-list/src/04-retained-versions.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>((Some(10), 2), (Some(11), 1)) : ((Option&lt;Int&gt;, Int), (Option&lt;Int&gt;, Int))</code></pre>
+<p>The older value remains observable through the older dictionary, while the new front value shadows it in the newer dictionary. One call to <code>insert</code> completes one <code>Entry</code> application and one <code>More</code> application; it performs no equality application and reconstructs no older entry. The two <code>(Option&lt;Int&gt;, Int)</code> fields make each version’s selected value and comparison count observable. The two earlier entries remain reachable from <code>older_dictionary</code> and, behind the new front entry, from <code>newer_dictionary</code>.</p>
+<p>This is a source-level construction and reachability account. It does not establish object or pointer identity, exact heap bytes, garbage-collection or liveness behavior, or a compiler representation. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">observation rules</a> render tuples and constructors structurally; the output does not expose those implementation choices. Each complete line follows the tool’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/docs/tools/ash.md#successful-output">successful-output contract</a>: one value, its checked type, and a newline.</p>
+</section>
+<section id="practice-change-the-front" class="level2">
+<h2 class="anchored" data-anchor-id="practice-change-the-front">Practice: change the front</h2>
+<p>First, predict the result and comparison count for queries <code>2</code> and <code>4</code> in the three-entry dictionary. Check each prediction with <code>lookup_counted</code>, then explain which equality result selected or continued the traversal.</p>
+<p>Next, retain the three-entry dictionary and insert <code>(2, 21)</code> to make a newer version. Predict lookup of <code>2</code> in both versions. Compare selective and folded counts for the newer version, and explain why inserting the duplicate does not remove the older <code>(2, 20)</code> entry.</p>
+<p>This case does not require equality laws or interfaces, evidence selection, key ordering, trees, balancing, opacity, deletion, mutation or in-place update, or lazy, infinite, or cyclic data. Its source counts say nothing about host stack use, tail-call optimization, elapsed time, machine instructions, exact heap bytes, garbage collection, pointer identity, or compiler optimization.</p>
+<p>A single <code>rest</code> gives lookup one next place to search. How does the data-directed method extend when recursive data branches into a tree?</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-accumulating-list-results.html" class="pagination-link" aria-label="Accumulating list results">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Accumulating list results</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-folding-branching-data.html" class="pagination-link" aria-label="Folding branching data">
+        <span class="nav-page-text"><span class="chapter-title">Folding branching data</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

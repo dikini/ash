@@ -1,0 +1,431 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0030: Typed Compiler Macros and Declarative Hooks · Ash</title><meta name="description" content="Can Ash libraries define typed compiler transformations and specialized code without making library operations compiler intrinsics? Which declarative hooks, registration scopes, and selection policies would let the…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0030: Typed Compiler Macros and Declarative Hooks · Ash"><meta property="og:description" content="Can Ash libraries define typed compiler transformations and specialized code without making library operations compiler intrinsics? Which declarative hooks, registration scopes, and selection policies would let the…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0030: Typed Compiler Macros and Declarative Hooks · Ash"><meta name="twitter:description" content="Can Ash libraries define typed compiler transformations and specialized code without making library operations compiler intrinsics? Which declarative hooks, registration scopes, and selection policies would let the…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0030-typed-compiler-macros-and-hooks.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0030: Typed Compiler Macros and Declarative Hooks","headline":"DN-0030: Typed Compiler Macros and Declarative Hooks","description":"Can Ash libraries define typed compiler transformations and specialized code without making library operations compiler intrinsics? Which declarative hooks, registration scopes, and selection policies would let the…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/","@id":"https://dikini.github.io/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0030-typed-compiler-macros-and-hooks.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0030-typed-compiler-macros-and-declarative-hooks" data-pagefind-meta="title">DN-0030: Typed Compiler Macros and Declarative Hooks</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0030-typed-compiler-macros-and-hooks.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0030</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/decisions/ad-0001-implementation-environment/">AD-0001: Implementation Environment</a>, <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007: Typed Core Dialects</a>, <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009: Effects, Handlers, and Continuations</a>, <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011: Modules, Providers, and Resolution</a>, <a href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">DN-0017: Resource Management and Storage Policy</a>, <a href="/ash/docs/design/dn-0019-primitive-feature-composition/">DN-0019: Primitive Feature Composition</a>, <a href="/ash/docs/design/dn-0026-effect-ash-resource-first-milestones/">DN-0026: Effect Ash Resource-First Milestones</a></li>
+</ul>
+<blockquote>
+<p>This work-in-progress design note records an unfinished exploration. It is
+informative, does not define current Ash, accept an architecture or language
+change, select a backend, or authorize implementation.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can Ash libraries define typed compiler transformations and specialized code
+without making library operations compiler intrinsics? Which declarative hooks,
+registration scopes, and selection policies would let the compiler consider
+those transformations at appropriate phases while preserving Ash semantics,
+typed Core boundaries, diagnostics, separate compilation, and target choice?</p>
+<p>The exploration is motivated by general compiler macros as well as future
+data-parallel libraries. It does not assume that numerical compilation should
+determine the general mechanism.</p>
+<h2 id="current-boundary">Current boundary</h2>
+<p>The current <a href="/ash/spec/">specification</a> defines a rank-1 language
+with passive statically linked modules, nominal data and <code>newtype</code>, interfaces,
+and scoped exact evidence. It includes exact effect rows, requests, lexical
+handlers, non-escaping one-shot resume/discard, scoped cells and native buffers,
+synchronous runtime hooks, and cleanup. The builtin resources are closed
+compiler-owned APIs; they do not establish general library-defined providers
+or FFI.</p>
+<p>Compiler macros, declarative compiler hooks, optimization annotations, staged
+evaluation, a native code backend, arrays/tensors, floating-point types, and
+fixed-width source integer types remain outside the specification. In
+particular, synchronous runtime hooks do not supply compiler-phase hooks, and
+lexical handlers do not have the compile/link behavior hypothesized below.</p>
+<p><a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a> retains
+bounded provider, SQLite, and scalar Arena experiments on <code>main</code>, using
+Rust-authored contracts and native adapters. They are experimental evidence,
+not product adoption. <a href="/ash/docs/design/dn-0019-primitive-feature-composition/">DN-0019</a>
+retains a separate Float composition prototype. Neither experiment implements
+this note's macro or staged-handler model.</p>
+<p>The implemented foundation is typed Core with independent validation and the
+specified effect/resource contracts. This note's transformations,
+registrations, selection policy, phase behavior, and specialized kernels
+remain open design work. No macro prototype or product implementation is
+claimed. See the <a href="/ash/docs/design/#implementation-and-evidence-boundaries">scope summary</a>
+for related notes' implementation and evidence boundaries.</p>
+<p><a href="/ash/docs/decisions/ad-0001-implementation-environment/">AD-0001</a> permits MLIR as a
+future lowering target but requires LLVM, MLIR, Cranelift, and other backend
+types to remain outside Ash Core and its shared transformations. Backend
+adapters consume Ash-owned lower representations. A library transformation
+that eventually uses MLIR must preserve that boundary.</p>
+<p><a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> gives the exploration a
+transferable structure: retained Core dialects are closed and typed;
+transformations declare input and output dialects, preserve or rebuild causal
+provenance, and submit their result to independent validation. Construction
+APIs do not replace validation. This decision does not accept a macro system,
+an optimization dialect, effects, handler semantics, or concrete continuation
+modes.</p>
+<p><a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009</a>,
+<a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011</a>, and
+<a href="/ash/docs/design/dn-0026-effect-ash-resource-first-milestones/">DN-0026</a> provide exploratory
+pressure from effects, ordered handlers, providers, continuations, resolution
+at different stages, resources, and future dynamic composition. They do not
+make the staged-handler model below current or accepted Ash.</p>
+<h2 id="motivating-direction">Motivating direction</h2>
+<p>Ash is intended to remain a general-purpose functional language rather than a
+numerical DSL. A later library should nevertheless be able to express regular
+data-parallel work, including array and table pipelines, specialized kernels,
+multicore execution, and SIMD lowering.
+<a href="https://discus-lang.org/papers/2010-rarrays/repa-icfp2010.pdf">Repa</a>,
+<a href="https://www.acceleratehs.org/documentation/users-guide/language.html">Accelerate</a>,
+and <a href="https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.FSTTCS.2008.1769">Data Parallel Haskell</a>
+provide different evidence that useful parallelism requires the compiler to
+retain bulk operations, shapes, reductions, or nested parallel structure
+rather than recover them from arbitrary scalar recursion.</p>
+<p>MLIR is relevant because its dialects retain several abstraction levels. A
+future Ash-owned structured-kernel representation could lower through MLIR
+<a href="https://mlir.llvm.org/docs/Dialects/Linalg/"><code>linalg</code></a>, tensor,
+<a href="https://mlir.llvm.org/docs/Bufferization/">bufferization</a>, vector, loop, GPU,
+or <a href="https://mlir.llvm.org/docs/TargetLLVMIR/">LLVM</a> dialects without making
+those dialects Ash semantics. MLIR supplies transformation and lowering
+machinery; it does not decide which Ash computation is a kernel, whether
+parallel execution is legal, or which candidate optimization should run.</p>
+<p>The same macro and hook mechanism should also support non-numerical examples.
+A mechanism justified only by Linalg would not establish that it belongs in a
+general compiler.</p>
+<h2 id="working-distinctions">Working distinctions</h2>
+<p>The brainstorm currently separates the following concerns:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Concern</th>
+<th>Question answered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compiler-structure type</td>
+<td>What meaningful program or compiler structure does a value represent?</td>
+</tr>
+<tr>
+<td>Macro type</td>
+<td>Could this transformation consume the available structure and produce a structure accepted by a later phase?</td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>Is the macro definition visible to this compilation?</td>
+</tr>
+<tr>
+<td>Registration</td>
+<td>At which compiler hook is the macro a candidate?</td>
+</tr>
+<tr>
+<td>Scope</td>
+<td>In which program region is that registration active?</td>
+</tr>
+<tr>
+<td>Selection policy</td>
+<td>Should an applicable candidate run, and in what order with other candidates?</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Does the produced structure satisfy its independent invariants?</td>
+</tr>
+</tbody>
+</table>
+<p>These questions must not collapse. In particular, aligned types establish only
+that a macro could be used. They do not decide whether it is registered, where
+it is active, whether it is profitable, or whether the compiler should select
+it.</p>
+<h2 id="typed-compiler-macros">Typed compiler macros</h2>
+<p>The working meaning of <em>macro</em> is broader than surface-syntax expansion:</p>
+<pre tabindex="0"><code class="language-text">macro = function from one meaningful typed compiler structure
+        to another meaningful typed compiler structure
+</code></pre>
+<p>The function's input and output types describe possible composition. Examples
+could include resolved syntax to resolved declarations, structured patterns to
+decision Core, one typed Core dialect to another, a linked program to a
+specialized program, or an Ash-owned structured kernel to backend IR. These are
+examples of type relationships, not accepted type names or compiler phases.</p>
+<p>A macro may require compiler effects such as diagnostics, authenticated fresh
+identities, declared build inputs, or target facts. Such effects describe what
+the macro may request while running. They do not select the macro or grant it
+authority to forge Core facts.</p>
+<p>Compiler structures may become available at different times. A function that
+requires a linked-program structure cannot run before linking produces one. A
+function requiring target facts cannot run before a target is selected. This
+type-level availability still does not schedule the function; a hook and
+selection mechanism do that separately.</p>
+<p>Macros are independent of providers. Ordinary library code, compiler tooling,
+handlers, or providers may use them. A provider is one important consumer: a
+SIMD provider might call general fusion, tiling, or structured-kernel lowering
+macros while implementing its compile or link behavior. The macro mechanism
+does not own the provider relationship or become active merely because a
+provider exists.</p>
+<p>Two correctness obligations remain distinct:</p>
+<ul>
+<li>A generative macro can define a program fragment through its validated
+expansion.</li>
+<li>An optimization or lowering macro transforms an already meaningful program
+and therefore needs evidence that it preserves or implements the applicable
+observations in addition to structural type compatibility.</li>
+</ul>
+<p>Input and output types can expose some preservation obligations. They cannot by
+themselves establish arbitrary semantic equivalence. Independent validation,
+differential execution, laws, proofs, or other evidence may be required; this
+note does not select one universal method.</p>
+<h2 id="declarative-compiler-hooks">Declarative compiler hooks</h2>
+<p>The preferred current direction is declarative registration. A compiler hook
+names a stable representation boundary and its invariants rather than a Rust
+function or incidental pass position. A registration makes one macro a
+candidate at one compatible hook under a stated scope. Registration does not
+mean unconditional execution.</p>
+<p>Possible hooks might occur after resolution, after typed elaboration, before
+pattern compilation, after handler elaboration, after linking, before kernel
+lowering, or before backend lowering. This list is illustrative. Concrete
+examples must justify both the retained boundary and the structures exposed by
+it before Ash accepts a hook catalogue.</p>
+<p>A hook should provide enough information to answer:</p>
+<ul>
+<li>which input structure and invariants are available;</li>
+<li>which output structures may continue through the pipeline;</li>
+<li>which program region the candidate may inspect or replace;</li>
+<li>which compiler facts and effects the macro may request;</li>
+<li>how provenance and diagnostics cross the boundary;</li>
+<li>how the output is validated; and</li>
+<li>how failure or non-selection returns to a defined fallback.</li>
+</ul>
+<p>The exploration currently favors collecting registrations declaratively before
+running a phase. An effect scope, module, build description, backend, or
+explicit macro use could contribute a scoped registration without mutating the
+candidate set during traversal. This preference requires comparison. It is not
+an accepted ban on dynamically established compiler context.</p>
+<h2 id="scope-and-compilation-unit">Scope and compilation unit</h2>
+<p>The same transformation at a wider scope receives different authority and
+creates different invalidation and correctness obligations:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Scope</th>
+<th>Available knowledge</th>
+<th>Main constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expression or handler region</td>
+<td>Exact local computation and installed context</td>
+<td>Unknown callees and surrounding code remain opaque.</td>
+</tr>
+<tr>
+<td>Definition</td>
+<td>One typed body and its captures</td>
+<td>The declared external contract must remain valid.</td>
+</tr>
+<tr>
+<td>Module</td>
+<td>Private bodies, exports, and imported summaries</td>
+<td>Imported implementations cannot be assumed.</td>
+</tr>
+<tr>
+<td>Separately compiled package</td>
+<td>Published IR or summaries</td>
+<td>ABI, cache, version, and invalidation boundaries matter.</td>
+</tr>
+<tr>
+<td>Linked program</td>
+<td>Selected modules, handlers, and providers</td>
+<td>High-level bodies or summaries must survive until this stage.</td>
+</tr>
+<tr>
+<td>Closed whole program</td>
+<td>All reachable definitions and resolved identities</td>
+<td>The closed-world claim fails when loading or unresolved providers remain.</td>
+</tr>
+<tr>
+<td>Backend region</td>
+<td>Concrete target, ABI, and data layout</td>
+<td>The result may be target-specific and less portable.</td>
+</tr>
+</tbody>
+</table>
+<p>These scopes may justify different compiler-structure types rather than one
+generic Core value with an unchecked scope flag. The exact type inventory is
+open. The useful property is that a macro cannot inspect facts its input
+structure does not expose.</p>
+<p>Possible registration scopes include global compiler configuration, a module,
+a definition, an explicitly delimited program region, an installed handler,
+an effect operation family, a provider, or a backend. These mechanisms may
+coexist. Importing a package, making a macro available, activating a
+registration, and selecting a macro are separate events whose exact
+relationships remain unresolved.</p>
+<h2 id="effects-handlers-providers-and-phases">Effects, handlers, providers, and phases</h2>
+<p>A related working hypothesis gives every installed handler distinct compile,
+link, and runtime behavior. The phase distinction belongs to the handler, not
+to each individual effect operation.</p>
+<p>Under this hypothesis, explicit handler installation defines a delimited
+compile-time context. Handler identity and order determine which interpretation
+surrounds the scoped computation. A provider supplies implementation or
+resource details required by that interpretation. Compile behavior may retain
+or transform meaningful structure; link behavior may use whole-program and
+target facts; runtime behavior executes the residual operational work.</p>
+<p>For example, an installed <code>SimdArray</code> handler could delimit a pipeline of array
+operations. Its provider could supply implementations for some operations in
+that context. Compile behavior might preserve a structured kernel, link
+behavior might select and specialize an x86-64 or ARM64 implementation, and
+runtime behavior might manage buffers and invoke the resulting kernel. These
+names and behaviors are examples, not proposed Ash syntax or accepted
+semantics.</p>
+<p>Continuation and resource modes constrain every phase. Candidate modes include
+exactly-once, at-most-once, duplicable, abortive, and escaping behavior, with
+corresponding capture, discard, replay, lifetime, and resource obligations. A
+parallel array handler need not duplicate the continuation surrounding the
+whole pipeline. One candidate instead duplicates only an eligible element
+computation, joins the parallel work, and resumes the outer continuation once.</p>
+<p>Effects and handler scopes are possible ways to contribute macro
+registrations, but macros remain independent. Other global, module, local,
+link, or backend mechanisms may register the same typed transformation.</p>
+<h2 id="annotations">Annotations</h2>
+<p>Annotations entered the discussion as a possible convenience for directing
+specialized compilation. The preferred ideal is that they are unnecessary:
+effect identities, handler installation, provider relationships, compiler-
+structure types, macro types, registrations, and scope may already expose the
+required facts.</p>
+<p>If later evidence justifies annotations, deleting an optimization annotation
+should preserve program meaning. An annotation must not replace effect,
+continuation, resource, type, or Core validation. This note does not reserve
+syntax or accept an annotation mechanism.</p>
+<h2 id="candidate-registration-and-selection-directions">Candidate registration and selection directions</h2>
+<h3 id="explicit-macro-application">Explicit macro application</h3>
+<p>An Ash program or library explicitly applies an imported macro. This makes use
+and local scope visible, but explicit source use alone does not address module,
+link, whole-program, or backend pipelines.</p>
+<h3 id="scoped-declarative-registration">Scoped declarative registration</h3>
+<p>A module, definition, handler installation, effect context, provider, backend,
+or build description contributes a declarative candidate registration for a
+bounded region. This retains inspectable scope without requiring every source
+operation to invoke the macro directly. It leaves ordering and selection to a
+separate policy.</p>
+<h3 id="global-declarative-pipeline">Global declarative pipeline</h3>
+<p>Compiler or package configuration registers candidates globally at named
+hooks. This can support whole-program optimization and stable default
+pipelines, but import-driven ambient behavior, ordering, reproducibility, and
+incremental invalidation require explicit evidence.</p>
+<p>These directions can coexist. No direction yet determines whether one
+applicable macro should run. Possible policies include an explicit pipeline,
+a provider or backend policy, compiler defaults, target rules, a cost model,
+bounded search, or mandatory expansion for a construct whose meaning requires
+it. Selecting none must remain valid for an optional optimization with a
+fallback. The exploration has not selected priorities, conflict resolution,
+iteration to a fixed point, or a cost model.</p>
+<h2 id="data-parallel-example">Data-parallel example</h2>
+<p>A first comparison can use one regular pipeline:</p>
+<pre tabindex="0"><code class="language-text">map f -&gt; map g -&gt; filter p -&gt; reduce combine initial
+</code></pre>
+<p>Place the same computation in progressively wider contexts:</p>
+<ol>
+<li>all operations inside one explicitly handled region;</li>
+<li>operations split across private definitions in one module;</li>
+<li>operations split across exported definitions in separately compiled
+modules;</li>
+<li>those modules linked with typed bodies available;</li>
+<li>those modules linked through summaries only;</li>
+<li>a closed program with a concrete SIMD target; and</li>
+<li>a program whose provider selection remains until runtime.</li>
+</ol>
+<p>A custom optimization kernel can also be a library macro explicitly used by an
+Ash program. The macro receives meaningful typed compiler structures and
+returns another meaningful typed structure. A portable candidate would produce
+an Ash-owned structured-kernel representation; a backend-phase candidate could
+lower such a representation to MLIR Linalg. The comparison must not assume
+that either boundary is correct before measuring it.</p>
+<p>For each placement, record:</p>
+<ul>
+<li>which macros are type-compatible;</li>
+<li>which hooks and scopes can register them;</li>
+<li>which bodies, summaries, effect facts, continuation modes, resource facts,
+target facts, and provider identities are visible;</li>
+<li>which fusion, specialization, parallelization, or vectorization is legal;</li>
+<li>what changes trigger recompilation or relinking;</li>
+<li>which fallback remains when no candidate is selected;</li>
+<li>how failures identify the macro, registration, transformed region, and
+originating Ash source; and</li>
+<li>whether pre- and post-transform observations agree where equivalence is
+required.</li>
+</ul>
+<p>A second, non-numerical case should exercise the same hooks. Handler
+specialization, provider erasure, pattern compilation, or protocol-state
+elimination are possible candidates. The comparison should reject a hook model
+that works only because array operations have a convenient scalar shape.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Current Ash semantics remain authoritative and unchanged.</li>
+<li>Backend-specific types do not enter Ash Core or its shared transformations.</li>
+<li>Macro applicability, registration, scope, selection, execution, and
+validation remain distinct.</li>
+<li>Handler order is preserved unless checked evidence justifies a reordering.</li>
+<li>Effect-row membership alone does not prove operation commutativity.</li>
+<li>A transformation cannot duplicate or discard a continuation, capture, or
+resource without the applicable checked permission.</li>
+<li>Every produced retained Core representation receives independent validation.</li>
+<li>Transformations preserve or rebuild causal provenance for diagnostics.</li>
+<li>Separate compilation does not silently become a closed-world build.</li>
+<li>Optional optimization has a defined non-selection path.</li>
+<li>Imported packages do not gain ambient compiler authority merely by being
+imported unless a future accepted design explicitly defines that behavior.</li>
+</ul>
+<h2 id="intentional-exclusions">Intentional exclusions</h2>
+<p>This note does not select MLIR, LLVM, Cranelift, a machine ABI, an array model,
+a numeric type family, a macro syntax, annotations, quotation syntax, a plugin
+ABI, dynamic native plugins, a compiler-structure representation, a hook
+catalogue, an optimization policy, a cost model, or handler and continuation
+semantics. It does not authorize a prototype or product implementation.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>The next design work should specify examples before mechanisms. The array
+pipeline above should compare local, module, separate-compilation, link,
+whole-program, and backend scopes using the same semantics and observations.
+Only after that comparison should a later note propose the smallest compiler
+structures and hooks required by the cases.</p>
+<p>If executable evidence becomes necessary, a separately authorized disposable
+prototype should test one named question, such as whether a typed library macro
+can preserve enough kernel structure across a module boundary for a Linalg
+lowering without exposing MLIR in Core. It must compare at least one rejected
+unsafe transformation and one non-selected fallback. Retain measurements and
+counterexamples; discard prototype machinery unless a later decision and task
+adopt it.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which first non-numerical macro gives a structurally different comparison?</li>
+<li>Which compiler structures should libraries inspect directly, and which need
+abstract validated construction and traversal APIs?</li>
+<li>Which phase boundaries are stable enough to become public hooks?</li>
+<li>Does importing a macro registration make it available, active, or neither?</li>
+<li>How do nested global, module, handler, effect, provider, and backend scopes
+compose?</li>
+<li>Which registrations define required expansion, and which offer optional
+optimization?</li>
+<li>Who selects among several compatible macros, and how are order, conflict,
+repetition, termination, and resource budgets controlled?</li>
+<li>What semantic evidence must an optimization or lowering macro return beyond
+a structurally valid output?</li>
+<li>Which typed bodies or summaries may cross separate-compilation boundaries?</li>
+<li>How do macro definitions and registrations participate in cache keys and
+incremental invalidation?</li>
+<li>Which compile-time effects may a macro request, and how are declared build
+inputs and reproducibility enforced?</li>
+<li>How do diagnostics retain both macro-definition and macro-invocation
+provenance through several transformations?</li>
+<li>How do link-time optimization and future dynamic loading coexist without a
+false closed-world assumption?</li>
+<li>Which target facts are available before native linking, and which require
+residual runtime dispatch?</li>
+<li>Can custom kernels preserve ordinary Ash fallback behavior without requiring
+annotations or compiler-known library names?</li>
+<li>How do floating-point reassociation, reduction laws, failure, cancellation,
+and resource cleanup constrain data-parallel selection?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#current-boundary">Current boundary</a><a href="#motivating-direction">Motivating direction</a><a href="#working-distinctions">Working distinctions</a><a href="#typed-compiler-macros">Typed compiler macros</a><a href="#declarative-compiler-hooks">Declarative compiler hooks</a><a href="#scope-and-compilation-unit">Scope and compilation unit</a><a href="#effects-handlers-providers-and-phases">Effects, handlers, providers, and phases</a><a href="#annotations">Annotations</a><a href="#candidate-registration-and-selection-directions">Candidate registration and selection directions</a><a href="#data-parallel-example">Data-parallel example</a><a href="#constraints">Constraints</a><a href="#intentional-exclusions">Intentional exclusions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0029-human-diagnostic-presentation/">← DN-0029: Human Diagnostic Presentation</a><a rel="next" href="/ash/docs/design/dn-0031-resource-composition-concept-map/">DN-0031: Resource Composition Concept Map →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Narrow checked foreign-provider evidence · Ash</title><meta name="description" content="This informative report records the implemented and verified native-buffer increment on integration/effect-ash-foundations. The milestone closure report records integration into main and final verification status.…"><meta name="robots" content="index, follow"><meta property="og:title" content="Narrow checked foreign-provider evidence · Ash"><meta property="og:description" content="This informative report records the implemented and verified native-buffer increment on integration/effect-ash-foundations. The milestone closure report records integration into main and final verification status.…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Narrow checked foreign-provider evidence · Ash"><meta name="twitter:description" content="This informative report records the implemented and verified native-buffer increment on integration/effect-ash-foundations. The milestone closure report records integration into main and final verification status.…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/effect-ash/narrow-foreign-provider-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/effect-ash/narrow-foreign-provider-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/narrow-foreign-provider-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Narrow checked foreign-provider evidence","headline":"Narrow checked foreign-provider evidence","description":"This informative report records the implemented and verified native-buffer increment on integration/effect-ash-foundations. The milestone closure report records integration into main and final verification status.…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/effect-ash/narrow-foreign-provider-evidence/","@id":"https://dikini.github.io/ash/docs/design/effect-ash/narrow-foreign-provider-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/narrow-foreign-provider-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="narrow-checked-foreign-provider-evidence" data-pagefind-meta="title">Narrow checked foreign-provider evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/narrow-foreign-provider-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This informative report records the implemented and verified native-buffer
+increment on <code>integration/effect-ash-foundations</code>. The
+<a href="/ash/docs/design/effect-ash/milestone-closure-evidence/">milestone closure report</a> records integration
+into <code>main</code> and final verification status.
+Product checkpoint <code>3819a93</code> retains compiler admission, runtime execution,
+conformance tests, specification, review and full verification.
+The <a href="/ash/spec/">specification</a> accompanies the implementation
+and conformance tests. Unsigned local merge <code>c0f230f</code> passed full merged
+verification. The clean feature worktree and branch were removed; their history
+remains in the integration branch. No main merge, push or tag was performed.</p>
+<p>The fixed adapter described below is historical evidence at the linked retained
+commit. The current <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/libraries/native_buffer.ash">source buffer library</a>
+replaces it on the product path.</p>
+<h2 id="evidence-coverage">Evidence coverage</h2>
+<p>The FOREIGN identifiers retain the accepted proposal's evidence obligations.
+Independent contract, effects, provenance/proof and existential-pressure review
+approved FOREIGN-01 through FOREIGN-09. Final Rust/resource quality review also
+passed. Full verification and clean local integration close FOREIGN-10.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>ID</th>
+<th>Established evidence</th>
+<th>Review and closure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FOREIGN-01</td>
+<td><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/native_buffer_syntax.rs">Syntax</a>, <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/native_buffer_modules.rs">modules</a>, <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/native_buffer_imports.rs">imports</a>, <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/native_buffer_typing.rs">typing</a>, and <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/native_buffer_core.rs">Core transforms</a>: closed builtin selection, targeted/renamed imports, facade-only and copied-API rejection, sealed provider, exact types and unchanged cells.</td>
+<td>Contract approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-02</td>
+<td><a href="https://github.com/dikini/ash-lang/blob/ea93b8701649806ab22b916fa0a5a9a91ebc5fd4/native-buffer/src/lib.rs">Native owner</a>, <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/native_buffer_runtime.rs">runtime</a>, and <a href="https://github.com/dikini/ash-lang/blob/ea93b8701649806ab22b916fa0a5a9a91ebc5fd4/src/eval/native_buffer_tests.rs">private boundaries</a>: real zeroed allocation, length/access, conversions, index-before-byte checks and unchanged rejected writes.</td>
+<td>Contract and resource reviews approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-03</td>
+<td>Private boundary tests cover injected null, pre-call work exhaustion, no body authority and release of a real unpublished owner after injected publication failure. Refusal-delivery tests cover committed initializer effects and no further allocation.</td>
+<td>Contract and reporting reviews approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-04</td>
+<td>Runtime/private tests cover aliases, reentrant activations, retired-key rejection, active/captured capacity reuse and escaping closures. Imports cover generic value and selected-method captures versus copied values.</td>
+<td>Ownership/provenance review approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-05</td>
+<td><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/native_buffer_interactions.rs">Interactions</a> cover mixed structural order, inner cleanup access, resume/discard, recursive owner discard, skipped suffixes, action-local result wrapping and outside-owner/running-action rejection.</td>
+<td>Contract review accepts these separate witnesses; retain the combined stress limitation below.</td>
+</tr>
+<tr>
+<td>FOREIGN-06</td>
+<td>Interactions cover removed overrides versus surviving builtin/action-local interpretation. Imports cover exact/different generic hook instances, imported callbacks and positive/negative row-lacks cases.</td>
+<td>Effects review approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-07</td>
+<td><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence_validation.rs">Linked validation</a> checks nine independent resource mutations and constructor payloads. <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/validate.rs">Core validation</a> mutates acquisition/method/brand/result/row/origin facts after both transforms. Rejections leave all six native counters zero; transformed positives execute <code>Success(5)</code> with one allocation and release.</td>
+<td>Contract approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-08</td>
+<td>Private tests cover normal return, body failure, discard, partial publication and completed teardown releases. Injected teardown exhaustion preserves primary/secondary failure, marks cleanup incomplete and prevents source clause/suffix/cleanup writes. Row-storage fault matrices preserve actual storage causes.</td>
+<td>Contract and reporting reviews approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-09</td>
+<td>Compiler and runtime tests retain exact/one-short/fresh budgets, proportional length charging, owner capacity/reuse, deep stack checks and shared Pure-locality evidence.</td>
+<td>Contract and finite-work audit approved.</td>
+</tr>
+<tr>
+<td>FOREIGN-10</td>
+<td>Isolated safe-owning adapter, CLI fixture, predecessor suite and ARM64 compile checks pass. Independent complete-provider contract, Rust/resource and documentation reviews passed. Full verification passed before and after unsigned local merge; transition and clean feature-worktree cleanup are complete.</td>
+<td>Closed locally; no main merge, push or tag.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="native-and-injected-observations">Native and injected observations</h2>
+<p>The first-party <a href="https://github.com/dikini/ash-lang/blob/ea93b8701649806ab22b916fa0a5a9a91ebc5fd4/native-buffer/README.md">adapter</a> owns the private
+pointer and calls C <code>calloc</code>/<code>free</code>. Its six tests include real successful
+allocation, zeroed bytes, checked access and one release after moving ownership.
+Root evaluator tests observe calls into that safe adapter and ownership drops.
+Together these boundaries connect root ownership observations to actual C
+release; root counters are not presented as direct C-call instrumentation.</p>
+<p>Injected null is a separate failure witness, not evidence that the host allocator
+actually exhausted memory. Normal execution, captured/discarded owners and
+post-success publication failure use real buffers. Handles contain activation
+keys, never addresses; retired-key rejection precedes access independently of
+whether the allocator reuses an address.</p>
+<p>The exact <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/spec_examples.rs">CLI fixture</a> prints
+<code>Success(Success(42)) : Outcome&lt;Outcome&lt;Int&gt;&gt;</code> plus a newline, with empty standard
+error and exit status zero.</p>
+<h2 id="disposal-and-failure-boundary">Disposal and failure boundary</h2>
+<p>The accepted transition distinguishes atomic native refusal from terminal
+runtime resource failure. The prepared refusal result may be delivered only
+without further allocation or new observable state; earlier initializer effects
+remain committed. Insufficient retained disposal capacity is terminal.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/eval/disposal.rs">disposal worklist</a> reuses existing environment,
+captured-frame, type and kind traversals. Eight inline slots handle small pending
+sets; ordinary disposal may reserve spill storage fallibly. Refusal delivery
+forbids that growth. Exhaustion preserves a fixed first failure and safely
+abandons undismantled ownership, reporting incomplete cleanup rather than
+recursively dropping it or retrying. No source cleanup or recovery traversal is
+introduced. This does not promise that whole teardown cannot fail.</p>
+<p>Each dismantled structural node is consumed once. Environment traversal follows
+at most two outgoing edges per unique entry; shared entries are dismantled only
+when their final owner is consumed. There is no repeated graph scan or frame
+rotation. Existing small-stack tests pass with these traversals.</p>
+<p>Independent contract review cleared refusal delivery and fail-stop disposal.
+Separate Rust review found no additional ownership/disposal defect, but found
+missing resource details on shared capture and native-request work failures.
+The subsequent audit also found such sites in cleanup, registration, cell
+admission and generic application while a native owner can remain live.
+Those direct paths now retain resource details. Contract re-review found two
+generic row-helper defects: detected clone reservations could panic,
+and canonicalization could misreport storage refusal as work exhaustion. The
+complete runtime row path now passes independent contract re-review, including
+comparison inside canonicalization and tail membership. Independent Rust
+quality review and full verification also passed. The bounded
+writer must retain both
+a legacy primary reason and the explicit resource cause when they
+differ; an undetermined storage-reservation cause is not a claimed RAM quota.
+The structured reporting mechanism handles returned failures from fallible
+operations; it does not intercept process termination by infallible host
+allocation APIs.</p>
+<h2 id="verification-and-limitations">Verification and limitations</h2>
+<p>On 2026-09-09, after the reporting correction and final validator/import QA,
+parent verification passed:</p>
+<ul>
+<li><code>cargo xtask verify</code>, including build, strict lint, workspace tests and rustdoc;</li>
+<li>1,214 library tests, 14 CLI tests and 50 native integration tests, including
+the storage-fault matrices and native-owner source-effect-stop witnesses;</li>
+<li><code>cargo check --workspace --all-targets --target aarch64-unknown-linux-gnu --locked</code>.</li>
+</ul>
+<p>The merged checkout then passed <code>cargo xtask verify</code> in full. Final status-only
+documentation changes were checked separately; they change no Rust or Ash code.</p>
+<p>Changed Markdown has no new lint findings against the compiler checkpoint;
+existing overlong lines remain, and table and formal-code line lengths were
+excluded. Relative file links resolve after artifact cleanup, and referenced
+specification headings were checked. Final contract and
+Rust/resource reviews found no remaining findings.</p>
+<p>ARM64 compilation is not native ARM64 execution or release conformance.
+Native tests here ran on Linux x86-64. No other backend or simulated portability
+fallback is claimed.</p>
+<p>A combined recursive native-owner/cleanup witness exhausts checker work before
+evaluation. In the recursive discard interaction, wrapping the native body in
+<code>cleanup fn(ignored) { perform Record.digit depth } { ... }</code> reproduces it;
+using <code>Buffer.length b</code> instead of <code>depth</code> also exhausts work. Removing only that
+cleanup layer admits recursive native ownership and discard. Separate tests
+cover cleanup access and mixed ordering. No limit was raised, and this combined
+case is not claimed admitted.</p>
+<p>Library-defined acquisition, a general FFI, files and fallible native close are
+excluded from this slice. Fixed native <code>free</code> has no recoverable close result;
+these observations do not generalize that rule to future file providers.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#evidence-coverage">Evidence coverage</a><a href="#native-and-injected-observations">Native and injected observations</a><a href="#disposal-and-failure-boundary">Disposal and failure boundary</a><a href="#verification-and-limitations">Verification and limitations</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

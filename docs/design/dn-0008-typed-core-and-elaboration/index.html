@@ -1,0 +1,299 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0008: Typed Core and Elaboration · Ash</title><meta name="description" content="What typed Core and elaboration boundaries would make omitted surface typing operations explicit, preserve useful pattern structure, support checkable transformations and direct execution, and leave room for later…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0008: Typed Core and Elaboration · Ash"><meta property="og:description" content="What typed Core and elaboration boundaries would make omitted surface typing operations explicit, preserve useful pattern structure, support checkable transformations and direct execution, and leave room for later…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0008: Typed Core and Elaboration · Ash"><meta name="twitter:description" content="What typed Core and elaboration boundaries would make omitted surface typing operations explicit, preserve useful pattern structure, support checkable transformations and direct execution, and leave room for later…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0008-typed-core-and-elaboration/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0008-typed-core-and-elaboration/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0008-typed-core-and-elaboration.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0008: Typed Core and Elaboration","headline":"DN-0008: Typed Core and Elaboration","description":"What typed Core and elaboration boundaries would make omitted surface typing operations explicit, preserve useful pattern structure, support checkable transformations and direct execution, and leave room for later…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0008-typed-core-and-elaboration/","@id":"https://dikini.github.io/ash/docs/design/dn-0008-typed-core-and-elaboration/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0008-typed-core-and-elaboration.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0008-typed-core-and-elaboration" data-pagefind-meta="title">DN-0008: Typed Core and Elaboration</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0008-typed-core-and-elaboration.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0008</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006: Front-End Semantic Boundaries</a>, <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007: Typed Core Dialects</a>, <a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008: Explicit Evaluator Machine</a>, <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0002-core-representation/">DN-0002: Core Representation</a>, <a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005: Surface Function Definitions</a>, <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006: Initial Type System</a>, <a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007: Data and Pattern Typing</a>, <a href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">DN-0017: Resource Management and Storage Policy</a>, <a href="/ash/docs/design/dn-0018-runtime-established-static-evidence/">DN-0018: Runtime-Established Static Evidence</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative and non-normative. It explores typed Core and elaboration candidates; it does not define current Ash, accept an architecture, or require downstream capabilities. All syntax and internal forms are illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>What typed Core and elaboration boundaries would make omitted surface typing operations explicit, preserve useful pattern structure, support checkable transformations and direct execution, and leave room for later static evidence or representation changes without implementing them now?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p><a href="/ash/docs/design/dn-0002-core-representation/">DN-0002</a> asks which concrete Core representation fits a small pure language while keeping continuations inspectable and transformations checkable. This note narrows one part of that exploration: the semantic information surface elaboration should produce and the boundaries among Core forms, semantic rules, transformation mechanisms, and possible future evidence.</p>
+<p>The scope is:</p>
+<ul>
+<li>explicit term and type abstraction and application in Core;</li>
+<li>elaboration of equational and operational functions;</li>
+<li>typed structured patterns and compiled decision forms;</li>
+<li>explicit Core dialect contracts;</li>
+<li>direct execution of each retained semantic Core form;</li>
+<li>centralized semantic rule boundaries;</li>
+<li>separation of unification, constraints, normalization, and equality;</li>
+<li>representational seams for later evidence passing, effects, CPS, opacity, and existentials.</li>
+</ul>
+<p>This note does not choose the concrete recursive Core encoding, CPS representation, runtime layout, normative semantic notation, effect semantics, or optimizer architecture. Those questions remain open or belong to other artifacts.</p>
+<h2 id="accepted-first-stratum-boundaries">Accepted first-stratum boundaries</h2>
+<p><a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006</a> accepts a
+distinct binder-resolution boundary followed by bidirectional typed elaboration
+to structured Core. <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>
+accepts named typed Core dialects, independent validation, and the pure
+operation-family boundary. <a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a>
+accepts direct execution through an explicit first-order machine. They leave
+the richer polymorphism, pattern-compilation, evidence, effect, CPS, storage,
+and optimizer questions in this note open.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="make-surface-polymorphism-explicit-in-core">Make surface polymorphism explicit in Core</h3>
+<blockquote>
+<p>Suggested rule: Surface omission of type abstraction and instantiation elaborates to explicit, typed Core operations.</p>
+</blockquote>
+<p>An illustrative surface definition:</p>
+<pre tabindex="0"><code class="language-ash">id : A -&gt; A
+id(x) = x
+</code></pre>
+<p>could elaborate conceptually to:</p>
+<pre tabindex="0"><code class="language-text">ΛA : Type.
+    fn(x : A) -&gt; A {
+        x
+    }
+</code></pre>
+<p>A surface use such as <code>id(42)</code> could become:</p>
+<pre tabindex="0"><code class="language-text">(id [Int])(42)
+</code></pre>
+<p>Core would distinguish:</p>
+<pre tabindex="0"><code class="language-text">TermLambda
+TermApply
+TypeLambda
+TypeApply
+</code></pre>
+<p>This makes polymorphic operations available to validation and transformation instead of treating elaborator omissions as semantic absence. The same ordinary binding and application structure could later carry generated evidence if such a feature is designed; no evidence system is required now.</p>
+<h3 id="elaborate-function-presentations-to-the-same-typed-semantics">Elaborate function presentations to the same typed semantics</h3>
+<blockquote>
+<p>Suggested rule: Operational bodies and equation groups produce the same typed Core constructs after surface-specific elaboration, while retaining source provenance separately.</p>
+</blockquote>
+<p>Equation heads can elaborate through the pattern forms discussed below. A single irrefutable equation may become an ordinary lambda body without a meaningful match. The Core need not record “equational function” as a second semantic function kind.</p>
+<p>Source maps or provenance nodes should preserve enough information to diagnose a failed clause, generated argument, or inserted type application against the programmer's source. Provenance is tooling data, not a semantic distinction.</p>
+<h3 id="preserve-typed-structured-patterns-before-lowering">Preserve typed structured patterns before lowering</h3>
+<blockquote>
+<p>Suggested rule: One Core form may retain typed structured patterns, while an explicit transformation compiles them into lower-level decision forms.</p>
+</blockquote>
+<p>A structured form might resemble:</p>
+<pre tabindex="0"><code class="language-text">Match {
+    scrutinee
+    typed pattern cases
+}
+</code></pre>
+<p>A decision form might expose:</p>
+<pre tabindex="0"><code class="language-text">constructor tests
+field or tuple projections
+bindings
+branches
+</code></pre>
+<p>Transforms before lowering can reason directly about <code>Some(x)</code>, tuple decomposition, or labelled record patterns. Transforms after lowering can reason about tests, branch sharing, projections, and dead branches. Pattern compilation would be a typed Core-to-Core operation rather than an untracked parser side effect.</p>
+<p>Coverage and irrefutability remain semantic checks from <a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007</a>; successful lowering should not redefine them.</p>
+<h3 id="give-materially-different-core-forms-explicit-contracts">Give materially different Core forms explicit contracts</h3>
+<blockquote>
+<p>Suggested rule: When two Core forms have materially different admissible nodes and useful invariants, name their dialect contracts and require transformations to declare what they consume and produce.</p>
+</blockquote>
+<p>One candidate division is:</p>
+<pre tabindex="0"><code class="language-text">CoreStructured
+CoreDecision
+</code></pre>
+<p>with illustrative contracts:</p>
+<pre tabindex="0"><code class="language-text">simplify_match : CoreStructured -&gt; CoreStructured
+compile_patterns : CoreStructured -&gt; CoreDecision
+simplify_case : CoreDecision -&gt; CoreDecision
+</code></pre>
+<p>Both would remain fully typed. Dialect boundaries need not imply a mandatory chronological pipeline; they describe checked representation states. A new dialect should require evidence that its invariants materially simplify or enable transformations, otherwise micro-dialects would add validation and conversion cost without enough benefit.</p>
+<h3 id="keep-every-retained-semantic-core-dialect-directly-executable">Keep every retained semantic Core dialect directly executable</h3>
+<blockquote>
+<p>Suggested rule: Each retained Core dialect has a direct interpreter so transformations can be compared by observable evaluation.</p>
+</blockquote>
+<p>Direct execution supports differential checks such as:</p>
+<pre tabindex="0"><code class="language-text">evaluate(program) == evaluate(transform(program))
+</code></pre>
+<p>for programs whose observable result is defined by the experiment.</p>
+<p>An interpreter candidate represents language evaluation state explicitly:</p>
+<pre tabindex="0"><code class="language-text">Machine {
+    control
+    environment
+    continuation
+}
+</code></pre>
+<p>rather than relying on the host call stack as the only representation of language continuations. Explicit state would let the pure first language test evaluation order and transformation behavior while keeping continuation structure inspectable. Effects, handlers, concurrency, cancellation, and one-shot or multi-shot continuation semantics are downstream pressure only.</p>
+<p>Direct interpretation need not make every intermediate compiler data structure a semantic dialect. The criterion is whether the form is retained as a meaningful transformation boundary whose behavior must be validated.</p>
+<h3 id="centralize-semantic-decisions-and-separate-them-from-mechanism">Centralize semantic decisions and separate them from mechanism</h3>
+<blockquote>
+<p>Suggested rule: Each semantic question has one authoritative rule interface that returns structured outcomes; storage and algorithmic mechanisms remain behind those rules.</p>
+</blockquote>
+<p>Candidate rule boundaries include:</p>
+<pre tabindex="0"><code class="language-text">TypeEqualityRule
+KindCheckingRule
+QuantificationRule
+InstantiationRule
+FunctionExposureRule
+GeneralizationRule
+AnnotationRequirementRule
+PatternTypingRule
+PatternIrrefutabilityRule
+CoverageRule
+RecordFieldLookupRule
+AccessRule
+</code></pre>
+<p>Mechanisms such as union-find, substitutions, type arenas, constraint stores, and tree traversal may support several rules but should not define language policy incidentally.</p>
+<p>Structured outcomes make policy and diagnostics visible:</p>
+<pre tabindex="0"><code class="language-text">GeneralizationDecision =
+    Generalize(vars)
+    | KeepMonomorphic(reason)
+    | RequiresAnnotation(reason)
+
+CoverageDecision =
+    Exhaustive
+    | MissingCases(patterns)
+    | RequiresCatchall(reason)
+</code></pre>
+<p>These interfaces are candidates for experiments, not mandatory source modules or public APIs.</p>
+<h3 id="keep-constraint-resolution-distinct-from-type-mechanics">Keep constraint resolution distinct from type mechanics</h3>
+<blockquote>
+<p>Suggested rule: Unification, constraint resolution, type normalization, and type equality remain separate operations even when the first coherent type checker needs only kind and type equality constraints.</p>
+</blockquote>
+<p>A small initial solver could handle:</p>
+<pre tabindex="0"><code class="language-text">type equality
+kind equality
+</code></pre>
+<p>Possible interfaces, rows, associated types, or propositions may later add different obligations. For example, a requirement such as <code>Eq&lt;A&gt;</code> would state that evidence is needed; it would not itself be the evidence. A future elaboration might pass such evidence through ordinary Core type and term binders. Associated projections might introduce reducible type expressions whose normalization depends on resolved evidence.</p>
+<p>Those examples are pressure tests only. The initial Core need not contain dictionaries, associated projections, row evidence, propositions, or proof terms. Its immediate responsibility is to avoid one recursive “solve everything” procedure that silently conflates the four semantic operations.</p>
+<h3 id="preserve-extension-seams-without-placeholder-semantics">Preserve extension seams without placeholder semantics</h3>
+<blockquote>
+<p>Suggested rule: Future capabilities influence present representation only through concrete separations that can be tested now; they do not introduce unreachable placeholder constructs or current-language requirements.</p>
+</blockquote>
+<p>Potentially useful seams include:</p>
+<ul>
+<li>explicit type binders, rigid variables, and scopes for later existential or opaque operations;</li>
+<li>ordinary typed term binders and applications through which generated evidence could travel;</li>
+<li>explicit representation-access facts rather than equating type visibility with constructor access;</li>
+<li>explicit continuation data for later effect and CPS experiments;</li>
+<li>typed dialect boundaries for possible Core-to-CPS and CPS-to-Core transforms;</li>
+<li>rule inputs that can accept later effect, generativity, resource, or refinement facts.</li>
+</ul>
+<p>A seam is justified only if it keeps an existing responsibility clear or supports an experiment with named cases, comparison observations, and retention conditions. “Extensibility” alone is not evidence.</p>
+<h3 id="preserve-established-facts-until-their-last-checked-use">Preserve established facts until their last checked use</h3>
+<blockquote>
+<p>Suggested rule: A Core transformation retains or revalidates every static fact
+needed by a later checked transformation, then erases that fact only after its
+last consumer.</p>
+</blockquote>
+<p>Possible future resource work could establish facts such as unique authority,
+disjoint places, one-shot control, or the locality of an identity. Those facts
+could justify in-place update, ownership transfer, frame reuse, or removal of an
+internal effect requirement. A low-level backend need not understand the source
+type mechanism, but erasure must not happen before the transformation that relies
+on it.</p>
+<p>This is a representation pressure, not acceptance of any resource discipline or
+optimization. A candidate must identify the producer, validator, consumers, and
+invalidation conditions for each retained fact. Attaching unchecked metadata to
+Core would move the semantic decision rather than make it explicit.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="fully-explicit-typed-core">Fully explicit typed Core</h3>
+<p>This is the main candidate. It exposes type abstraction/application, term structure, pattern information, and dialect invariants to validation. It costs larger terms, more elaboration steps, and more obligations for every transform.</p>
+<h3 id="typed-nodes-with-implicit-core-polymorphism">Typed nodes with implicit Core polymorphism</h3>
+<p>Core nodes could carry final types while leaving instantiation and abstraction implicit. This reduces syntax and node count but makes specialization, substitution, transformation validation, and later evidence passing depend on reconstructing hidden operations.</p>
+<h3 id="one-core-pattern-representation">One Core pattern representation</h3>
+<p>Keeping only structured patterns preserves source-level meaning but forces decision-oriented transforms and execution to rediscover tests. Keeping only decision forms simplifies execution but discards useful high-level structure early. Keeping both adds a transform and two validators; experiments should show whether each side enables materially simpler work.</p>
+<h3 id="dialect-granularity-and-conversions">Dialect granularity and conversions</h3>
+<p><a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> rejects one permissive
+node set as the retained semantic Core boundary. The exact dialect granularity,
+node-family assembly, conversion ownership, and validation evidence remain
+open. Experiments should justify each additional dialect by the guarantees it
+provides to consumers.</p>
+<h3 id="explicit-machine-composition">Explicit-machine composition</h3>
+<p><a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a> selects an
+explicit first-order machine for the retained evaluator. A host-recursive
+interpreter may remain a disposable differential oracle. Further comparison
+should concern transition ownership, frame composition, inspectable code and
+environment storage, diagnostics, and resource accounting within the accepted
+machine boundary.</p>
+<h3 id="rules-as-functions-modules-or-declarative-data">Rules as functions, modules, or declarative data</h3>
+<p>Centralization does not determine implementation form. Rules could be functions with structured results, dedicated modules, tables interpreted by the checker, or another organization. The important candidate property is one reviewable decision path per semantic question.</p>
+<h3 id="direct-core-to-runtime-lowering-without-a-persistent-interpreter">Direct Core-to-runtime lowering without a persistent interpreter</h3>
+<p>Lowering only to a backend may reduce duplicate execution machinery. It weakens differential testing and makes backend behavior part of every Core experiment. A minimal interpreter may be worthwhile even if it is not the production execution route.</p>
+<h2 id="interactions-and-architectural-pressure">Interactions and architectural pressure</h2>
+<ul>
+<li><a href="/ash/docs/design/dn-0002-core-representation/">DN-0002</a> owns the broader representation question, including Freer-like candidates, explicit continuations, Core/CPS relationships, and opaque CPS regions. This note provides experiments and constraints, not an answer to that question.</li>
+<li><a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005</a> requires equivalent elaboration for equation groups and operational bodies plus source provenance for form-specific diagnostics.</li>
+<li><a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006</a> supplies candidate kinding, instantiation, equality, generalization, recursion, and unification rules that Core must represent and revalidate.</li>
+<li><a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007</a> supplies typed patterns, visibility, irrefutability, and coverage obligations. Pattern compilation should preserve those established facts or revalidate their relevant consequences.</li>
+<li><a href="/ash/docs/decisions/ad-0004-small-step-semantic-method/">AD-0004</a> selects
+small-step semantics as the primary normative method. An explicit machine can
+provide implementation evidence without becoming normative semantics.</li>
+<li>Possible Core/CPS movement pressures dialect interfaces not to assume one irreversible lowering pipeline. CPS reconstruction and opaque CPS regions are not requirements for the first Core.</li>
+<li>Possible optimization search pressures transform applicability to remain checkable and output to be revalidated. Heuristic search or ML ranking is not part of the trusted semantic core and is not an initial requirement.</li>
+<li>Possible interfaces, handlers, existentials, and proof evidence pressure explicit binders and applications. They should not be encoded speculatively before their semantics exist.</li>
+</ul>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>A Core experiment should be limited to the probes and comparisons listed below and remain disposable. Its provisional IR is evidence, not product architecture or language truth. Compare candidates using the same small typed programs and report representation size, validator complexity, traversal behavior, diagnostic provenance, and failure modes.</p>
+<p>Required probes include:</p>
+<ul>
+<li>explicit global polymorphism and explicit instantiation at multiple use sites;</li>
+<li>local generalization whose resulting Core binder scope is inspectable;</li>
+<li>equivalent equational and operational definitions elaborated to comparable Core;</li>
+<li>parameterized ADTs and constructor values;</li>
+<li>nested constructor, tuple, and record patterns in structured Core;</li>
+<li>pattern compilation into decision Core with types and source provenance retained;</li>
+<li>direct execution of the structured and decision forms;</li>
+<li>a beta-reduction or simplification transform followed by type validation;</li>
+<li>differential evaluation before and after pattern compilation and simplification;</li>
+<li>invalid Core containing a scope error, bad type application, wrong branch type, or dialect-forbidden node;</li>
+<li>a mock generated evidence parameter passed through ordinary bindings and applications, without implementing an interface system;</li>
+<li>a mock fact that is established, preserved through one rewrite, consumed by a
+later rewrite, and erased before low-level lowering, including a stale-fact
+rejection case;</li>
+<li>a mock opaque or continuation-bearing boundary sufficient to test traversal and validation, without exposing it as surface Ash.</li>
+</ul>
+<p>Compare direct interpreters on:</p>
+<ul>
+<li>whether evaluation order and continuations are observable in implementation data;</li>
+<li>whether host stack limits or exception behavior leak into language behavior;</li>
+<li>the amount of machinery required for the pure cases;</li>
+<li>whether both dialects can share machine components without erasing their invariants.</li>
+</ul>
+<p>Compare rule organizations on:</p>
+<ul>
+<li>whether each semantic decision has one traceable caller path;</li>
+<li>whether diagnostics retain structured reasons;</li>
+<li>whether swapping a generalization or coverage policy affects only the rule boundary;</li>
+<li>whether normalization, equality, unification, and constraint resolution can be tested independently.</li>
+</ul>
+<p>Retain a prototype only if it supplies current design evidence that cannot be captured more cheaply in examples, measurements, and counterexamples. No prototype should become production architecture without a later decision and task.</p>
+<p>The retained <a href="/ash/docs/design/mini-ash/rank-1-polymorphism/evidence/">rank-1 integration report</a>
+records the implemented Mini-Ash result. Explicit type abstraction and
+application made scheme scope, substitution, transformation, malformed-Core
+rejection, and runtime erasure independently observable. Structured patterns
+remain in the retained Core; decision Core and pattern compilation remain
+excluded.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which exact type annotations belong on Core nodes, binders, patterns, and branches?</li>
+<li>Is explicit type abstraction/application sufficient for rank-1 Core, or are type schemes also stored at binding sites?</li>
+<li>How should elaboration record inserted operations without overwhelming source diagnostics?</li>
+<li>Do structured and decision patterns justify two dialects, two node families in one dialect, or one form plus ephemeral lowering data?</li>
+<li>Which invariants must <code>compile_patterns</code> establish beyond type preservation?</li>
+<li>Which representation changes qualify as retained semantic Core dialects subject to direct execution, and which are only lowering artifacts?</li>
+<li>Which transition and frame composition keeps the accepted explicit machine
+reviewable as the pure interpreter grows?</li>
+<li>What continuation representation remains inspectable without making ordinary pure terms awkward?</li>
+<li>Which semantic rules belong to Core validation, surface elaboration, or shared static infrastructure?</li>
+<li>How are proof obligations or established facts attached to transformed Core without trusting stale evidence?</li>
+<li>Which facts belong in types, explicit evidence terms, validated side tables, or
+analysis results, and what invalidates each representation?</li>
+<li>What minimal mock evidence test is useful without designing interfaces prematurely?</li>
+<li>How can an opaque CPS or other representation region expose a typed interface without pretending Core can inspect its contents?</li>
+<li>Which transformations are simpler before pattern lowering, and which after?</li>
+<li>When does a new Core dialect provide enough invariant value to justify conversion and validation costs?</li>
+<li>What observable behavior should differential execution compare before effects and richer runtime state exist?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#accepted-first-stratum-boundaries">Accepted first-stratum boundaries</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-directions">Candidate directions</a><a href="#interactions-and-architectural-pressure">Interactions and architectural pressure</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0007-data-and-pattern-typing/">← DN-0007: Data and Pattern Typing</a><a rel="next" href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009: Effects, Handlers, and Continuations →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

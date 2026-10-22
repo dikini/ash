@@ -1,0 +1,806 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0036: Foreign Library and Memory Provider Experiments · Ash</title><meta name="description" content="Can library-defined providers connect Ash to foreign code and manage scoped storage through useful source APIs whose safety contracts are enforced by type checking? Which mechanisms must the language provide, which…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0036: Foreign Library and Memory Provider Experiments · Ash"><meta property="og:description" content="Can library-defined providers connect Ash to foreign code and manage scoped storage through useful source APIs whose safety contracts are enforced by type checking? Which mechanisms must the language provide, which…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0036: Foreign Library and Memory Provider Experiments · Ash"><meta name="twitter:description" content="Can library-defined providers connect Ash to foreign code and manage scoped storage through useful source APIs whose safety contracts are enforced by type checking? Which mechanisms must the language provide, which…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0036-foreign-library-and-memory-provider-experiments.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0036: Foreign Library and Memory Provider Experiments","headline":"DN-0036: Foreign Library and Memory Provider Experiments","description":"Can library-defined providers connect Ash to foreign code and manage scoped storage through useful source APIs whose safety contracts are enforced by type checking? Which mechanisms must the language provide, which…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/","@id":"https://dikini.github.io/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0036-foreign-library-and-memory-provider-experiments.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0036-foreign-library-and-memory-provider-experiments" data-pagefind-meta="title">DN-0036: Foreign Library and Memory Provider Experiments</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0036-foreign-library-and-memory-provider-experiments.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0036</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0031-resource-composition-concept-map/">DN-0031</a>,
+<a href="/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/">DN-0032</a>,
+<a href="/ash/docs/design/dn-0034-one-shot-kernel-soundness-and-practicality/">DN-0034</a>,
+<a href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025</a>,
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
+<a href="/ash/docs/decisions/ad-0004-small-step-semantic-method/">AD-0004</a>,
+<a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
+</ul>
+<blockquote>
+<p>This design note governs two bounded design experiments and their comparison.
+It defines no current Ash semantics and accepts no production architecture.
+Experimental implementations are evidence. Successful designs require the
+proposal, decision, task, and verification steps described below before they
+become part of Ash or its standard library.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can library-defined providers connect Ash to foreign code and manage scoped
+storage through useful source APIs whose safety contracts are enforced by type
+checking? Which mechanisms must the language provide, which can be ordinary
+library definitions, and which tools make those libraries practical to author?</p>
+<p>Study two connected cases: a SQLite binding and a memory resource beginning
+with a fixed-capacity scoped arena. Their purpose is to discover:</p>
+<ul>
+<li>underlying design pressures and counterexamples to candidate abstractions;</li>
+<li>implementation requirements specific to each case and reusable across cases;</li>
+<li>what convenient client and provider syntax must express;</li>
+<li>which surface additions and Core operational rules are needed, and which
+behavior can reuse existing forms and transitions;</li>
+<li>which properties can be inferred and which need explicit contracts or evidence;</li>
+<li>how types, effects, dependencies, and usage rules establish safety;</li>
+<li>a repeatable blueprint and supporting tooling for foreign-library authors.</li>
+</ul>
+<p>A working native wrapper or allocator alone does not answer these questions.
+The evidence must connect source descriptions, checking, execution, and costs.</p>
+<p><a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a> records the separate
+program for authoring foreign-library interfaces in Ash through generic host
+ABI and linking infrastructure. Findings from these experiments can inform that
+program; it does not change this note's experiment contracts or completion
+criteria.</p>
+<h2 id="context">Context</h2>
+<h3 id="current-semantic-foundation">Current semantic foundation</h3>
+<p>The <a href="/ash/spec/">specification</a> defines passive modules, rank-1
+ordinary values, interfaces, exact effect instances, lexical handlers, and
+single-use nonescaping continuations. Modules have no runtime initialization.
+The <a href="/ash/spec/dynamic-semantics/">dynamic semantics</a> give ordinary values an
+evaluator-managed heap. General regions and selectable storage disciplines are
+not current language features.</p>
+<p>The two <a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">builtin resource providers</a>
+introduce an acquisition identity, duplicable non-owning access, sealed provider
+evidence, an exact effect interpreter, and scope-owned completion. Inferred
+dependencies prevent access from escaping, including through closures,
+evidence, and request operands. A fresh runtime activation distinguishes
+repeated acquisitions. Capture/resume retains the owned scope; checked discard
+closes owned abandoned scopes. <a href="/ash/spec/static-semantics/#scoped-cleanup-actions">Cleanup</a>
+has its own completion and interpretation obligations.</p>
+<p>These mechanisms do not provide general library-defined acquisition, borrowing,
+ownership transfer, foreign representations, or view-invalidation checking.
+Lexical scope does not establish address stability, compatible layout, or
+permission for aliases to mutate shared storage. A live resource owner does
+not imply that every view previously obtained from it is still valid.</p>
+<p>The <a href="/ash/spec/elaboration/#surface-erasure">elaboration contract</a> retains an
+authenticated Effect <code>Resource</code> carrier for the closed builtin APIs. Selected
+interface evidence already lowers to ordinary functions, but a source <code>with</code>
+cannot manufacture sealed resource authority. General providers must account
+for that authority rather than assume interfaces already supply it.</p>
+<h3 id="transferable-evidence-and-pressure">Transferable evidence and pressure</h3>
+<p>The <a href="/ash/docs/design/effect-ash/narrow-foreign-provider-evidence/">native-buffer evidence</a>
+establishes a bounded native allocation adapter, checked access, activation
+identity, owned release, failure handling, and independent validation. Its
+exclusions include library-defined acquisition and fallible native close. Its
+combined recursive cleanup case also exposes checker-cost pressure; increasing
+limits is not evidence that a new analysis scales.</p>
+<p><a href="/ash/docs/design/dn-0031-resource-composition-concept-map/">DN-0031</a> and
+<a href="/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/">DN-0032</a> distinguish resource
+authority, interpretation, provider code, and composition. Those proposed roles
+guide comparisons without selecting a syntax or adding current semantics.
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a> supplies the
+broader memory direction and reference corpus. This note bounds its initial
+experiment; it does not assume regions or borrowing already exist.</p>
+<p><a href="/ash/docs/design/dn-0034-one-shot-kernel-soundness-and-practicality/">DN-0034</a> distinguishes
+semantic soundness from implementation correspondence. Existing continuation
+proofs transfer only within their admitted fragment. New storage and foreign
+rules need their own obligations and an explicit connection to execution.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Preserve current ordinary immutable sharing, closure use, module boundaries,
+exact effect identity, and completion behavior in the comparison corpus.
+Report any proposed semantic change explicitly.</li>
+<li>Keep source name scope, allocation lifetime, access permission, interpretation,
+and release authority distinct. Reuse current mechanisms where their actual
+contracts suffice.</li>
+<li>Give each new rule a concrete positive case and a counterexample. Measure
+rejected useful programs and annotation burden as well as unsafe admissions.</li>
+<li>Keep arena ownership scoped. Do not package or transport an arena owner with
+dependent values, extend its lifetime by returning it, or transfer it between
+processes. Passing non-owning access within the owner's lifetime is allowed
+subject to the candidate access rules.</li>
+<li>Captured control may retain an owned scope under the admitted continuation
+rules. This does not make its owner a transportable source value. Borrow
+obligations must remain valid while control is captured.</li>
+<li>Treat processes as future pressure consistent with shared-nothing storage.
+Process implementation, cross-process sharing, and large-message transport
+without copying are outside these experiments.</li>
+<li>Begin with synchronous foreign calls that finish before Ash resumes. Exclude
+foreign callbacks into Ash, escaping continuations, threads, asynchronous
+execution, dynamic loading, and a universal ABI. Record limitations without
+designing those mechanisms in advance.</li>
+<li>Keep foreign contracts, checked provider obligations, runtime tests, and
+proved properties distinguishable. A declared signature is not evidence that
+arbitrary foreign code obeys its memory contract.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="provider-descriptions">Provider descriptions</h3>
+<p>Compare the same operations and lifecycle under these descriptions:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Question and tradeoff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Explicit acquisition, ordinary handlers, and cleanup</td>
+<td>Establishes the reusable baseline and exposes relationships authors must repeat. Identify any authority or typing rule the baseline still needs.</td>
+</tr>
+<tr>
+<td>A provider declaration packaging those parts</td>
+<td>May make state, operation coverage, dependencies, and completion explicit in one place. Test whether it introduces independent semantics or can elaborate to the baseline.</td>
+</tr>
+<tr>
+<td>Ordinary definitions plus scoped installation</td>
+<td>Tests whether reusable functions and evidence can assemble a provider with little dedicated syntax. Expose any need for a body type beyond current rank-1 source positions.</td>
+</tr>
+</tbody>
+</table>
+<p>Do not choose a candidate because its declaration looks shorter in isolation.
+Compare provider authoring, importing clients, helpers, diagnostics, and the
+resulting checked representation. A generic foreign boundary may require a
+trusted primitive; SQLite-specific behavior should remain library material.</p>
+<h3 id="memory-descriptions">Memory descriptions</h3>
+<p>Start with explicit arena acquisition and typed allocation. Compare that with
+ordinary construction directed to an applicable scoped provider, as proposed
+in DN-0035. Determine how helpers and closures obtain the allocation context,
+how allocation effects appear in types, and how independent results escape.
+Nearest-region construction is a candidate, not an assumed rule.</p>
+<p>For data crossing the FFI, compare copying into independent storage with scoped
+borrowing. Retained access needs a stronger dependency than access lasting only
+for one call. Transferring arena ownership is not a candidate.</p>
+<p>Counting and tracing are later reclamation comparisons under the same scoped
+owner. Neither changes the owner's lifetime or permits dependent values to
+escape. They need not become a mandatory sequence or prerequisites for an arena
+proposal; every claim of generality must name the policies actually tested.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>The initial <a href="/ash/docs/design/provider-experiments/">experiment package</a> records the
+bounded plan, contract inventory, paired scenarios, surface/Core comparison,
+and worktree inputs. Its expected outcomes remain experimental; observed
+results must identify the checker or native harness that established them.</p>
+<h3 id="common-method-and-experimental-boundary">Common method and experimental boundary</h3>
+<p>Keep prototypes and their fixtures in an identified experimental directory or
+checkout. Before coding a slice, record the Ash revision, admitted source
+fragment, candidate contracts, trusted primitives, implementation steps,
+comparison cases, and reproducible commands. Record the native library version,
+build configuration, host ABI, and toolchain where applicable.</p>
+<p>Implement these experiments by extending the existing Ash compiler and runtime
+in a separate repository worktree under <code>.worktree/</code>. Use the current parser,
+resolver, elaborator, Core validator, and effect machine. Native helper tests
+may establish foreign behavior or allocation cost, but source examples must
+exercise Ash's existing driver and the experimental extensions to that pipeline.
+An isolated unsafe adapter is a foreign-call boundary, not another language
+implementation. A Rust wrapper's borrow checking does not establish Ash typing.
+Hand-constructed Core can isolate a question but is insufficient for syntax,
+inference, or library-authoring conclusions.</p>
+<p>For each case retain the source, expected admission or rejection, inferred and
+explicit information, diagnostic cause, resulting checked form, execution
+observations, and relevant costs. Cross module imports and generic helpers in
+the source corpus. Keep foreign calls behind one identifiable adapter so their
+assumptions and instrumentation can be reviewed.</p>
+<p>The dynamic account should use small-step configurations consistent with
+AD-0004. Any proposed product representation must have a path through resolved
+identities, typed elaboration, independent Core validation, transformations,
+and explicit machine execution under AD-0006 through AD-0008. An experimental
+shortcut must identify the missing correspondence rather than silently bypass
+these product boundaries.</p>
+<h3 id="surface-syntax-and-core-operational-semantics">Surface syntax and Core operational semantics</h3>
+<p>Each experiment must produce a candidate semantic delta alongside its executable
+evidence. It must connect surface programs to typed Core and to their execution,
+including the foreign or storage boundary. An authoring API and successful
+native calls are insufficient without this account.</p>
+<p>Always follow the types. Distinguish a resource type definition, which composes
+its provider, formal unique-identity parameter, effect interface, and handlers,
+from an expression establishing an initialized instance with a lexical lifetime.
+Derive input and state types, operation and handler types, outward effects,
+result types, and dependency rules before proposing their surface spelling.
+Reuse current effect and handler conventions where their contracts suffice.
+Lexical resource instances do not settle program-lifetime resources; global
+identity, initialization, publication, and shutdown remain separate questions.</p>
+<p>For surface syntax, describe any proposed foreign declarations, provider
+definitions, acquisition forms, allocation, and scoped access constructs. State
+their grammar, lexical implications, precedence, binder scopes, import/export
+behavior, and interaction with existing expressions and declarations. Compare
+reuse of current syntax with additions. If no new form is needed for a mechanism,
+show the ordinary definitions that express it and record that result explicitly.
+Label all new forms as experimental.</p>
+<p>For every candidate construct, retain a mapping to its resolution and typing
+rules, effect and dependency information, and elaborated Core representation.
+Distinguish syntax that erases into existing operations from behavior needing a
+new primitive, additional Core metadata, or changed rules for an existing node.
+Explain why the current closed builtin resource relation does or does not need
+to change. Do not add a Core operation merely to mirror a surface spelling.</p>
+<p>Extend the Core small-step account for each required behavior. Define the
+configuration components, values, ownership and access invariants, and terminal
+outcomes needed by the admitted fragment. Identify compile-time facts that erase
+and runtime state that remains; do not assume all borrowed access needs runtime
+tracking. Cover these transition questions:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Behavior</th>
+<th>Required operational account</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Establishment</td>
+<td>Order and scope of initialization and operand evaluation, partial acquisition, publication of authority, and entry into the body.</td>
+</tr>
+<tr>
+<td>Foreign invocation</td>
+<td>Argument preparation, the contracted host interaction, returned values or failure, and any committed external effects. State the host relation's assumptions rather than model arbitrary C execution as verified Ash.</td>
+</tr>
+<tr>
+<td>Storage and access</td>
+<td>Allocation and object initialization, aliasing, reads, writes, retained access, view creation, invalidation, copying, and capacity failure.</td>
+</tr>
+<tr>
+<td>Interpretation</td>
+<td>Exact instance selection, source-handler precedence, provider interpretation, and which interpretation context executes provider operations and completion.</td>
+</tr>
+<tr>
+<td>Control</td>
+<td>Capture and resume of owners and access obligations, checked discard, nested scopes, and required completion that cannot be skipped.</td>
+</tr>
+<tr>
+<td>Completion</td>
+<td>Normal return, owned abandonment, release order, and failures that consume an owner versus failures that leave it live. Distinguish source completion from internal host teardown.</td>
+</tr>
+</tbody>
+</table>
+<p>Use one-step rules with explained configuration and side conditions, following
+AD-0004 and the <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/project/notation.md">formal-notation guide</a>. State a proposed
+change in evaluation order or observation explicitly. Reused transitions should
+be identified as reused; candidate semantics must not arise solely from a host
+adapter's implementation or a test's expected output.</p>
+<p>Derive representative traces for both experiments and their shared cases. The
+checker must establish the invariants those transitions require. Verification
+must cover preservation and progress for the admitted fragment under its stated
+foreign assumptions, source-to-Core correspondence, and agreement between the
+operational account and the experimental machine. Negative source cases should
+reject before invalid native access. Existing transforms must preserve the new
+facts and independently validate their results.</p>
+<p>The candidate delta should identify the affected specification chapters:
+<a href="/ash/spec/lexical-structure/">lexical structure</a>,
+<a href="/ash/spec/syntax/">syntax</a>, <a href="/ash/spec/name-resolution/">name resolution</a>,
+<a href="/ash/spec/static-semantics/">static semantics</a>,
+<a href="/ash/spec/elaboration/">elaboration</a>, and
+<a href="/ash/spec/dynamic-semantics/">dynamic semantics</a>. Record unchanged areas
+where reuse is established. These are proposed updates; the normative files
+change only with the accepted product implementation and required evidence.</p>
+<h3 id="experiment-a-sqlite-provider">Experiment A: SQLite provider</h3>
+<h4 id="scope-and-foreign-contracts">Scope and foreign contracts</h4>
+<p>Use SQLite's C interface for a synchronous connection with nested prepared
+statements. Start with an in-memory database, then add a temporary file that is
+closed and reopened to demonstrate external persistence. Use integers and
+bytes for the initial data boundary. Record the minimal representation support
+needed for SQL, paths, lengths, and results; prototype encodings are not a
+decision about Ash strings or collections.</p>
+<p>The initial operation set should cover open, prepare, bind, step, read a column,
+reset or rebind, finalize, and close. Define the minimum supporting error and
+metadata queries from the actual calls used. Pin an exact SQLite build when
+the experiment runs. The following upstream contracts motivate cases:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Contract</th>
+<th>Pressure on the provider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://www.sqlite.org/c3ref/initialize.html">Initialization</a> may happen through ordinary entry calls; explicit shutdown requires all SQLite resources to have completed.</td>
+<td>Distinguish host-wide initialization from each connection. Imports remain passive; one connection must not claim authority to shut down another.</td>
+</tr>
+<tr>
+<td><a href="https://www.sqlite.org/c3ref/open.html">Opening</a> may produce a connection handle even when it reports failure.</td>
+<td>Dispose of partial acquisition before returning an Ash failure; publish authority only after successful establishment.</td>
+</tr>
+<tr>
+<td><a href="https://www.sqlite.org/c3ref/bind_blob.html">Binding</a> distinguishes a copy made before return from storage retained until rebinding or finalization. Reset does not clear bindings.</td>
+<td>Express temporary and retained access separately, including the point at which access is relinquished.</td>
+</tr>
+<tr>
+<td><a href="https://www.sqlite.org/c3ref/column_blob.html">Column results</a> require a valid row; returned byte views may be invalidated by stepping, resetting, finalizing, or conversion.</td>
+<td>Relate views to an access interval or protocol state, not merely to a live statement. Distinguish empty bytes, SQL null, and allocation failure.</td>
+</tr>
+<tr>
+<td><a href="https://www.sqlite.org/c3ref/finalize.html">Finalization</a> destroys the statement and may report its preceding evaluation error.</td>
+<td>Separate resource consumption from the reported outcome; an error does not always mean the owner remains live.</td>
+</tr>
+<tr>
+<td><a href="https://www.sqlite.org/c3ref/close.html">Close</a> can refuse while statements remain; deferred close has different destruction timing.</td>
+<td>Establish dependent completion order and preserve the native postcondition on failure. Do not hide a failed order by silently selecting deferred destruction.</td>
+</tr>
+</tbody>
+</table>
+<p>For SQLite's internal allocations, initially use its own allocation discipline.
+Model the Ash-visible ownership and release contract without claiming that all
+foreign storage belongs to an Ash arena. Allocator replacement is unnecessary
+for the first comparison; investigate it only if a retained case requires it.</p>
+<h4 id="sqlite-construction-sequence">SQLite construction sequence</h4>
+<ol>
+<li>Inventory the selected foreign calls and their preconditions, ownership,
+postconditions, error results, and invalidation behavior. Implement a narrow
+host adapter and observations for real acquisition and release. Distinguish
+injected failures from failures observed in the native library.</li>
+<li>Run a complete connection/statement program with copied inputs and outputs.
+Retain acquisition, typed requests, interpretation, and completion in the
+candidate provider description. A query hardcoded into a native builtin is
+only an adapter smoke test.</li>
+<li>Move the provider API and implementation into experimental library modules.
+Run an importing client and generic helper, then compare the three provider
+descriptions over the same checked behavior.</li>
+<li>Add retained input bytes and scoped column views. Make valid use convenient
+and reject mutation, invalidation, escape, or release that violates the
+active contract. Compare borrowing with the copying baseline.</li>
+<li>Exercise failure and control composition, then connect the retained-byte
+case to the arena experiment. State which memory guarantees come from each
+provider and which remain foreign assumptions.</li>
+</ol>
+<p>Use a fixture that binds arena-backed bytes, evaluates a parameterized statement,
+reads a scoped result view, copies the selected output, and completes statement,
+connection, and arena in a valid order. Its copying variant should remain usable
+when the borrowed variant's lifetime requirements cannot be satisfied.</p>
+<h4 id="required-sqlite-cases">Required SQLite cases</h4>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Required comparison or observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQL-01: lifecycle</td>
+<td>Successful acquisition, query, copied result, statement finalization, and connection close; repeat with two live connections and through imports.</td>
+</tr>
+<tr>
+<td>SQL-02: partial establishment</td>
+<td>Failed open or prepare publishes no usable owner; any partial native state has an identified completion path.</td>
+</tr>
+<tr>
+<td>SQL-03: retained input</td>
+<td>Valid retained bytes survive every foreign use; premature mutation or arena completion rejects. Reset is not mistaken for release of retained input.</td>
+</tr>
+<tr>
+<td>SQL-04: temporary output</td>
+<td>A view is usable in its admitted interval; invalidating operations and hidden escaping captures reject. Copied output remains usable.</td>
+</tr>
+<tr>
+<td>SQL-05: result and protocol</td>
+<td>Row, completion, error, empty bytes, and null remain distinct. Checked preconditions or runtime validation guard column access and numeric conversions.</td>
+</tr>
+<tr>
+<td>SQL-06: control and completion</td>
+<td>Capture/resume preserves owners; owned discard completes dependent resources in order. Required outside completion and running cleanup cannot be skipped.</td>
+</tr>
+<tr>
+<td>SQL-07: failure reporting</td>
+<td>Body and completion failures retain their relationship and order; consumed and still-live native owners are distinguished. No blanket retry or cleanup-success claim.</td>
+</tr>
+<tr>
+<td>SQL-08: library boundary</td>
+<td>Public summaries preserve the contracts needed by a client that lacks provider bodies. Forged provider facts or mismatched instances reject.</td>
+</tr>
+<tr>
+<td>SQL-09: external observation</td>
+<td>A temporary file retains the expected data across close/reopen; the test owns and removes its files. Record native calls separately from model traces.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="experiment-b-memory-and-region-resource">Experiment B: memory and region resource</h3>
+<h4 id="initial-arena-contract">Initial arena contract</h4>
+<p>Acquire an independently owned, fixed-capacity arena whose contents are opaque
+storage. Typed allocation produces access to objects within it. The candidate
+must define capacity units, metadata and alignment costs, initialization,
+overflow checks, and the outcome of insufficient space. Failed allocation must
+preserve existing objects and publish no partially initialized access.</p>
+<p>The initial arena reclaims storage at owner completion. Binding or dropping an
+alias does not relocate or individually free the object. Objects can share
+references while valid; opacity prevents fabrication of access from arbitrary
+addresses or integers. Typed operations expose contents without exposing raw
+storage. Decide stable-address requirements for foreign access explicitly.</p>
+<p>The owner remains scoped and cannot travel with returned objects. Independent
+copies may escape. An inner arena may hold access to outer storage while that
+owner remains live. Outer storage must not retain access to completed inner
+storage. Begin with conservative rejection of such inward dependencies; compare
+a scoped borrow only where its removal and captured uses can be established.</p>
+<p>Complete actions that use arena storage before reclaiming that storage. Bulk
+byte reclamation is not a substitute for required resource completion. First
+test ordinary data and closures, then a separately tracked resource whose
+cleanup accesses arena data. Do not assume every ordinary object has a
+destructor or that the arena should discover destructors by scanning objects.</p>
+<h4 id="memory-construction-sequence">Memory construction sequence</h4>
+<ol>
+<li>Define the bounded storage model and typed allocation operations. Compare
+one arena with repeated scratch arenas; retain allocation and release
+observations and capacity-boundary failures.</li>
+<li>Add shared immutable graphs, captured values, nested arenas, and generic
+helpers. Compare explicit allocation with the candidate default allocation
+context. Preserve ordinary binding and distinguish it from construction.</li>
+<li>Add scoped shared and exclusive access where concrete mutations require it.
+Exercise aliases and captured control, including a handler trying to use
+conflicting access while a borrow remains captured.</li>
+<li>Run the SQLite retained-input and output-view cases with this storage model.
+Measure copying, retained bytes, and author annotations against independent
+copies. Storage ownership and view validity must both be checked.</li>
+<li>Compare earlier reclamation within the same nontransportable owner when the
+arena cases are understood. A reference-counted provider is one candidate;
+cyclic graphs and hidden roots supply pressure for tracing or another policy.
+Record cycle behavior and actual guarantees. A collector implementation
+requires a newly bounded comparison within this experiment before coding.</li>
+</ol>
+<p>Ordinary immutable sharing must not require choosing a unique owner for every
+source alias. A candidate may infer dependencies or use scoped access types;
+any additional restriction needs a case that explains it. Cyclic data remains
+in the reference corpus even if one candidate requires additional construction
+support or cannot reclaim cycles early.</p>
+<h4 id="required-memory-cases">Required memory cases</h4>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Required comparison or observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MEM-01: capacity</td>
+<td>Exact-fit and insufficient-capacity allocations account for alignment and metadata, preserve earlier objects, and expose no partial value.</td>
+</tr>
+<tr>
+<td>MEM-02: sharing</td>
+<td>Repeated aliases, a persistent structure, and a shared cyclic graph remain valid for the owner's lifetime; bindings do not silently copy payloads.</td>
+</tr>
+<tr>
+<td>MEM-03: nesting</td>
+<td>An inner object can depend on outer storage; escaping inner access rejects through fields, helpers, evidence, and closures. Returning an outer projection can remain valid.</td>
+</tr>
+<tr>
+<td>MEM-04: copying</td>
+<td>Copy into independent storage preserves the stated value relationships. Define deep versus shallow copying, sharing, and cycle behavior for the admitted fragment.</td>
+</tr>
+<tr>
+<td>MEM-05: borrowing</td>
+<td>Compatible reads compose; conflicting mutation, invalidation, and release reject, including conflicts reached through aliases and effects.</td>
+</tr>
+<tr>
+<td>MEM-06: control</td>
+<td>Capture/resume retains storage and access obligations; owned abandonment performs required completion before release. Borrow checking cannot ignore suspended uses.</td>
+</tr>
+<tr>
+<td>MEM-07: scope restriction</td>
+<td>Returning an arena owner or an owner-plus-dependent package rejects. Keeping the owner alive through a source reference count is not an escape route.</td>
+</tr>
+<tr>
+<td>MEM-08: bounded retention</td>
+<td>Repeated completed scratch arenas release their storage. Distinguish payload, metadata, checker work, runtime bookkeeping, and native-library allocations.</td>
+</tr>
+<tr>
+<td>MEM-09: policy comparison</td>
+<td>For any later counting or tracing candidate, compare the same sharing, cycle, closure, failure, and completion cases. State roots, cycle limitations, and reclamation costs.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="type-checking-inference-and-provider-verification">Type checking, inference, and provider verification</h3>
+<p>For each candidate, give types and a small-step account before claiming safety.
+The target is compositional verification: checked clients satisfy the provider's
+preconditions, and checked provider operations preserve storage validity,
+access permissions, and completion obligations. State any assumptions on trusted
+primitives and foreign code. Tests supplement this argument.</p>
+<p>Use these questions to derive the typing rules rather than assuming a general
+borrow checker or proof language:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Information</th>
+<th>Inference and explicit-contract comparison</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resource and allocation identity</td>
+<td>Infer local relationships where possible; determine how generic signatures and module summaries preserve them.</td>
+</tr>
+<tr>
+<td>Stored and callable dependencies</td>
+<td>Propagate actual retained access through values, selected methods, and control; identify annotations needed when bodies are unavailable.</td>
+</tr>
+<tr>
+<td>Effect and interpretation requirements</td>
+<td>Infer outward rows and exact instances; explicitly describe primitive effects and required completion interpretation.</td>
+</tr>
+<tr>
+<td>Access and invalidation</td>
+<td>Compare inferred usage with declared read, write, retain, and invalidate contracts. Foreign bodies cannot supply source-based inference.</td>
+</tr>
+<tr>
+<td>State transitions and failure</td>
+<td>Specify which outcomes create, retain, or consume authority. Check branch joins and rollback of partial establishment.</td>
+</tr>
+<tr>
+<td>Representation</td>
+<td>Declare the foreign layout, encoding, width, alignment, and address requirements; check conversions and call-site compatibility.</td>
+</tr>
+<tr>
+<td>Numeric and external conditions</td>
+<td>Use runtime checks where values or foreign results decide validity. Determine whether checked results introduce typed evidence for later use.</td>
+</tr>
+<tr>
+<td>Provider correctness</td>
+<td>Identify checkable implementation obligations and explicit external assumptions. Ordinary interface evidence must not stand in for an arbitrary safety proof.</td>
+</tr>
+</tbody>
+</table>
+<p>Type checking must rule out the admitted fragment's invalid access and
+completion patterns; it need not predict allocation success or external I/O
+results. Runtime checks may establish facts consumed by checked code. Document
+whether the checker infers them, requires annotations, or rejects an otherwise
+safe program because its reasoning is incomplete.</p>
+<p>Compare checking with provider bodies present and with only authenticated public
+contracts. Include recursive and higher-order helpers within the admitted
+fragment, branch-sensitive use, and malformed evidence. Establish preservation
+of the candidate invariant and progress relative to explicit foreign contracts;
+do not claim termination or eventual release of divergent programs.</p>
+<p>Before a product proposal relies on a property, connect its source checking to
+the retained typed representation and concrete operations. Check independent
+validation and preservation across the existing transforms. Record finite
+checker work and structured exhaustion, so a safety result does not depend on
+an unbounded analysis or an unspecified runtime registry.</p>
+<h3 id="syntax-and-developer-experience">Syntax and developer experience</h3>
+<p>Write complete examples for both library authors and callers. Every candidate
+must show declaration, import, acquisition, provider state, operation coverage,
+handler installation, invocation, error handling, and completion. Include a
+generic helper and one diagnostic repair. Label candidate syntax explicitly.</p>
+<p>Measure repeated declarations, required annotations, exposed lifetime or state
+parameters, conversion code, and effort to locate a rejected dependency.
+Compare the same behavior and information, not unequal examples with hidden
+work inside native code. Explain which surface forms erase to ordinary library
+definitions and which need a new checking or execution rule.
+Include parse and resolution examples for each addition, paired with its Core
+mapping and operational trace. Convenient syntax must preserve the behavior
+established by the semantic comparison.</p>
+<h3 id="foreign-library-development-blueprint">Foreign-library development blueprint</h3>
+<p>Derive a worked blueprint from the SQLite implementation and revise it after
+the memory interaction cases. It should let another author reproduce:</p>
+<ol>
+<li>Inventory the foreign API, supported native versions, ABI, and initialization.</li>
+<li>State ownership, retained access, invalidation, failure, and release contracts.</li>
+<li>Define the Ash values, opaque access, effects, operations, and resource types.</li>
+<li>Implement conversions and foreign calls behind the stated trusted boundary.</li>
+<li>Assemble acquisition, handlers, dependencies, and completion into a provider.</li>
+<li>Export contracts sufficient for independent client checking.</li>
+<li>Build, link, import, test, diagnose, and update the binding reproducibly.</li>
+</ol>
+<p>Every step should reference a real fixture or artifact. Distinguish generated
+facts, author-supplied contracts, proved obligations, and assumed native behavior.
+Record limitations. Validate transfer by applying the procedure to the arena's
+native allocation boundary and by a walkthrough of one contrasting foreign API;
+a second complete library binding is not required by this initial experiment.</p>
+<h3 id="tooling-investigation">Tooling investigation</h3>
+<p>Keep an authoring log of repetition, errors, manual checks, and difficult
+diagnoses. Derive tools from those observations:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Developer activity</th>
+<th>Candidate assistance and evidence of value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bind symbols and representations</td>
+<td>Generate mechanical signatures and check layouts; compare with hand-authored bindings. Missing semantic contracts remain visible.</td>
+</tr>
+<tr>
+<td>Describe provider contracts</td>
+<td>Check completeness and consistency; trace retained access or invalidation errors to the responsible declaration.</td>
+</tr>
+<tr>
+<td>Assemble a provider</td>
+<td>Generate justified forwarding or lifecycle boilerplate; verify generated code through the same checking boundary.</td>
+</tr>
+<tr>
+<td>Build and link</td>
+<td>Record native inputs and configurations; diagnose missing symbols and incompatible representations with a reproducible fixture.</td>
+</tr>
+<tr>
+<td>Investigate behavior</td>
+<td>Observe acquisition, access, copying, and release; inject failures and retain minimal counterexamples.</td>
+</tr>
+<tr>
+<td>Maintain a binding</td>
+<td>Detect changed foreign signatures or build assumptions and identify contracts requiring review.</td>
+</tr>
+</tbody>
+</table>
+<p>For each recommendation state the observed problem, minimal useful tool,
+remaining author judgment, and measured reduction in work or ambiguity.
+Separate syntax problems from tooling problems. A small experimental utility
+is sufficient to test a recommendation; a general package manager, binding
+generator, or IDE is not a prerequisite.</p>
+<h2 id="stages-deliverables-and-completion">Stages, deliverables, and completion</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Stage</th>
+<th>Work and exit evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Establish cases</td>
+<td>Pin the source and native inputs, inventory contracts, and write paired valid/invalid scenarios. Identify representation gaps and the initial surface-to-Core semantic questions.</td>
+</tr>
+<tr>
+<td>2. Build independent baselines</td>
+<td>Run a copying SQLite bridge and a fixed arena with typed allocation. Separate native behavior observations from proposed Ash behavior.</td>
+</tr>
+<tr>
+<td>3. Check candidate descriptions</td>
+<td>Define candidate grammar, resolution, typing, Core mapping, and small-step rules. Execute checked examples, compare syntax and inference, and cross imports and generic helpers.</td>
+</tr>
+<tr>
+<td>4. Compose memory and foreign access</td>
+<td>Run retained bytes, temporary views, copying, borrowing, and continuation/completion cases through both providers. Resolve counterexamples or record bounded rejection.</td>
+</tr>
+<tr>
+<td>5. Evaluate reuse</td>
+<td>Compare memory policies only where needed for the intended claim; complete the blueprint, tooling trials, cost report, and language-versus-library analysis.</td>
+</tr>
+<tr>
+<td>6. Prepare adoption</td>
+<td>Retain the supported surface syntax and Core operational delta, specification obligations, library APIs, architectural choices, remaining gaps, and proposed product checkpoints.</td>
+</tr>
+</tbody>
+</table>
+<p>The first two baselines can progress independently after the shared case
+inventory. Their integration determines later typing and implementation work.
+Revise the next bounded slice when evidence changes the question. These stages
+are experiment guidance, not an accepted product implementation plan.</p>
+<p>Retain an evidence report with reproducible commands, results for each named
+case, counterexamples, checking limitations, costs, and unresolved assumptions.
+Candidate surface syntax and its Core mapping, the operational account, the
+authoring blueprint, and tooling recommendations are required outputs even if
+the semantic candidate fails. Record negative findings as experiment results
+rather than weakening cases until a candidate passes.</p>
+<p>An experiment is complete when it answers its bounded questions with this
+evidence. A successful candidate additionally admits the required useful cases,
+rejects the prohibited cases, connects its safety argument to execution, and
+has a credible implementation and library-authoring path. Partial success must
+name the supported fragment; it does not establish a general FFI or memory model.</p>
+<h2 id="path-into-ash-and-its-standard-library">Path into Ash and its standard library</h2>
+<p>Design the experiments for eventual adoption by identifying the smallest
+language mechanism that supports ordinary library implementations of both
+cases. Use this allocation of responsibility as a hypothesis to test:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Layer</th>
+<th>Candidate responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Language and checking</td>
+<td>Scoped authority, dependencies, access rules, effects, provider installation, and the contracts that public signatures must preserve.</td>
+</tr>
+<tr>
+<td>Trusted runtime and foreign boundary</td>
+<td>Native calls, representation checks, primitive storage operations, and execution support that cannot be ordinary Ash code.</td>
+</tr>
+<tr>
+<td>Standard library</td>
+<td>Reusable resource/provider definitions, scoped arenas, typed views, conversions, and completion/reporting helpers supported by accepted language rules.</td>
+</tr>
+<tr>
+<td>SQLite library</td>
+<td>SQLite operations, protocol and error mapping, native contracts, and database-specific policy. Evaluate inclusion as an optional standard-library component or separately distributed library.</td>
+</tr>
+<tr>
+<td>Developer tools</td>
+<td>Binding assistance, build integration, diagnostics, and validation utilities justified by the experiments.</td>
+</tr>
+</tbody>
+</table>
+<p>Standard-library authors should use the proposed public mechanisms. Each
+required compiler privilege needs a named safety reason and a negative test.
+An implementation that requires a new compiler resource kind for every library
+has not established reusable library-defined provision. Conversely, avoiding a
+primitive is not a success if it hides unchecked authority in generated code.</p>
+<p>The adoption report must include:</p>
+<ul>
+<li>the semantic delta from the current specification, including any changes to
+ordinary allocation, rank-1 boundaries, effects, or module summaries;</li>
+<li>proposed surface grammar and binding rules, elaboration for each addition,
+and Core configuration and transition updates with representative derivations;</li>
+<li>a source-to-Core account, validation and transform obligations, runtime
+invariants, and preservation of current Pure and Effect behavior;</li>
+<li>public library examples, documented costs and failures, compatibility and
+migration cases, and reproducible native build requirements;</li>
+<li>a simplification audit against the existing cell and native-buffer mechanisms,
+with evidence before proposing their replacement;</li>
+<li>supported targets and foreign versions, explicit trust assumptions, and gaps
+that prevent broader claims.</li>
+</ul>
+<p>Then follow the <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/project/artifacts.md">artifact guide</a>: semantic changes need
+an accepted change proposal; converged non-language architecture needs a
+decision. Authorized tasks own detailed product execution plans. Implement each
+coherent product checkpoint with parsing and resolution cases, typing and Core
+validation tests, operational traces, applicable proof or correspondence
+evidence, specification and library documentation, and full verification.
+Any changed surface syntax and Core operational semantics must be specified in
+the same product checkpoint as their implementation. Integrating that accepted
+product checkpoint into <code>main</code> establishes current Ash behavior. Retaining a
+bounded experiment is a separate action and grants no such authority.</p>
+<p>Possible checkpoints are a checked foreign boundary and scoped provision,
+scoped arena allocation and access, and library APIs with developer tooling.
+Their order and split depend on the demonstrated dependencies; every retained
+checkpoint must be usable and preserve its complete safety contract. A SQLite
+example should continue to exercise the language/standard-library combination
+after adoption, so the reusable mechanism is tested by an external library.</p>
+<p>Bounded scope does not require a disposable implementation. Retain useful
+extensions to existing Ash on the experiment branch with reproducible inputs,
+comparison results, and stated limitations. Successful code may become the basis
+of the product implementation after it satisfies the accepted contract and
+product checks. Discard or replace failed candidate machinery when justified by
+the findings; preserve its useful counterexamples. Retention alone establishes
+neither current language semantics nor production authority.</p>
+<p>Do not merge unsuccessful candidate machinery into <code>main</code>. A successful
+experiment proceeds through the adoption work above using the useful retained
+implementation. Failure does not require deleting its branch or evidence.</p>
+<p>On 2026-10-08 the user separately authorized consolidating the completed,
+verified common, SQLite and selected arena deliveries and retaining them in
+<code>main</code>, conditional on combined verification. This is an explicit experimental
+retention checkpoint, not product adoption. Keep the experimental entry points,
+fixtures, semantic delta, trusted foreign assumptions and limitations identified;
+leave <code>spec/</code> unchanged. The accepted proposal, architectural decisions and
+product correspondence work described above remain required for adoption.
+Exclude unsuccessful optimization candidates and the paused Lean and Core
+one-shot work from that integration. Preserve their histories and unrelated
+working drafts during cleanup. The <a href="/ash/docs/design/provider-experiments/execution/">execution record</a>
+records completed capabilities and the actual integration and verification
+receipts; this authorization does not imply that the final gate has passed.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What minimum rule makes library-defined acquisition authoritative without
+turning ordinary interface evidence into unchecked resource authority?</li>
+<li>Which surface additions are necessary, and what minimum Core configuration
+and transition changes implement them without duplicating existing behavior?</li>
+<li>Can the provider's supplied body remain expressible within current rank-1
+source positions, or does a scoped binder need a new typing rule?</li>
+<li>Which dependencies and usage relationships can inference recover across
+helpers and modules, and which public contracts need explicit expression?</li>
+<li>What distinguishes owner lifetime from a shorter access interval or protocol
+state without burdening every ordinary alias?</li>
+<li>How can source handler overrides preserve the access contracts of a storage
+provider, including while conflicting authority is captured?</li>
+<li>Which allocation-context and result-copying rules keep native Ash code
+convenient while exposing costs and failure behavior?</li>
+<li>What provider properties can checking establish directly, what evidence needs
+a separate checker, and what is necessarily assumed about foreign primitives?</li>
+<li>What is the smallest public language and runtime boundary that lets both
+experiments become maintained libraries without case-specific compiler paths?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#stages-deliverables-and-completion">Stages, deliverables, and completion</a><a href="#path-into-ash-and-its-standard-library">Path into Ash and its standard library</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">← DN-0035: Region Memory Management and Verified Providers</a><a rel="next" href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037: Ash-Authored Foreign-Library Interfaces →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

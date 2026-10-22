@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./effects-introduction.html" rel="next">
+<link href="./libraries-wrapping-a-representation.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Supplying scoped evidence · Ash</title><meta name="description" content="A module newtype gives a representation a meaning shared by that module's clients. Sometimes a calculation needs a distinction only within one block. A local newtype gives the following code a nominal identity…"><meta name="robots" content="index, follow"><meta property="og:title" content="Supplying scoped evidence · Ash"><meta property="og:description" content="A module newtype gives a representation a meaning shared by that module's clients. Sometimes a calculation needs a distinction only within one block. A local newtype gives the following code a nominal identity…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Supplying scoped evidence · Ash"><meta name="twitter:description" content="A module newtype gives a representation a meaning shared by that module's clients. Sometimes a calculation needs a distinction only within one block. A local newtype gives the following code a nominal identity…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/libraries-supplying-scoped-evidence.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/libraries-supplying-scoped-evidence.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Supplying scoped evidence","headline":"Supplying scoped evidence","description":"A module newtype gives a representation a meaning shared by that module's clients. Sometimes a calculation needs a distinction only within one block. A local newtype gives the following code a nominal identity…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/libraries-supplying-scoped-evidence.html","@id":"https://dikini.github.io/ash/study/latest/libraries-supplying-scoped-evidence.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/supplying-scoped-evidence/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./libraries-introduction.html">Design library abstractions in Ash</a></li><li class="breadcrumb-item"><a href="./libraries-supplying-scoped-evidence.html"><span class="chapter-title">Supplying scoped evidence</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#consume-a-local-distinction-inside-its-block" id="toc-consume-a-local-distinction-inside-its-block" class="nav-link active" data-scroll-target="#consume-a-local-distinction-inside-its-block">Consume a local distinction inside its block</a></li>
+  <li><a href="#a-closure-may-retain-a-value-without-exposing-its-type" id="toc-a-closure-may-retain-a-value-without-exposing-its-type" class="nav-link" data-scroll-target="#a-closure-may-retain-a-value-without-exposing-its-type">A closure may retain a value without exposing its type</a></li>
+  <li><a href="#supply-the-exact-method-needed-here" id="toc-supply-the-exact-method-needed-here" class="nav-link" data-scroll-target="#supply-the-exact-method-needed-here">Supply the exact method needed here</a></li>
+  <li><a href="#a-module-nominal-does-not-establish-a-local-key" id="toc-a-module-nominal-does-not-establish-a-local-key" class="nav-link" data-scroll-target="#a-module-nominal-does-not-establish-a-local-key">A module nominal does not establish a local key</a></li>
+  <li><a href="#availability-follows-the-occurrences-source-scope" id="toc-availability-follows-the-occurrences-source-scope" class="nav-link" data-scroll-target="#availability-follows-the-occurrences-source-scope">Availability follows the occurrence’s source scope</a></li>
+  <li><a href="#separate-scopes-can-supply-different-methods" id="toc-separate-scopes-can-supply-different-methods" class="nav-link" data-scroll-target="#separate-scopes-can-supply-different-methods">Separate scopes can supply different methods</a></li>
+  <li><a href="#retain-a-selected-method-in-an-outward-function" id="toc-retain-a-selected-method-in-an-outward-function" class="nav-link" data-scroll-target="#retain-a-selected-method-in-an-outward-function">Retain a selected method in an outward function</a></li>
+  <li><a href="#practice-trace-scope-and-capture" id="toc-practice-trace-scope-and-capture" class="nav-link" data-scroll-target="#practice-trace-scope-and-capture">Practice: trace scope and capture</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./libraries-introduction.html">Design library abstractions in Ash</a></li><li class="breadcrumb-item"><a href="./libraries-supplying-scoped-evidence.html"><span class="chapter-title">Supplying scoped evidence</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Supplying scoped evidence</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>A module newtype gives a representation a meaning shared by that module’s clients. Sometimes a calculation needs a distinction only within one block. A local newtype gives the following code a nominal identity without making that identity part of the block’s outward contract.</p>
+<p>Once that local type exists, the block may supply exact interface behavior for it. The supplied methods can use values already available there. Their availability follows the source scope, and selected methods become ordinary functions used by the checked calculation.</p>
+<section id="consume-a-local-distinction-inside-its-block" class="level2">
+<h2 class="anchored" data-anchor-id="consume-a-local-distinction-inside-its-block">Consume a local distinction inside its block</h2>
+<p><code>01-local-value.ash</code> introduces <code>Points</code> only for the remainder of <code>main</code>’s body:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>main : Unit -&gt; Int
+main () = {
+    newtype Points = Points(Int)
+    let points = Points(40)
+    match points {
+        Points(value) =&gt; value + 2
+    }
+}</code></pre>
+<p>The representation is <code>Int</code>, as for the module newtype in the preceding chapter. Construction and the pattern explicitly cross that boundary. The local identity must stay out of the block’s outward type. Follow the pattern and arithmetic to predict the returned amount, then identify what type leaves the block. Run from this lesson’s <code>src</code> directory:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 01-local-value.ash
+42 : Int</code></pre>
+<p>The pattern unwraps <code>40</code>, and the body adds two to return <code>42 : Int</code>. No <code>Points</code> identity occurs in that result type.</p>
+<p>A local declaration is sequential: its nominal type and constructor enter the following scope together. It has no <code>pub</code> form and cannot become a recursive group member. Its identity belongs to this lexical declaration; executing the block does not allocate a fresh runtime identity or a resource owner.</p>
+</section>
+<section id="a-closure-may-retain-a-value-without-exposing-its-type" class="level2">
+<h2 class="anchored" data-anchor-id="a-closure-may-retain-a-value-without-exposing-its-type">A closure may retain a value without exposing its type</h2>
+<p><code>02-returned-closure.ash</code> returns a calculation over a captured local value:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>make_adder : Int -&gt; Int -&gt; Int
+make_adder amount = {
+    newtype Offset = Offset(Int)
+    let offset = Offset(amount)
+    fn(value) {
+        match offset {
+            Offset(saved) =&gt; saved + value
+        }
+    }
+}
+
+main : Unit -&gt; Int
+main () = make_adder 40 2</code></pre>
+<p>The result of <code>make_adder 40</code> has type <code>Int -&gt; Int</code>. The returned function captures <code>offset</code> and unwraps it when called, but its parameter and result do not expose <code>Offset</code>. Predict the amount retained when <code>make_adder</code> receives <code>40</code>, then the result when that returned function receives <code>2</code>. Run it:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 02-returned-closure.ash
+42 : Int</code></pre>
+<p>The closure unwraps its saved <code>40</code> and adds its argument <code>2</code>, producing <code>42</code>. This is an ordinary retained value and closure. The local newtype has no release obligation. Its representation may remain in a function environment when the function’s outward type is independent of the local nominal identity.</p>
+<p>Returning the local value itself crosses a different boundary:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>main : Unit -&gt; Int
+main () = {
+    let escaped = {
+        newtype Token = Token(Int)
+        Token(42)
+    }
+    0
+}</code></pre>
+<p>Compare the inner block’s result type with the outward function type of <code>make_adder</code>. Which expression exposes a local identity beyond its declaration’s scope here? Predict whether leaving <code>escaped</code> unused changes that boundary:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 04-identity-escape.ash
+This type or effect row exposes a local nominal type outside its scope.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/04-identity-escape.ash:5:9
+5 |         Token(42)
+  |         ^ This type or effect row exposes a local nominal type outside its scope.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/04-identity-escape.ash:4:9
+4 |         newtype Token = Token(Int)
+  |         ^ This scope owns the local nominal type.
+reason: type.local-nominal-escape</code></pre>
+<p>The escaping expression has type <code>Token</code>, and the related label identifies the declaration whose scope would end. The unused name <code>escaped</code> does not hide that outward type. Return an unwrapped integer, or an identity-free function such as <code>make_adder</code>’s result.</p>
+<p>The check includes function domains and results, aggregate members, schemes, requirements, and effect rows. Returning a local value together with a function that unwraps it does not create an implicit package hiding the identity. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#local-nominal-scope">local nominal rules</a> define this boundary.</p>
+</section>
+<section id="supply-the-exact-method-needed-here" class="level2">
+<h2 class="anchored" data-anchor-id="supply-the-exact-method-needed-here">Supply the exact method needed here</h2>
+<p>A local nominal can identify an exact interface application. In <code>03-exact-method.ash</code>, <code>Read&lt;A, B&gt;</code> uses <code>A</code> to determine its result type <code>B</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>interface Read&lt;A, B&gt; where A -&gt; B {
+    read : A -&gt; B
+}
+
+forward : A -&gt; B where Read&lt;A, B&gt;
+forward value = read value
+
+main : Unit -&gt; Int
+main () = {
+    newtype Token = Token(Int)
+    let token = Token(40)
+    let offset = 2
+    with Read&lt;Token, Int&gt; {
+        read (Token(value)) = value + offset
+    }
+    forward token
+}</code></pre>
+<p><code>with Read&lt;Token, Int&gt;</code> supplies one complete application, not a generic implementation head. Its <code>read</code> method unwraps a <code>Token</code> and adds the preceding <code>offset</code> value. The source becomes available only after every supplied method has checked; <code>forward token</code> is in that following remainder.</p>
+<p>Identify the complete requirement at <code>forward token</code> and the preceding declaration that supplies it. Which ordinary value does the supplied method capture? Follow its calculation to predict the result before running it:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 03-exact-method.ash
+42 : Int</code></pre>
+<p>The method unwraps <code>40</code> and adds the captured <code>offset</code>, which is two. At the call, the token fixes the selection key. The exact <code>Read&lt;Token, Int&gt;</code> source determines the result as <code>Int</code> and supplies the required method. Inside <code>forward</code>, its ordinary declared requirement carries that method to <code>read</code>. The global helper uses the supplied behavior without naming the local type.</p>
+<p>This retains the earlier library model: a generic helper declares its requirement, and the caller supplies evidence. <code>with</code> adds a lexical source for one exact relation. It does not infer a new requirement or initiate local implementation search.</p>
+<p>The application must be explicit and have no unresolved inference choices. Its key must contain an active local nominal. Here <code>Token</code> is the determinant; for an interface without an edge, all arguments form the key. A local nominal under another type constructor also counts, but one appearing only in a dependent result does not.</p>
+</section>
+<section id="a-module-nominal-does-not-establish-a-local-key" class="level2">
+<h2 class="anchored" data-anchor-id="a-module-nominal-does-not-establish-a-local-key">A module nominal does not establish a local key</h2>
+<p>Compare the earlier local declaration with a module-level <code>Token</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>interface Read&lt;A, B&gt; where A -&gt; B {
+    read : A -&gt; B
+}
+
+forward : A -&gt; B where Read&lt;A, B&gt;
+forward value = read value
+
+newtype Token = Token(Int)
+
+main : Unit -&gt; Int
+main () = {
+    with Read&lt;Token, Int&gt; {
+        read (Token(value)) = value
+    }
+    forward (Token(42))
+}</code></pre>
+<p>Identify the selection key in <code>Read&lt;Token, Int&gt;</code>, then locate the declaration that owns its nominal identity. Does that declaration supply an active local nominal? Predict which source occurrence the checker will mark:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 05-no-local-key.ash
+This evidence declaration needs an active local nominal type in its selection key: the determinant arguments, or all arguments when there is no determination edge.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/05-no-local-key.ash:12:10
+12 |     with Read&lt;Token, Int&gt; {
+   |          ^ This evidence declaration needs an active local nominal type in its selection key: the determinant arguments, or all arguments when there is no determination edge.
+reason: evidence.missing-local-key</code></pre>
+<p>The diagnostic marks the exact application and states which positions form its key. This <code>Token</code> is a module nominal, not an active local declaration. Move the newtype back inside the block for the original scoped behavior. For behavior belonging to a module type, use an ordinary implementation in an owning module, following the preceding lessons.</p>
+<p><code>with</code> does not bypass module ownership or coherence rules. Abstract evidence from a function’s declared requirement and exact current-implementation evidence retain precedence over lexical evidence. Lexical evidence precedes matching concrete implementations; it does not rewrite those contracts.</p>
+</section>
+<section id="availability-follows-the-occurrences-source-scope" class="level2">
+<h2 class="anchored" data-anchor-id="availability-follows-the-occurrences-source-scope">Availability follows the occurrence’s source scope</h2>
+<p>The evidence source applies to the following remainder, including function bodies defined there. Compare that scope with this call’s position:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>interface Read&lt;A, B&gt; where A -&gt; B {
+    read : A -&gt; B
+}
+
+forward : A -&gt; B where Read&lt;A, B&gt;
+forward value = read value
+
+main : Unit -&gt; Int
+main () = {
+    newtype Token = Token(Int)
+    let token = Token(40)
+    let before = forward token
+    with Read&lt;Token, Int&gt; {
+        read (Token(value)) = value + 2
+    }
+    before
+}</code></pre>
+<p>At <code>forward token</code>, which evidence declarations are already available? Predict whether the later <code>with</code> can supply this occurrence, then run the source:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 06-before-evidence.ash
+No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/06-before-evidence.ash:12:18
+12 |     let before = forward token
+   |                  ^ No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/06-before-evidence.ash:5:1
+5 | forward : A -&gt; B where Read&lt;A, B&gt;
+  | ^ This declaration introduced the interface requirement.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/06-before-evidence.ash:1:1
+1 | interface Read&lt;A, B&gt; where A -&gt; B {
+  | ^ This interface participates in the failing evidence selection.
+2 |     read : A -&gt; B
+  | ^ This interface participates in the failing evidence selection.
+3 | }
+  | ^ This interface participates in the failing evidence selection.
+reason: constraint.unsatisfied</code></pre>
+<p>The call in <code>before</code> is outside the following remainder. Its labels lead back to <code>forward</code>’s required relation. The final <code>before</code> expression and <code>main</code>’s <code>Int</code> result annotation fix the complete requirement to <code>Read&lt;Token, Int&gt;</code>. What remains missing is evidence available at the call’s original position. Moving the evidence declaration before that call supplies the source. The compiler preserves an occurrence’s original lexical scope even when it finishes inference later.</p>
+<p>Supplied method bodies can capture preceding ordinary values and use preceding evidence. The new source is not available inside its own supplied bodies, so it grants no implicit recursive or sibling method selection. If a method needs a recursive helper, define an appropriately annotated local recursive function earlier, using the rules from Learn.</p>
+</section>
+<section id="separate-scopes-can-supply-different-methods" class="level2">
+<h2 class="anchored" data-anchor-id="separate-scopes-can-supply-different-methods">Separate scopes can supply different methods</h2>
+<p>Two simultaneously active sources cannot supply the same key:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>interface Read&lt;A, B&gt; where A -&gt; B {
+    read : A -&gt; B
+}
+
+forward : A -&gt; B where Read&lt;A, B&gt;
+forward value = read value
+
+main : Unit -&gt; Int
+main () = {
+    newtype Token = Token(Int)
+    with Read&lt;Token, Int&gt; {
+        read (Token(value)) = value + 1
+    }
+    with Read&lt;Token, Int&gt; {
+        read (Token(value)) = value + 2
+    }
+    forward (Token(40))
+}</code></pre>
+<p>Mark the remainder governed by each <code>with</code>. Which earlier source remains active when the checker reaches the second declaration? Compare their keys to predict which two locations the checker needs to relate:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 07-duplicate-evidence.ash
+An active evidence declaration already supplies this exact interface application.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/07-duplicate-evidence.ash:14:10
+14 |     with Read&lt;Token, Int&gt; {
+   |          ^ An active evidence declaration already supplies this exact interface application.
+  --&gt; /path/to/ash-doc/content/libraries/supplying-scoped-evidence/src/07-duplicate-evidence.ash:11:10
+11 |     with Read&lt;Token, Int&gt; {
+   |          ^ The earlier active evidence declaration is here.
+reason: evidence.duplicate</code></pre>
+<p>The two labels identify the overlapping declarations. The second does not shadow the first. Remove one source when a single interpretation is intended. For two independent calculations with different interpretations, use disjoint blocks:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>interface Read&lt;A, B&gt; where A -&gt; B {
+    read : A -&gt; B
+}
+
+forward : A -&gt; B where Read&lt;A, B&gt;
+forward value = read value
+
+main : Unit -&gt; (Int, Int)
+main () = {
+    newtype Token = Token(Int)
+    let token = Token(40)
+    let first = {
+        with Read&lt;Token, Int&gt; {
+            read (Token(value)) = value + 1
+        }
+        forward token
+    }
+    let second = {
+        with Read&lt;Token, Int&gt; {
+            read (Token(value)) = value + 2
+        }
+        forward token
+    }
+    (first, second)
+}</code></pre>
+<p>Follow each call using only the <code>with</code> source active in its block. Predict the pair’s values and explain why one block’s method cannot change the other:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 08-disjoint-scopes.ash
+(41, 42) : (Int, Int)</code></pre>
+<p>The first method computes <code>40 + 1</code> and the second computes <code>40 + 2</code>, giving <code>(41, 42)</code>. <code>Token</code> remains in scope around both calculations, but each <code>with</code> applies only inside its own following remainder. Neither source becomes available to a new call after its block.</p>
+<p>For a determined interface, simultaneously active equal keys with different dependent result types also conflict. Distinct local declarations remain distinct nominal keys even if they use the same representation.</p>
+</section>
+<section id="retain-a-selected-method-in-an-outward-function" class="level2">
+<h2 class="anchored" data-anchor-id="retain-a-selected-method-in-an-outward-function">Retain a selected method in an outward function</h2>
+<p>Lexical availability of new calls is separate from retaining a method already selected for a closure:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>interface Read&lt;A, B&gt; where A -&gt; B {
+    read : A -&gt; B
+}
+
+forward : A -&gt; B where Read&lt;A, B&gt;
+forward value = read value
+
+make_reader : Int -&gt; Unit -&gt; Int
+make_reader amount = {
+    newtype Token = Token(Int)
+    let token = Token(amount)
+    let offset = 2
+    with Read&lt;Token, Int&gt; {
+        read (Token(value)) = value + offset
+    }
+    fn(ignored) {
+        forward token
+    }
+}
+
+main : Unit -&gt; Int
+main () = make_reader 40 ()</code></pre>
+<p>The function body occurs in the remainder after <code>with</code>. Use that source scope to identify the method selected for <code>forward token</code>, then trace the values it needs when called. Predict the result and check whether the returned <code>Unit -&gt; Int</code> type exposes <code>Token</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 09-retained-method.ash
+42 : Int</code></pre>
+<p>The selected method adds its captured two to the token’s saved <code>40</code>, producing <code>42</code>. The checked closure retains the method function, its <code>offset</code> capture, and the local token needed for the call. Its outward type exposes only <code>Unit -&gt; Int</code>.</p>
+<p>After <code>make_reader</code> returns, calling this closure uses those retained ordinary functions and values. It does not search the caller’s block for evidence or export a new evidence fact that other calls can select.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#scoped-exact-evidence">scoped evidence rules</a> distinguish selecting in a lexical scope from retaining the selected functions. Local nominals and exact evidence add no acquisition, resource release, or permission to export resource access. Those separate obligations belong to the effects and resources path.</p>
+</section>
+<section id="practice-trace-scope-and-capture" class="level2">
+<h2 class="anchored" data-anchor-id="practice-trace-scope-and-capture">Practice: trace scope and capture</h2>
+<p>Start each task with a fresh copy in a scratch directory: use <code>03-exact-method.ash</code> for task one, <code>08-disjoint-scopes.ash</code> for task two, and <code>09-retained-method.ash</code> for tasks three and four.</p>
+<ol type="1">
+<li>Change the <code>offset</code> in <code>03-exact-method.ash</code>. Predict the result and explain how <code>forward</code> receives behavior without knowing that local binding.</li>
+<li>In <code>08-disjoint-scopes.ash</code>, make the second method multiply by two. Predict both fields before running it, then explain which source supplies each method.</li>
+<li>Construct two readers with different inputs using <code>make_reader</code>, then call both in <code>main</code> and update its result annotation. Predict the pair and which ordinary values each closure retains, then check the observation.</li>
+<li>Reason about returning the local constructor from <code>make_reader</code>. Write its outward function type on paper and identify any local identity it contains. Compare that boundary with the current <code>Unit -&gt; Int</code> result.</li>
+</ol>
+<p>In every run, the local machinery stayed invisible at the boundary: the results were plain <code>42</code> and <code>(41, 42)</code>, the rejected sources were marked at their own occurrences, and each <code>with</code> governed only the code that followed it. Continue with the <a href="./cases-introduction.html">algorithm and effect Cases</a> to use explicit capabilities while deriving calculations, invariants, and costs.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./libraries-wrapping-a-representation.html" class="pagination-link" aria-label="Wrapping a representation">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Wrapping a representation</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./effects-introduction.html" class="pagination-link" aria-label="Working with effects and scoped resources">
+        <span class="nav-page-text">Working with effects and scoped resources</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

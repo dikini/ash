@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-round-tripping-tagged-frames.html" rel="next">
+<link href="./cases-checking-proposed-edits.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Cancel a stable sort · Ash</title><meta name="description" content="A comparison budget can stop a sort before it has an answer. That creates two separate promises: a completed result must put records in the intended order, and a cancelled result must report only the comparison work…"><meta name="robots" content="index, follow"><meta property="og:title" content="Cancel a stable sort · Ash"><meta property="og:description" content="A comparison budget can stop a sort before it has an answer. That creates two separate promises: a completed result must put records in the intended order, and a cancelled result must report only the comparison work…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Cancel a stable sort · Ash"><meta name="twitter:description" content="A comparison budget can stop a sort before it has an answer. That creates two separate promises: a completed result must put records in the intended order, and a cancelled result must report only the comparison work…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-cancelling-a-stable-sort.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-cancelling-a-stable-sort.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Cancel a stable sort","headline":"Cancel a stable sort","description":"A comparison budget can stop a sort before it has an answer. That creates two separate promises: a completed result must put records in the intended order, and a cancelled result must report only the comparison work…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-cancelling-a-stable-sort.html","@id":"https://dikini.github.io/ash/study/latest/cases-cancelling-a-stable-sort.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/cancelling-a-stable-sort/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-cancelling-a-stable-sort.html"><span class="chapter-title">Cancel a stable sort</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#choose-the-records-and-the-complete-result" id="toc-choose-the-records-and-the-complete-result" class="nav-link active" data-scroll-target="#choose-the-records-and-the-complete-result">Choose the records and the complete result</a></li>
+  <li><a href="#insert-an-earlier-record-into-its-sorted-tail" id="toc-insert-an-earlier-record-into-its-sorted-tail" class="nav-link" data-scroll-target="#insert-an-earlier-record-into-its-sorted-tail">Insert an earlier record into its sorted tail</a></li>
+  <li><a href="#calculate-the-seven-comparisons" id="toc-calculate-the-seven-comparisons" class="nav-link" data-scroll-target="#calculate-the-seven-comparisons">Calculate the seven comparisons</a></li>
+  <li><a href="#bound-source-work-after-naming-its-unit" id="toc-bound-source-work-after-naming-its-unit" class="nav-link" data-scroll-target="#bound-source-work-after-naming-its-unit">Bound source work after naming its unit</a></li>
+  <li><a href="#stop-before-the-next-comparison" id="toc-stop-before-the-next-comparison" class="nav-link" data-scroll-target="#stop-before-the-next-comparison">Stop before the next comparison</a></li>
+  <li><a href="#an-ordered-result-can-still-be-unstable" id="toc-an-ordered-result-can-still-be-unstable" class="nav-link" data-scroll-target="#an-ordered-result-can-still-be-unstable">An ordered result can still be unstable</a></li>
+  <li><a href="#one-permission-request-gets-one-continuation-use" id="toc-one-permission-request-gets-one-continuation-use" class="nav-link" data-scroll-target="#one-permission-request-gets-one-continuation-use">One permission request gets one continuation use</a></li>
+  <li><a href="#practice-preserve-the-intended-promise" id="toc-practice-preserve-the-intended-promise" class="nav-link" data-scroll-target="#practice-preserve-the-intended-promise">Practice: preserve the intended promise</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-cancelling-a-stable-sort.html"><span class="chapter-title">Cancel a stable sort</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Cancel a stable sort</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>A comparison budget can stop a sort before it has an answer. That creates two separate promises: a completed result must put records in the intended order, and a cancelled result must report only the comparison work already allowed. Calling an unfinished sequence sorted would hide the distinction.</p>
+<p>Continue from <a href="./cases-searching-ordered-tree.html">ordered tree search</a>, <a href="./cases-measuring-tree-search.html">measuring comparisons</a>, and <a href="./cases-bounding-search-work.html">bounded search</a>. Those Cases separated an ordering invariant, a named unit of work, and a handler that can stop further work. Here the algorithm also preserves the input order of equal-priority records. That property is called <em>stability</em>.</p>
+<section id="choose-the-records-and-the-complete-result" class="level2">
+<h2 class="anchored" data-anchor-id="choose-the-records-and-the-complete-result">Choose the records and the complete result</h2>
+<p>A record has a priority and an identifier. Choose three priorities, ordered <code>Low</code>, then <code>Normal</code>, then <code>High</code>. This is our application’s relation, defined by the comparator below; constructor declaration order supplies no such rule. Identifiers let us recognize records and the original order of ties. They do not participate in comparison.</p>
+<p>Use this input, with slash notation meaning priority and identifier:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Normal/1, Low/2, Normal/3, High/4, Low/5</code></pre>
+<p>The intended result is <code>Low/2, Low/5, Normal/1, Normal/3, High/4</code>. Low records retain input IDs <code>2,5</code>; Normal records retain <code>1,3</code>. Preserving every complete record is a separate requirement from putting its priority in order. A result that lost one Low record could be ordered without being a permutation of the input.</p>
+<p>Derive two interfaces from complete versus cancelled work. Sorting returns <code>Records</code>; only finishing that calculation allows its caller to construct <code>Sorted(records)</code>. A handler that abandons it returns <code>Cancelled</code> instead. Before comparing two records, insertion requests <code>Compare.allow : Unit -&gt; Unit</code>. An answer lets that comparison run; discard abandons the pending comparison and the waiting <code>Sorted</code> construction.</p>
+<p>We will return a triple: result, used comparison count, and a comparison trace. The count belongs to the permission policy. The trace records operand IDs and the ordering actually returned by the comparator. Keeping both observations will show whether denied permission accidentally ran a comparison.</p>
+</section>
+<section id="insert-an-earlier-record-into-its-sorted-tail" class="level2">
+<h2 class="anchored" data-anchor-id="insert-an-earlier-record-into-its-sorted-tail">Insert an earlier record into its sorted tail</h2>
+<p>Sort the tail first, then insert the original head into that result. Assume the recursive result has three properties:</p>
+<ul>
+<li>its priorities are ordered by our fixed comparator;</li>
+<li>it contains exactly the tail’s complete records; and</li>
+<li>equal-priority records remain in their original tail order.</li>
+</ul>
+<p>Insertion must preserve those properties while adding the head. If the current tail record has lower priority, retain it and insert into the remaining tail. If it has equal or greater priority, put the incoming record before it. At an empty tail, construct a singleton. Sorting the tail first and inserting the head into that sorted result is the <em>insertion sort</em> algorithm.</p>
+<p>The equal case follows from the recursion direction. The incoming head occurred before every record in its original tail, including equal-priority ones. Inserting it before the first equal preserves that earlier position. Inserting it after equals would reverse their order as successive earlier heads are added.</p>
+<p>These cases also preserve all records. The stopping case adds the incoming record and retains the current record and rest. The advancing case retains the current record while the recursive insertion adds the incoming one. The empty case adds just that one record. With the ordered-tail assumption, advancing passes only lower-priority records and stopping leaves no smaller record after the inserted head. The recursive calls consume smaller finite lists.</p>
+<p>Keep the representation, comparator, insertion, and budget handler in <code>sort.ash</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import @builtin.cell as Cell
+
+pub type Priority = Low
+    | Normal
+    | High
+pub type Record = Record(Priority, Int)
+pub type Records = End
+    | More(Record, Records)
+pub type Ordering = Before
+    | Same
+    | After
+pub type Result = Sorted(Records)
+    | Cancelled
+pub type Comparisons = Done
+    | Comparison(Int, Int, Ordering, Comparisons)
+
+pub effect Compare {
+    allow : Unit -&gt; Unit
+}
+
+pub effect Trace {
+    compared : (Int, Int, Ordering) -&gt; Unit
+}
+
+order : (Priority, Priority) -&gt; Ordering
+order (Low, Low) = Same
+order (Low, Normal) = Before
+order (Low, High) = Before
+order (Normal, Low) = After
+order (Normal, Normal) = Same
+order (Normal, High) = Before
+order (High, Low) = After
+order (High, Normal) = After
+order (High, High) = Same
+
+pub compare : (Record, Record) -&gt; Ordering ! {Trace}
+compare (Record(left, left_id), Record(right, right_id)) = {
+    let ordering = order (left, right)
+    let ignored = perform Trace.compared (left_id, right_id, ordering)
+    ordering
+}
+
+pub insert : (Record, Records) -&gt; Records ! {Compare, Trace}
+insert (record, End) = More(record, End)
+insert (record, More(current, rest)) = {
+    let ignored = perform Compare.allow ()
+    match compare (record, current) {
+        Before =&gt; More(record, More(current, rest))
+        Same =&gt; More(record, More(current, rest))
+        After =&gt; More(current, insert (record, rest))
+    }
+}
+
+pub stable_sort : Records -&gt; Records ! {Compare, Trace}
+stable_sort End = End
+stable_sort (More(record, rest)) = {
+    let ordered_tail = stable_sort rest
+    insert (record, ordered_tail)
+}
+
+pub sample : Unit -&gt; Records
+sample () = More (
+    Record(Normal, 1), More (
+        Record(Low, 2), More (
+            Record(Normal, 3), More (
+                Record(High, 4), More(Record(Low, 5), End)
+            )
+        )
+    )
+)
+
+pub equals : Unit -&gt; Records
+equals () = More (
+    Record(Normal, 11), More (
+        Record(Normal, 12), More(Record(Normal, 13), End)
+    )
+)
+
+pub run : (Records, Int) -&gt; (Result, Int, Comparisons)
+run (records, budget) = resource cell&lt;R&gt; used = 0 {
+    handle {
+        let result = handle (Sorted (stable_sort records)) with Compare {
+            allow () =&gt; match Cell.read used == budget {
+                true =&gt; {
+                    let ignored = discard
+                    Cancelled
+                }
+                false =&gt; {
+                    let count = Cell.read used
+                    let ignored = Cell.write (used, count + 1)
+                    resume ()
+                }
+            }
+        }
+        (result, Cell.read used, Done)
+    } with Trace {
+        compared (left_id, right_id, ordering) =&gt; {
+            let (result, count, later) = resume ()
+            (result, count, Comparison(left_id, right_id, ordering, later))
+        }
+    }
+}</code></pre>
+<p>The nine equations for <code>order</code> define the finite relation explicitly. <code>compare</code> computes that ordering, records it through <code>Trace.compared</code>, and returns it. In each nonempty insertion step, <code>Compare.allow</code> precedes the call to <code>compare</code>. Empty insertion needs neither permission nor a comparison. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#effect-handlers-and-completion">evaluation rules</a> explain why a denied request never reaches the expression following it when its continuation is discarded.</p>
+<p>The <code>run</code> policy assumes a nonnegative budget. Its cell starts at zero and increases by one on each admitted comparison until equality reaches the limit. The denial branch increments nothing. It discards the owned continuation and returns <code>Cancelled</code>; it does not fabricate a partial <code>Sorted</code> value. The cell surrounds both handlers, so its previous writes remain available when <code>run</code> reads the used count.</p>
+<p>The trace handler resumes once before prepending its current observation to the later trace. Thus later budget decisions do not leave that clause’s capability unconsumed, and the returned trace follows actual comparison order. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#effects">effect rules</a> check consumption and whether discard can close this owned work. They do not establish the sort’s ordering or stability.</p>
+</section>
+<section id="calculate-the-seven-comparisons" class="level2">
+<h2 class="anchored" data-anchor-id="calculate-the-seven-comparisons">Calculate the seven comparisons</h2>
+<p>Before running, work from the end of the input toward its beginning. Inserting <code>Low/5</code> into empty needs no comparison. <code>High/4</code> passes <code>Low/5</code>. <code>Normal/3</code> passes <code>Low/5</code> and stops before <code>High/4</code>. <code>Low/2</code> stops before equal <code>Low/5</code>. Finally, <code>Normal/1</code> passes the two Low records and stops before equal <code>Normal/3</code>. The count is <code>0 + 1 + 2 + 1 + 3 = 7</code>.</p>
+<p>Here is the complete comparison sequence derived from those insertions. <code>Before</code>, <code>Same</code>, and <code>After</code> compare the left record’s priority with the right record’s priority:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Call</th>
+<th style="text-align: left;">Left ID</th>
+<th style="text-align: left;">Right ID</th>
+<th style="text-align: left;">Ordering</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><code>4</code></td>
+<td style="text-align: left;"><code>5</code></td>
+<td style="text-align: left;"><code>After</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><code>3</code></td>
+<td style="text-align: left;"><code>5</code></td>
+<td style="text-align: left;"><code>After</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;"><code>3</code></td>
+<td style="text-align: left;"><code>4</code></td>
+<td style="text-align: left;"><code>Before</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><code>2</code></td>
+<td style="text-align: left;"><code>5</code></td>
+<td style="text-align: left;"><code>Same</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">5</td>
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;"><code>2</code></td>
+<td style="text-align: left;"><code>After</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">6</td>
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;"><code>5</code></td>
+<td style="text-align: left;"><code>After</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">7</td>
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;"><code>3</code></td>
+<td style="text-align: left;"><code>Same</code></td>
+</tr>
+</tbody>
+</table>
+<p>Check the result against an independent pure calculation. <code>reference.ash</code> filters the input separately for Low, Normal, and High, preserving order in each pass, then concatenates those three groups. It shares the record representation but uses neither insertion nor the comparator:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import sort as Sort
+
+keep_low : Sort.Records -&gt; Sort.Records
+keep_low Sort.End = Sort.End
+keep_low (Sort.More(record, rest)) = {
+    let Sort.Record(priority, ignored_id) = record
+    match priority {
+        Sort.Low =&gt; Sort.More(record, keep_low rest)
+        other =&gt; keep_low rest
+    }
+}
+
+keep_normal : Sort.Records -&gt; Sort.Records
+keep_normal Sort.End = Sort.End
+keep_normal (Sort.More(record, rest)) = {
+    let Sort.Record(priority, ignored_id) = record
+    match priority {
+        Sort.Normal =&gt; Sort.More(record, keep_normal rest)
+        other =&gt; keep_normal rest
+    }
+}
+
+keep_high : Sort.Records -&gt; Sort.Records
+keep_high Sort.End = Sort.End
+keep_high (Sort.More(record, rest)) = {
+    let Sort.Record(priority, ignored_id) = record
+    match priority {
+        Sort.High =&gt; Sort.More(record, keep_high rest)
+        other =&gt; keep_high rest
+    }
+}
+
+append : (Sort.Records, Sort.Records) -&gt; Sort.Records
+append (Sort.End, right) = right
+append (Sort.More(record, rest), right) = Sort.More (
+    record, append (rest, right)
+)
+
+pub grouped : Sort.Records -&gt; Sort.Records
+grouped records = append (
+    keep_low records, append (keep_normal records, keep_high records)
+)</code></pre>
+<p>Each filter retains an entire selected record before filtering the rest, so it preserves the selected records’ input order. The three constructors cover all priorities exactly once across the filters. Concatenating the groups in the chosen order therefore supplies an independent stable reference for this finite priority domain.</p>
+<p>Enter <code>cancelling-a-stable-sort/src</code> from the Cases directory. Predict the complete result and count of <code>01-complete.ash</code>, then run it:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import sort as Sort
+import reference as Reference
+
+main : Unit -&gt; ((Sort.Result, Int, Sort.Comparisons), Sort.Records)
+main () = {
+    let records = Sort.sample ()
+    (Sort.run (records, 7), Reference.grouped records)
+}</code></pre>
+<p>Run <code>ash 01-complete.ash</code>. It returns a pair whose first field is the result, count, and trace triple; the second is the reference sequence. The trace matches the seven rows above, the used count is <code>7</code>, and the result constructor is <code>Sorted</code>. The following table summarizes every complete record in both returned sequences; tuple and list structure are omitted:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 20%">
+<col style="width: 17%">
+<col style="width: 24%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Position</th>
+<th style="text-align: left;">Sorted priority</th>
+<th style="text-align: left;">Sorted ID</th>
+<th style="text-align: left;">Reference priority</th>
+<th style="text-align: left;">Reference ID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">0</td>
+<td style="text-align: left;"><code>Low</code></td>
+<td style="text-align: left;"><code>2</code></td>
+<td style="text-align: left;"><code>Low</code></td>
+<td style="text-align: left;"><code>2</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><code>Low</code></td>
+<td style="text-align: left;"><code>5</code></td>
+<td style="text-align: left;"><code>Low</code></td>
+<td style="text-align: left;"><code>5</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><code>Normal</code></td>
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;"><code>Normal</code></td>
+<td style="text-align: left;"><code>1</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;"><code>Normal</code></td>
+<td style="text-align: left;"><code>3</code></td>
+<td style="text-align: left;"><code>Normal</code></td>
+<td style="text-align: left;"><code>3</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><code>High</code></td>
+<td style="text-align: left;"><code>4</code></td>
+<td style="text-align: left;"><code>High</code></td>
+<td style="text-align: left;"><code>4</code></td>
+</tr>
+</tbody>
+</table>
+<p>Agreement with the reference is one observation. Comparing these complete records with the original also checks preservation and per-priority input order. The invariant argument explains why insertion preserves those properties for every finite input under the fixed relation; this one run checks the chosen example and its exact seven-call calculation.</p>
+</section>
+<section id="bound-source-work-after-naming-its-unit" class="level2">
+<h2 class="anchored" data-anchor-id="bound-source-work-after-naming-its-unit">Bound source work after naming its unit</h2>
+<p>The seven calls describe one finite input. To obtain a general bound, let an insertion receive an ordered tail of length <code>m</code>. It makes at most <code>m</code> comparisons and reconstructs the passed prefix. The stopping case constructs both <code>More(record, ...)</code> and the current list node; reaching empty constructs one node. Altogether one insertion constructs at most <code>m + 1</code> list nodes.</p>
+<p>Sorting <code>n</code> records inserts into tails of lengths <code>0</code> through <code>n - 1</code>. Consequently, comparisons are bounded by <code>n(n - 1)/2</code> and cumulative newly constructed record-list nodes by <code>n(n + 1)/2</code>. The original nodes and unused tails are immutable; these allocation counts do not describe peak live memory or physical stack use. The trace adds one observation node per comparison.</p>
+<p>Three possible priorities still permit quadratic work. Consider <code>k</code> High records followed by <code>k</code> Low records. Sorting the Low block keeps it together. Each earlier High must pass all <code>k</code> Low records before reaching the High group or the end. Those crossings alone contribute <code>k * k</code> comparisons and prefix reconstruction. This is a source-work argument using comparisons and constructor operations as units; it is not a timing benchmark or a claim about evaluator handler search and physical representation costs.</p>
+<p>Insertion keeps its equality position and charge point visible. A merge sort would offer a different work bound, but would need separate splitting, merging, and tie-order arguments. The present algorithm answers this smaller question with those two decisions next to each other.</p>
+</section>
+<section id="stop-before-the-next-comparison" class="level2">
+<h2 class="anchored" data-anchor-id="stop-before-the-next-comparison">Stop before the next comparison</h2>
+<p><code>02-budgets.ash</code> runs the same input with budgets zero, six, seven, and eight. Predict which budget first permits a complete sort. Also predict whether a denied request appears in the returned trace:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import sort as Sort
+
+main : Unit -&gt; (
+    (Sort.Result, Int, Sort.Comparisons),
+    (Sort.Result, Int, Sort.Comparisons),
+    (Sort.Result, Int, Sort.Comparisons),
+    (Sort.Result, Int, Sort.Comparisons)
+)
+main () = {
+    let records = Sort.sample ()
+    (
+        Sort.run (records, 0), Sort.run (records, 6),
+        Sort.run (records, 7), Sort.run (records, 8)
+    )
+}</code></pre>
+<p>Run <code>ash 02-budgets.ash</code>. It returns four result/count/trace triples in budget order. The table summarizes those fields from this one captured result. Trace rows refer to the complete seven-row table above:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Budget</th>
+<th style="text-align: left;">Result constructor</th>
+<th style="text-align: left;">Used</th>
+<th style="text-align: left;">Trace rows</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>0</code></td>
+<td style="text-align: left;"><code>Cancelled</code></td>
+<td style="text-align: left;"><code>0</code></td>
+<td style="text-align: left;">None</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>6</code></td>
+<td style="text-align: left;"><code>Cancelled</code></td>
+<td style="text-align: left;"><code>6</code></td>
+<td style="text-align: left;">1–6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>7</code></td>
+<td style="text-align: left;"><code>Sorted</code></td>
+<td style="text-align: left;"><code>7</code></td>
+<td style="text-align: left;">1–7</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>8</code></td>
+<td style="text-align: left;"><code>Sorted</code></td>
+<td style="text-align: left;"><code>7</code></td>
+<td style="text-align: left;">1–7</td>
+</tr>
+</tbody>
+</table>
+<p>Both completed results contain the same complete records shown above. At six, the next comparison would be <code>Normal/1</code> against <code>Normal/3</code>. The handler denies its permission request, so that seventh call is absent and the result is <code>Cancelled</code>. At seven, that call runs and insertion completes without another request. A larger budget does not force an extra comparison.</p>
+<p>Cancellation reports earlier allowed work without returning a partial sequence. Discard does not undo the counter writes or earlier trace entries. The selected continuation contains pending insertion work and the final <code>Sorted</code> construction; abandoning it prevents both from finishing. These are synchronous permission points in this calculation, not asynchronous interrupts.</p>
+<p>Small inputs check the boundary where no comparison is needed, and three identical priorities make the stability condition visible:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import sort as Sort
+
+main : Unit -&gt; (
+    (Sort.Result, Int, Sort.Comparisons),
+    (Sort.Result, Int, Sort.Comparisons),
+    (Sort.Result, Int, Sort.Comparisons)
+)
+main () = (
+    Sort.run (Sort.End, 0),
+    Sort.run (Sort.More(Sort.Record(Sort.High, 9), Sort.End), 0),
+    Sort.run (Sort.equals (), 2)
+)</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 03-small-inputs.ash
+((Sorted(End), 0, Done), (Sorted(More(Record(High, 9), End)), 0, Done), (Sorted(More(Record(Normal, 11), More(Record(Normal, 12), More(Record(Normal, 13), End)))), 2, Comparison(12, 13, Same, Comparison(11, 12, Same, Done)))) : ((Result, Int, Comparisons), (Result, Int, Comparisons), (Result, Int, Comparisons))</code></pre>
+<p>The empty and singleton inputs complete with budget zero and an empty trace. The three Normal records retain IDs <code>11,12,13</code>. Their two comparisons both stop at equality, first inserting <code>12</code> before <code>13</code>, then <code>11</code> before <code>12</code>.</p>
+</section>
+<section id="an-ordered-result-can-still-be-unstable" class="level2">
+<h2 class="anchored" data-anchor-id="an-ordered-result-can-still-be-unstable">An ordered result can still be unstable</h2>
+<p>Change only the equality action: after <code>Same</code>, retain the current record and continue inserting. <code>04-unstable.ash</code> uses this alternative with the same three equal-priority records. Its handlers permit every comparison and ignore the trace:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import sort as Sort
+
+insert_after : (
+    Sort.Record, Sort.Records
+) -&gt; Sort.Records ! {Sort.Compare, Sort.Trace}
+insert_after (record, Sort.End) = Sort.More(record, Sort.End)
+insert_after (record, Sort.More(current, rest)) = {
+    let ignored = perform Sort.Compare.allow ()
+    match Sort.compare (record, current) {
+        Sort.Before =&gt; Sort.More(record, Sort.More(current, rest))
+        Sort.Same =&gt; Sort.More(current, insert_after (record, rest))
+        Sort.After =&gt; Sort.More(current, insert_after (record, rest))
+    }
+}
+
+unstable_sort : Sort.Records -&gt; Sort.Records ! {Sort.Compare, Sort.Trace}
+unstable_sort Sort.End = Sort.End
+unstable_sort (Sort.More(record, rest)) = {
+    let ordered_tail = unstable_sort rest
+    insert_after (record, ordered_tail)
+}
+
+main : Unit -&gt; Sort.Records
+main () = handle {
+    handle (unstable_sort (Sort.equals ())) with Sort.Compare {
+        allow () =&gt; resume ()
+    }
+} with Sort.Trace {
+    compared ignored =&gt; resume ()
+}</code></pre>
+<p>Predict the ID order before running. Does satisfying the types also preserve our tie-order invariant?</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 04-unstable.ash
+More(Record(Normal, 13), More(Record(Normal, 12), More(Record(Normal, 11), End))) : Records</code></pre>
+<p>The priority sequence remains ordered and all complete records survive, but the IDs are reversed. Tail-first recursion inserts each earlier equal record after all the later ones. This is an accepted sorting counterexample. The compiler checks the effects and connected value types; the definition of <code>Records</code> does not certify stability, and a <code>Sorted</code> constructor would not certify it either.</p>
+</section>
+<section id="one-permission-request-gets-one-continuation-use" class="level2">
+<h2 class="anchored" data-anchor-id="one-permission-request-gets-one-continuation-use">One permission request gets one continuation use</h2>
+<p>The unstable program makes a wrong algorithmic choice. A handler that tries to resume the same permission request twice crosses a different boundary. <code>05-double-resume.ash</code> isolates that mistake without the sorting data:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>effect Compare {
+    allow : Unit -&gt; Unit
+}
+
+main : Unit -&gt; Unit
+main () = handle (perform Compare.allow ()) with Compare {
+    allow () =&gt; {
+        let ignored = resume ()
+        resume ()
+    }
+}</code></pre>
+<p>The first <code>resume ()</code> runs the waiting work. Identify what right remains before the second use, then inspect the complete message from the same <code>src</code> directory:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 05-double-resume.ash
+This path has already resumed or discarded the continuation; it cannot do so again.
+  --&gt; /path/to/ash-doc/content/cases/cancelling-a-stable-sort/src/05-double-resume.ash:9:9
+9 |         resume ()
+  |         ^ This path has already resumed or discarded the continuation; it cannot do so again.
+reason: effect.resume-already-consumed</code></pre>
+<p>The label selects the second <code>resume ()</code>. The preceding resumption has already consumed this clause’s capability, so it cannot be used again. The secondary reason is <code>effect.resume-already-consumed</code>. Under the <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#effects">effect rules</a>, returning the ordinary result of the first resumption is permitted; a second resumption is not an alternative way to explore another answer.</p>
+<p><code>06-single-resume.ash</code> makes that repair and uses the handler around the full sort. Each request resumes once; the clause then returns the result it received:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import sort as Sort
+
+main : Unit -&gt; Sort.Result
+main () = handle {
+    handle (Sort.Sorted (Sort.stable_sort (Sort.sample ()))) with Sort.Compare {
+        allow () =&gt; {
+            let result = resume ()
+            result
+        }
+    }
+} with Sort.Trace {
+    compared ignored =&gt; resume ()
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 06-single-resume.ash
+Sorted(More(Record(Low, 2), More(Record(Low, 5), More(Record(Normal, 1), More(Record(Normal, 3), More(Record(High, 4), End)))))) : Result</code></pre>
+<p>Alternatives require ordinary data representing choices or a fresh call to the calculation. They cannot reuse a consumed continuation. These full diagnostic words and source labels describe this edition’s tool presentation; the consumption requirement is the language boundary. Neither that requirement nor the successful repaired run establishes the sorting invariant by itself.</p>
+</section>
+<section id="practice-preserve-the-intended-promise" class="level2">
+<h2 class="anchored" data-anchor-id="practice-preserve-the-intended-promise">Practice: preserve the intended promise</h2>
+<p>Make scratch copies outside this lesson’s <code>src</code> directory. Keep <code>sort.ash</code> and <code>reference.ash</code> beside entries that import them, and predict each result before running the changed program.</p>
+<ol type="1">
+<li>Move <code>Low/5</code> to the front of the main sample. Derive the new trace and determine which equal-priority ID order must be preserved.</li>
+<li>Give the three-equal-record input a budget of one. Predict both the result and the recorded comparison prefix.</li>
+<li>In the unstable example, change only its <code>Same</code> arm to the stable action. Explain why that one branch repairs the equal-priority result for this recursion direction.</li>
+<li>Add a fourth priority to your scratch copies. Identify which comparator equations, reference filters, and invariant premises need to change before claiming a complete stable order.</li>
+</ol>
+<p>A complete sort promises ordering, preservation, and stable ties only because its algorithm maintains those properties. A cancelled run promises an explicit absence of a completed result and a count of allowed comparison work. The next question is how to check that a representation survives a round trip when its producer and consumer use different calculations.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-checking-proposed-edits.html" class="pagination-link" aria-label="Check proposed edits">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Check proposed edits</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-round-tripping-tagged-frames.html" class="pagination-link" aria-label="Round-trip a tagged frame">
+        <span class="nav-page-text"><span class="chapter-title">Round-trip a tagged frame</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

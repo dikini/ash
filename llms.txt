@@ -1,0 +1,47 @@
+# Ash
+
+> Ash programming language: current specification, tools, study material, and development records.
+
+The language specification defines current rules. Design notes are informative research; an accepted architectural decision does not establish a language feature. Imported docs and the website compiler checkpoint can use different revisions. Study pages state their compiler target.
+
+## Discover
+
+- [Ash — Explore the language](https://dikini.github.io/ash/index.md): A statically typed functional language where types, effects, and resources are declared in the program. Read a complete program, take the tour, and explore the current implementation.
+- [Meet Ash](https://dikini.github.io/ash/discover/index.md): A typed functional language connecting programs, behavior, and reasoning.
+- [Documentation](https://dikini.github.io/ash/docs/index.md): Build the tool, run a program, and find the right source for a precise answer.
+- [A short tour of Ash](https://dikini.github.io/ash/learn/tour/index.md): Three complete programs. A first look at values, data, and how computations ask for things.
+- [A clear view of where Ash stands](https://dikini.github.io/ash/status/index.md): Implemented capabilities, bounded experiments, and the work still ahead.
+- [Take time to understand the program](https://dikini.github.io/ash/study/index.md): Read the latest Ash study material here: connected lessons, executable examples, and worked cases.
+
+## Specification
+
+- [Ash Specification](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/README.md): This directory is the canonical Ash specification. It is normative and describes exactly the implemented language and runtime behavior.
+- [Dynamic Semantics](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/dynamic-semantics.md): Ash evaluation is defined by one deterministic small-step relation over configurations CONFIG(heap, environment, control, continuation). The heap is fresh for one evaluation and maps numeric locations to tuples,…
+- [Elaboration](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/elaboration.md): Elaboration converts resolved surface syntax into typed semantic terms used by the dynamic semantics. Each term has its structural type and a causal source origin. Elaboration does not change the result prescribed by…
+- [Lexical Structure](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/lexical-structure.md): An Ash source file is UTF-8 text. Ash identifiers, reserved words, punctuation, module paths, and integer spellings use ASCII characters. Quoted strings may contain UTF-8 text. A byte order mark is not part of the…
+- [Name Resolution](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/name-resolution.md): Name resolution gives each module, nominal type, constructor, interface, method, anonymous implementation, requirement, type parameter, and term binder an identity and connects every occurrence to exactly one such…
+- [Static Semantics](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/static-semantics.md): Ash has Int, Bool, Unit, String, Bytes, rigid type variables, structural tuples, parameterized nominal algebraic data types, unary functions, and effect rows. A tuple contains at least two element types. A function…
+- [Syntax](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/syntax.md): Each Ash source file defines one unnamed passive static module. A module contains zero or more imports followed by zero or more declarations. It has no module header, source-declared signature, or file result…
+
+## Tools
+
+- [Ash Tools](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/tools/README.md): Ash currently provides one executable:
+- [The ash Executable](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/tools/ash.md): ash loads and runs one modular Ash program:
+
+## Study
+
+- [Ash documentation](https://dikini.github.io/ash/study/latest/): The book begins with small calculations and follows how their data and functions connect. Work through the programs, predict their results, and use the observations to explain each step. Read as HTML; original Markdown is not public.
+- [Reader setup](https://dikini.github.io/ash/study/latest/setup.html): The learning path uses the ash command-line tool. You need Git and a Rust toolchain that includes Cargo. Clone Ash with its Git URL, select the exact commit for this edition, and build it: Read as HTML; original Markdown is not public.
+
+## Design notes
+
+- [Design notes](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/README.md): Design notes record exploration, research, alternatives, experiments, tradeoffs, uncertainty, and future architectural pressure. They are informative and do not define Ash semantics or accept architecture. A note may…
+
+## Architectural decisions
+
+- [Architectural decisions](https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/decisions/README.md): Architectural decisions record accepted non-language choices after exploration converges. They may cover parser architecture, Core representation, compiler passes, repository workflow, or implementation tooling. They…
+
+## Complete catalogue and provenance
+
+- [Content catalogue](https://dikini.github.io/ash/content-index.json): All public reading pages, Markdown URLs, document status, relationships, and exact source revisions.
+- [Build manifest](https://dikini.github.io/ash/build-manifest.json): Resolved documentation revisions and pinned build inputs.

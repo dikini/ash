@@ -1,0 +1,677 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Explicit Kinds and Higher-Kinded Parameter Evidence · Ash</title><meta name="description" content="This report records implementation evidence for the second bounded lib-ash increment: explicit kinds and higher-kinded declaration parameters. It is informative, not normative. The Ash specification alone defines the…"><meta name="robots" content="index, follow"><meta property="og:title" content="Explicit Kinds and Higher-Kinded Parameter Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for the second bounded lib-ash increment: explicit kinds and higher-kinded declaration parameters. It is informative, not normative. The Ash specification alone defines the…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Explicit Kinds and Higher-Kinded Parameter Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for the second bounded lib-ash increment: explicit kinds and higher-kinded declaration parameters. It is informative, not normative. The Ash specification alone defines the…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/lib-ash/kinds-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/lib-ash/kinds-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/kinds-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Explicit Kinds and Higher-Kinded Parameter Evidence","headline":"Explicit Kinds and Higher-Kinded Parameter Evidence","description":"This report records implementation evidence for the second bounded lib-ash increment: explicit kinds and higher-kinded declaration parameters. It is informative, not normative. The Ash specification alone defines the…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/lib-ash/kinds-evidence/","@id":"https://dikini.github.io/ash/docs/design/lib-ash/kinds-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/kinds-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="explicit-kinds-and-higher-kinded-parameter-evidence" data-pagefind-meta="title">Explicit Kinds and Higher-Kinded Parameter Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/kinds-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report records implementation evidence for the second bounded <code>lib-ash</code>
+increment: explicit kinds and higher-kinded declaration parameters. It is
+informative, not normative. The <a href="/ash/spec/">Ash specification</a>
+alone defines the current language. Git history retains the accepted proposal,
+task, design record, and execution plans removed after the reviewed product
+checkpoints retained their results.</p>
+<p>This report alone did not close the complete <code>lib-ash</code> milestone. At the second-
+increment checkpoint, method-local type parameters, multi-parameter interfaces,
+determination, associated outputs, defaults, the combined library corpus, and
+the final library simplification audit remained separate work. Later integrated
+increments close the revised milestone without changing this report's evidence
+scope. This increment received no <code>lib-ash</code> tag.</p>
+<h2 id="scope-and-checkpoints">Scope and checkpoints</h2>
+<p>The branch starts from integrated explicit-import checkpoint <code>a1647ff</code>. Its
+principal unsigned product checkpoints are:</p>
+<ul>
+<li><code>a6cae23</code>, which retains explicit kind syntax and declaration binder lists;</li>
+<li><code>f71424e</code>, which replaces saturated semantic nominal applications with one
+canonical unary application tree;</li>
+<li><code>040f4d5</code>, which gives resolved declarations fixed kinds and one total kind
+gate;</li>
+<li><code>3c3ffdb</code>, which makes Core schemes, abstraction, application, transforms,
+and independent validation kind-aware;</li>
+<li><code>b94ac52</code>, which preserves fixed kinds through inference, unification, local
+generalization, and checked value-scheme admission;</li>
+<li><code>e411ed7</code>, which makes implementation matching and evidence selection
+first-order and kind-preserving;</li>
+<li><code>7a1bd84</code>, which authenticates kinded body-free and linked facts;</li>
+<li><code>0794457</code> through <code>5cc441d</code>, which retain ordered resolved-global binder
+authority, close generated-binder and transform evidence, and close the
+linked Core resource and tampering matrices;</li>
+<li><code>41b98f7</code>, which closes diagnostic, public resource, and deep-disposal
+evidence;</li>
+<li><code>0af2350</code>, which proves predecessor migration and the linked product corpus;</li>
+<li><code>8c11cd3</code>, which restores the documented module-wide source order of resolved
+type-binder identities across interleaved declaration families;</li>
+<li><code>573bc57</code>, which retains AD-0009, the reconciled normative specification, and
+the executable specification corpus; and</li>
+<li><code>7284551</code>, which retains the final independent reviews, corrections, exact
+resource evidence, and 1,422-test verification inventory.</li>
+</ul>
+<p>These commits are implementation evidence, not independent language authority.
+The current specification remains normative; this report and AD-0009 retain the
+completed evidence and non-language architecture after transition cleanup.</p>
+<h2 id="implemented-boundary">Implemented boundary</h2>
+<p>The kind language has <code>Type</code> and right-associative function kinds. Declaration
+binders may carry an explicit kind:</p>
+<pre tabindex="0"><code class="language-ash">type Option&lt;A&gt; =
+    None
+    | Some(A)
+
+keep&lt;F : Type -&gt; Type, A&gt; : F&lt;A&gt; -&gt; F&lt;A&gt;
+keep value = value
+</code></pre>
+<p>Nominal, interface, global, operational, and implementation declarations retain
+their written binder order. A present global or implementation binder list is
+complete: every binder used by that declaration header must appear exactly
+once, and every listed binder must be used there. When the list is absent, the
+resolver introduces binders from free type names in first-occurrence order.</p>
+<p>Every omitted declaration kind annotation, and every binder introduced by an
+omitted global or implementation binder list, is fixed to <code>Type</code>. Ash does not
+infer a kind for those binders. This is the current phase-dependent language
+constraint, not a commitment against a later bounded declaration-local
+inference rule.</p>
+<p>The increment adds neither kind polymorphism nor type lambdas. It does not infer
+function kinds from application, perform higher-order unification, or introduce
+source <code>forall</code> or explicit term type application.</p>
+<h2 id="canonical-identities-and-applications">Canonical identities and applications</h2>
+<p>Each resolved source type binder receives a module-qualified identity whose
+local ordinal follows source order across nominal, interface, global, and
+implementation declaration families. Written binder order and implicit
+first-occurrence order remain owner-local authority. The regression at
+<code>8c11cd3</code> proves both properties when parameterized families interleave; strict
+Core registry validation continues to reject forged identity-to-source order.</p>
+<p>Surface type application may retain several comma-separated arguments, but
+resolution folds them left into the one canonical unary form:</p>
+<pre tabindex="0"><code class="language-text">F&lt;A, B&gt;  =  Application(Application(F, A), B)
+</code></pre>
+<p>This structural application is not Core scheme instantiation. One Core
+<code>TypeApplicationNode</code> supplies all arguments to one complete outer rank-1
+scheme simultaneously. Tests reject partial outer-scheme instantiation while
+admitting partial nominal or variable application when the surrounding kind
+expects the residual function kind.</p>
+<h2 id="kind-environments-and-checking">Kind environments and checking</h2>
+<p>The shared total kind engine uses four fixed environments:</p>
+<ul>
+<li><code>DELTA</code> maps declaration or generated scheme binders to declared kinds;</li>
+<li><code>OMEGA</code> maps transient inference identities to their fixed kinds;</li>
+<li><code>XI</code> maps canonical nominal identities to derived or frozen kinds; and</li>
+<li><code>IOTA</code> maps interface identities to their canonical parameter record,
+including its <code>TypeVariableId</code> and declared Kind.</li>
+</ul>
+<p>Primitive types synthesize <code>Type</code>. Variables and inference identities use
+<code>DELTA</code> and <code>OMEGA</code>. Nominals use <code>XI</code>. Unary application requires a function
+kind whose domain equals the argument kind and returns its residual codomain.
+Tuple and function components must have kind <code>Type</code>, and the complete tuple or
+function type also has kind <code>Type</code>. Ordinary value annotations require <code>Type</code>.
+An interface argument is checked against the selected interface parameter's
+declared kind rather than the ordinary value-type rule.</p>
+<p>One resolved kind stage derives every local nominal kind before it checks any
+type-bearing declaration fact. The stage authenticates canonical binder records,
+constructor payloads, interface methods, globals, requirements, implementations,
+and declaration-order completeness before <code>ResolvedModule</code> construction.
+Checked schemes and body-free facts retain ordered identity-kind pairs.</p>
+<h2 id="inference-matching-and-evidence">Inference, matching, and evidence</h2>
+<p>Every fresh inference identity receives one fixed <code>OMEGA</code> entry before the
+identity appears in a type. Ordinary fresh identities have kind <code>Type</code>; scheme
+instantiation and constructor patterns copy the defining binder kind. Eligible
+local generalization copies fixed kinds into generated outer-scheme binders.
+Recursive and otherwise ineligible locals remain monomorphic.</p>
+<p>Unification remains first-order. Before it publishes a solution it checks the
+candidate against the inference identity's fixed kind. It traverses both
+children of canonical applications and admits partial constructors without
+synthesizing a type lambda. Zonk and generalization preserve those fixed kinds
+and reject missing, duplicate, conflicting, or escaping inference facts.</p>
+<p>Implementation matching treats goals as rigid and binds only candidate
+parameters. Each retained substitution must have the defining binder's kind.
+Overlap independently freshens both candidates. Selection admits only complete,
+inference-free interface goals and preserves abstract, exact-current, then
+concrete candidate priority. Prerequisites, selected roots, substitutions,
+checked methods, and occurrence evidence are authenticated again at their
+owning boundaries.</p>
+<h2 id="summaries-and-linked-facts">Summaries and linked facts</h2>
+<p>A checked dependency publishes body-free kind facts only after its complete
+body succeeds. Transparent nominals retain their ordered parameters and
+constructor family. Hidden and opaque nominals retain frozen body-free kind
+facts without exposing constructors or materializing private declaration rows.
+Imported interface, global, and implementation facts retain the exact defining
+identities and kinds used by checking and evidence selection.</p>
+<p>Physical constructor schemes have one transfer lifecycle:</p>
+<pre tabindex="0"><code class="language-text">checked export summary -&gt; imported fact -&gt; disposal before linked Core
+</code></pre>
+<p>The linker does not retain a redundant constructor-scheme carrier. Linked
+nominal and constructor registry facts are sufficient for independent Core
+kind derivation after authenticated summaries have been consumed.</p>
+<p>Linked evidence validation checks every canonical type-variable record, nominal
+family, interface fact, global scheme, implementation fact, selected evidence
+root, substitution, method, route, and occurrence before it exposes the
+capability used for Core synthesis. A failed check publishes no validated
+program.</p>
+<h2 id="linked-core-authority">Linked Core authority</h2>
+<p><a href="/ash/docs/decisions/ad-0009-ordered-resolved-global-binder-authority/">AD-0009</a>
+accepts one private ordered owner-to-parameter fact in the shared immutable
+registry for each non-empty resolved global scheme. The fact contains only the
+stable term owner and ordered resolved parameter identities. Canonical
+variable records remain the only authority for kind, spelling, and source
+origin.</p>
+<p>This is an implementation boundary, not language syntax or a normative storage
+model. The specification requires the observable validation relationship: a
+resolved outer abstraction must be the immediate initializer of its owning
+<code>RecursiveBind</code> member, its identities and order must equal the authenticated
+global scheme exactly once, and every authenticated owner must be consumed.
+The specification does not expose the private row type, its position index, or
+its physical storage.</p>
+<p>A sequential Core <code>Bind</code> cannot claim resolved-global authority. Nominal
+parameters retain their separate ordered nominal ownership. Interface binders
+erase before Core. Implementation-method parameters and locally generalized
+binders use generated Core identities.</p>
+<p>Generated Core identities are local to their <code>TypeAbstractionNode</code>, matching
+outer <code>Forall</code>, lexical body, and applications. A complete capture-free fresh
+substitution is valid alpha-renaming. Independent validation does not
+authenticate the elaborator's original generated identity, source span, or
+allocation ordinal as external authority.</p>
+<p>Both identity traversal and literal folding rebuild expression nodes while
+sharing the immutable registry. Each result passes fresh module-aware Core
+validation. Kinds, schemes, abstractions, applications, and resolved-owner
+facts erase before evaluation. No evaluator value, frame, lookup, transition,
+or failure mode changes.</p>
+<h2 id="diagnostic-matrix">Diagnostic matrix</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Invalid relationship</th>
+<th>Owning phase and reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>malformed kind syntax or binder-list syntax</td>
+<td><code>parse.*</code></td>
+</tr>
+<tr>
+<td>duplicate, unused, or omitted explicit declaration binder</td>
+<td><code>resolve.duplicate-type-parameter</code>, <code>resolve.unused-type-parameter</code>, or <code>resolve.unknown-type</code></td>
+</tr>
+<tr>
+<td>interface used as an ordinary value type</td>
+<td><code>resolve.type-kind</code></td>
+</tr>
+<tr>
+<td>non-interface used where an interface is required</td>
+<td><code>resolve.interface-kind</code></td>
+</tr>
+<tr>
+<td>unsaturated constructor at a value-type boundary</td>
+<td><code>kind.expected-type</code></td>
+</tr>
+<tr>
+<td>applying a <code>Type</code>-kinded binder as a constructor</td>
+<td><code>kind.not-applicable</code></td>
+</tr>
+<tr>
+<td>application domain or interface argument kind mismatch</td>
+<td><code>kind.argument</code></td>
+</tr>
+<tr>
+<td>inference unification mismatch or infinite type</td>
+<td>existing <code>type.*</code> owner after fixed-kind authentication</td>
+</tr>
+<tr>
+<td>absent, ambiguous, or cyclic interface evidence</td>
+<td>existing <code>constraint.*</code> owner</td>
+</tr>
+<tr>
+<td>malformed checked, summary, or linked kind mirror</td>
+<td><code>evidence.validation.*</code> before Core</td>
+</tr>
+<tr>
+<td>malformed Core kind, scope, owner, order, provenance, or registry relation</td>
+<td><code>core.validation.*</code> before evaluation</td>
+</tr>
+</tbody>
+</table>
+<p>Library and CLI diagnostic tests assert reason codes, primary spans, expected
+and found kinds, declaration labels, route labels, and stage ownership. The
+migration corpus records deliberate predecessor stage changes from nominal
+arity or resolution failures to total kind failures; it does not normalize all
+failures to one generic error.</p>
+<h2 id="named-semantic-evidence">Named semantic evidence</h2>
+<p>The positive and negative boundary is retained by named tests rather than by
+the prose alone:</p>
+<ul>
+<li><code>projects_contextual_kinds_and_explicit_binders</code>,
+<code>malformed_kind_and_binder_headers_recover_without_projection</code>, and
+<code>legacy_headers_remain_distinct_from_present_explicit_lists</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/kinds_syntax.rs"><code>tests/kinds_syntax.rs</code></a> cover syntax,
+recovery, spans, contextual <code>Type</code>, and list omission.</li>
+<li><code>explicit_kind_binders_are_complete_and_ordered</code>,
+<code>declaration_type_binder_identities_follow_source_order_across_interface_and_nominal_families</code>,
+<code>declaration_type_binder_identities_follow_source_order_across_impl_and_global_families</code>,
+<code>explicit_global_binders_reject_duplicates_unused_names_and_omissions</code>, and
+<code>explicit_implementation_binders_reject_duplicates_unused_names_and_omissions</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/resolution.rs"><code>tests/resolution.rs</code></a> cover binder sets,
+order, scope, and structured resolution failures.</li>
+<li><code>total_resolved_kinding_accepts_every_type_form_and_value_site</code>,
+<code>omitted_lists_do_not_infer_arrow_kinds_in_this_phase</code>,
+<code>bare_nominal_in_a_value_type_reports_structured_expected_type</code>,
+<code>applying_a_type_kinded_binder_reports_not_applicable</code>, and
+<code>application_domain_mismatch_reports_argument_kind_and_declaration</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/kinds.rs"><code>tests/kinds.rs</code></a> cover total synthesis,
+phase-dependent fixed kinds, diagnostics, and precedence.</li>
+<li><code>higher_kinded_instantiation_preserves_fixed_kinds</code> and
+<code>eligible_local_relay_generalizes_higher_kinded_parameters</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/polymorphism.rs"><code>tests/polymorphism.rs</code></a>, together with
+<code>inference_kind_registry_rejects_missing_duplicate_and_conflicting_entries</code>
+and <code>deep_kind_authenticated_unification_has_an_exact_stack_safe_budget</code> in
+<code>src/elaborate.rs</code>, cover inference, generalization, zonking, unification,
+and escape prevention.</li>
+<li><code>allows_distinct_higher_kinded_partial_heads</code>,
+<code>rejects_overlapping_higher_kinded_partial_heads</code>,
+<code>higher_kinded_concrete_candidate_retains_ordered_substitution_and_evidence</code>,
+and <code>ordinary_candidate_search_does_not_refine_a_rigid_higher_kinded_goal</code>
+in <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/implementations.rs"><code>tests/implementations.rs</code></a> and
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_selection.rs"><code>tests/interface_selection.rs</code></a>
+cover first-order matching, overlap, prerequisites, rigid goals, and
+selection.</li>
+<li><code>detached_summaries_preserve_defining_kinds_across_every_import_route</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/kind_modules.rs"><code>tests/kind_modules.rs</code></a>,
+<code>deep_constructor_scheme_crosses_check_and_link_then_is_disposed_before_core</code>
+in <code>src/evidence_validation.rs</code>, and
+<code>authenticates_one_reusable_higher_kinded_linked_diamond</code> in the same file
+cover body-free facts, hidden closure, route reuse, and constructor-scheme
+disposal.</li>
+<li><code>linked_higher_kinded_core_revalidates_after_both_transforms</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/core_validation.rs"><code>tests/core_validation.rs</code></a>,
+<code>higher_kinded_interface_erasure_adds_no_runtime_state_or_transition</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>, and
+<code>wide_source_argument_vector_crosses_body_free_link_and_core_on_a_small_stack</code>
+in <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/kind_resources.rs"><code>tests/kind_resources.rs</code></a> cover the
+final linked program, both transforms, independent validation, erasure,
+evaluation, and wide folded application.</li>
+<li><code>public_kind_diagnostics_retain_complete_causal_rows</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/diagnostics.rs"><code>tests/diagnostics.rs</code></a>,
+<code>public_kind_failure_precedence_follows_causal_and_owner_order</code> in the same
+file,
+<code>cli_renders_each_structured_kind_reason_without_reclassifying_it</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/module_cli.rs"><code>tests/module_cli.rs</code></a>,
+<code>explicit_kind_migration_matrix_records_every_predecessor_assertion_shift</code>
+and <code>every_valid_corpus_presentation_has_its_exact_library_and_cli_observation</code>
+in <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/corpus.rs"><code>tests/corpus.rs</code></a>, and the 57 tests in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/spec_examples.rs"><code>tests/spec_examples.rs</code></a> cover diagnostics,
+CLI policy separation, migration, normative examples, and exact
+observations.</li>
+</ul>
+<h2 id="migration">Migration</h2>
+<p>Every predecessor-valid omitted kind annotation and absent global or
+implementation binder list remains valid without source edits. Omitted binders
+retain <code>Type</code> and their prior owner-local order. Explicit <code>Type</code> annotations and
+explicit lists are compatible spellings of that boundary.</p>
+<p>The compatibility corpus proves exact library and CLI observations for:</p>
+<ul>
+<li>omitted nominal, interface, global, operational, and implementation kinds;</li>
+<li>implicit global and implementation binder order;</li>
+<li>explicit <code>Type</code> annotations and explicit list order;</li>
+<li>contextual nominal <code>Type</code> beside kind <code>Type</code>;</li>
+<li>ordinary rank-1 instantiation and higher-kinded partial application; and</li>
+<li>linked modules using explicit implementation imports from the predecessor
+increment.</li>
+</ul>
+<p>Intentional migrations replace saturated-shape assumptions with canonical
+application inspection and replace predecessor kind-blind failures with the
+structured kind reasons above. No compatibility grammar or second compiler
+path remains.</p>
+<h2 id="type-bearing-inventory">Type-bearing inventory</h2>
+<p><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/architecture.rs"><code>tests/architecture.rs</code></a> keeps the production
+type-and-kind inventory at a bidirectional fixed point. At checkpoint <code>8c11cd3</code>
+it records 755 kind sites:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Site class</th>
+<th align="right">Count</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>physical fields</td>
+<td align="right">697</td>
+<td>stored production carriers whose ownership, rule, failure, budget, and disposal are recorded</td>
+</tr>
+<tr>
+<td>contextual uses</td>
+<td align="right">33</td>
+<td>one physical carrier interpreted under more than one kind obligation</td>
+</tr>
+<tr>
+<td>transient work owners</td>
+<td align="right">25</td>
+<td>local stacks, continuations, and completed-work buffers</td>
+</tr>
+</tbody>
+</table>
+<p>Each <code>KIND_SITES</code> entry names its source carrier, environment, owning rule,
+required result, failure class, budget, disposal owner, and contextual roles.
+The retained test manifest is the complete per-site map; this report records
+its reviewed totals rather than duplicating 755 independently stale rows.</p>
+<p>Sixteen shared Kind-engine sites are phase-neutral: their caller supplies the
+phase-owned failure and budget. The inventory also rejects broad raw mutation
+of recursive type owners, stale manifest entries, unrecorded production fields,
+and Core or evaluator interface-evidence state. Final review changed no
+production carrier, so the retained counts remain current.</p>
+<h2 id="exact-resources-and-disposal">Exact resources and disposal</h2>
+<p>The increment changes one production capacity: independent Core validation
+uses one cumulative <code>3 * TYPE_WORK_LIMIT = 983,040</code> ledger instead of the
+predecessor's <code>TYPE_WORK_LIMIT</code> ledger. This preserves the unchanged deep and
+wide predecessor witnesses after kind validation enters the same cumulative
+pass. Core construction, transform rebuilding, and every other production
+limit retain their predecessor capacities. No later task resets, splits,
+raises, or narrows those limits.</p>
+<p>The retained exact formulas and their executable owners are:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Additive work or measured result</th>
+<th>Named proof</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kind fold, clone, equality, hash, and render</td>
+<td><code>K</code> units for a retained or visited <code>K</code>-node Kind; folding also retains one <code>Arrow</code> per domain</td>
+<td><code>kind_algebra_is_iterative_and_exactly_budgeted</code> in <code>src/types.rs</code></td>
+</tr>
+<tr>
+<td>Type clone, equality, hash, and render</td>
+<td><code>C</code> units for a visited or retained <code>C</code>-cell Type</td>
+<td><code>deep_application_operations_remain_bounded_on_a_small_stack</code> in <code>src/types.rs</code></td>
+</tr>
+<tr>
+<td>Type and Kind disposal</td>
+<td>one visit per structural cell; pending ownership is the left-spine depth or sequence width</td>
+<td><code>type_and_kind_disposal_have_exact_visits_and_bounded_pending_ownership</code> in <code>src/types.rs</code></td>
+</tr>
+<tr>
+<td>Type substitution</td>
+<td>the complete rebuilt result cell count; a depth-<code>D</code> unary application costs <code>2D + 1</code> and a width-<code>W</code> tuple costs <code>W + 1</code></td>
+<td><code>deep_and_wide_substitution_resource_boundaries_are_exact_and_reusable</code> in <code>src/types.rs</code></td>
+</tr>
+<tr>
+<td>one declared or copied binder</td>
+<td><code>1 + K</code> type units for the binder record and its <code>K</code> Kind nodes</td>
+<td><code>fixed_kind_binder_allocation_is_exact_and_atomic</code> in <code>src/resolve.rs</code> and <code>copied_fixed_kind_binder_storage_is_exact_and_atomic</code> in <code>src/resolved.rs</code></td>
+</tr>
+<tr>
+<td>materialized nominal Kind retention</td>
+<td><code>2 + sum_parameter(1 + K_i)</code> type units per nominal</td>
+<td><code>linked_nominal_kinds_are_retained_once_for_all_value_schemes</code> in <code>src/evidence_validation.rs</code></td>
+</tr>
+<tr>
+<td>checker-view abstract nominal Kind retention</td>
+<td>the same parameter-derived Kind has an exact atomic budget and remains non-structural</td>
+<td><code>checker_view_retains_abstract_kind_without_structural_visibility</code> and <code>checker_view_abstract_kind_failure_and_drop_are_stack_safe</code> in <code>src/resolved.rs</code></td>
+</tr>
+<tr>
+<td>imported checker-view declaration binders</td>
+<td><code>1 + K</code> type units for one interface binder; <code>sum_i(1 + K_i)</code> for implementation-head binders</td>
+<td><code>checker_view_interface_binder_has_an_exact_atomic_budget_and_preserves_source</code> and <code>checker_view_implementation_head_binders_have_an_exact_atomic_budget</code> in <code>src/resolved.rs</code></td>
+</tr>
+<tr>
+<td>inference solution</td>
+<td>17 scalar units; <code>9C - 3D + 8</code> for a <code>C</code>-cell candidate of function depth <code>D</code></td>
+<td><code>unification_charges_operand_copies_and_solution_metadata_exactly</code> and <code>deep_kind_authenticated_unification_has_an_exact_stack_safe_budget</code> in <code>src/elaborate.rs</code></td>
+</tr>
+<tr>
+<td>generalization of <code>n</code> variables in type <code>T</code></td>
+<td><code>3n + sum_i(3 + 2K_i) + Z(T)</code> type units, where <code>Z</code> is fused zonk work</td>
+<td><code>higher_kinded_generalization_batch_is_exact_and_atomic</code> in <code>src/elaborate.rs</code></td>
+</tr>
+<tr>
+<td>linked <code>keep</code> scheme</td>
+<td>18 structural constraint units, 20 Kind-judgment constraint units, and four owner-environment type units</td>
+<td><code>linked_value_kind_validation_has_exact_dual_limits</code> in <code>src/evidence_validation.rs</code></td>
+</tr>
+<tr>
+<td>width-<code>W</code> first-order head match</td>
+<td><code>18W + 8</code> constraint units and <code>W</code> type units; the scalar fixture is 24/5</td>
+<td><code>wide_binding_slots_fit_default_work_and_fail_atomically_one_unit_short</code> and <code>kind_preserving_head_match_has_exact_independent_resource_boundaries</code> in <code>src/interface.rs</code></td>
+</tr>
+<tr>
+<td>deep match and overlap over <code>K = 2D + 1</code> Kind nodes</td>
+<td><code>2K + 18</code> and <code>2K + 22</code> constraint units; the scalar overlap fixture is 42/5</td>
+<td><code>deep_higher_kinded_head_match_has_exact_atomic_small_stack_boundaries</code>, <code>deep_higher_kinded_overlap_has_exact_atomic_small_stack_boundaries</code>, and <code>canonical_higher_kinded_overlap_is_first_order_and_exactly_bounded</code> in <code>src/interface.rs</code></td>
+</tr>
+<tr>
+<td>complete concrete selection</td>
+<td>156 constraint and 20 type units</td>
+<td><code>full_higher_kinded_selection_has_exact_atomic_dual_limits</code> in <code>src/evidence.rs</code></td>
+</tr>
+<tr>
+<td>declaration head plus prerequisite authentication</td>
+<td>12 constraint and four type units</td>
+<td><code>declaration_head_and_prerequisite_kind_authentication_has_exact_dual_limits</code> in <code>src/evidence_validation.rs</code></td>
+</tr>
+<tr>
+<td>selected-root and exact-current evidence</td>
+<td>73 units as <code>59 + 9 + 4 + 1</code>, and 107 as <code>87 + 15 + 4 + 1</code></td>
+<td><code>selected_root_and_prerequisite_kind_checks_have_exact_constraint_limit</code> in <code>src/evidence_validation.rs</code></td>
+</tr>
+<tr>
+<td>final substitution precharge and argument cloning</td>
+<td><code>15W + 8</code> constraint units; <code>N + sum_i size(Type_i)</code> type units for <code>N</code> arguments</td>
+<td><code>selected_substitution_authentication_has_exact_kind_limits</code> in <code>src/evidence_validation.rs</code> and <code>replacement_map_charges_indexes_and_cloned_arguments_exactly_before_publication</code> in <code>src/evidence.rs</code></td>
+</tr>
+<tr>
+<td>shared deep Kind judgment</td>
+<td><code>6D + 3</code> valid units and <code>6D - 1</code> residual-mismatch units</td>
+<td><code>deep_linked_value_kinding_is_exact_and_stack_safe</code> in <code>src/evidence_validation.rs</code></td>
+</tr>
+<tr>
+<td>complete public linked validation</td>
+<td><code>9D + 63 + O + 2</code> constraint units for type/Kind depth <code>D</code> and generated-origin depth <code>O</code></td>
+<td><code>deep_public_linked_value_kinding_fits_the_default_budget_on_a_small_stack</code> in <code>src/evidence_validation.rs</code></td>
+</tr>
+<tr>
+<td>resolved-global owner-row retention</td>
+<td><code>2S + R</code> type units for <code>S</code> non-empty owners and <code>R</code> identities, plus <code>S</code> constraint units for owner uniqueness</td>
+<td><code>combine_checked_retains_borrowed_global_parameter_rows_in_dependency_order</code> in <code>src/resolved.rs</code></td>
+</tr>
+<tr>
+<td>linked row authentication</td>
+<td><code>S + R</code> constraint units and no type work; the complete linked-registry fixture costs 23 constraint units</td>
+<td><code>linked_registry_rows_have_exact_constraint_work_and_no_type_work</code> in <code>src/evidence_validation.rs</code></td>
+</tr>
+<tr>
+<td>Core row structure and matching</td>
+<td>row structure costs <code>2S + 2R</code> type units; resolved matching costs <code>2R + K_R + S</code>, where <code>K_R</code> is canonical Kind work</td>
+<td><code>linked_core_row_structure_work_is_exact_atomic_and_retryable</code>, <code>complete_linked_core_validation_work_is_additive_exact_and_retryable</code>, and <code>linked_arrow_kind_row_matching_work_is_exact_atomic_and_retryable</code> in <code>src/core/validate.rs</code></td>
+</tr>
+<tr>
+<td>complete small linked Core validation</td>
+<td>264 cumulative type units: registry 1, row structure 4, envelopes 42, graph 0, binders 16, initializer owners 1, resolved matching 6, generated matching 4, nodes 127, term scopes 0, and type scopes 63</td>
+<td><code>complete_linked_core_validation_work_is_additive_exact_and_retryable</code> in <code>src/core/validate.rs</code></td>
+</tr>
+<tr>
+<td>independent Core capacity</td>
+<td>983,040 cumulative units; depth-96 uses <code>275,398 + 145,151 = 420,549</code>; width-32,767 uses <code>22W + 7 = 720,881</code></td>
+<td><code>core_validation_type_work_capacity_is_exact_and_atomic</code> in <code>src/core/validate.rs</code>, <code>deep_generic_prerequisite_chain_completes_the_pipeline_on_a_small_stack</code> in <code>tests/interfaces.rs</code>, and <code>validated_program_discards_a_wide_application_on_a_small_stack</code> in <code>src/core/dialect.rs</code></td>
+</tr>
+<tr>
+<td>unchanged width-256 elaboration and Core witness</td>
+<td><code>320,221 + 4,883 + 512 = 325,616</code> of 327,680 type units; 4,096 unrelated <code>OMEGA</code> entries do not change reachable solution cost</td>
+<td><code>wide_nominal_application_remains_width_through_elaboration_and_core</code> in <code>tests/polymorphism.rs</code> and <code>reachable_solution_cost_is_independent_of_unrelated_omega_width</code> in <code>src/elaborate.rs</code></td>
+</tr>
+<tr>
+<td>row-bearing Core construction and transforms</td>
+<td>construction costs <code>3 + 4 + 12 + 9 + 1 = 29</code>; identity rebuild costs <code>6 + 8 + 20 + 18 + 2 = 54</code>; literal folding costs <code>2 + 8 + 16 + 4 + 18 + 2 = 50</code>; both transforms add zero copied row units and share the exact immutable registry</td>
+<td><code>row_bearing_construction_and_identity_have_exact_independent_type_work</code>, <code>folded_higher_kinded_transform_has_exact_independent_type_work</code>, and <code>unchecked_transforms_share_the_exact_nonempty_global_row_registry</code> in <code>src/core/transform.rs</code></td>
+</tr>
+<tr>
+<td>malformed expanded Core resource mapping</td>
+<td>width 1,000 expands to at least 1,000,000 retained type cells, exceeds the 983,040 validation ledger while fitting the unchanged construction limit, and reports <code>ValidationReason::Resource</code></td>
+<td><code>expanded_malformed_type_application_maps_to_validation_resource</code> in <code>tests/core_validation.rs</code></td>
+</tr>
+<tr>
+<td>depth-32,000 iterative success and failure teardown</td>
+<td>the successful type-application witness costs <code>11D + 6 = 352,006</code>; transform, match coverage and redundancy, late-pattern, substituted-payload, downstream-validation, and downstream-evaluator owners all dismantle on 256 KiB stacks</td>
+<td><code>late_pattern_rebuild_failure_discards_completed_patterns_iteratively</code> in <code>src/core/transform.rs</code>; <code>successful_type_application_validation_discards_instantiation_work_iteratively</code>, <code>successful_match_validation_discards_coverage_matrix_iteratively</code>, <code>redundant_match_validation_discards_pending_pattern_row_iteratively</code>, <code>late_pattern_validation_error_discards_owned_payload_type_iteratively</code>, and <code>payload_shape_error_discards_substituted_type_iteratively</code> in <code>src/core/validate.rs</code>; and <code>downstream_validation_failure_discards_deep_result_type_iteratively</code> and <code>downstream_evaluator_failure_discards_deep_result_type_iteratively</code> in <code>src/driver.rs</code></td>
+</tr>
+</tbody>
+</table>
+<p>Exact-success, one-short failure, atomic publication, retry, and disposal probes
+cover binder allocation, kind synthesis, environments, inference solutions,
+generalization, matching, overlap, selection, summary combination, linked
+validation, Core construction, resolved-owner authentication, transforms, and
+observation teardown. Deep and wide cases run on 256 KiB threads. With type and
+kind depth 32,768 and generated-origin depth 16,384, the linked witness costs
+311,361 units and fits the existing production default. The predecessor
+depth-96 and width-32,767 Core witnesses retain their dimensions and limits.</p>
+<p>The source-order correction at <code>8c11cd3</code> moves allocation into one fallibly
+reserved cross-family preparation pass. It neither clones a second binder nor
+adds a resource limit. Its only new kind-bearing fields are resolution-owned
+transient preparation carriers recorded in the closed inventory.</p>
+<h2 id="tampering-and-negative-evidence">Tampering and negative evidence</h2>
+<p>Private mutation matrices reject each retained relationship independently:</p>
+<ul>
+<li>canonical variable identity, spelling, origin, kind, module, and source
+order;</li>
+<li>nominal owner, parameter order, constructor family, payload, kind, and hidden
+or opaque closure;</li>
+<li>checked and summary interface, global, implementation, method, requirement,
+and selected-evidence mirrors;</li>
+<li>imported fact identity, route, visibility, parameter, application, and kind;</li>
+<li>resolved-global owner facts that are empty, missing, extra, duplicated,
+reordered, wrong-owner, wrong-position, nominal, interface-only, or left
+unconsumed;</li>
+<li>Core abstraction, outer scheme, application arity, argument order, kind,
+occurrence, scope, provenance, and immediate recursive owner;</li>
+<li>generated binder inconsistency, duplication, capture, shadowing, or escape;
+and</li>
+<li>identity and literal-folding transform results, each rebuilt independently
+from the original validated program.</li>
+</ul>
+<p>The named tamper anchors are
+<code>exhaustive_summary_orders_indexes_aliases_and_owners_fail_before_local_checking</code>,
+<code>exhaustive_public_and_hidden_summary_carriers_fail_before_local_checking</code>, and
+<code>fused_constructor_scheme_authentication_rejects_every_independent_type_obligation</code>
+in <code>src/resolve/module_tests.rs</code>;
+<code>rejects_every_task8_kinded_linked_diamond_carrier_before_core</code>,
+<code>rejects_every_surviving_linked_nominal_and_constructor_mirror_before_core</code>,
+<code>linked_registry_rejects_every_resolved_global_parameter_row_mutation_before_core</code>,
+and <code>linked_registry_canonical_malformation_precedes_a_later_row_mismatch</code> in
+<code>src/evidence_validation.rs</code>;
+<code>linked_core_rejects_each_independent_registry_row_structure_mutation</code>,
+<code>linked_core_rejects_coherent_resolved_binder_owner_swap</code>,
+<code>linked_core_rejects_coherent_resolved_binder_reorder</code>,
+<code>linked_core_sequential_bind_cannot_claim_a_resolved_global_row</code>,
+<code>linked_core_rejects_each_independent_generated_binder_mutation</code>, and
+<code>linked_core_preserves_registry_graph_binder_and_abstraction_precedence</code> in
+<code>src/core/validate.rs</code>; and
+<code>rejects_registry_identity_order_spelling_and_source_forgery</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/core_validation.rs"><code>tests/core_validation.rs</code></a>.
+<code>kind_inventory_is_closed</code> and <code>transient_kind_site_owners_are_source_anchored</code>
+in <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/architecture.rs"><code>tests/architecture.rs</code></a> make the carrier
+inventory itself fail closed.</p>
+<p>The corresponding positive matrix accepts exact resolved owner/order matching,
+complete generated alpha-renaming, both transforms followed by fresh
+validation, erasure, and evaluation.
+<code>linked_core_accepts_capture_free_generated_alpha_renaming</code> in
+<code>src/core/validate.rs</code> is the explicit positive generated-identity witness.</p>
+<h2 id="production-and-maintenance-sites">Production and maintenance sites</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Principal production owners</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>syntax and projection</td>
+<td><code>src/parser/grammar.rs</code>, <code>src/parser/project.rs</code>, <code>src/parser/mod.rs</code>, <code>src/surface.rs</code></td>
+</tr>
+<tr>
+<td>identities, canonical application, and resolved kind gate</td>
+<td><code>src/resolve.rs</code>, <code>src/resolved.rs</code>, <code>src/kind.rs</code>, <code>src/types.rs</code></td>
+</tr>
+<tr>
+<td>inference, matching, selection, and checking</td>
+<td><code>src/elaborate.rs</code>, <code>src/interface.rs</code>, <code>src/pattern.rs</code></td>
+</tr>
+<tr>
+<td>body-free and linked facts</td>
+<td><code>src/evidence.rs</code>, <code>src/evidence_validation.rs</code>, <code>src/driver.rs</code></td>
+</tr>
+<tr>
+<td>kind-aware Core construction, validation, and transforms</td>
+<td><code>src/core/dialect.rs</code>, <code>src/core/validate.rs</code>, <code>src/core/transform.rs</code>, <code>src/core/type_ops.rs</code></td>
+</tr>
+<tr>
+<td>iterative observation and structural inspection</td>
+<td><code>src/eval/value.rs</code>, <code>src/eval/machine.rs</code></td>
+</tr>
+</tbody>
+</table>
+<p>Primary maintenance suites are <code>parser</code>, <code>interfaces_syntax</code>, <code>resolution</code>,
+<code>kinds</code>, <code>kind_modules</code>, <code>polymorphism</code>, <code>interfaces</code>, <code>implementations</code>,
+<code>interface_modules</code>, <code>interface_validation</code>, <code>evidence_validation</code>,
+<code>core_validation</code>, <code>type_properties</code>, <code>architecture</code>, <code>diagnostics</code>,
+<code>resources</code>, <code>corpus</code>, <code>spec_examples</code>, <code>module_cli</code>, and <code>library_imports</code>.</p>
+<h2 id="verification-status">Verification status</h2>
+<p>The Task 11 migration checkpoint passes 37 polymorphism tests, 49 resolution
+tests at that checkpoint, nine corpus tests, 48 predecessor specification
+examples, 32 interface tests, three kind-module tests, and 56 Core-validation
+tests, followed by the complete all-target and all-feature workspace suite,
+Clippy with warnings denied, <code>cargo xtask verify</code>, Markdown lint, formatting,
+and diff hygiene.</p>
+<p>The source-order correction adds two resolution tests, so the focused resolver
+suite now contains 51 passing tests. Its independent semantic/authority and
+Rust/resource/atomicity reviews both pass with <code>gpt-5.6-sol</code> at <code>xhigh</code>
+reasoning. The 42 focused resolver resource and teardown tests, 21 architecture
+tests, 56 Core-validation tests, the linked behavioral regression, all-target
+Clippy, formatting, and diff hygiene pass without a limit change.</p>
+<p>Task 12 began with 57 executable specification tests. After the resolver
+correction, 49 behavior and predecessor-document cases passed and the remaining
+eight failed only because the normative kind examples and rule fragments had
+not yet been reconciled. The reconciled specification now passes all 57 tests.
+Independent architecture-decision, normative-authority, and evidence-lifecycle
+reviews pass without findings, each with <code>gpt-5.6-sol</code> at <code>xhigh</code> reasoning.
+<code>cargo xtask verify</code>, Markdown lint, relative-link checks, formatting, and diff
+hygiene pass at the Task 12 checkpoint. At that point, Task 13 still had to
+record the fresh complete workspace inventory, final review corrections, exact
+verification, and lifecycle cleanup.</p>
+<p>Task 13's implementation/Core/resource review passes without findings. Its
+normative review found and corrected one stale lexical claim that named type
+applications were saturated. Its evidence/lifecycle review restored the
+canonical interface parameter identity in <code>IOTA</code> and retained the width-1,000
+malformed-Core and depth-32,000 teardown witnesses above. Both correction
+reviews then pass without remaining findings. All three reviewers used
+<code>gpt-5.6-sol</code> at <code>xhigh</code> reasoning.</p>
+<p>The fresh all-target inventory contains 1,422 tests: 642 library tests, ten
+<code>ash</code> binary tests, 769 integration tests, and one <code>xtask</code> test. Formatting,
+all-target and all-feature checking, all 1,422 tests, Clippy with warnings
+denied, the exact test inventory, <code>cargo xtask verify</code>, Markdown lint,
+relative-link checks, and diff hygiene pass on the retained tree. This report
+is the final evidence record for the bounded increment; its transition-artifact
+cleanup did not close or tag the complete <code>lib-ash</code> milestone. Later integrated
+increments provide the separate milestone-closure evidence.</p>
+<h2 id="intentional-exclusions-and-remaining-pressure">Intentional exclusions and remaining pressure</h2>
+<p>This increment does not add method-local source type parameters,
+multi-parameter interfaces, functional dependencies, associated outputs,
+defaults, specialization, type lambdas, kind inference, kind polymorphism,
+higher-order unification, source <code>forall</code>, explicit term type application,
+higher-rank source values, runtime kind values, compatibility syntax, packages,
+manifests, persistent summaries, compiled artifacts, or separate linking.</p>
+<p>Later work may use the fixed kind environments, canonical applications, stable
+identities, body-free facts, and authenticated linked boundary. It requires its
+own semantic authority and evidence. At this checkpoint, the complete <code>lib-ash</code>
+milestone remained open and untagged; later integrated increments close the
+revised milestone without claiming a tag.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#scope-and-checkpoints">Scope and checkpoints</a><a href="#implemented-boundary">Implemented boundary</a><a href="#canonical-identities-and-applications">Canonical identities and applications</a><a href="#kind-environments-and-checking">Kind environments and checking</a><a href="#inference-matching-and-evidence">Inference, matching, and evidence</a><a href="#summaries-and-linked-facts">Summaries and linked facts</a><a href="#linked-core-authority">Linked Core authority</a><a href="#diagnostic-matrix">Diagnostic matrix</a><a href="#named-semantic-evidence">Named semantic evidence</a><a href="#migration">Migration</a><a href="#type-bearing-inventory">Type-bearing inventory</a><a href="#exact-resources-and-disposal">Exact resources and disposal</a><a href="#tampering-and-negative-evidence">Tampering and negative evidence</a><a href="#production-and-maintenance-sites">Production and maintenance sites</a><a href="#verification-status">Verification status</a><a href="#intentional-exclusions-and-remaining-pressure">Intentional exclusions and remaining pressure</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

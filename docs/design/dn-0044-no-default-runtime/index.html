@@ -1,0 +1,453 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0044: No Default Runtime · Ash</title><meta name="description" content="Can Ash compile programs without a mandatory runtime, while libraries supply the storage, control, and platform services a particular application needs? Can compiler-supplied defaults and checked lowering make…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0044: No Default Runtime · Ash"><meta property="og:description" content="Can Ash compile programs without a mandatory runtime, while libraries supply the storage, control, and platform services a particular application needs? Can compiler-supplied defaults and checked lowering make…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0044: No Default Runtime · Ash"><meta name="twitter:description" content="Can Ash compile programs without a mandatory runtime, while libraries supply the storage, control, and platform services a particular application needs? Can compiler-supplied defaults and checked lowering make…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0044-no-default-runtime/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0044-no-default-runtime/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0044-no-default-runtime.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0044: No Default Runtime","headline":"DN-0044: No Default Runtime","description":"Can Ash compile programs without a mandatory runtime, while libraries supply the storage, control, and platform services a particular application needs? Can compiler-supplied defaults and checked lowering make…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0044-no-default-runtime/","@id":"https://dikini.github.io/ash/docs/design/dn-0044-no-default-runtime/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0044-no-default-runtime.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0044-no-default-runtime" data-pagefind-meta="title">DN-0044: No Default Runtime</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0044-no-default-runtime.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0044</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">DN-0017</a>,
+<a href="/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/">DN-0030</a>,
+<a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a>,
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
+<a href="/ash/docs/design/dn-0042-native-interaction-and-efficient-data/">DN-0042</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
+</ul>
+<blockquote>
+<p>This note is a working document for continued design. It records a long-term
+aim and an initial sketch, not a ready design. It is informative: it defines
+no current Ash semantics, accepts no architecture, and authorizes no
+implementation or prototype. The alternatives, contracts, and evidence below
+remain open to revision as the design develops.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can Ash compile programs without a mandatory runtime, while libraries supply
+the storage, control, and platform services a particular application needs?
+Can compiler-supplied defaults and checked lowering make ordinary value
+construction participate in that model without requiring explicit allocation
+syntax or complex policy inference?</p>
+<p>The working aim is that Ash impose no ambient allocator, collector, scheduler,
+or runtime initialization. A program would select the services it needs and
+could omit the corresponding machinery when those services are unnecessary.
+Generated arithmetic, copying, checking, and cleanup code still occupies space
+and performs work. Its presence must be accounted for even when no separate
+runtime service is required.</p>
+<h2 id="context">Context</h2>
+<h3 id="motivation">Motivation</h3>
+<p>Embedded and near-embedded applications make a mandatory runtime costly in
+code size, memory use, and supported platforms. Selecting a fixed arena or
+static storage could make a smaller application possible. Memory safety alone
+would not establish bounded memory use, bounded work, or a real-time guarantee;
+those claims need their own contracts and evidence.</p>
+<p>A future native backend could also produce Ash libraries linked by other
+languages. The host application should be able to call an exported function
+without automatically starting an Ash evaluator, scheduler, or collector. Ash
+could establish guarantees for checked code under stated foreign-entry and
+provider contracts. This would not protect the entire process from arbitrary
+foreign memory corruption or establish an external Ash ABI by itself.</p>
+<p>Larger applications could opt into libraries providing managed storage,
+scheduling, or other services. Several policies might coexist in one program.
+The aim is to make the required services selectable and their assumptions
+explicit, while preserving the guarantees each admitted composition claims.</p>
+<h3 id="current-foundation-and-boundaries">Current foundation and boundaries</h3>
+<p>The <a href="/ash/spec/dynamic-semantics/">current dynamic semantics</a> define an
+evaluation heap, arbitrary-precision integers, lexical functions, ordinary
+aggregate allocation, and recursive data. Ordinary allocation is not a
+source-selectable storage effect. An empty source effect row therefore does
+not imply allocation-free execution.</p>
+<p><a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">Resource checking</a>
+tracks dependencies through values, captures, and operation metadata.
+<a href="/ash/spec/dynamic-semantics/#scoped-cell-execution">Resource execution</a>
+moves owned scopes through capture and resume; checked discard completes owned
+abandoned resources. These are foundations for the proposed direction. Current
+cell and native-buffer providers are sealed builtin relations, rather than
+general library-authored memory or runtime providers.</p>
+<p><a href="/ash/spec/elaboration/#effect-core-lowering">Elaboration</a> currently retains
+ordinary construction in shared value/computation families. Pure Core admits
+no inhabited effect operations, and Effect Core retains exact computation
+rows. Making ordinary construction effectful would cross those boundaries;
+it is not already a supported lowering choice.</p>
+<p><a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> requires typed dialects,
+declared transform boundaries, and independent validation.
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a> selects the
+current evaluator machine. These decisions do not select a native backend or
+require a native executable to carry that evaluator.</p>
+<h3 id="relationship-to-other-design-work">Relationship to other design work</h3>
+<p><a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a> owns the
+broader memory-policy exploration, including implicit construction, storage
+dependencies, provider verification, and allocation context across calls.
+This note adds the no-default-runtime objective and a simpler initial route:
+supply policy defaults to compilation before considering complex inference.
+It does not settle DN-0035's lifetime or memory-model questions.</p>
+<p><a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a> explores Ash
+calling foreign libraries. It explicitly excludes a stable external Ash ABI.
+Foreign callers invoking compiled Ash add a separate entry, representation,
+storage, and control boundary.
+<a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a> supplies
+pressure from captured control and completion; this note selects no suspension
+or scheduling model. <a href="/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/">DN-0030</a>
+explores library participation in compilation without establishing the
+configuration mechanism proposed here.</p>
+<h2 id="constraints">Constraints</h2>
+<p>These are criteria for comparing candidates, not accepted language rules:</p>
+<ul>
+<li>Preserve checked authority, storage dependencies, and required completion
+through lowering and specialization.</li>
+<li>Preserve immutable sharing, closures, recursive data, and mathematical
+integer behavior wherever a candidate claims ordinary Ash compatibility.</li>
+<li>Make service requirements and unsupported target cases identifiable. A
+fixed-storage configuration must not silently introduce an auxiliary heap,
+collector, scheduler, or platform service.</li>
+<li>Separate policy selection from the acquisition of provider state and backing
+storage. Passive imports must not acquire runtime initialization semantics
+merely because they expose a provider library.</li>
+<li>Account for payload storage, provider metadata, closures, captured control,
+failure delivery, and cleanup when claiming a capacity or cost bound.</li>
+<li>State foreign assumptions and the trusted storage primitive boundary.
+Ordinary method signatures alone do not verify a provider's safety laws.</li>
+</ul>
+<p>This note does not choose source syntax, machine integer semantics, a general
+borrow system, an object-file format, or a stable ABI. It does not require
+automatic lifetime inference, escaping suspension, multi-shot control,
+parallelism, or a collector before the initial direction can be explored.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="initial-sketch-supplied-defaults-and-checked-lowering">Initial sketch: supplied defaults and checked lowering</h3>
+<p>The initial working preference is:</p>
+<ol>
+<li>The application selects a library-provided policy as a compilation default.</li>
+<li>Ordinary construction keeps its surface presentation. A typed lowering
+makes the required storage operations and provider relationships explicit.</li>
+<li>Explicit scopes can override that default for scratch storage or other
+policies when their lifetime and completion contracts permit it.</li>
+<li>The chosen provider realizes storage and reclamation. The compiler checks
+the required contracts and lowers or specializes the corresponding calls.</li>
+<li>Services absent from the resulting program can be omitted from its artifact.</li>
+</ol>
+<p>A supplied default is a policy choice made by the application. It need not be
+a built-in allocator or a hidden process-wide runtime. The provider algorithm
+could be selected statically while the caller supplies backing memory at entry.
+Library selection, provider installation, and state acquisition still need a
+specified relationship; this sketch chooses none of their source forms.</p>
+<h3 id="default-lifetime-and-explicit-precision">Default lifetime and explicit precision</h3>
+<p>One conservative starting point would give ordinary values a single
+application-owned storage domain. This avoids discovering short lifetimes
+automatically and resembles the current retention of the evaluation heap.
+It can retain unused storage for a long time, so it does not establish a useful
+fixed-capacity bound for every application.</p>
+<p>An invocation-owned arena is another option, especially for a foreign entry
+that returns a scalar or writes into caller-owned output. Results referencing
+that arena cannot outlive its completion. Caller-owned result storage could
+support longer-lived results, under an explicit ownership and release contract.</p>
+<p>Explicit nested scratch scopes could reclaim temporary storage sooner.
+Checking an explicit scope's escape and completion rules is distinct from
+inferring where every scope should be introduced. More precise placement or
+reuse inference can be considered later when a concrete workload justifies it.</p>
+<h3 id="where-storage-effects-belong">Where storage effects belong</h3>
+<p>Uniform Core treatment leaves several semantic options:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Option</th>
+<th>Potential benefit</th>
+<th>Question or cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ordinary checked allocation effects, with surface elaboration inserting requests</td>
+<td>Reuses effect and provider vocabulary; observable failure can be represented explicitly.</td>
+<td>Hidden syntax still needs truthful function contracts; general handler behavior can constrain optimization and require control support.</td>
+</tr>
+<tr>
+<td>A later typed storage dialect, with defaults supplied at its boundary</td>
+<td>Keeps logical value construction separate from physical storage decisions; permits a checked native lowering.</td>
+<td>Needs a preservation account relating storage, failure, and observations to the preceding dialect.</td>
+</tr>
+<tr>
+<td>Provider requirements plus specialized construction operations</td>
+<td>Can select direct calls or primitive storage without general continuation machinery.</td>
+<td>May need a distinct operation contract and must demonstrate which existing mechanisms it actually reuses.</td>
+</tr>
+</tbody>
+</table>
+<p>These options can overlap. Sharing an operation representation does not settle
+whether physical allocation has the same observable meaning as an ordinary
+source effect. Keeping surface syntax also does not guarantee that every
+current signature remains sufficient. Module summaries and compiled artifacts
+must retain whatever requirements their consumers need to check.</p>
+<h3 id="storage-policies-worth-comparing">Storage policies worth comparing</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Policy</th>
+<th>Useful case</th>
+<th>Main pressure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Static storage or verified stack placement</td>
+<td>Fixed configuration and temporary bounded data.</td>
+<td>Layout, recursion, escaping results, and captured control.</td>
+</tr>
+<tr>
+<td>Fixed arena or pool</td>
+<td>Embedded applications and caller-supplied buffers.</td>
+<td>Exhaustion, fragmentation, metadata, and retention until completion.</td>
+</tr>
+<tr>
+<td>Growable arena</td>
+<td>Invocation or request processing with bulk release.</td>
+<td>Backing acquisition, growth failure, and peak retained storage.</td>
+</tr>
+<tr>
+<td>Reference-counted storage</td>
+<td>Shared values needing earlier reclamation.</td>
+<td>Count maintenance, overflow, cycles, and destruction work.</td>
+</tr>
+<tr>
+<td>Traced storage</td>
+<td>Long-lived shared or cyclic graphs.</td>
+<td>Root completeness, collection work, and possible reference relocation.</td>
+</tr>
+</tbody>
+</table>
+<p>A policy need not offer every capability or the same costs. An arena can
+reclaim cyclic data in bulk without finding unreachable cycles. Reference
+counting alone does not reclaim every cycle. Moving collection needs an update
+contract for every retained reference, including hidden captures.</p>
+<p>One managed policy for ordinary values, with explicit providers only for
+specialized values, remains a simpler comparison baseline. It preserves more
+of the existing construction model but may impose services on all ordinary
+programs. A restricted freestanding profile is another baseline: it could
+admit only supported constructions or require explicit storage for selected
+features. Such restrictions must be stated rather than inferred from a target
+label.</p>
+<h3 id="compiled-library-requirements">Compiled library requirements</h3>
+<p>Policy specialization could occur when compiling the final artifact, through
+provider parameters at callable boundaries, or by producing separate instances
+for selected policies. These choices trade code size against indirection,
+separate compilation, and reuse. Selection time is separate from the lifetime
+of each provider activation.</p>
+<p>An exported library would need a contract covering symbols, calling convention,
+representations, required services, backing storage, result validity, release,
+and failure. Opaque handles, copying, caller-owned outputs, and checked borrowed
+views are options with different obligations. A synchronous entry could handle
+its effects internally. Suspension could instead use an explicit polling or
+state-machine protocol. Crossing arbitrary foreign frames would require a
+further control and platform contract.</p>
+<h2 id="semantic-questions-and-corner-cases">Semantic questions and corner cases</h2>
+<h3 id="observable-allocation-and-failure">Observable allocation and failure</h3>
+<p>Consider constructing an unused pair and then returning an integer. If its
+allocation is unobservable, removing the pair can preserve the result. If a
+provider reports exhaustion at that allocation, counts requests observably,
+logs, or suspends, removing it can change behavior.</p>
+<p>Candidate contracts include terminal exhaustion outside ordinary source error
+handling, recoverable allocation failure carried by a checked effect, or a
+capacity guarantee established before entry. The appropriate contract might
+depend on the provision, but its interaction with ordinary construction and
+optimization must be specified. Current internal capacity failure is not
+already a recoverable construction effect.</p>
+<p>Local state encapsulation gives evidence for hiding effects proven
+unobservable. It does not justify erasing arbitrary provider behavior.
+Placement freedom, bounds on consumed memory, exact allocation counts, and
+guaranteed failure points are different promises.</p>
+<h3 id="results-closures-sharing-and-recursive-construction">Results, closures, sharing, and recursive construction</h3>
+<p>Allocating an outer tuple in caller storage does not extend the lifetime of
+its contained values. A returned closure can retain a table in a shorter-lived
+region even if the closure record itself survives. Its own construction,
+captured storage, and allocations when later invoked may involve different
+contexts. Binding an existing value should not silently relocate or deep-copy
+its data.</p>
+<p>Recursive data adds initialization and partially constructed graph obligations.
+A failure during construction must account for what has been published and
+what remains owned. Region completion, individual reclamation, and effectful
+resource cleanup need distinct contracts and a defined order.</p>
+<h3 id="provider-and-control-foundations">Provider and control foundations</h3>
+<p>A provider may need memory for bookkeeping, diagnostics, or failure results.
+If those constructions request the same provider recursively, installation or
+allocation can fail to establish a usable base. Candidate foundations include
+preallocated state, explicit backing storage, an outer provider, and checked
+primitives that do not request the operation being implemented.</p>
+<p>Handlers and continuations also consume storage. Simple provider operations
+might lower to direct calls, while suspension requires saved control and its
+ownership. Lexical scoping or one-shot resumption alone does not prove that
+this storage disappears. A scoped resource captured by control remains owned
+while suspended; a textual block boundary is not itself a release event.</p>
+<h2 id="research-and-implementation-references">Research and implementation references</h2>
+<p>These sources supply precedents and comparison questions. None establishes
+that the proposed Ash composition is already safe or practical. Implementation
+documentation was consulted on 10 October 2026; versioned links identify the
+particular implementation documentation used where available.</p>
+<ul>
+<li><a href="https://doc.rust-lang.org/stable/core/">Rust <code>core</code></a> separates a
+heap-unaware, platform-independent foundation from higher services, while
+documenting possible code-generation support symbols.
+<a href="https://doc.rust-lang.org/stable/alloc/">Rust <code>alloc</code></a> adds heap-owning
+facilities without requiring the full standard library. This supports the
+separation of services, but does not supply Ash's proposed scoped selection.</li>
+<li><a href="https://doc.rust-lang.org/core/alloc/trait.GlobalAlloc.html">Rust <code>GlobalAlloc</code></a>
+explicitly permits allocation calls to be skipped, merged, or replaced by
+stack storage. It also warns about allocator re-entrance. This is a concrete
+contract for optimization and provider foundations, rather than a rule to
+import unchanged into Ash.</li>
+<li><a href="https://ziglang.org/documentation/0.15.2/#Memory">Zig 0.15.2 memory documentation</a>
+describes allocating functions accepting an allocator, including a fixed
+caller-owned buffer. Its
+<a href="https://ziglang.org/documentation/0.15.2/#Exporting-a-C-Library">C library export example</a>
+supplies a foreign-callable artifact precedent. Zig leaves lifetime and
+ownership correctness to the programmer; Ash would need checked contracts.</li>
+<li><a href="https://doi.org/10.1006/inco.1996.2613">Tofte and Talpin, <em>Region-Based Memory Management</em> (1997)</a>
+develops type-and-effect region inference without assuming a collector,
+tested in MLKit with higher-order functions and recursive data. The
+<a href="https://elsman.com/pdf/retro.pdf">authors' retrospective</a> and
+<a href="https://melsman.github.io/mlkit/pdf/mlkit-4.3.0.pdf">MLKit manual</a> supply
+implementation context. These sources show functional programming can use
+regions, but do not make its inference machinery a prerequisite for
+compiler-supplied Ash defaults.
+<a href="https://www.microsoft.com/en-us/research/wp-content/uploads/1995/06/afl-pldi95.pdf">Aiken, Fähndrich, and Levien (1995)</a>
+shows that more precise region placement can reduce retention, sometimes
+asymptotically. Safe lexical regions do not by themselves ensure small memory
+use.</li>
+<li><a href="https://www.cs.cmu.edu/~dpw/papers/capabilities-toplas-abstract.html">Walker, Crary, and Morrisett, <em>Typed Memory Management via Static Capabilities</em></a>
+gives a typed intermediate language with explicit memory operations and
+statically checked permissions. Its safety checking does not require complex
+analysis of region lifetimes. This is evidence for separating explicit Core
+contracts from optional high-level placement inference, not a ready Ash
+provider interface.</li>
+<li><a href="https://arxiv.org/abs/1406.2061">Leijen, <em>Koka: Programming with Row Polymorphic Effect Types</em> (2014)</a>
+establishes local-state encapsulation analogous to Haskell's <code>runST</code>: local
+mutable-reference effects can disappear from an outer contract when their
+heap identity cannot escape. This concerns encapsulated state, rather than
+hiding arbitrary allocator behavior or all ordinary value allocation.</li>
+<li><a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2021/03/multip-tr-v2.pdf"><em>Generalized Evidence Passing for Effect Handlers</em> (2021), extended report</a>
+compiles handlers to ordinary C without special continuation primitives.
+Selected paths avoid constructing continuations; full yields still represent
+them explicitly. This separates optional control machinery from the costs of
+operations that actually need it.</li>
+<li><a href="https://www.mc-pony.com/assets/documents/lexa-oopsla2024.pdf"><em>Lexical Effect Handlers, Directly</em> (2024)</a>
+treats tail-resumptive handlers as ordinary calls without reifying resumptions
+or allocating new stacks; general handlers in that strategy allocate stacks.
+<a href="https://doi.org/10.1145/3763177"><em>Zero-Overhead Lexical Effect Handlers</em> (2025)</a>
+moves exceptional-effect handling work into runtime stack walks. These are
+different cost tradeoffs; efficient ordinary paths do not imply an absent
+runtime or zero total code size.</li>
+<li><a href="https://arxiv.org/abs/2607.15876v2"><em>Yarrow: Reconciling Effect Handlers and Region-Based Memory Management</em>, v2 (2026)</a>
+formalizes regions with one-shot and multi-shot control in Iris/Rocq and proves
+case studies. It addresses the disruption of region lifetimes by captured
+control. This is semantic and proof evidence, without a demonstrated native
+backend or measured embedded footprint.</li>
+<li><a href="https://ocaml.org/manual/5.5/effects.html">OCaml 5.5 effect limitations</a>
+prevent an effect from crossing a C callback boundary. This supplies a
+concrete foreign-control constraint, not an impossibility result for all
+implementations. <a href="https://github.com/koka-lang/libmprompt"><code>libmprompt</code></a>
+explores library-supplied delimited control compatible with C/C++ stacks,
+but requires 64-bit virtual address space and commits at least 4 KiB per
+active prompt. Its repository marks it incomplete and unsuitable for
+production; it is a comparison for control support, not an embedded solution.</li>
+<li><a href="https://webspace.science.uu.nl/~swier004/publications/2023-icfp.pdf"><em>FP²: Fully in-Place Functional Programming</em> (2023)</a>
+proves allocation-free, constant-stack execution for a specified calculus
+under uniqueness conditions, with an implementation in Koka. It suggests a
+route to checked reuse for selected programs. It does not show all ordinary
+functional construction can omit storage services.</li>
+<li><a href="https://doc.rust-lang.org/reference/linkage.html#staticlib">Rust foreign linkage</a>,
+<a href="https://doc.rust-lang.org/reference/panic.html">panic policy</a>, and
+<a href="https://doc.rust-lang.org/reference/behavior-considered-undefined.html">undefined behavior</a>
+expose the packaging, failure, and foreign assumptions behind a callable
+native library. They motivate separate Ash contracts for entry and failure;
+linkage alone does not establish safety across a foreign boundary.</li>
+</ul>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>Further discussion can refine the contracts before code is needed. Useful
+comparison cases include:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Evidence to seek</th>
+<th>Contrary outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Allocation-free exported computation</td>
+<td>Artifact requirements contain no allocator, evaluator, scheduler, or initialization service; account for generated helpers.</td>
+<td>An omitted service is still an undeclared link or startup dependency.</td>
+</tr>
+<tr>
+<td>Ordinary data under a fixed provider</td>
+<td>Backing memory and metadata respect the declared budget; exhaustion has the stated result.</td>
+<td>Hidden heap fallback or unaccounted provider/control storage.</td>
+</tr>
+<tr>
+<td>Repeated scratch computation</td>
+<td>Completion permits storage reuse while preserving the same logical result.</td>
+<td>Retention grows across completed iterations or surviving data becomes invalid.</td>
+</tr>
+<tr>
+<td>Returned closure or shared graph</td>
+<td>Captured and nested storage remains valid under the declared result contract.</td>
+<td>Only the outer allocation survives, or hidden copying changes the contract.</td>
+</tr>
+<tr>
+<td>Unused construction near exhaustion</td>
+<td>Optimized and unspecialized executions agree under the chosen observability rules.</td>
+<td>Optimization changes a promised failure, report, or request count.</td>
+</tr>
+<tr>
+<td>Provider installation and failure</td>
+<td>Initialization, bookkeeping, error delivery, and cleanup have a terminating storage path.</td>
+<td>Allocation recursively invokes itself or failure reporting needs unavailable storage.</td>
+</tr>
+<tr>
+<td>Foreign entry and callback</td>
+<td>Data validity, ownership, control transfer, and cleanup obey the boundary contract.</td>
+<td>Suspension crosses unsupported foreign frames or retained results outlive storage.</td>
+</tr>
+</tbody>
+</table>
+<p>Measure artifact size, required symbols and initialization, peak storage,
+metadata, allocation and copying, and completion work. Separate semantic
+preservation, memory safety, bounded capacity, and performance observations.
+No particular optimizer success should be the sole basis of a claimed
+freestanding guarantee; accepted configurations need a stated executable
+meaning and service requirements.</p>
+<p>This note does not yet authorize a prototype. If one becomes useful, first add
+a bounded governing question, supported cases, comparison criteria, and
+disposal or retention conditions. Experimental code would remain evidence;
+product adoption would follow the proposal or decision and task workflow.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which allocation observations are part of the contract, especially
+exhaustion, counters, logging, and suspension?</li>
+<li>Do storage effects belong in source computation contracts, a later Core
+dialect, provider requirements, or some combination?</li>
+<li>Where are defaults supplied, and which requirements survive separate
+compilation and foreign export?</li>
+<li>What initial lifetime is sufficient for ordinary values and entry results?
+How do explicit overrides affect closures and existing aliases?</li>
+<li>Which provider laws are checked, proved, tested, or trusted, and how do those
+guarantees connect to actual storage primitives?</li>
+<li>How are control storage, recursive construction, partial failure, and
+required cleanup represented without introducing an implicit runtime?</li>
+<li>Which concrete workload justifies additional placement, reuse, or capacity
+inference beyond supplied defaults and explicit scopes?</li>
+</ul>
+<p>As work continues, update the candidate descriptions and references with their
+actual evidence and limits. Keep unresolved choices visible. A converged
+language change belongs in a change proposal; a converged non-language choice
+belongs in an architectural decision. This document remains the exploration
+space rather than a substitute for either artifact.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#semantic-questions-and-corner-cases">Semantic questions and corner cases</a><a href="#research-and-implementation-references">Research and implementation references</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0043-shorter-surface-alternatives/">← DN-0043: Shorter Surface Alternatives</a><a rel="next" href="/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/">DN-0045: Native Compilation and Interactive Execution →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

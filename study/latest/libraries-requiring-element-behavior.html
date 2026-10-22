@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./libraries-wrapping-a-representation.html" rel="next">
+<link href="./libraries-determining-interface-results.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Requiring element behavior · Ash</title><meta name="description" content="The first library lesson compared integers through Equal<Int>. A container can also support equality, but its implementation must explain what makes its elements equal. A box cannot obtain that behavior merely…"><meta name="robots" content="index, follow"><meta property="og:title" content="Requiring element behavior · Ash"><meta property="og:description" content="The first library lesson compared integers through Equal<Int>. A container can also support equality, but its implementation must explain what makes its elements equal. A box cannot obtain that behavior merely…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Requiring element behavior · Ash"><meta name="twitter:description" content="The first library lesson compared integers through Equal<Int>. A container can also support equality, but its implementation must explain what makes its elements equal. A box cannot obtain that behavior merely…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/libraries-requiring-element-behavior.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/libraries-requiring-element-behavior.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Requiring element behavior","headline":"Requiring element behavior","description":"The first library lesson compared integers through Equal\u003cInt>. A container can also support equality, but its implementation must explain what makes its elements equal. A box cannot obtain that behavior merely…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/libraries-requiring-element-behavior.html","@id":"https://dikini.github.io/ash/study/latest/libraries-requiring-element-behavior.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/requiring-element-behavior/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./libraries-introduction.html">Design library abstractions in Ash</a></li><li class="breadcrumb-item"><a href="./libraries-requiring-element-behavior.html"><span class="chapter-title">Requiring element behavior</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#retain-the-concrete-element-behavior" id="toc-retain-the-concrete-element-behavior" class="nav-link active" data-scroll-target="#retain-the-concrete-element-behavior">Retain the concrete element behavior</a></li>
+  <li><a href="#derive-the-container-implementation" id="toc-derive-the-container-implementation" class="nav-link" data-scroll-target="#derive-the-container-implementation">Derive the container implementation</a></li>
+  <li><a href="#supply-both-facts-at-the-use" id="toc-supply-both-facts-at-the-use" class="nav-link" data-scroll-target="#supply-both-facts-at-the-use">Supply both facts at the use</a></li>
+  <li><a href="#a-selected-container-rule-still-needs-its-prerequisite" id="toc-a-selected-container-rule-still-needs-its-prerequisite" class="nav-link" data-scroll-target="#a-selected-container-rule-still-needs-its-prerequisite">A selected container rule still needs its prerequisite</a></li>
+  <li><a href="#follow-nested-prerequisites-toward-a-base-case" id="toc-follow-nested-prerequisites-toward-a-base-case" class="nav-link" data-scroll-target="#follow-nested-prerequisites-toward-a-base-case">Follow nested prerequisites toward a base case</a></li>
+  <li><a href="#require-structural-progress-from-a-generic-prerequisite" id="toc-require-structural-progress-from-a-generic-prerequisite" class="nav-link" data-scroll-target="#require-structural-progress-from-a-generic-prerequisite">Require structural progress from a generic prerequisite</a></li>
+  <li><a href="#a-specialized-implementation-is-not-an-override" id="toc-a-specialized-implementation-is-not-an-override" class="nav-link" data-scroll-target="#a-specialized-implementation-is-not-an-override">A specialized implementation is not an override</a></li>
+  <li><a href="#put-an-implementation-with-an-owner" id="toc-put-an-implementation-with-an-owner" class="nav-link" data-scroll-target="#put-an-implementation-with-an-owner">Put an implementation with an owner</a></li>
+  <li><a href="#practice-follow-the-required-behavior" id="toc-practice-follow-the-required-behavior" class="nav-link" data-scroll-target="#practice-follow-the-required-behavior">Practice: follow the required behavior</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./libraries-introduction.html">Design library abstractions in Ash</a></li><li class="breadcrumb-item"><a href="./libraries-requiring-element-behavior.html"><span class="chapter-title">Requiring element behavior</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Requiring element behavior</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The first library lesson compared integers through <code>Equal&lt;Int&gt;</code>. A container can also support equality, but its implementation must explain what makes its elements equal. A box cannot obtain that behavior merely because its element type is written as a parameter.</p>
+<p>We will derive box equality by unwrapping two boxes and asking for equality of their contents. The resulting implementation has a prerequisite. A client must make both the container implementation and the needed element behavior available.</p>
+<section id="retain-the-concrete-element-behavior" class="level2">
+<h2 class="anchored" data-anchor-id="retain-the-concrete-element-behavior">Retain the concrete element behavior</h2>
+<p>Keep the familiar interface, integer implementation, and constrained helper in <code>equality.ash</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub interface Equal&lt;A&gt; {
+    equal : (A, A) -&gt; Bool
+}
+
+pub impl Equal&lt;Int&gt; {
+    equal (left, right) = left == right
+}
+
+pub same : (A, A) -&gt; Bool where Equal&lt;A&gt;
+same pair = equal pair</code></pre>
+<p><code>same</code> requires <code>Equal&lt;A&gt;</code> and forwards that evidence to the method call. The integer implementation satisfies <code>Equal&lt;Int&gt;</code>. It says nothing yet about boxes, even boxes containing integers.</p>
+</section>
+<section id="derive-the-container-implementation" class="level2">
+<h2 class="anchored" data-anchor-id="derive-the-container-implementation">Derive the container implementation</h2>
+<p><code>boxes.ash</code> owns the box type and supplies its equality rule:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub import equality (Equal, equal)
+
+pub type Box&lt;A&gt; = Box(A)
+
+pub impl&lt;A&gt; Equal&lt;Box&lt;A&gt;&gt; where Equal&lt;A&gt; {
+    equal (Box(left), Box(right)) = equal (left, right)
+}</code></pre>
+<p>Read the header from the outside inward. <code>impl&lt;A&gt;</code> names the head’s type parameter. <code>Equal&lt;Box&lt;A&gt;&gt;</code> is the interface application being implemented. <code>where Equal&lt;A&gt;</code> is the evidence needed to implement it.</p>
+<p>The method patterns expose <code>left</code> and <code>right</code>, both of type <code>A</code>. Their equality call uses the declared prerequisite. The method cannot assume integer operations because <code>A</code> is rigid while the implementation is checked. Its argument type is fixed by substituting <code>Box&lt;A&gt;</code> into the interface contract.</p>
+<p>The public import forwards the interface and method names. It does not import or re-export the integer implementation. The public box implementation is a separate fact whose prerequisite must be satisfied when a client selects it. All parameter names in a prerequisite must already occur in the head; prerequisites do not introduce new unknown element types.</p>
+</section>
+<section id="supply-both-facts-at-the-use" class="level2">
+<h2 class="anchored" data-anchor-id="supply-both-facts-at-the-use">Supply both facts at the use</h2>
+<p>The entry explicitly selects the two public implementations:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import equality (same, impl Equal)
+import boxes (Box, impl Equal)
+
+main : Unit -&gt; (Bool, Bool)
+main () = (same (Box(42), Box(42)), same (Box(20), Box(22)))</code></pre>
+<p>Write the complete requirement for the first <code>same</code> call. Follow the box implementation’s prerequisite to the selected element method, then use that method on each pair’s unwrapped contents. Predict both booleans before running from this lesson’s <code>src</code> directory:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 01-box-equality.ash
+(true, false) : (Bool, Bool)</code></pre>
+<p>The first pair has equal contents and the second does not. The ordinary constructor shapes are the same; the element method supplies the distinction.</p>
+<p>For <code>same (Box(42), Box(42))</code>, the evidence request follows this path:</p>
+<ol type="1">
+<li>The argument fixes <code>A</code> in <code>same</code> to <code>Box&lt;Int&gt;</code>.</li>
+<li><code>Equal&lt;Box&lt;Int&gt;&gt;</code> matches the generic box implementation with its parameter set to <code>Int</code>.</li>
+<li>Substituting that choice into its prerequisite gives <code>Equal&lt;Int&gt;</code>.</li>
+<li>The selected integer implementation satisfies that prerequisite.</li>
+</ol>
+<p>The resulting box method receives integer equality and uses it on the two unwrapped values. The second call uses the same evidence path with different integer contents.</p>
+</section>
+<section id="a-selected-container-rule-still-needs-its-prerequisite" class="level2">
+<h2 class="anchored" data-anchor-id="a-selected-container-rule-still-needs-its-prerequisite">A selected container rule still needs its prerequisite</h2>
+<p><code>02-missing-prerequisite.ash</code> removes only the integer implementation selector:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import equality (same)
+import boxes (Box, impl Equal)
+
+main : Unit -&gt; (Bool, Bool)
+main () = (same (Box(42), Box(42)), same (Box(20), Box(22)))</code></pre>
+<p>The box implementation is still selected. Trace its prerequisite from the first call: where does evidence become unavailable? Predict which call and declarations the message will connect, then run this entry:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 02-missing-prerequisite.ash
+No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/02-missing-prerequisite.ash:5:12
+5 | main () = (same (Box(42), Box(42)), same (Box(20), Box(22)))
+  |            ^ No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/equality.ash:9:5
+9 | pub same : (A, A) -&gt; Bool where Equal&lt;A&gt;
+  |     ^ This declaration introduced the interface requirement.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/02-missing-prerequisite.ash:1:18
+1 | import equality (same)
+  |                  ^ This import made the declaration available.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/equality.ash:1:1
+1 | pub interface Equal&lt;A&gt; {
+  | ^ This interface participates in the failing evidence selection.
+2 |     equal : (A, A) -&gt; Bool
+  | ^ This interface participates in the failing evidence selection.
+3 | }
+  | ^ This interface participates in the failing evidence selection.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/02-missing-prerequisite.ash:2:1
+2 | import boxes (Box, impl Equal)
+  | ^ This import made the selected implementation available.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/boxes.ash:5:1
+5 | pub impl&lt;A&gt; Equal&lt;Box&lt;A&gt;&gt; where Equal&lt;A&gt; {
+  | ^ Evidence selection followed this implementation.
+6 |     equal (Box(left), Box(right)) = equal (left, right)
+  | ^ Evidence selection followed this implementation.
+7 | }
+  | ^ Evidence selection followed this implementation.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/boxes.ash:6:5
+6 |     equal (Box(left), Box(right)) = equal (left, right)
+  |     ^ This implementation method supplies the selected evidence.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/equality.ash:1:1
+1 | pub interface Equal&lt;A&gt; {
+  | ^ This interface participates in the failing evidence selection.
+2 |     equal : (A, A) -&gt; Bool
+  | ^ This interface participates in the failing evidence selection.
+3 | }
+  | ^ This interface participates in the failing evidence selection.
+reason: constraint.unsatisfied</code></pre>
+<p>The message starts at the constrained use, relates it to <code>same</code>’s declaration, and follows the imported box implementation. That implementation is available, but its substituted <code>Equal&lt;Int&gt;</code> prerequisite has no evidence in this entry’s effective environment. Importing <code>same</code> by name does not admit that fact.</p>
+<p>Restore <code>impl Equal</code> in the import from <code>equality</code>. This repairs the missing element behavior without changing the generic container rule. A library may also deliberately forward public implementation facts through a facade, as in the earlier forwarding lesson; the route must still be explicit.</p>
+</section>
+<section id="follow-nested-prerequisites-toward-a-base-case" class="level2">
+<h2 class="anchored" data-anchor-id="follow-nested-prerequisites-toward-a-base-case">Follow nested prerequisites toward a base case</h2>
+<p>The same generic implementation handles a box inside another box:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import equality (same, impl Equal)
+import boxes (Box, impl Equal)
+
+main : Unit -&gt; Bool
+main () = same (Box(Box(42)), Box(Box(42)))</code></pre>
+<p>Write the complete requirements from the outer box to the element type. Separately count the box layers each value must lose during execution. Predict the boolean before running this nested comparison:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 03-nested-boxes.ash
+true : Bool</code></pre>
+<p>Selection follows <code>Equal&lt;Box&lt;Box&lt;Int&gt;&gt;&gt;</code>, then <code>Equal&lt;Box&lt;Int&gt;&gt;</code>, then <code>Equal&lt;Int&gt;</code>. Each generic step removes one <code>Box</code> layer from the requirement. Execution similarly unwraps each layer before comparing the integer values. The implementation is reused with different complete arguments; its own method body remains checked once against its declared generic contract.</p>
+<p>For an interface without a determination edge, the complete argument vector is its <em>selection key</em>. With an edge, only the determinant positions form the key, as in the preceding determination lesson. Prerequisites do not provide a second way to choose between competing implementations.</p>
+</section>
+<section id="require-structural-progress-from-a-generic-prerequisite" class="level2">
+<h2 class="anchored" data-anchor-id="require-structural-progress-from-a-generic-prerequisite">Require structural progress from a generic prerequisite</h2>
+<p>For a generic prerequisite still containing parameters, compare its selection key with the head’s key. The vectors must have equal width. Each prerequisite component must equal or be a strict syntactic part of the corresponding head component, and at least one must be strictly smaller. This rule checks structural progress in the requirement, not the method’s calculation.</p>
+<p>Consider keeping the box type in the prerequisite:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>type Box&lt;A&gt; = Box(A)
+
+interface Equal&lt;A&gt; {
+    equal : (A, A) -&gt; Bool
+}
+
+impl&lt;A&gt; Equal&lt;Box&lt;A&gt;&gt; where Equal&lt;Box&lt;A&gt;&gt; {
+    equal pair = true
+}
+
+main : Unit -&gt; Unit
+main () = ()</code></pre>
+<p>Compare the two <code>Box&lt;A&gt;</code> key arguments. Which part of the progress requirement can this header satisfy, and which part remains unmet? Run the source:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 04-no-decrease.ash
+This generic prerequisite does not have a strictly smaller selection key than the implementation head.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/04-no-decrease.ash:7:29
+7 | impl&lt;A&gt; Equal&lt;Box&lt;A&gt;&gt; where Equal&lt;Box&lt;A&gt;&gt; {
+  |                             ^ This generic prerequisite does not have a strictly smaller selection key than the implementation head.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/04-no-decrease.ash:7:9
+7 | impl&lt;A&gt; Equal&lt;Box&lt;A&gt;&gt; where Equal&lt;Box&lt;A&gt;&gt; {
+  |         ^ Each prerequisite key argument must equal or be a strict syntactic subterm of its corresponding head argument, with at least one strict decrease.
+reason: impl.prerequisite-not-decreasing</code></pre>
+<p>The labels compare <code>Box&lt;A&gt;</code> with the unchanged <code>Box&lt;A&gt;</code> prerequisite. The prerequisite repeats the head instead of removing a constructor layer. In the working implementation, <code>A</code> is a strict part of <code>Box&lt;A&gt;</code>, so the prerequisite makes structural progress.</p>
+<p>This admission rule applies to nonground prerequisites: those still containing parameters. A fully concrete prerequisite is exempt from this decrease comparison, but evidence selection still detects cycles of complete requirements. The rule does not prove that arbitrary method bodies terminate.</p>
+</section>
+<section id="a-specialized-implementation-is-not-an-override" class="level2">
+<h2 class="anchored" data-anchor-id="a-specialized-implementation-is-not-an-override">A specialized implementation is not an override</h2>
+<p>Available implementation heads must be coherent: two distinct heads cannot match the same complete application. A prerequisite does not give one head lower priority. Consider adding a separate rule for integer boxes:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import equality (Equal, equal, impl Equal)
+
+type Box&lt;A&gt; = Box(A)
+
+impl&lt;A&gt; Equal&lt;Box&lt;A&gt;&gt; where Equal&lt;A&gt; {
+    equal (Box(left), Box(right)) = equal (left, right)
+}
+
+impl Equal&lt;Box&lt;Int&gt;&gt; {
+    equal (Box(left), Box(right)) = left == right
+}
+
+main : Unit -&gt; Unit
+main () = ()</code></pre>
+<p>Find an application that both heads can match. Predict which declarations the checker must compare before it can accept this module, then run it:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 05-overlap.ash
+This implementation can match the same interface application as an earlier available implementation.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/05-overlap.ash:9:12
+9 | impl Equal&lt;Box&lt;Int&gt;&gt; {
+  |            ^ This implementation can match the same interface application as an earlier available implementation.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/05-overlap.ash:5:9
+5 | impl&lt;A&gt; Equal&lt;Box&lt;A&gt;&gt; where Equal&lt;A&gt; {
+  |         ^ The earlier implementation is defined here.
+reason: impl.overlap</code></pre>
+<p>Both heads can match <code>Equal&lt;Box&lt;Int&gt;&gt;</code>. The diagnostic identifies the later head and the earlier generic one. Having a prerequisite does not make the generic rule lower priority. Source order, import order, and apparent specificity do not select a winner.</p>
+<p>Keep one coherent implementation for that key. Here the generic implementation already obtains integer behavior through its prerequisite, so remove the specialized declaration. If a wrapper needs a distinct meaning, give it a distinct nominal type; the next chapter develops that choice.</p>
+</section>
+<section id="put-an-implementation-with-an-owner" class="level2">
+<h2 class="anchored" data-anchor-id="put-an-implementation-with-an-owner">Put an implementation with an owner</h2>
+<p>An implementation belongs in a module that owns its interface or an outer nominal type in its selection key. The box module qualifies through its own type even though <code>Equal</code> comes from another module. Examine this client:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import equality (Equal)
+import boxes (Box)
+
+impl Equal&lt;Box&lt;Int&gt;&gt; {
+    equal (Box(left), Box(right)) = left == right
+}
+
+main : Unit -&gt; Unit
+main () = ()</code></pre>
+<p>Locate the defining modules of <code>Equal</code> and the outer <code>Box</code> type. Does this client define either one? Predict whether its method body can repair an ownership failure, then run the source:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 06-foreign-owner.ash
+This module owns neither the interface nor an outer nominal type in the implementation's selection key. Dependent arguments and nested nominal types do not establish ownership.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/06-foreign-owner.ash:4:6
+4 | impl Equal&lt;Box&lt;Int&gt;&gt; {
+  |      ^ This module owns neither the interface nor an outer nominal type in the implementation's selection key. Dependent arguments and nested nominal types do not establish ownership.
+  --&gt; /path/to/ash-doc/content/libraries/requiring-element-behavior/src/06-foreign-owner.ash:4:6
+4 | impl Equal&lt;Box&lt;Int&gt;&gt; {
+  |      ^ This selected interface belongs to another module.
+reason: impl.orphan</code></pre>
+<p>The declaration is rejected before its body matters. Place this responsibility in the module owning <code>Equal</code> or the module owning the outer <code>Box</code>, retaining only one implementation for overlapping keys. Importing a type does not transfer ownership of its declaration.</p>
+<p>For a determined interface, only the selection-key arguments can establish this nominal ownership. A nominal appearing solely in a dependent result, or nested beneath a foreign outer constructor, does not establish an owner. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#implementations">implementation rules</a> govern admission and coherence; <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#constraint-satisfaction-and-checked-evidence">evidence selection</a> governs the subsequent prerequisite search.</p>
+</section>
+<section id="practice-follow-the-required-behavior" class="level2">
+<h2 class="anchored" data-anchor-id="practice-follow-the-required-behavior">Practice: follow the required behavior</h2>
+<p>Start each task with fresh copies in a scratch directory. For tasks one and two, copy <code>03-nested-boxes.ash</code>, <code>equality.ash</code>, and <code>boxes.ash</code> together. For tasks three and four, copy <code>01-box-equality.ash</code> with those two libraries.</p>
+<ol type="1">
+<li>Change one innermost integer in <code>03-nested-boxes.ash</code>. Trace the complete requirements and predict the boolean and which method makes the final decision, then run it.</li>
+<li>Add another <code>Box</code> layer to both arguments in <code>03-nested-boxes.ash</code>. Predict the result and count the unwrapping steps before running it. Explain which complete requirements reuse the generic declaration.</li>
+<li>Add <code>Equal&lt;Bool&gt;</code> to <code>equality.ash</code>, using exhaustive Boolean patterns. Compare two Boolean boxes through <code>same</code> in the copied entry and adjust its arguments as needed. Predict the result, then check it.</li>
+<li>Explain why removing the prerequisite from the box implementation would leave its method unable to compare arbitrary elements.</li>
+</ol>
+<p>One generic declaration served every layer: the nested run reached the integer fact through two unwrappings, and the rejected sources each broke a guard on that same path — selected evidence, a shrinking key, coherent heads, an owning module. The next chapter gives an <a href="./libraries-wrapping-a-representation.html">existing representation a new nominal meaning</a> without allocating an ordinary constructor wrapper.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./libraries-determining-interface-results.html" class="pagination-link" aria-label="Determining interface results">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Determining interface results</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./libraries-wrapping-a-representation.html" class="pagination-link" aria-label="Wrapping a representation">
+        <span class="nav-page-text"><span class="chapter-title">Wrapping a representation</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

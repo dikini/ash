@@ -1,0 +1,253 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0011: Modules, Providers, and Resolution · Ash</title><meta name="description" content="Can static linking and dynamic loading use one typed resolution model while modules remain passive packages, loaded interiors may stay opaque, and unloading respects the lifetime of code and resources?"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0011: Modules, Providers, and Resolution · Ash"><meta property="og:description" content="Can static linking and dynamic loading use one typed resolution model while modules remain passive packages, loaded interiors may stay opaque, and unloading respects the lifetime of code and resources?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0011: Modules, Providers, and Resolution · Ash"><meta name="twitter:description" content="Can static linking and dynamic loading use one typed resolution model while modules remain passive packages, loaded interiors may stay opaque, and unloading respects the lifetime of code and resources?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0011-modules-providers-and-resolution/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0011-modules-providers-and-resolution/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0011-modules-providers-and-resolution.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0011: Modules, Providers, and Resolution","headline":"DN-0011: Modules, Providers, and Resolution","description":"Can static linking and dynamic loading use one typed resolution model while modules remain passive packages, loaded interiors may stay opaque, and unloading respects the lifetime of code and resources?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0011-modules-providers-and-resolution/","@id":"https://dikini.github.io/ash/docs/design/dn-0011-modules-providers-and-resolution/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0011-modules-providers-and-resolution.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0011-modules-providers-and-resolution" data-pagefind-meta="title">DN-0011: Modules, Providers, and Resolution</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0011-modules-providers-and-resolution.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0011</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009: Effects, Handlers, and Continuations</a>, <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010: Identities and Resource Lifetimes</a>, <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012: Coeffects and Hooks</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It explores possible future module and resolution semantics; it does not define current Ash, accept an architecture, or authorize roadmap work. The syntax and type notation in this note are illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can static linking and dynamic loading use one typed resolution model while modules remain passive packages, loaded interiors may stay opaque, and unloading respects the lifetime of code and resources?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>A future Ash program may need to resolve interfaces, effect handlers, provider requirements, hook subscribers, and module exports. Some relationships will be known during compilation or linking. Others may become known only when a package, identity, or runtime parameter arrives.</p>
+<p>This note explores the hypothesis that those cases differ primarily in resolution stage, not in composition semantics. It focuses on modules as packages and on the typed relationships among their contents. It does not define a general plugin marketplace, activation framework, component scheduler, dynamic type universe, or universal registry.</p>
+<p>Providers appear here because they are resolution targets and module exports. Their semantic separation from handlers and effect APIs is developed in <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009</a>; their stable identity and lifetime are developed in <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a>.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="keep-modules-passive">Keep modules passive</h3>
+<blockquote>
+<p>Suggested rule: A module packages definitions and metadata; loading it makes those contents available but does not implicitly start an active component or register runtime behavior.</p>
+</blockquote>
+<p>A module may package:</p>
+<ul>
+<li>code and types;</li>
+<li>effect APIs;</li>
+<li>interfaces and implementations;</li>
+<li>handler definitions;</li>
+<li>provider implementations;</li>
+<li>resource constructors;</li>
+<li>subscriber definitions;</li>
+<li>metadata needed for typed discovery and elaboration.</li>
+</ul>
+<p>The loader or ordinary program code performs orchestration. A load handler may choose to construct resources or registrations, but that is an explicit loading policy rather than an intrinsic module lifecycle.</p>
+<h3 id="share-static-and-dynamic-composition-semantics">Share static and dynamic composition semantics</h3>
+<blockquote>
+<p>Suggested rule: Resolve the same typed relationships at compile time, link time, load time, or run time according to when the required information becomes available.</p>
+</blockquote>
+<p>For example:</p>
+<pre tabindex="0"><code class="language-text">required interface + available impl = resolved implementation
+required effect    + available handler = resolved interpretation
+handler need       + available provider = resolved provider
+hook identity      + compatible subscriber = registration
+</code></pre>
+<p>When all evidence is static, the compiler can specialize and erase witnesses. When evidence arrives later, the runtime retains typed witnesses and indirection. The two paths should not assign different meanings to the resolved relationship.</p>
+<h3 id="treat-loading-as-delayed-elaboration">Treat loading as delayed elaboration</h3>
+<blockquote>
+<p>Suggested rule: Model dynamic loading as ordinary module elaboration performed later with runtime-supplied parameters and identities.</p>
+</blockquote>
+<p>The two stages can be compared as:</p>
+<pre tabindex="0"><code class="language-text">module package + known parameters
+    -&gt; compile/link elaboration
+    -&gt; resolved identities and implementations
+
+module package + runtime parameters or identities
+    -&gt; runtime elaboration
+    -&gt; resolved identities and implementations
+</code></pre>
+<p>Loading changes the controlled runtime world and is therefore a plausible future effect. A load handler might validate a package, map code, instantiate identities, resolve exports, construct selected resources, reject the load, or publish hooks. None of those possibilities gives loading an automatic relationship to coeffect registration.</p>
+<h3 id="resolve-by-typed-identity">Resolve by typed identity</h3>
+<blockquote>
+<p>Suggested rule: Static and dynamic discovery use typed identities and compatibility evidence rather than string names or untyped shape matching.</p>
+</blockquote>
+<p>Tooling and loaders should eventually be able to answer:</p>
+<ul>
+<li>which known effect APIs are present;</li>
+<li>which handlers interpret them and what lower effects those handlers require;</li>
+<li>which providers satisfy handler constraints;</li>
+<li>which hook identities are exported;</li>
+<li>which subscribers are type-compatible;</li>
+<li>which types or identities are hidden existentially.</li>
+</ul>
+<p>When all facts are already known, this discovery collapses into ordinary linking.</p>
+<h3 id="preserve-a-statically-known-boundary">Preserve a statically known boundary</h3>
+<blockquote>
+<p>Suggested rule: Already compiled Ash code interacts with dynamically loaded contents through a statically meaningful outer contract, while arbitrary module-internal types and protocols may remain opaque.</p>
+</blockquote>
+<p>One candidate package boundary might expose an existential contract:</p>
+<pre tabindex="0"><code class="language-text">exists a.
+    KnownModuleAPI&lt;a&gt;
+</code></pre>
+<p>A different candidate might expose only a statically known transport boundary while implementing TLS, HTTP, a proprietary protocol, or an interpreter internally. In either case, dynamic loading need not extend the set of APIs the existing program can name directly.</p>
+<h3 id="keep-loading-and-registration-orthogonal">Keep loading and registration orthogonal</h3>
+<blockquote>
+<p>Suggested rule: Loading may make subscriber code and hook identities available, but registration and deregistration remain separate acquisitions that occur only when their required identities are valid.</p>
+</blockquote>
+<p>This avoids an implicit module-activation lifecycle and lets an application, request, process, or resource scope own a registration independently of the module that supplied its code.</p>
+<h3 id="unload-only-after-code-dependencies-drain">Unload only after code dependencies drain</h3>
+<blockquote>
+<p>Suggested rule: Withdraw module-provided bindings and stop creating module-originated objects before reclaiming code; keep the module resident while live handlers, callbacks, destructors, or suspended continuations still require it.</p>
+</blockquote>
+<p>Ownership and code provenance are separate. Unloading cannot assume that every object created with module code is owned by the module, but it must account for each object's dependency on that code.</p>
+<h2 id="candidate-model">Candidate model</h2>
+<h3 id="package-and-contract">Package and contract</h3>
+<p>A module package could carry:</p>
+<ul>
+<li>a statically known outer contract;</li>
+<li>code and data for its implementation;</li>
+<li>export identities and requirements;</li>
+<li>existentially hidden identities or associated types;</li>
+<li>compatibility metadata or witnesses;</li>
+<li>constructors whose invocation is separate from package loading.</li>
+</ul>
+<p>This model lets a loaded module contain an opaque sub-world. The surrounding program needs to understand only the boundary. A more ambitious future design might let one module expose a manifest or proof for an opaque API and request another compatible module. That should remain outside the initial experiment until ordinary existential boundaries prove insufficient.</p>
+<h3 id="elaboration-and-resolution">Elaboration and resolution</h3>
+<p>Resolution could be expressed as typed constraints over identities. The same engine might support:</p>
+<pre tabindex="0"><code class="language-text">interface/impl
+effect/handler
+handler/provider
+hook/subscriber
+module import/export
+</code></pre>
+<p>It may share generic and associated-type resolution, witness or dictionary construction, existential opening, and specialization. Semantic rules still differ: a handler transforms effect rows and controls continuations, while an <code>impl</code> dictionary does not.</p>
+<p>The result of runtime elaboration may resemble:</p>
+<pre tabindex="0"><code class="language-text">exists module_id provider_id handler_id ... .
+    LoadedModule&lt;module_id, provider_id, handler_id, ...&gt;
+</code></pre>
+<p>The package keeps hidden identities related while exposing only the operations permitted by its known contract.</p>
+<h3 id="modules-in-handler-chains">Modules in handler chains</h3>
+<p>A loaded module may provide, consume, or transform effects rather than acting only as a terminal provider:</p>
+<pre tabindex="0"><code class="language-text">Application
+    | Http
+    v
+Retry module
+    | Http
+    v
+Http-over-Network module
+    | Network
+    v
+runtime provider
+</code></pre>
+<p>The retry module consumes and provides <code>Http</code>. Another module might provide <code>Filesystem</code> by consuming <code>ObjectStore</code>. Dynamic composition therefore needs the same handler-transformation model as static composition.</p>
+<h3 id="provider-discovery">Provider discovery</h3>
+<p>A provider can realize several effect APIs or expose lower-level resources from which handlers build interpretations:</p>
+<pre tabindex="0"><code class="language-text">PostgresRuntime
+    +-- Database provider
+    +-- Transaction provider
+    +-- Notification provider
+</code></pre>
+<p>Resolution should use ordinary type constraints and identity equality rather than a fixed one-provider/one-effect registry entry. Replacing one provider identity affects new bindings; <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a> explains why existing bindings remain stable unless explicitly migrated.</p>
+<h3 id="unloading">Unloading</h3>
+<p>A candidate unload sequence is:</p>
+<pre tabindex="0"><code class="language-text">request unload
+      |
+      v
+prevent new module-originated objects
+      |
+      v
+withdraw module-provided bindings
+      |
+      v
+drain or remove live objects requiring module code
+      |
+      v
+release module-level resources
+      |
+      v
+unmap or reclaim module
+</code></pre>
+<p>The loader or library may select a policy: wait, reject unload, cancel dependents, or require explicit migration. The core identity/lifetime model must at least make outstanding dependencies observable and prevent use of reclaimed code.</p>
+<h2 id="interactions-and-failure-cases">Interactions and failure cases</h2>
+<h3 id="the-static-type-world">The static type world</h3>
+<p>A dynamically loaded module can contain APIs unknown to already compiled code, but those APIs remain inside an opaque boundary. Treating load as permission to add arbitrary named types to the running type checker would create a second dynamic language and prevent ordinary static compatibility checks.</p>
+<p>Conversely, requiring Ash to understand every internal protocol would make typed loading unnecessarily restrictive. A known byte-transport or interpreter interface can safely contain richer opaque machinery.</p>
+<h3 id="identity-lifetime">Identity lifetime</h3>
+<p>Loading may introduce module, provider, handler, resource, and registration identities. They have distinct ownership and dependency edges. The module's provenance does not make it the owner of all later resources, but those resources can keep module code live. <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a> explores withdrawal, draining, and captured identities.</p>
+<h3 id="coeffect-registration">Coeffect registration</h3>
+<p>The sequence:</p>
+<pre tabindex="0"><code class="language-text">load module M
+    -&gt; subscriber implementation S becomes available
+
+register S with Hook&lt;h&gt;
+    -&gt; Registration&lt;r&gt;
+
+deregister r
+    -&gt; M may remain loaded
+</code></pre>
+<p>must be possible. A loader may explicitly combine those operations, but automatic registration on load would blur discovery, acquisition, ownership, and policy. Hook publication and registration are explored in <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012</a>.</p>
+<h3 id="loading-as-an-effect">Loading as an effect</h3>
+<p>If load is effectful, a handler may reject it, validate signatures or policy, introduce identities, and publish phases. That does not make module loading the sole source of identities: opening a connection, spawning a process, installing a handler, or creating a subscription can introduce identities during ordinary execution.</p>
+<h3 id="name-based-discovery">Name-based discovery</h3>
+<p>String names can support diagnostics or package metadata, but using them as semantic equality would permit unrelated providers or hooks with matching names to bind. The resolver must preserve typed identity witnesses through existential opening.</p>
+<h3 id="separate-static-and-dynamic-implementations">Separate static and dynamic implementations</h3>
+<p>Two unrelated resolution engines risk drift: the same module graph could type-check statically and bind differently after runtime loading. A common semantic model does not require one code path, but both implementations should produce equivalent typed relationships when given equivalent evidence.</p>
+<h3 id="code-reclamation">Code reclamation</h3>
+<p>Immediate unload after withdrawing exports is unsafe if:</p>
+<ul>
+<li>a handler implemented by the module remains installed;</li>
+<li>a callback implemented by the module remains registered;</li>
+<li>a resource destructor points into module code;</li>
+<li>a suspended continuation can resume into module code.</li>
+</ul>
+<p>A correct design must expose or retain these dependencies rather than depending on callers to remember them informally.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<h3 id="staticdynamic-equivalence-fixture">Static/dynamic equivalence fixture</h3>
+<p>Construct one small module graph containing an interface implementation, a transforming effect handler, a provider, an exported hook, and a compatible subscriber. Elaborate it once with all identities known and once after loading an existential package. Compare:</p>
+<ul>
+<li>accepted and rejected bindings;</li>
+<li>associated-type equalities;</li>
+<li>handler order and row transformation;</li>
+<li>runtime witnesses retained;</li>
+<li>opportunities for specialization;</li>
+<li>diagnostic quality.</li>
+</ul>
+<p>Equivalent evidence should produce equivalent behavior. Keep only design conclusions; discard any loader scaffolding that does not become independently justified architecture.</p>
+<h3 id="opaque-sub-world-case">Opaque sub-world case</h3>
+<p>Load a package exposing a known byte transport while internally interpreting an unknown protocol. Verify that the host can store, pass, invoke, and unload the package through the known contract without naming its hidden types. Add a second package requiring a compatible hidden identity to test the limit of existential opening.</p>
+<h3 id="discovery-surface">Discovery surface</h3>
+<p>Prototype a machine-readable and human-readable view that reports provided and required typed identities, effect transformations, hook compatibility, and hidden associated types. Test collision cases where display names match but identities differ. The goal is to validate the semantic information needed, not to select a final package format or tool UI.</p>
+<h3 id="loading-and-registration-separation">Loading and registration separation</h3>
+<p>Exercise these cases:</p>
+<ul>
+<li>load without constructing resources;</li>
+<li>construct a provider later;</li>
+<li>register and deregister a subscriber while the package stays loaded;</li>
+<li>let another scope own a resource built by module code;</li>
+<li>unload while no code dependencies remain.</li>
+</ul>
+<p>The experiment should reveal any hidden activation assumption in the candidate API.</p>
+<h3 id="unload-stress-cases">Unload stress cases</h3>
+<p>Request unload while each of these remains live: a handler, callback, resource destructor, provider binding, and suspended continuation. Compare wait, rejection, cancellation, and explicit migration policies. The core criterion is that no policy permits reclaimed code to remain reachable.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What exact outer contract and evidence must a loadable package carry?</li>
+<li>Which parts of elaboration can share implementation between compiler, linker, and runtime?</li>
+<li>How are package authenticity, ABI compatibility, and version compatibility represented without making them language semantics prematurely?</li>
+<li>How does dynamic resolution open existential identities and preserve associated-type equalities?</li>
+<li>Are opaque types, existentials, associated types, and witnesses sufficient for every important dynamic binding case?</li>
+<li>How are ambiguity, priority, and multiple compatible providers handled?</li>
+<li>Is provider selection deterministic, explicit, scoped, or policy-controlled?</li>
+<li>Which discovery facts are semantic and which are only metadata for tools?</li>
+<li>Can one loaded opaque sub-world request another package satisfying a contract it introduced, and what statically known bridge would make that safe?</li>
+<li>What is the result and lifetime type of a load operation?</li>
+<li>Who owns identities and resources created during load if elaboration fails partway through?</li>
+<li>How are partial construction and rollback handled for effects that are not reversible?</li>
+<li>What prevents new objects during unload without imposing a global lock?</li>
+<li>How are cycles among module-code dependencies detected or broken?</li>
+<li>May unload cancel or invalidate suspended continuations, and how is that visible in their types?</li>
+<li>Which resolved artifacts can be cached, and how are caches invalidated when identities withdraw?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-model">Candidate model</a><a href="#interactions-and-failure-cases">Interactions and failure cases</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">← DN-0010: Identities and Resource Lifetimes</a><a rel="next" href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012: Coeffects and Hooks →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

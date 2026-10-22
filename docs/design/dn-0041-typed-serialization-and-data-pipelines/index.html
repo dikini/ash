@@ -1,0 +1,539 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0041: Typed Serialization and Data Pipelines · Ash</title><meta name="description" content="Can Ash express a reusable checked relationship between application data types and independent data formats, with useful parsing and processing APIs? Which existing interfaces, type parameters, effects and resource…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0041: Typed Serialization and Data Pipelines · Ash"><meta property="og:description" content="Can Ash express a reusable checked relationship between application data types and independent data formats, with useful parsing and processing APIs? Which existing interfaces, type parameters, effects and resource…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0041: Typed Serialization and Data Pipelines · Ash"><meta name="twitter:description" content="Can Ash express a reusable checked relationship between application data types and independent data formats, with useful parsing and processing APIs? Which existing interfaces, type parameters, effects and resource…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0041-typed-serialization-and-data-pipelines.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0041: Typed Serialization and Data Pipelines","headline":"DN-0041: Typed Serialization and Data Pipelines","description":"Can Ash express a reusable checked relationship between application data types and independent data formats, with useful parsing and processing APIs? Which existing interfaces, type parameters, effects and resource…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/","@id":"https://dikini.github.io/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0041-typed-serialization-and-data-pipelines.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0041-typed-serialization-and-data-pipelines" data-pagefind-meta="title">DN-0041: Typed Serialization and Data Pipelines</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0041-typed-serialization-and-data-pipelines.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0041</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0040-floating-point-semantics-and-representation/">DN-0040</a>,
+<a href="/ash/docs/design/dn-0039-files-and-filesystem-resources/">DN-0039</a>,
+<a href="/ash/docs/design/dn-0023-interfaces-and-implementations/">DN-0023</a>,
+<a href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025</a>,
+<a href="/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/">DN-0030</a>,
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>,
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
+</ul>
+<blockquote>
+<p>This note explores an Ash adaptation of Serde's architecture and executable
+parsing, processing and transformation pipelines. It defines no current
+interfaces, format semantics, derivation facility or runtime optimization,
+and authorizes no implementation. JSON, YAML, CSV, TOML and BSON are first-class
+design cases. This is separate from DN-0036's active completion criteria.</p>
+</blockquote>
+<h2 id="question-and-objective">Question and objective</h2>
+<p>Can Ash express a reusable checked relationship between application data types
+and independent data formats, with useful parsing and processing APIs? Which
+existing interfaces, type parameters, effects and resource dependencies suffice,
+which language additions need proposals, and which costs arise only from the
+framework or rich type machinery?</p>
+<p>Adapt Serde's framework architecture to Ash. Application types define their
+encoding/decoding relationships, while format modules supply representations.
+Serde's data-model and visitor interfaces provide comparison evidence, not an
+Ash API or a requirement to reproduce its Rust types.
+<a href="https://serde.rs/">Serde architecture</a>,
+<a href="https://serde.rs/data-model.html">Serde data model</a></p>
+<p>The intended deliverables are reusable Ash libraries for the five formats,
+typed transformation pipelines, a developer authoring blueprint, and measured
+runtime requirements. Test manual and eventually generated implementations,
+cross-module generic use, copied and scoped data, and processing on real inputs.
+Small successful examples alone do not establish framework expressibility or
+controlled memory costs.</p>
+<h2 id="context-and-authority">Context and authority</h2>
+<p>The <a href="/ash/spec/">current specification</a> provides primitive <code>Int</code>,
+<code>Bool</code> and <code>Unit</code>, tuples, parameterized nominal algebraic data, <code>newtype</code>,
+rank-1 constrained schemes, higher-kinded parameters, relational interfaces
+and method-local type parameters. Nominal constructor payloads are positional;
+there is no current record-field reflection or general derivation facility.</p>
+<p><a href="/ash/spec/elaboration/">Elaboration</a> authenticates selected interface
+evidence, then lowers methods to ordinary functions. The
+<a href="/ash/spec/dynamic-semantics/#generated-interface-evidence">dynamic semantics</a>
+do not perform runtime interface selection. Pure type operations and <code>newtype</code>
+wrappers erase; Effect execution retains lexical instantiation needed by exact
+operation identities. Aggregates occupy an evaluator-managed heap. These
+facts do not establish zero-cost generic calls, packed collections or bounded
+retention over an arbitrarily long pipeline.</p>
+<p>The provider <a href="/ash/docs/design/provider-experiments/execution/">execution record</a> records
+experimental packed <code>Bytes</code>, UTF-8 <code>String</code>, literals and resource support.
+Those branch capabilities require their own adoption before becoming normative.
+The current specification has no Float, selectable region policy, general
+borrowing, associated types, user compiler macros or native-code backend.
+Related design notes do not provide those capabilities by implication.</p>
+<p><a href="/ash/docs/design/dn-0040-floating-point-semantics-and-representation/">DN-0040</a> separately
+plans normative floating point.
+<a href="/ash/docs/design/dn-0039-files-and-filesystem-resources/">DN-0039</a> provides prospective
+file input/output. The scoped arena and later access regimes provide memory
+experiments, not prerequisites for the first owned in-memory format libraries.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Follow the types before proposing syntax. Identify values, interface
+parameters, effects, error types, storage dependencies and state transitions.</li>
+<li>Put data mappings and format logic in Ash modules. Compiler additions need a
+generic language or runtime contract, not a serializer or format name.</li>
+<li>Preserve passive modules, authenticated implementation evidence, opaque
+representation boundaries and independent linked/Core validation.</li>
+<li>Treat all five formats as framework design and acceptance cases. Delivery
+can be incremental, but each implemented profile must state its coverage.</li>
+<li>Preserve type-specific and format-specific information where the selected
+contract requires it. Unsupported conversion reports an error or uses an
+explicitly selected policy; it never silently discards precision or structure.</li>
+<li>Start with owned/copying values and manual implementations. Borrowing,
+derivation and performance transformations have separate evidence gates.</li>
+<li>Keep arenas lexical and nontransportable. Concurrency, asynchronous pipelines,
+process transfer, reference counting and tracing are separate studies.</li>
+</ul>
+<h2 id="candidate-framework">Candidate framework</h2>
+<h3 id="typed-roles-and-state">Typed roles and state</h3>
+<p>The following are design roles, not accepted interface declarations. Use complete
+parameter applications of fixed kinds and the existing constrained-function
+model before requesting associated types or higher-rank source functions.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Role</th>
+<th>Type relationship to establish</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Application value <code>T</code></td>
+<td>The nominal or structural value being encoded or constructed; its public representation contract is explicit.</td>
+</tr>
+<tr>
+<td>Format/profile <code>F</code></td>
+<td>A statically identifiable format and admitted options, with runtime configuration only where needed.</td>
+</tr>
+<tr>
+<td>Encoder state <code>S</code></td>
+<td>Output state with the backing storage, progress and effect dependencies required by its operations.</td>
+</tr>
+<tr>
+<td>Decoder state <code>D</code></td>
+<td>Input/cursor state with its storage dependencies, absolute position and incremental state.</td>
+</tr>
+<tr>
+<td>Error <code>E</code></td>
+<td>Structured failure with location/path and any committed progress; dependencies must be visible if error data retains storage.</td>
+</tr>
+<tr>
+<td>Encoding evidence</td>
+<td>Checked methods relating <code>T</code>, <code>S</code>, <code>E</code> and an effect row.</td>
+</tr>
+<tr>
+<td>Decoding evidence</td>
+<td>Checked methods relating <code>D</code>, <code>T</code>, <code>E</code> and an effect row.</td>
+</tr>
+<tr>
+<td>Construction/visitor evidence</td>
+<td>Checked operations that build the requested <code>T</code> from the format's admitted categories.</td>
+</tr>
+<tr>
+<td>Schema/mapping</td>
+<td>Explicit names, variant representation, optional/default fields and conversion policy; checked evidence, library data or generated code according to its role.</td>
+</tr>
+</tbody>
+</table>
+<p>One comparison uses ordinary state threading. Schematically, an encoding
+operation takes <code>(S, T)</code> and returns either updated <code>S</code> or <code>E</code>; decoding takes
+<code>D</code> and returns either <code>(T, D)</code> or <code>E</code>. Their computation types state an exact
+effect row. These are logical signatures, not source syntax, first-class
+dictionaries or a claim that one interface already expresses the whole design.
+An ordinary state value is duplicable; state threading alone proves neither
+linearity nor unique access to mutable backing storage.</p>
+<p>Another comparison uses identity-indexed resources for mutable decoder or
+builder state. Its handles, callbacks and errors must retain the owner and
+access-interval dependencies. Compare annotation burden, expression within
+current method schemes, state allocation and per-value dispatch. Neither
+direction may obtain mutation or one-shot callback authority from a name alone.</p>
+<p>Format-specific entry functions fix <code>F</code>; the target annotation or contextual
+result type fixes <code>T</code>. Do not rely on a phantom format name that inference
+cannot determine. Specify independent checking of exported generic functions
+and imported implementations before selecting convenience syntax.</p>
+<p>Authors specify field/variant mappings, profiles, conversion/default policy,
+state protocols and borrowing promises. Checking can infer ordinary type
+arguments, select available implementation evidence, propagate effects and
+retain storage dependencies. It cannot infer a preferred wire schema, whether
+an absent field means a default, or whether a runtime number fits a bounded
+format scalar. Derived mappings must disclose their conventions and produce
+the same checked obligations as manual implementations.</p>
+<h3 id="expressibility-experiment">Expressibility experiment</h3>
+<p>The first contract corpus should include a generic application ADT, a nested
+sequence, a sum type, an opaque nominal with a public custom representation,
+and a format-specific scalar. Encode/decode the same eligible application types
+in JSON and YAML, then test the other format constraints before freezing the
+framework interfaces.</p>
+<p>Rust associated types and lifetime bounds do not transfer automatically.
+Try explicit state/result/error parameters and relational interfaces first.
+Check whether generic visitors or compound builders need constrained
+method-local schemes that current Ash does not express. A failing example
+becomes a specific design question and potential language proposal, not an
+unchecked generated adapter or hidden compiler special case.</p>
+<p>Opaque values must be handled by an authorized implementation in their defining
+module or an explicit public representation. Derivation must respect visibility
+and constructor authority. Live resource handles and provider authority have
+no automatic portable serialization: an application may expose ordinary data
+such as a path or identifier, but decoding it does not reacquire authority.</p>
+<h3 id="common-data-model-and-format-extensions">Common data model and format extensions</h3>
+<p>Start from Ash's actual value forms and library collections. The framework
+needs booleans, integers, binary floating point, text, bytes, optional values,
+sequences, products, keyed fields and variants. Field names and variant tags
+are explicit mappings for positional ADTs, not assumed record reflection.</p>
+<p>Exact decimal, dates/times, binary subtypes and other extended scalars can be
+library-defined nominal types with custom mappings. Their presence does not
+justify adding a compiler primitive for every format tag. A common model must
+also allow a format to reject an unsupported category and an application to
+select a documented representation.</p>
+<p>Determine structural support through checked interfaces where possible. Value
+conditions such as an <code>Int</code> fitting BSON int32 still require runtime range
+checks. Similarly, a valid <code>String</code> may violate a format's key restrictions.
+Keep these dynamic conditions distinct from evidence that a codec exists.</p>
+<h3 id="three-execution-styles">Three execution styles</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Style</th>
+<th>Use</th>
+<th>Cost or limitation to measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Materialized document</td>
+<td>Inspection and transformations with unknown shape.</td>
+<td>A generic tree may duplicate names, strings and numerical representations before building <code>T</code>.</td>
+</tr>
+<tr>
+<td>Direct typed decode/encode</td>
+<td>Known application schemas and ordinary library use.</td>
+<td>Avoids a mandatory generic tree, but builders, visitors and application values still have costs.</td>
+</tr>
+<tr>
+<td>Incremental records/events</td>
+<td>Filtering, reductions and format conversion as input arrives.</td>
+<td>Needs chunk, partial-token, state, error and lifetime contracts; some formats require retained document state.</td>
+</tr>
+</tbody>
+</table>
+<p>A generic document tree is an optional ordinary library type. Direct decoding
+must not require it. Event APIs and typed row APIs can share format machinery
+without forcing every application to manipulate untyped nodes.</p>
+<p>Incremental operations distinguish need-more-input, produced data, completion
+and failure. State absolute offsets across chunks and the meaning of trailing
+data. A chunk boundary may split a UTF-8 sequence, number, escape or CSV quoted
+field; it is not automatically a token or record boundary.</p>
+<p>Library collections, byte cursors and output builders are dependencies to
+deliver, not existing primitives to assume. Start with the operations the
+parsers need: bounded access, incremental accumulation, UTF-8 validation,
+numeric conversion and construction of sequences/fields. A full string API or
+general collections redesign remains outside the initial scope.</p>
+<h2 id="first-class-format-contracts">First-class format contracts</h2>
+<p>Pin a version and explicit options for every library. A deliberately incomplete
+profile must report exclusions and cannot claim full format support.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Format</th>
+<th>Required design pressure</th>
+<th>Initial profile questions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JSON, RFC 8259</td>
+<td>Nested values, string keys, Unicode and numbers beyond a selected numerical target.</td>
+<td>Duplicate keys, range/rounding, trailing data and direct/incremental arrays.</td>
+</tr>
+<tr>
+<td>YAML 1.2.2</td>
+<td>Scalar resolution, tags, anchors, aliases and document structure.</td>
+<td>Schema choice, unknown tags, alias preservation/expansion, cycles and retained state.</td>
+</tr>
+<tr>
+<td>CSV, declared dialect</td>
+<td>Rows, headers, textual field conversion, quoting and embedded line breaks.</td>
+<td>Column mapping, missing/extra fields, encoding, empty/null distinction and recovery.</td>
+</tr>
+<tr>
+<td>TOML 1.1.0</td>
+<td>Tables, nested configuration, dates/times and document constraints.</td>
+<td>Target mapping, special floats, ordering-independent construction and duplicate definitions.</td>
+</tr>
+<tr>
+<td>BSON, specification 1.1</td>
+<td>Length-prefixed binary documents, integer widths, doubles, bytes and extended scalar tags.</td>
+<td>Range checks, byte order, binary subtypes, decimal128, unknown/deprecated types and output sizing.</td>
+</tr>
+</tbody>
+</table>
+<p>The format contracts derive from their primary descriptions:
+<a href="https://www.rfc-editor.org/rfc/rfc8259.html">JSON</a>,
+<a href="https://yaml.org/spec/1.2.2/">YAML</a>,
+<a href="https://www.rfc-editor.org/rfc/rfc4180.html">CSV baseline</a>,
+<a href="https://toml.io/en/v1.1.0">TOML</a>, and
+<a href="https://bsonspec.org/spec.html">BSON</a>.</p>
+<p>The adapter contract must state unsupported-value behavior. A YAML/TOML
+nonfinite float cannot become a JSON number without a selected representation
+policy. A BSON decimal must not silently become a binary64 value. CSV's column
+mapping needs a schema or explicit conversion; arbitrary nested values do not
+gain a universal row representation.</p>
+<p>BSON output lengths may require buffering, a sizing pass or a seekable sink.
+Compare the costs and make the requirement visible. A sizing pass must not
+execute an effectful user mapping twice. YAML aliases and TOML document-wide
+constraints may require retained state; a streaming API must report that
+requirement rather than promise constant storage for every document.</p>
+<h2 id="ownership-arenas-and-borrowing">Ownership, arenas and borrowing</h2>
+<p>Owned decoding is the first API. Its result and errors must be independent of
+temporary file, input-window and scratch-arena owners. Ordinary immutable
+sharing of copied data is permitted; independence does not require gratuitous
+deep copying at every binding.</p>
+<p>Later distinguish borrowed input, transient callback data and independently
+owned output. Serde's deserializer lifetime illustrates the need to tie a
+borrowed result to input storage, and its owned decoding separates results from
+discarded input. Ash must express the equivalent safety relationship using
+its own admitted types and dependencies.
+<a href="https://serde.rs/lifetimes.html">Deserializer lifetime comparison</a></p>
+<p>A file owner is not the owner of bytes already read. A live buffer owner does
+not permit refilling while dependent views remain usable. Escaped text may
+need newly initialized storage even when unescaped input can be borrowed.
+Compound decoded values, closures, evidence methods, errors and captured
+continuations must preserve those dependencies.</p>
+<p>Gate borrowing on a separately specified access interval and buffer protocol.
+An arena result depends on its arena; an explicit independent copy may escape.
+Initializing arena objects through parsing needs transactional publication or
+an explicit initialized-prefix contract. Immutable arena allocation supplies
+no writable-input-buffer permission by itself.</p>
+<h2 id="errors-and-laws">Errors and laws</h2>
+<p>Separate syntax errors, schema/type mismatches, numeric conversion failures,
+unsupported representations, resource limits and external I/O failures.
+Preserve byte offsets, field/variant paths and row/column information where
+meaningful. Limit retained snippets and error paths when a bounded pipeline
+claims a storage bound.</p>
+<p>Specify fail-fast behavior first. Recovery is an explicit format operation,
+with a valid resynchronization point; skipping one physical line is not a
+general CSV recovery rule. Preserve already emitted output and consumed input
+when a later stage fails. Closing a resource does not undo those effects.</p>
+<p>Round-trip laws apply to a declared representation domain and equivalence.
+Application values need not preserve formatting, comments, original numeric
+spelling, alias sharing or byte identity. Floating-point laws use DN-0040's
+observations, including signed zero and NaN, rather than assuming ordinary
+equality is reflexive. Lossless document editing is a separate profile, with
+raw representations retained where needed.</p>
+<h2 id="semantics-core-and-proof-obligations">Semantics, Core and proof obligations</h2>
+<p>The preferred first account elaborates libraries through current ADTs,
+functions, evidence and effects. It adds no JSON/YAML parser node to Core.
+If expressibility fails, identify the smallest reusable semantic delta and
+return to design/proposal work before implementation.</p>
+<p>Each new capability must account for surface typing, module summaries,
+elaboration, Core authentication, runtime transitions and the affected
+specification. Required obligations include:</p>
+<ul>
+<li>Correct selection and preservation of complete codec/visitor evidence through
+generic calls and separate module checking.</li>
+<li>Construction of a well-typed <code>T</code> or an explicit error, with no constructor or
+opaque-representation authority fabricated by schema data or generated code.</li>
+<li>Dependency preservation through owned, transient and borrowed results,
+including continuation capture and cleanup.</li>
+<li>Initialized storage before publication, correct bounds/offset conversion and
+no use after refill, release or access-interval completion.</li>
+<li>Progress of incremental state or a specified need-more/error result; no
+hidden infinite retry when neither input nor output advances.</li>
+<li>Transformation preservation of values, errors, external progress, exact
+effects and completion order.</li>
+</ul>
+<p>Manual mappings establish the framework first. Derivation follows only after
+their requirements are understood. A derivation mechanism should produce
+ordinary checked implementations and preserve origins and visibility. It
+needs its own generic design contract; the exploratory macro direction in
+<a href="/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/">DN-0030</a> is not an available facility
+or current authority about language capabilities.</p>
+<h2 id="runtime-and-memory-experiments">Runtime and memory experiments</h2>
+<h3 id="define-attributable-overhead">Define attributable overhead</h3>
+<p>The target is zero additional runtime storage for static distinctions that can
+erase, and bounded shared metadata where runtime state is necessary. Define
+the bound per live pipeline, buffer or owner; do not call a repeated per-value
+allocation constant overhead merely because each object has constant size.</p>
+<p>Report retained Core, code and static authentication facts as program-resident
+storage, separately from per-value state and compiler-phase working memory.
+Their absence from source values does not make their physical storage free.
+Runtime erasure must preserve the independent validation and provenance
+boundaries before execution and after any transformation.</p>
+<p>Storage should depend on data and necessary execution state rather than the
+complexity of static type expressions or verification evidence. Distinguish:</p>
+<ul>
+<li>Payload, necessary variant tags, alignment and numerical representation.</li>
+<li>Static wrappers, interface/evidence adapters and retained type metadata.</li>
+<li>Collection nodes, builders, cursor state and duplicated document trees.</li>
+<li>Input/output buffers, foreign conversion and bytes copied.</li>
+<li>Closures, environments, handler/continuation state and completion metadata.</li>
+<li>Unreachable retained storage, including state outside arena payload bounds.</li>
+</ul>
+<p>The current evaluator heap does not supply a source-level collection policy.
+Discarding a row or closing an arena does not, by itself, establish that all
+ordinary wrapper, environment or control storage is reclaimed. Measure those
+costs. A collector or new storage regime requires separate authorized design
+if evidence makes it necessary; it is not introduced silently by this library.</p>
+<h3 id="comparison-method">Comparison method</h3>
+<p>Compare equivalent concrete and generic Ash pipelines with the same data,
+representation, effects and error behavior. Vary erased wrappers and generic
+constraints while keeping payload representation fixed. Then vary input size,
+record width, nesting, escaped-text frequency, buffer size and retained output.</p>
+<p>Use a native implementation as an additional absolute baseline after the Ash
+comparison. A native/interpreter gap alone cannot identify rich-type overhead.
+Measure wall time/throughput, allocation count and bytes, peak live and retained
+storage, copies, metadata, stack/control depth and teardown work. Measure
+compile/check time and generated-code size separately when relevant.</p>
+<p>For a streaming filter or fixed-state reduction, aim for memory governed by
+buffer/token limits, nesting and processing state rather than total row count.
+An aggregation by distinct keys, a full output collection or a retained YAML
+graph has an additional data-dependent bound. State it. Include native buffers
+and runtime metadata; an arena capacity alone is not an execution-memory bound.</p>
+<h3 id="improvement-candidates">Improvement candidates</h3>
+<p>Investigate only costs demonstrated by the pipelines. Candidate improvements
+include direct typed construction, shared immutable byte backing, packed
+collections, immediate scalars, arena scratch batches, builder/cursor reuse,
+elimination of redundant evidence adapters and validated specialization or
+fusion. None is selected in advance.</p>
+<p>Specialization remains optional after evidence-passing execution works. It
+must preserve independent checking and body-free module contracts, and its
+runtime gain must be weighed against compile time and code growth. Fusion must
+preserve error timing, effect order, hooks and resource completion. Borrowing
+is admitted only after its access contract; unsafe views are not a performance
+result. Keep configured compiler/runtime limits visible and unchanged for
+baseline comparisons.</p>
+<p>Zero or near-zero type overhead is a design target, not an unmeasured claim or
+a requirement to delay every usable library delivery. Each checkpoint reports
+its achieved bound and remaining costs. Select numerical acceptance targets
+from the first measurements before declaring the runtime goal complete.</p>
+<h2 id="evidence-and-executable-delivery-order">Evidence and executable delivery order</h2>
+<p>Use connected feature batches and public e2e/integration evidence. Focused
+parser, numeric and adapter tests remain useful for demonstrated defects and
+conformance boundaries. Batch builds and checks instead of testing every small
+edit. A performance claim requires a reproducible workload and counter data.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Delivery</th>
+<th>Ash can execute</th>
+<th>Dependencies and gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S-0: framework contract</td>
+<td>Small manually mapped application types across candidate format interfaces.</td>
+<td>Current interface/method schemes; resolve expressibility gaps and profile matrix before freezing APIs.</td>
+</tr>
+<tr>
+<td>S-1: owned JSON</td>
+<td>Decode, process and encode nested typed data in memory, with explicit numeric and Unicode policy.</td>
+<td>Minimal Bytes/String/cursor/builder/collection facilities; Float delivery for numerical cases.</td>
+</tr>
+<tr>
+<td>S-2: owned YAML</td>
+<td>The same eligible application types use YAML through the framework.</td>
+<td>Defined YAML schema, tags/aliases coverage and errors; no change to application codec just to select another eligible format.</td>
+</tr>
+<tr>
+<td>S-3: incremental CSV</td>
+<td>Parse typed rows, filter and reduce, then emit a JSON array incrementally.</td>
+<td>Declared CSV dialect and row mapping; chunk/progress contract and measured memory bounds.</td>
+</tr>
+<tr>
+<td>S-4: TOML and BSON</td>
+<td>Typed configuration processing and binary document transformations.</td>
+<td>Date/time and extended-value mappings, integer ranges, lengths and binary conversion; Float64 for double processing.</td>
+</tr>
+<tr>
+<td>S-5: file pipelines</td>
+<td>Read real files, decode, transform, encode, write and observe completion.</td>
+<td>DN-0039 copying interface; preserve partial output and independent owned results.</td>
+</tr>
+<tr>
+<td>S-6: derivation</td>
+<td>Generate checked mappings equivalent to the manual corpus.</td>
+<td>Separately accepted generic derivation contract, visibility/origin checks and diagnostic evidence.</td>
+</tr>
+<tr>
+<td>S-7: scoped storage</td>
+<td>Arena batches and eligible borrowed fields reduce measured copying.</td>
+<td>Agreed arena layout/initialization and access-interval contracts, including negative escape/refill cases.</td>
+</tr>
+<tr>
+<td>S-8: measured runtime changes</td>
+<td>Equivalent pipelines run with demonstrated storage or execution improvements.</td>
+<td>A cost reproducer, semantic/validation review, targeted regressions and fresh comparison measurements.</td>
+</tr>
+</tbody>
+</table>
+<p>S-3 and S-4 can proceed independently after the shared framework contracts are
+stable. File copying can develop alongside in-memory libraries. Derivation and
+runtime work need not delay manual owned APIs. Scope/profile completion is
+recorded for every format; JSON/YAML success does not complete the five-format
+workstream or establish full YAML support.</p>
+<p>Representative public programs include generic nested values in JSON and YAML;
+YAML/TOML configuration decoding, validation and JSON output; CSV typed rows
+with Float64 processing, filtering/reduction and JSON output; and BSON typed
+transformations with integers, doubles and binary payloads. Define framing when
+a file contains several binary documents. Later compose scoped arena batches
+and measure them against the same owned programs.</p>
+<p>Negative cases include malformed/truncated input, invalid Unicode, numbers out
+of the requested range, missing/duplicate/unknown fields under the selected
+policy, unsupported format categories, mismatched codec evidence, opaque
+constructor access, buffer escape, refill during a live borrow and partial
+output failure. Deliberately vary chunk boundaries through tokens and test
+source/linked/Core validation where a new semantic capability requires it.</p>
+<h2 id="coordination-tools-and-adoption">Coordination, tools and adoption</h2>
+<p>Keep these contracts separate from the common, SQLite and arena active task
+scope. Import verified checkpoints and agree one owner for each shared compiler
+seam. An independent format library should not wait for the entire SQLite
+provider, arena borrowing or the Ash-only FFI authoring program.</p>
+<p>Authoring tools should provide schema/evidence diagnostics, field and input
+locations, checked generated-code inspection, a conformance fixture runner,
+chunk-boundary execution, conversion diagnostics and allocation/copy profiles.
+Provide a library blueprint covering manual mappings, format modules,
+incremental state, errors, effects, resource composition, derivation and
+measurements. A foreign parser backend, if separately chosen, uses DN-0037's
+binding contract; it does not replace checked Ash application mappings or
+require a format-specific compiler entry point.</p>
+<p>A later tasked prototype tests framework expressibility and costs within its
+declared profile. Retain successful modules and reusable evidence. Revise the
+design before expanding a failed contract; do not merge an unsuccessful
+experiment or hide missing semantics in runtime special cases.</p>
+<p>Language changes follow proposals, tasks, implementation, tests, specification
+updates and relevant proof work. Accepted non-language architecture follows
+decisions. Standard-library adoption additionally requires declared format
+coverage, executable examples, authoring documentation, compatibility/error
+policy and measured costs. This note is design preparation, not an execution
+plan or a claim of implemented serialization.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Can the needed generic visitors/builders be expressed with current rank-1
+method schemes and relational interfaces, and which counterexample requires
+a reusable extension?</li>
+<li>Which field/variant schema conventions are useful for positional Ash ADTs?</li>
+<li>What exact format profiles and extension-preservation policies should each
+first delivery promise?</li>
+<li>Which cursor/builder/collection representations enable the first APIs with
+acceptable measured costs?</li>
+<li>What input and access types express transient versus retained borrowed data
+without transporting storage owners?</li>
+<li>Which costs are removable through ordinary library design, and which justify
+changes to the evaluator or validated transformations?</li>
+<li>What storage and throughput targets should the baseline measurements support
+for fixed-state, retained-document and key-aggregation workloads?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question-and-objective">Question and objective</a><a href="#context-and-authority">Context and authority</a><a href="#constraints">Constraints</a><a href="#candidate-framework">Candidate framework</a><a href="#first-class-format-contracts">First-class format contracts</a><a href="#ownership-arenas-and-borrowing">Ownership, arenas and borrowing</a><a href="#errors-and-laws">Errors and laws</a><a href="#semantics-core-and-proof-obligations">Semantics, Core and proof obligations</a><a href="#runtime-and-memory-experiments">Runtime and memory experiments</a><a href="#evidence-and-executable-delivery-order">Evidence and executable delivery order</a><a href="#coordination-tools-and-adoption">Coordination, tools and adoption</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0040-floating-point-semantics-and-representation/">← DN-0040: Floating-Point Semantics and Representation</a><a rel="next" href="/ash/docs/design/dn-0042-native-interaction-and-efficient-data/">DN-0042: Native Interaction and Efficient Data →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

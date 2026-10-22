@@ -1,0 +1,321 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Synchronous hook implementation evidence · Ash</title><meta name="description" content="This informative report records the verified implementation of historical CP-0018, tracked by historical TASK-0028. Both transition artifacts and the task-owned plan are retained in product checkpoint ad2b0d4. This…"><meta name="robots" content="index, follow"><meta property="og:title" content="Synchronous hook implementation evidence · Ash"><meta property="og:description" content="This informative report records the verified implementation of historical CP-0018, tracked by historical TASK-0028. Both transition artifacts and the task-owned plan are retained in product checkpoint ad2b0d4. This…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Synchronous hook implementation evidence · Ash"><meta name="twitter:description" content="This informative report records the verified implementation of historical CP-0018, tracked by historical TASK-0028. Both transition artifacts and the task-owned plan are retained in product checkpoint ad2b0d4. This…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/effect-ash/synchronous-hooks-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/effect-ash/synchronous-hooks-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/synchronous-hooks-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Synchronous hook implementation evidence","headline":"Synchronous hook implementation evidence","description":"This informative report records the verified implementation of historical CP-0018, tracked by historical TASK-0028. Both transition artifacts and the task-owned plan are retained in product checkpoint ad2b0d4. This…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/effect-ash/synchronous-hooks-evidence/","@id":"https://dikini.github.io/ash/docs/design/effect-ash/synchronous-hooks-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/synchronous-hooks-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="synchronous-hook-implementation-evidence" data-pagefind-meta="title">Synchronous hook implementation evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/synchronous-hooks-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This informative report records the verified implementation of historical
+<code>CP-0018</code>, tracked by historical <code>TASK-0028</code>. Both transition artifacts and the
+task-owned plan are retained in product checkpoint <code>ad2b0d4</code>. This report does not
+define language behavior. The complete hook contract passes its final reviews
+and verification and is locally integrated on the milestone branch.
+The <a href="/ash/docs/design/effect-ash/milestone-closure-evidence/">milestone closure report</a> records integration
+into <code>main</code> and final verification status.</p>
+<h2 id="retained-checkpoints">Retained checkpoints</h2>
+<p>Unsigned checkpoint <code>bb618e8</code> retains primary syntax and projection for <code>hook</code>
+and <code>register</code>. Unsigned checkpoint <code>e801edb</code> retains authenticated executable
+roots. The registration proof increment retains structure and completion
+checking after independent semantic and Rust/resource reviews and final parent
+verification in unsigned checkpoint <code>07bb726e</code>. The final runtime, interaction
+corpus and specification now pass independent reviews and full verification.
+Unsigned product checkpoint <code>ad2b0d4</code> retains that complete implementation,
+specification, tests, review and verification. The finished proposal, task and
+execution plan are removed after that checkpoint; Git preserves them.
+Unsigned local merge <code>7dacce7</code> retains the feature on
+<code>integration/effect-ash-foundations</code>. At that checkpoint, no main merge, push or
+tag had occurred.</p>
+<p>At <code>07bb726e</code>, both public Effect validators run registration proof before unconditionally
+rejecting executable registration admission. Owning tests use a private,
+test-only proof wrapper for transforms; it is not a production bypass. Positive
+registration proof below is not evidence of runtime execution.</p>
+<h2 id="runtime-findings">Runtime findings</h2>
+<p>The runtime implementation removes the temporary public gates after adding a private,
+non-Clone registration owner frame. Non-owning keys associate generated handler
+and clause frames with that owner. Capture and resume move the owning frame;
+normal return consumes it. This ownership invariant does not require a global
+registry to detect an impossible copy of a private owning frame. Stale or
+duplicated non-owning facts are checked at request and resume transitions.
+Final runtime reviews and full verification pass.</p>
+<p>Three unchanged witnesses identified corrections during this increment:</p>
+<ul>
+<li>Callback-environment preparation originally happened after capture. A failed
+extension left one frame instead of the original two. Preparation now
+precedes capture; the owning preflight test passes without consuming control
+or changing registration counters.</li>
+<li>An imported callback with latent row <code>{| R}</code> under a signature containing
+<code>{Adjust&lt;Int&gt; | R}</code> checked at source but failed independent Core validation.
+Generated application lowering omitted the already-authorized lacks fact.
+It now uses ordinary row qualification and explicit application emission,
+preserving the least row and the existing independent authority check. The
+unchanged imported callback test passes through both transforms.</li>
+<li>Direct internal discard of a generated registration clause initially
+returned success. The clause's existing registration association now rejects
+that transition before consuming its capture. The full gate reruns this
+witness and the distinct permitted subscriber-local discard case.</li>
+</ul>
+<p>An additional resume association scan was removed by reusing the existing
+clause lookup, preserving ordinary hook-free resume work. No callback variant
+restriction, new effect-row authority or second evaluator was introduced.</p>
+<p>Independent semantic review found a defensive gap: return and
+resume must reject an extra active non-owning handler for the same activation
+before changing owner state. The existing charged scan can require one active
+handler at request selection and zero other active handlers at return/resume.
+Both transitions independently returned success in the failing witnesses.
+The shared scan now enforces those exact counts, and both unchanged witnesses
+pass. No additional scan or registry was added. Semantic re-review and the
+complete corrected regression gate pass.</p>
+<p>Registration-specific generic coincidence controls now execute through both
+transforms. Equal and unequal instances produce <code>42</code> and <code>1</code> with a
+callback-added dependency's cell still live; the equal escaping result rejects.
+Completion controls resume with <code>4</code> and <code>3</code>, while both discard variants reject
+because both retain registration completion. No unequal escaping success or
+summary-erasure precision is required. An older ordinary handler returns <code>30</code>
+to the registration callback, which produces <code>31</code>; this complements the
+publisher-side interception case. These controls and the complete corrected
+gate and reviews pass.</p>
+<h2 id="contract-coverage">Contract coverage</h2>
+<p>The case names below retain CP-0018's complete evidence matrix.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Retained evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HOOK-01: API and syntax</td>
+<td><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/hooks_syntax.rs">Syntax tests</a> cover primary positions, grouping, qualified/generic targets, source spans, malformed forms and both keyword collisions. <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/hooks_typing.rs">Typing tests</a> reject wrong names, multiple operations and <code>Convert&lt;Int, Int&gt;</code>, and check original argument kind spans and ordinary diagnostic precedence. Registration callback/body errors and conservative rows are covered; owning validation tests cover contextual identity lambdas, latent effects and ordinary polymorphic bindings.</td>
+</tr>
+<tr>
+<td>HOOK-02: Identity and scope</td>
+<td><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/hooks_runtime.rs">Runtime tests</a> observe identity publication, unused roots and nested-root isolation. Typing tests pair existing open-tail lacks with ambiguity rejection and preserve ordinary handler missing-input rejection. <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/hooks_core.rs">Core tests</a> execute facade/open-lacks helpers and equal/unequal generic registration cases through both transforms, including live dependencies and pending completion.</td>
+</tr>
+<tr>
+<td>HOOK-03: Ordered transformation</td>
+<td><code>registrations_transform_in_registration_order</code> observes <code>8</code> and reversed <code>7</code>. Initializer-once and repeated-entry tests observe <code>5614</code>; inner removal observes <code>843</code>. Intermediate callback payloads and registration-site logging observe <code>48</code>. Generated forward–callback–resume order and the preceding initializer binding are independently checked.</td>
+</tr>
+<tr>
+<td>HOOK-04: Effects and handler placement</td>
+<td>Typing tests retain forwarded and latent requirements for unused scopes and reject missing initializer effects. Runtime tests distinguish outer from publisher-local logging, ordinary exact interception (<code>30</code>), and an older ordinary handler's forwarded result (<code>31</code>). Imported callback type/row contexts execute through both transforms; an unused effectful callback leaves the cell unchanged.</td>
+</tr>
+<tr>
+<td>HOOK-05: Nested publication and scoped changes</td>
+<td>Older-prefix nested publication observes <code>82</code>, without replaying pending callbacks. Temporary callback registration and nested-root isolation observe <code>410</code> and <code>310</code>. Callback copies and static-request closures remain ordinary after deregistration and observe the later chain (<code>46</code>).</td>
+</tr>
+<tr>
+<td>HOOK-06: Captured values and transformed dependencies</td>
+<td>Source and linked-Core tests admit callback-added dependencies within the cell owner, reject escape and reject outward input before later erasure. <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/effect_modules.rs">Module tests</a> pair opaque/facade factory retention with escape. Core tests execute opaque and selected-evidence factories and equal/unequal live-dependency cases through both transforms. Tuple payload transformation and projection observe <code>44</code> with the cell live; aggregate and projected-function escape reject, as does forwarding an original dependent tuple before later erasure. Actual same-typed linked callback substitution rejects an added escaping dependency.</td>
+</tr>
+<tr>
+<td>HOOK-07: Control and normal release</td>
+<td>Proof rejects unused-owner abandonment and skipped completion, admits initializer discard before acquisition and subscriber-local discard, and distinguishes consumed clause owners. Runtime tests observe same-site overlapping activations (<code>13</code>), outward callback capture/resume with cells (<code>281</code>), inner removal and release/reuse. Generic registration completion resumes with <code>4</code>/<code>3</code>; both outward discard variants reject. Linked callback substitution rejects changed completion behavior.</td>
+</tr>
+<tr>
+<td>HOOK-08: Independent authority</td>
+<td>Validator units reject root and registration API/target, binder, order, row and origin corruption through both transforms. Detached and duplicate owners reject. Actual linked same-typed callback changes reject unsafe completion or resource escape. Positive registration fixtures now use public validation and execute after transforms; no private admission bypass remains.</td>
+</tr>
+<tr>
+<td>HOOK-09: Resources and failure</td>
+<td>Compiler/proof tests retain exact/one-short/fresh-retry and small-stack evidence below. Machine tests cover live and captured capacity, release/reuse, fresh identities, acquisition and invocation preflight, stale/duplicate non-owning facts, separate chain/callback work, and 1,025 registrations with cells on a 256 KiB stack through success and repeated internal failure. Corrected full verification passes.</td>
+</tr>
+<tr>
+<td>HOOK-10: Migration and tools</td>
+<td>All eight specification/tool updates pass medium review and Markdown lint. <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/spec_examples.rs">The exact CLI test</a> observes <code>8 : Int\n</code> with empty stderr and checks the documented source. All 76 documentation-example tests pass, as do the full predecessor/Pure-locality gate and final semantic and Rust/resource reviews.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="owning-resource-evidence">Owning resource evidence</h2>
+<p>The owning tests retain measured work rather than an estimated allowance:</p>
+<ul>
+<li><code>hook_identity_retention_is_exact_and_disposes_failed_deep_inputs</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/resolve.rs">resolution</a> checks generated identity retention.</li>
+<li><code>hook_body_and_identity_elaboration_are_exact_and_fresh_retryable</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/elaborate.rs">elaboration</a> checks all shorter allowances with
+two phantom target arguments and a tuple.</li>
+<li><code>hook_root_validation_is_exact_one_short_and_retryable</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/validate.rs">Core validation</a> measures the root handler
+check, rejects one-short work and repeats two fresh exact allowances.</li>
+<li><code>nested_hook_recompute_owns_partial_target_clones</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/effect.rs">Effect Core</a> puts a 32,000-node left-associated
+application spine before a second phantom argument. Its failure cutoff is
+measured prefix work plus one extra range slot, one hook-node charge, two
+argument slots and the complete first clone. The unchanged cutoff originally
+overflowed during partial-clone disposal; it now reports exhaustion and
+restores retained rows. Separate full-work calibration checks one-short
+rollback and two fresh exact retries on a 256 KiB child stack.</li>
+</ul>
+<p>The safe target clone charges argument slots before cloning, retains partial
+arguments in iterative owners, then charges and reserves final argument slots
+before transferring ownership. Nested roots use this path without changing
+ordinary-handler work accounting.</p>
+<p><code>nested_root_pipeline_and_disposal_fit_a_small_stack</code> checks 24 roots on a fresh
+256 KiB thread through direct loading, resolution, module checking, linking,
+validation, evaluation and disposal. This follows the resource predecessor's
+helper pipeline. It does not establish the same bound for the full <code>run_path</code>
+wrapper: the matched resource control also overflowed through that wrapper.
+No predecessor depth or resource ceiling was relaxed.</p>
+<p>Registration resource tests add:</p>
+<ul>
+<li><code>registration_retention_is_exact_and_disposes_failed_deep_inputs</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/resolve.rs">resolution</a>, including 32,000-node inputs.</li>
+<li><code>registration_body_callback_and_owner_elaboration_are_exact_and_fresh_retryable</code>
+in <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/elaborate.rs">elaboration</a>, covering every insufficient
+allowance and two fresh exact retries with an anonymous callback.</li>
+<li><code>registration_capture_work_is_exact_one_short_and_retryable</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/validate.rs">Core validation</a>, measuring the actual finite
+proof rather than assuming a fixed allowance.</li>
+<li>Three 4,096-depth/256-KiB failure witnesses in elaboration:
+<code>registration_contextual_function_disposes_deep_payload_when_provenance_budget_fails</code>,
+<code>registration_callback_check_disposes_first_deep_clone_when_second_clone_fails</code>,
+and <code>registration_lowering_disposes_deep_result_when_resume_row_budget_fails</code>.
+Each retained failure originally overflowed during recursive type disposal.
+Existing iterative owners now retain partial types until transfer.</li>
+</ul>
+<p>The lowering witness uses the actual lowering function and a synthetic deep
+intermediate body. Its unbounded control rejects Core admission after 16,439
+elaborator work units; 16,438 units fail at the preceding resume-row clone.
+It never constructs a successful invalid Core program. This one direct lowering
+RED/GREEN, the same inspected guard at five fallible windows, exhaustive shallow
+budget tests and existing deep owner-disposal evidence establish the shared
+ownership correction. It is not five separate deep reproductions. Structural
+depth limits do not bound all host ownership depth: type-application left spines
+can remain deeply owned after admission.</p>
+<p><code>registration_pipeline_and_disposal_fit_a_small_stack</code> checks 24 registrations
+and an outer root through direct loading, resolution, checking, linking and
+independent proof on 256 KiB. Its original helper overflowed, as did a matched
+root-only helper. Aligning with the accepted direct root harness retains source,
+depth, stack and compiler phases; this is not an unchanged-helper success or a
+runtime test. A later contextual-typing correction regressed this unchanged
+witness. Extracting ordinary binding scheduling verbatim reduced the measured
+shared frame from 109,152 to 106,944 bytes and restored both root and registration
+witnesses without further harness or limit changes.</p>
+<h2 id="runtime-resource-evidence">Runtime resource evidence</h2>
+<p>Owning <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/eval/machine.rs">machine tests</a> measure registration work
+separately from the compiler ledgers above. Acquisition charges
+<code>3 + environment.len()</code> before retaining two frames and their callback relation
+and looking up the callback. Each owner-association scan charges the active
+frame count before traversal. Generated resume additionally charges its captured
+frame count for association checking; restoration preflight charges that count
+when registrations are live. Ordinary request search and callback evaluation
+retain their existing work. These are charged traversal bounds, not a claim
+that every publication has one fixed total cost.</p>
+<p><code>registration_publication_work_is_exact_one_short_and_fresh_retryable</code> measures
+the complete evaluator ledger for the two-registration program, rejects one
+less and repeats two fresh exact runs. Acquisition separately has the same
+boundary controls. <code>registration_chain_steps_are_separate_from_ordinary_callback_work</code>
+uses chains of 1, 2 and 4 registrations with callbacks containing either one or
+four primitives. A chain of N has N acquisitions, N+1 requests, selections and
+resumes including the root, and N times the callback's primitive count.</p>
+<p>Capacity tests lower the owning machine's limit to one or two entries. They
+distinguish active and captured owners, reject one-short capacity, repeat exact
+runs and reuse released capacity with fresh keys. Registration capacity is
+separate from cell capacity; both default to the existing representable-frame
+bound. Counter overflow, missing binding and failed work preparation publish
+no partial acquisition. Invocation preflight preserves the original frames,
+capture count and registration state on failure.</p>
+<p><code>deep_registration_callbacks_capture_cells_and_dispose_failure_on_a_small_stack</code>
+compiles a recursive source fixture before entering a fresh 256 KiB thread.
+Evaluation on that thread acquires 1,025 registrations and cells, invokes each
+callback once, and returns the sum of depths. Two fresh bounded runs fail at the
+first callback's <code>Pause</code> request and dispose pending control, owners and
+environments on the same small stack. This is runtime success and failure
+evidence, not compilation of that fixture on a small stack. Separate compiler
+witnesses retain their stated 24-scope bounds.</p>
+<p>Actual stale and duplicate non-owning handler transitions are tested without
+copying the private owning frame. Independent Rust review additionally found
+that clause return must compare retained clause associations with its pending
+count before mutation. Its unchanged witness first returned success, then
+passed after adding that comparison to the existing scan. The check accounts
+for the popped clause at return, preserves state on rejection and permits the
+original clause and owner to complete afterward. Source re-review confirms
+the invariant, and the corrected full gate passes.</p>
+<h2 id="review-and-verification">Review and verification</h2>
+<p>Independent high-reasoning semantic review found diagnostic ordering and
+identity-pattern origin gaps. Both original failing witnesses pass after
+correction. Rust/resource review closed the remaining nested-root partial-clone
+failure after inspecting its RED/GREEN and rollback evidence. Both reviews pass
+for the root checkpoint only.</p>
+<p>The final parent gate at <code>e801edb</code> passed 1,111 library tests and 176 focused
+hook/effect/resource integration tests, formatting and strict Clippy. All 32
+architecture tests passed before the final root-only clone-call correction;
+the actual-field inventory was repeated successfully afterward. Markdown lint
+and diff checks passed. The full baseline <code>cargo xtask verify</code> passed before
+product edits; the final closing gate is recorded separately below.</p>
+<p>Registration semantic review corrected anonymous callback generalization and
+added an actual linked dependency-rejection witness. The linked completion test
+also exposed missing value demand for enclosing linked bindings; demanding the
+existing root port restores actual callback discovery. Rust/resource review
+closed five raw-type ownership windows after the lowering failure above.
+Both reviews now pass for the proof checkpoint. Writer verification passes
+1,131 library tests, 229 focused integration tests, formatting and full strict
+Clippy. All 32 architecture checks passed before the final five local guards and
+private lowering test; those changes add no carriers. The final parent repeat
+passes 1,131 library tests, 229 focused integration tests, all 32 architecture
+checks, formatting and full strict Clippy on the corrected snapshot. The
+independent medium evidence-document audit also passes.</p>
+<p>An intermediate runtime run passed 34 registration-focused library tests, then the
+unfiltered 11 Core, 15 runtime, 23 typing and 76 documentation-example tests,
+including exact CLI output. High semantic re-review passes. Strict Clippy and
+formatting pass after a conditional-only style correction. Rust/resource review
+closed the consumed-clause multiplicity finding above. Its unchanged regression
+and aggregate controls pass in the corrected targeted run: 35 library, six Core
+and 13 typing tests.</p>
+<p>The final September 8 parent <code>CARGO_INCREMENTAL=0 cargo xtask verify</code> completed
+all phases successfully: formatting, locked metadata/build, strict Clippy,
+2,470 workspace tests and warnings-denied rustdoc. The test total comprises
+1,142 library, 10 executable, 1,317 integration and one xtask test; child-process
+reruns are not counted twice. The integration total includes all 32 architecture
+checks (309.98 seconds), 12 hook Core, 15 hook runtime, seven hook syntax,
+25 hook typing and 76 documentation-example tests. The original tool session
+receipt was lost during context truncation; the successful completed phase log
+and terminated process were inspected. The merged-checkout verification below
+retains a separate exit receipt.</p>
+<p>Final independent high semantic and Rust/resource audits pass without remaining
+findings. The medium documentation audit verifies all eight affected files,
+43 local links/anchors, formal notation, exact CLI coverage and the resource
+claims above. Markdown lint and diff checks pass. No predecessor test, resource
+ceiling, independent validation boundary or Pure inventory was weakened.</p>
+<p>The representation remains one private registration owner plus ordinary
+handlers and callable values. Future cleanup must define admitted exits and
+failure ownership; hooks add no implicit cleanup, registry, general ownership
+framework or second evaluator. Proofs, existentials, async hooks and foreign
+providers remain outside this checkpoint.</p>
+<p>A synthetic signature-disposal failure encountered while preparing
+one test was outside its intended boundary; it is not claimed fixed or used as
+that test's RED evidence.</p>
+<h2 id="local-integration-and-lifecycle-closure">Local integration and lifecycle closure</h2>
+<p>The complete product checkpoint is <code>ad2b0d4833e40293d4847861e564274c2074f03d</code>.
+Transition cleanup is retained at feature tip
+<code>74691dcd260db21f0c16fdd7456ce1e16222d2a6</code>. The explicit unsigned local merge
+<code>7dacce795091d10f97c40f9efb31960cc0f3262e</code> advances
+<code>integration/effect-ash-foundations</code> from
+<code>ec8f86165689306a5301732a2ec995f8f7487686</code>. The merged tree exactly matches the
+reviewed feature tip.</p>
+<p>On September 8, <code>CARGO_INCREMENTAL=0 cargo xtask verify</code> ran from the recreated
+integration checkout and returned exit status 0. All 2,470 workspace tests
+passed with the same breakdown above, including all 32 architecture checks
+(310.59 seconds); formatting, locked build, strict Clippy and warnings-denied
+rustdoc passed. The transition-cleanup audit checked all 133 local links and
+anchors across its six retained changed documents.</p>
+<p>After verification, the feature checkout was clean, with no untracked or ignored
+files, and its exact tip was proved an ancestor of the integration branch.
+The <code>.worktree/synchronous-hooks</code> checkout and <code>codex/synchronous-hooks</code> branch
+were removed through Git. Their commits remain reachable through the merge.
+The sole remaining checkout under <code>.worktree/</code> is <code>effect-ash-foundations</code>.
+Main remains at <code>7195500b7a165f8191efa1485e1ca6f4114180fb</code>, with its original
+unrelated changes preserved; the two detached documentation pins, remote refs
+and tags are unchanged. No signing configuration was changed.</p>
+<p>This closes the original nine-unit hook scope weight: 74 of 100 milestone
+planning units are closed, with 26 remaining. Reliable cleanup is the next
+logical proposal, not work implemented or authorized by this checkpoint.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#retained-checkpoints">Retained checkpoints</a><a href="#runtime-findings">Runtime findings</a><a href="#contract-coverage">Contract coverage</a><a href="#owning-resource-evidence">Owning resource evidence</a><a href="#runtime-resource-evidence">Runtime resource evidence</a><a href="#review-and-verification">Review and verification</a><a href="#local-integration-and-lifecycle-closure">Local integration and lifecycle closure</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

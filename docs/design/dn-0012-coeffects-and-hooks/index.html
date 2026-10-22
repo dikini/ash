@@ -1,0 +1,287 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0012: Coeffects and Hooks · Ash</title><meta name="description" content="Can future Ash handlers expose typed extension points whose subscribers compose predictably, may perform effects or alter control flow, and obey identity and continuation lifetimes without introducing a universal…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0012: Coeffects and Hooks · Ash"><meta property="og:description" content="Can future Ash handlers expose typed extension points whose subscribers compose predictably, may perform effects or alter control flow, and obey identity and continuation lifetimes without introducing a universal…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0012: Coeffects and Hooks · Ash"><meta name="twitter:description" content="Can future Ash handlers expose typed extension points whose subscribers compose predictably, may perform effects or alter control flow, and obey identity and continuation lifetimes without introducing a universal…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0012-coeffects-and-hooks/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0012-coeffects-and-hooks/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0012-coeffects-and-hooks.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0012: Coeffects and Hooks","headline":"DN-0012: Coeffects and Hooks","description":"Can future Ash handlers expose typed extension points whose subscribers compose predictably, may perform effects or alter control flow, and obey identity and continuation lifetimes without introducing a universal…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0012-coeffects-and-hooks/","@id":"https://dikini.github.io/ash/docs/design/dn-0012-coeffects-and-hooks/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0012-coeffects-and-hooks.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0012-coeffects-and-hooks" data-pagefind-meta="title">DN-0012: Coeffects and Hooks</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0012-coeffects-and-hooks.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0012</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009: Effects, Handlers, and Continuations</a>, <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010: Identities and Resource Lifetimes</a>, <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011: Modules, Providers, and Resolution</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It explores possible future coeffect and hook semantics; it does not define current Ash, accept an architecture, or authorize roadmap work. The syntax and type notation in this note are illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can future Ash handlers expose typed extension points whose subscribers compose predictably, may perform effects or alter control flow, and obey identity and continuation lifetimes without introducing a universal event bus or scheduler?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>The event-system analogy is useful:</p>
+<pre tabindex="0"><code class="language-text">perform effect operation ~ publish event
+register coeffect       ~ subscribe to event
+</code></pre>
+<p>The candidate semantics are narrower and more structured. A coeffect subscriber reacts at a typed point deliberately exposed in handler control flow. The hook has an API identity; the handler gives it operational placement; registration associates a subscriber with it; reaching the hook executes the resolved chain.</p>
+<p>This note uses <em>coeffect</em> for that reaction mechanism. It does not equate coeffects with messages, process mailboxes, streams, security policy, environmental requirements in other effect systems, or a polarity-reversed effect row. Those concepts may interact with hooks but need independent semantics.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="make-public-hooks-typed-api-identities">Make public hooks typed API identities</h3>
+<blockquote>
+<p>Suggested rule: A public hook has a unique type identity, runtime witness, and payload contract and is declared as part of the effect API rather than addressed by an untyped event name.</p>
+</blockquote>
+<p>An effect's discoverable surface could contain:</p>
+<pre tabindex="0"><code class="language-text">Effect Database
+
+Operations:
+    query
+    begin
+    commit
+
+Hooks:
+    BeforeQuery
+    AfterQuery
+    BeforeCommit
+    AfterCommit
+</code></pre>
+<p>Fixed <code>before</code>/<code>after</code> hooks, per-effect hooks, per-operation hooks, and explicitly named phases are possible surface families. They need not be mutually exclusive. The important distinction is between a public typed identity and a handler's private control point.</p>
+<h3 id="let-handlers-define-publication-semantics">Let handlers define publication semantics</h3>
+<blockquote>
+<p>Suggested rule: The effect API defines a hook's identity and type, while each compatible handler defines where and under what continuation contract that hook is published.</p>
+</blockquote>
+<p>A handler might interpret an operation as:</p>
+<pre tabindex="0"><code class="language-text">receive operation
+      |
+      v
+publish Validate
+      |
+      v
+prepare
+      |
+      v
+publish Prepared
+      |
+      v
+commit
+      |
+      v
+publish Committed
+      |
+      v
+resume continuation
+</code></pre>
+<p>Ash need not impose one universal scheduler or assume that every API has the same before/after lifecycle.</p>
+<h3 id="keep-registration-separate-from-availability">Keep registration separate from availability</h3>
+<blockquote>
+<p>Suggested rule: Loading or linking may make a subscriber definition available, but registration and deregistration are explicit runtime acquisitions whenever the required identities are valid.</p>
+</blockquote>
+<p>A module can export subscriber code without activating it. A loader may explicitly register the subscriber as one policy, but registration can also occur during ordinary execution or within a temporary scope. <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011</a> explores module availability and discovery.</p>
+<h3 id="support-distinct-sequential-and-parallel-composition">Support distinct sequential and parallel composition</h3>
+<blockquote>
+<p>Suggested rule: Coeffect composition has at least a sequential form and an independence-oriented parallel form; "parallel" does not by itself require simultaneous machine execution.</p>
+</blockquote>
+<p>Sequential composition:</p>
+<pre tabindex="0"><code class="language-text">C1 ; C2
+</code></pre>
+<p>lets <code>C2</code> observe the result or context produced by <code>C1</code>. Parallel composition:</p>
+<pre tabindex="0"><code class="language-text">C1 || C2
+</code></pre>
+<p>gives both subscribers the same input without making their mutual ordering part of the meaning. The parallel form still needs deterministic rules for result combination, failure, conflict, and whether actual concurrency is permitted.</p>
+<h3 id="include-subscriber-effects-in-types">Include subscriber effects in types</h3>
+<blockquote>
+<p>Suggested rule: A subscriber's type records effects it may perform, and composition combines those requirements without conflating effect-row algebra with coeffect-composition algebra.</p>
+</blockquote>
+<p>For example, using the named-hook-identity style above:</p>
+<pre tabindex="0"><code class="language-text">AfterQuery ! { Metrics, Logging }
+BeforeModuleLoad ! { SignatureVerification, Policy }
+</code></pre>
+<p>Sequential subscribers accumulate their effect requirements through ordinary row rules. Parallel subscribers may need additional independence constraints beyond row union.</p>
+<h3 id="treat-registration-as-a-resource">Treat registration as a resource</h3>
+<blockquote>
+<p>Suggested rule: Registering a subscriber creates a typed registration identity whose lifetime depends on the hook and on identities captured by the subscriber.</p>
+</blockquote>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">register Hook&lt;h&gt; subscriber
+    |
+    v
+Create(Registration&lt;r&gt;)
+</code></pre>
+<p>Deregistration removes <code>r</code>. This lets registration use the general ownership, dependency, draining, and removal model explored in <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a>.</p>
+<h3 id="compile-resolved-chains-off-the-hot-path">Compile resolved chains off the hot path</h3>
+<blockquote>
+<p>Suggested rule: Treat registration as construction or update of a typed hook chain so publication can invoke a cached continuation-like structure instead of discovering callbacks through a general event bus each time.</p>
+</blockquote>
+<p>When everything is statically known, linking may inline or specialize the chain. Runtime registration can rebuild or patch a cached sequential chain or fan-out structure. This is an implementation direction to test, not a promise that all registration changes are cheap.</p>
+<h3 id="keep-mechanism-separate-from-policy-and-messaging">Keep mechanism separate from policy and messaging</h3>
+<blockquote>
+<p>Suggested rule: Hooks provide typed control-flow extension points; libraries assign meanings such as authorization, auditing, metrics, retries, or debugging, while messaging and process communication remain separate abstractions.</p>
+</blockquote>
+<p>The same <code>BeforeFileWrite</code> hook might host a policy subscriber, audit subscriber, transformation, or debugger. No one use should become the core definition of coeffects.</p>
+<h2 id="candidate-model">Candidate model</h2>
+<h3 id="hook-declarations">Hook declarations</h3>
+<p>A hook declaration needs to relate:</p>
+<ul>
+<li>a hook identity <code>h</code>;</li>
+<li>input payload and possibly output or transformed payload;</li>
+<li>effect API and operation identities, where relevant;</li>
+<li>generic and associated types;</li>
+<li>the effects subscribers may perform;</li>
+<li>control actions the hook contract permits;</li>
+<li>identities introduced or removed across the hook.</li>
+</ul>
+<p>A public hook could be documented and discovered by identity. A handler can also use private phases that do not become public API.</p>
+<h3 id="publication-and-handler-flow">Publication and handler flow</h3>
+<p>The handler owns temporal placement. This matters because pre- and post-transition worlds can have different types and failure meanings:</p>
+<pre tabindex="0"><code class="language-text">before:
+    identity a does not exist
+
+operation:
+    Create(a)
+
+after:
+    a is valid and may occur in values and types
+</code></pre>
+<p>A pre-hook may reject before any transition. A post-hook runs after some state change and may require rollback, compensation, or an explicit rule if it fails. The hook type may need to express these different environments rather than reuse one callback signature.</p>
+<h3 id="subscriber-control">Subscriber control</h3>
+<p>Depending on the hook contract, a subscriber might:</p>
+<ul>
+<li>observe;</li>
+<li>transform input, output, or context;</li>
+<li>reject;</li>
+<li>abort;</li>
+<li>suspend;</li>
+<li>perform additional effects.</li>
+</ul>
+<p>Not every hook must permit every action. Some transformations may be better modeled as effect handlers rather than subscribers. The formal boundary should depend on who controls operation interpretation and continuation resumption, not on naming convention.</p>
+<h3 id="sequential-chains">Sequential chains</h3>
+<p>A sequential chain maps naturally to explicit continuation structure:</p>
+<pre tabindex="0"><code class="language-text">C1 -&gt; C2 -&gt; C3 -&gt; handler continuation
+</code></pre>
+<p>The coeffect algebra must define:</p>
+<ul>
+<li>which value or context passes to the next subscriber;</li>
+<li>how transformed payloads are typed;</li>
+<li>whether rejection skips later subscribers;</li>
+<li>how failure unwinds;</li>
+<li>how subscriber effects accumulate;</li>
+<li>whether registration order determines chain order or order is explicit.</li>
+</ul>
+<h3 id="parallel-fan-out">Parallel fan-out</h3>
+<p>A parallel group could be a preconstructed fan-out:</p>
+<pre tabindex="0"><code class="language-text">          +-&gt; C1 -+
+hook input        +-&gt; combine -&gt; continue
+          +-&gt; C2 -+
+</code></pre>
+<p>Its contract must define:</p>
+<ul>
+<li>whether subscribers are independent by proof, declaration, or convention;</li>
+<li>deterministic result and failure aggregation;</li>
+<li>conflicts between transformations;</li>
+<li>cancellation and partial completion;</li>
+<li>whether effects from different branches may interfere;</li>
+<li>whether the runtime may execute branches concurrently.</li>
+</ul>
+<p>Without these rules, <code>C1 || C2</code> is only suggestive notation.</p>
+<h3 id="registrations-and-captured-identities">Registrations and captured identities</h3>
+<p>A registration might establish dependencies such as:</p>
+<pre tabindex="0"><code class="language-text">Registration&lt;r&gt;
+    depends-on Hook&lt;h&gt;
+    depends-on Database&lt;db&gt;
+    depends-on Connection&lt;c&gt;
+    depends-on subscriber code
+</code></pre>
+<p>Withdrawal of one dependency could trigger deregistration, invalidate future invocation, enter a drain state, or make publication fail. The chosen behavior may vary by strength of capture, but it must not leave a cached chain pointing to removed identities or reclaimed code.</p>
+<h3 id="resolution-and-discovery">Resolution and discovery</h3>
+<p>Static tools and runtime loaders should resolve a subscriber through typed hook identity and payload compatibility. Where identities are known early, the compiler can bind and specialize the chain. Where they arrive later, runtime resolution retains witnesses. Display names remain useful for documentation but do not establish equality.</p>
+<h2 id="interactions-and-failure-cases">Interactions and failure cases</h2>
+<h3 id="continuation-capture-and-resumption">Continuation capture and resumption</h3>
+<p>Handlers drive both publication and continuation flow, so the model must answer whether a continuation captures:</p>
+<ul>
+<li>the hook chain present when it suspends;</li>
+<li>only the hook identity, resolving the current chain when it resumes;</li>
+<li>a mixture based on registration lifetime or capture mode.</li>
+</ul>
+<p>Suppose registrations change while an operation's continuation is suspended. Snapshot semantics preserve the old chain and its dependencies; live semantics observe the new chain; invalidation may reject resumption. Each choice affects determinism and resource retention.</p>
+<p>With a multi-shot continuation, post-hooks might run once per resumption, once around the original operation, or be rejected if their effects cannot repeat safely. A subscriber might itself capture or resume the surrounding continuation. These behaviors need explicit contracts shared with <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009</a>.</p>
+<h3 id="effectful-subscribers">Effectful subscribers</h3>
+<p>Two subscribers can have unordered hook semantics while their effects conflict. For example, both may write the same resource or one may depend on the other's output. Effect-row union alone does not prove independence. A parallel composition must either require evidence, define a deterministic serialization/merge, or reject the ambiguous case.</p>
+<h3 id="failure-after-a-transition">Failure after a transition</h3>
+<p>If an after-hook rejects after an external write or resource creation, ordinary unwinding cannot pretend the transition never happened. The handler or library may need compensation, staged publication, transaction support, or an error that reports partial completion. Universal reversal is not available.</p>
+<h3 id="fresh-identities">Fresh identities</h3>
+<p>A hook before identity creation cannot safely receive values parameterized by the not-yet-created identity. An after-hook may. A hook type system that ignores this distinction either leaks an invalid witness early or prevents useful post-creation registration.</p>
+<h3 id="lifetime-and-cached-chains">Lifetime and cached chains</h3>
+<p>Caching moves discovery off the hot path but makes invalidation central. Removing a hook, subscriber, captured resource, or module code must update, drain, or invalidate every cached chain that depends on it. A cache keyed only by display name or callback address would lose typed lifetime information.</p>
+<h3 id="policy">Policy</h3>
+<p>An authorization subscriber at <code>BeforeFileWrite</code> can reject, but an authorization handler around the entire effect may establish different guarantees. Both should remain possible library choices. Calling the hook itself a policy would obscure audit and instrumentation uses.</p>
+<h3 id="messaging">Messaging</h3>
+<p>A hook chain is invoked synchronously or according to its handler contract at a point in interpretation. A mailbox or stream has delivery, buffering, ordering, and backpressure semantics of its own. Reusing identity or continuation machinery does not make the abstractions equivalent.</p>
+<h3 id="time">Time</h3>
+<p>The relevant temporal distinctions arise from ordered control flow:</p>
+<pre tabindex="0"><code class="language-text">before transition
+after transition
+during suspended interpretation
+after resumption
+during withdrawal or draining
+</code></pre>
+<p>No universal global-time structure follows from this sequence. The handler defines the operational order for its hooks.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<h3 id="hook-typing-matrix">Hook typing matrix</h3>
+<p>Define representative hooks for observation, input transformation, rejection, result transformation, and fresh-identity creation. For each, record:</p>
+<ul>
+<li>input and output payload types;</li>
+<li>allowed control actions;</li>
+<li>subscriber effect rows;</li>
+<li>identities available before and after publication;</li>
+<li>handler obligations after failure.</li>
+</ul>
+<p>Compare fixed before/after templates with arbitrary named typed phases. Retain a design only if tools can discover the public contract and handlers can implement it without exposing private control points.</p>
+<h3 id="composition-calculus">Composition calculus</h3>
+<p>Give small operational and typing rules for <code>C1 ; C2</code> and <code>C1 || C2</code>. Test:</p>
+<ul>
+<li>transformed result passing;</li>
+<li>first and multiple failures;</li>
+<li>rejection;</li>
+<li>effect accumulation;</li>
+<li>conflicting writes;</li>
+<li>deterministic aggregation;</li>
+<li>cancellation;</li>
+<li>actual serial and concurrent execution.</li>
+</ul>
+<p>The experiment should distinguish algebraic independence from scheduling. Discard syntax or runtime structures after recording which rules make the cases unambiguous.</p>
+<h3 id="continuation-interaction-matrix">Continuation interaction matrix</h3>
+<p>Cross one-shot, multi-shot, abortive, and suspended handler behavior with before- and after-hooks. Change registrations during suspension and compare snapshot, live, and invalidating semantics. Include a subscriber that captures the surrounding continuation. Measure not performance first, but whether each behavior can be stated, typed, and cleaned up consistently.</p>
+<h3 id="registration-lifetime-cases">Registration lifetime cases</h3>
+<p>Create a registration that captures provider, resource, and module-code identities. Then withdraw each dependency in turn while publication is idle, executing, and suspended. Verify that no subsequent invocation observes a removed identity and that draining does not reclaim code still on a chain.</p>
+<h3 id="static-and-dynamic-chain-construction">Static and dynamic chain construction</h3>
+<p>Build the same hook chain through static linking and runtime registration. Compare semantics, effect requirements, order, and diagnostics. Benchmark direct specialization, cached sequential chains, and cached fan-out only after semantic equivalence is established.</p>
+<h3 id="boundary-comparison">Boundary comparison</h3>
+<p>Implement the same authorization or retry concern once as a hook subscriber and once as a handler. The comparison should reveal which operations each can intercept, whether it can control resumption, and what failure guarantees it can offer. Use the result to define the semantic boundary rather than privileging one mechanism.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Are hook identities generic, and how are associated types or identity parameters represented?</li>
+<li>Which hooks are implicit, if any, and which must be declared explicitly?</li>
+<li>Can a pre-hook transform operation arguments, and can an after-hook transform a result?</li>
+<li>Which control actions are available per hook: observe, reject, abort, suspend, or resume?</li>
+<li>When does a transformation belong in a subscriber rather than a handler?</li>
+<li>How are subscriber effect rows reflected in the enclosing handler's type?</li>
+<li>What value or context flows through sequential composition?</li>
+<li>How are order and priority established for sequential registrations?</li>
+<li>What evidence establishes independence for parallel composition?</li>
+<li>How are parallel failures, conflicts, results, cancellation, and partial completion combined deterministically?</li>
+<li>Does parallel composition permit or require concurrent execution?</li>
+<li>Does a suspended continuation capture a hook-chain snapshot or resolve registrations at resumption?</li>
+<li>Do post-hooks run once per multi-shot resumption, once per handled operation, or according to a declared mode?</li>
+<li>Can subscribers capture or invoke the surrounding continuation?</li>
+<li>How do deregistration and draining behave while a subscriber is executing?</li>
+<li>Can registrations be weak, scoped, transferred, or borrowed?</li>
+<li>How are fresh identities introduced across a hook boundary?</li>
+<li>What happens when an after-hook fails after an irreversible operation?</li>
+<li>Which discovery and compatibility information must tools expose for hooks?</li>
+<li>How are cached chains invalidated without imposing a universal registry or synchronization domain?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-model">Candidate model</a><a href="#interactions-and-failure-cases">Interactions and failure cases</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">← DN-0011: Modules, Providers, and Resolution</a><a rel="next" href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013: Session and Resource Protocol Stress Tests →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

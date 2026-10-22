@@ -1,0 +1,107 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>AD-0009: Ordered Resolved-Global Binder Authority · Ash</title><meta name="description" content="The combined resolved registry retains one private ordered owner fact for each non-empty resolved global scheme. Each fact contains the stable term BinderId and the global scheme's resolved TypeVariableId values in…"><meta name="robots" content="index, follow"><meta property="og:title" content="AD-0009: Ordered Resolved-Global Binder Authority · Ash"><meta property="og:description" content="The combined resolved registry retains one private ordered owner fact for each non-empty resolved global scheme. Each fact contains the stable term BinderId and the global scheme's resolved TypeVariableId values in…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="AD-0009: Ordered Resolved-Global Binder Authority · Ash"><meta name="twitter:description" content="The combined resolved registry retains one private ordered owner fact for each non-empty resolved global scheme. Each fact contains the stable term BinderId and the global scheme's resolved TypeVariableId values in…"><meta property="og:url" content="https://dikini.github.io/ash/docs/decisions/ad-0009-ordered-resolved-global-binder-authority/"><link rel="canonical" href="https://dikini.github.io/ash/docs/decisions/ad-0009-ordered-resolved-global-binder-authority/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/decisions/AD-0009-ordered-resolved-global-binder-authority.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"AD-0009: Ordered Resolved-Global Binder Authority","headline":"AD-0009: Ordered Resolved-Global Binder Authority","description":"The combined resolved registry retains one private ordered owner fact for each non-empty resolved global scheme. Each fact contains the stable term BinderId and the global scheme's resolved TypeVariableId values in…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/decisions/ad-0009-ordered-resolved-global-binder-authority/","@id":"https://dikini.github.io/ash/docs/decisions/ad-0009-ordered-resolved-global-binder-authority/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"accepted","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/decisions/AD-0009-ordered-resolved-global-binder-authority.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Architectural decisions</p><h1 id="ad-0009-ordered-resolved-global-binder-authority" data-pagefind-meta="title">AD-0009: Ordered Resolved-Global Binder Authority</h1><p class="spec-source">Development architectural decisions · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/decisions/AD-0009-ordered-resolved-global-binder-authority.md">ash-lang <code>7949b6d</code></a></p><p class="decision-status">Architectural decisions record non-language choices. Each document retains its recorded status and scope. Read the <a href="/ash/spec/">language specification</a> for current language rules.</p></header><nav class="spec-chapters" aria-label="Architectural decisions"><a href="/ash/docs/decisions/">All architectural decisions</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>AD-0009</code></li>
+<li>Status: accepted</li>
+<li>Related: <a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006: Front-End Semantic Boundaries</a>, <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007: Typed Core Dialects</a>, <a href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025: Library and Package Milestones</a>, and the <a href="/ash/docs/design/lib-ash/kinds-evidence/">explicit-kind evidence</a></li>
+</ul>
+<h2 id="decision">Decision</h2>
+<p>The combined resolved registry retains one private ordered owner fact for each
+non-empty resolved global scheme. Each fact contains the stable term
+<code>BinderId</code> and the global scheme's resolved <code>TypeVariableId</code> values in source
+order. The registry retains the facts in deterministic module and declaration
+order and provides private lookup by the owning term binder.</p>
+<p>The canonical resolved type-variable record remains the only authority for a
+parameter's kind, spelling, and source origin. An owner fact does not copy that
+metadata, a scheme body, evidence, an implementation route, or a module group.
+Checked-registry combination authenticates the facts before retention, and
+linked-evidence validation authenticates the completed registry before it can
+authorize Core construction.</p>
+<p>Module-aware Core validation derives a resolved abstraction's owner only when
+the abstraction is the immediate initializer of a <code>RecursiveBind</code> member. It
+requires the abstraction parameters, matching outer <code>Forall</code>, canonical
+records, and retained owner fact to agree exactly in identity and order. Every
+retained fact must be consumed exactly once. A sequential Core <code>Bind</code> cannot
+claim this authority.</p>
+<p>Generated Core type binders remain local to their abstraction, matching outer
+<code>Forall</code>, body, and applications. Complete capture-free substitution with
+fresh identities is valid alpha-renaming; the elaborator's original generated
+identity, source span, and allocation ordinal are not external authority.</p>
+<p>Core transformations share the immutable combined registry and revalidate
+their rebuilt programs. Evaluation does not inspect resolved-global owner
+facts. This decision changes compiler authentication, not Ash syntax, static
+semantics, or runtime behavior.</p>
+<h2 id="context">Context</h2>
+<p>The canonical resolved-variable registry authenticated each identity and kind
+but flattened the checked global scheme that owned the identity. Independent
+Core validation could therefore accept a coherent same-kind swap between two
+global owners, a coherent reorder within one global, or an interface-only
+identity forged into a global abstraction. Checking canonical membership alone
+could not recover owner or source order.</p>
+<p>Global linking already preserves a stable term binder and lowers final globals
+through recursive module groups. The combined resolved registry already
+crosses the validated linking boundary, Core construction, independent
+validation, and retained transformations through one immutable shared value.
+Retaining the missing owner-and-order fact there avoids a second authority
+carrier.</p>
+<p>The rejected alternatives were:</p>
+<ul>
+<li>a flat type-variable-to-owner map, which loses within-owner order;</li>
+<li>an owner map plus ordinals, which recreates ordered rows less directly;</li>
+<li>a separate Core sidecar, which duplicates transfer, resource, transform, and
+teardown paths;</li>
+<li>owner metadata embedded in unchecked Core nodes, which lets syntax assert
+its own authority;</li>
+<li>pruning interface-only variables, which does not prevent cross-owner swaps
+or within-owner reordering; and</li>
+<li>external authority for generated identities, which rejects valid
+alpha-renaming.</li>
+</ul>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>The compiler can reject missing, extra, duplicate, reordered, wrong-owner,
+nominal, interface-only, and unconsumed resolved-global facts before
+evaluation.</li>
+<li>Only resolved global parameters use this authority. Nominal parameters keep
+their separate ordered ownership; interface parameters erase before Core;
+implementation-method and locally generalized parameters use generated Core
+identities.</li>
+<li>The registry carries no redundant linked constructor scheme or generated
+binder provenance.</li>
+<li>Identity traversal and literal folding must preserve the exact shared
+registry and pass fresh module-aware validation.</li>
+<li>Retaining <code>S</code> non-empty owner facts containing <code>R</code> identities costs <code>2S + R</code>
+type-work units, plus the separately charged owner-uniqueness index.</li>
+<li>The concrete row and lookup types remain private compiler representation.
+The specification states only the observable authentication relationship.</li>
+</ul>
+<h2 id="verification">Verification</h2>
+<p>The implementation must retain:</p>
+<ul>
+<li>positive linked higher-kinded construction, both retained transformations,
+fresh validation, erasure, and evaluation;</li>
+<li>coherent cross-owner swap and within-owner reorder rejection;</li>
+<li>missing, extra, duplicate, wrong-owner, wrong-position, nominal,
+interface-only, and unconsumed fact rejection;</li>
+<li>sequential-<code>Bind</code> rejection and exact immediate-<code>RecursiveBind</code> ownership;</li>
+<li>complete generated-binder mutation rejection together with one accepted
+capture-free alpha-renaming;</li>
+<li>exact and one-short construction, validation, transformation, and teardown
+resource probes without a production limit change; and</li>
+<li>deterministic failure precedence, retry, and accepted and rejected teardown
+on the retained small-stack witnesses.</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#decision">Decision</a><a href="#context">Context</a><a href="#consequences">Consequences</a><a href="#verification">Verification</a></nav><div class="aside-note"><p>These records explain non-language choices at the source revision linked above. Read each decision’s status, scope, and verification requirements.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent architectural decisions"><a rel="prev" href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">← AD-0008: Explicit Evaluator Machine</a><a rel="next" href="/ash/docs/decisions/ad-0010-human-diagnostic-presentation-and-localization/">AD-0010: Human Diagnostic Presentation and Localization →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

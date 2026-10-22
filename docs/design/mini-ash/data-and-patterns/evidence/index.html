@@ -1,0 +1,304 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Data and Pattern Integration Evidence · Ash</title><meta name="description" content="This report records implementation evidence for the monomorphic data-and-pattern increment and compares it with the informative findings in DN-0007 and DN-0019. It does not define Ash semantics. The normative…"><meta name="robots" content="index, follow"><meta property="og:title" content="Data and Pattern Integration Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for the monomorphic data-and-pattern increment and compares it with the informative findings in DN-0007 and DN-0019. It does not define Ash semantics. The normative…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Data and Pattern Integration Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for the monomorphic data-and-pattern increment and compares it with the informative findings in DN-0007 and DN-0019. It does not define Ash semantics. The normative…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/mini-ash/data-and-patterns/evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/mini-ash/data-and-patterns/evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/data-and-patterns/evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Data and Pattern Integration Evidence","headline":"Data and Pattern Integration Evidence","description":"This report records implementation evidence for the monomorphic data-and-pattern increment and compares it with the informative findings in DN-0007 and DN-0019. It does not define Ash semantics. The normative…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/mini-ash/data-and-patterns/evidence/","@id":"https://dikini.github.io/ash/docs/design/mini-ash/data-and-patterns/evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/data-and-patterns/evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="data-and-pattern-integration-evidence" data-pagefind-meta="title">Data and Pattern Integration Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/data-and-patterns/evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report records implementation evidence for the monomorphic data-and-pattern
+increment and compares it with the informative findings in
+<a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007</a> and
+<a href="/ash/docs/design/dn-0019-primitive-feature-composition/">DN-0019</a>. It does not define
+Ash semantics. The normative specification owns the merged language.</p>
+<h2 id="scope-and-environment">Scope and environment</h2>
+<p>The measurement covers <code>4d5ce64...dacaee0</code> in the
+<code>feature/data-and-adts</code> worktree. Commit <code>8c1c6af</code> is the first checkpoint with
+the candidate parallel pipeline removed. Commit <code>79af325</code> closes the review
+findings around admitted depth, registry authentication and destruction,
+coverage resources, transition ownership, trace behavior, and diagnostics;
+commit <code>ca3ae75</code> records the clean lint checkpoint for that remediation.
+Commit <code>77ca07b</code> charges nested pattern shaping against the cumulative coverage
+budget and gives source-facing type errors registry-resolved nominal spellings.
+Commit <code>46df1aa</code> propagates a surrounding expected type to every match arm;
+commit <code>b157e14</code> aligns the normative pattern rules, recursive initialization
+steps, and representative value-binding derivations with retained behavior.
+Commit <code>d349b0c</code> retains the data binder-to-location map across recursive slot
+allocation. Commit <code>a141d5c</code> directly exercises contextual diagnostic causes
+and the source-ordered initializer-entry and alias-storage transitions. Commit
+<code>5eb0cdb</code> retains completed heaps for closure results and aligns operational
+pattern and recursion documentation. Commit <code>cff6fb5</code> makes reverse constructor
+ownership validation use the constructor identity index and exercises a
+10,000-constructor registry. Commit <code>c25dac3</code> removes parser reasons that
+contradicted the now-admitted tuple, match, and multi-pattern syntax. Commit
+<code>8085a1f</code> charges wide tuple types and every specialized pattern, type, state,
+and witness cell before materialization while sharing immutable states instead
+of cloning them.
+Commit <code>a679267</code> maps a direct oversized unchecked-Core match to validation's
+structured coverage resource failure. Commit <code>dacaee0</code> adds a cumulative
+syntax-work budget before retained token, lexical-diagnostic, and parser-event
+allocation and releases obsolete concrete and Surface representations at their
+successful stage boundaries.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Property</th>
+<th>Observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline</td>
+<td>recursive-definition merge <code>4d5ce64</code></td>
+</tr>
+<tr>
+<td>Retained-pipeline checkpoint</td>
+<td>unsigned commit <code>dacaee0</code></td>
+</tr>
+<tr>
+<td>Rust</td>
+<td><code>rustc 1.97.1 (8bab26f4f 2026-07-14)</code></td>
+</tr>
+<tr>
+<td>Cargo</td>
+<td><code>cargo 1.97.1 (c980f4866 2026-06-30)</code></td>
+</tr>
+<tr>
+<td>Host</td>
+<td>Linux <code>x86_64</code></td>
+</tr>
+</tbody>
+</table>
+<p>At the evidence checkpoint, the production diff under <code>src/</code> contains 6,650
+added and 724 deleted lines in 26 files. These counts exclude integration tests
+and do not measure semantic difficulty.</p>
+<h2 id="changed-composition-points">Changed composition points</h2>
+<ul>
+<li>The lexer adds uppercase identifiers, <code>_</code>, <code>type</code>, <code>match</code>, <code>|</code>, and <code>=&gt;</code>.
+The token spelling table is the closed parser-facing join.</li>
+<li>The retained parser adds declaration, tuple, pattern, and match grammar at
+its closed assembly points. CST projection verifies each new node and emits
+ordinary Surface forms.</li>
+<li>Lexing and event parsing share a 1,500,000-unit syntax-work budget. Each
+retained token, lexical diagnostic, and parser event is charged before
+allocation. Exhaustion returns a resource-bearing tree with no partial root;
+projection cannot admit it.</li>
+<li>Resolution performs file-wide identity allocation before resolving payload
+types, then resolves constructor occurrences, patterns, and binder scopes
+into one registry-bearing program.</li>
+<li><code>Type</code> adds nominal and tuple variants. Type admission, provenance traversal,
+display, registry validation, and coverage are the exhaustive consumers.</li>
+<li>The retained elaborator, Core arena, independent validator, transforms, and
+evaluator machine add tuples, constructors, typed patterns, structured
+matches, and guarded recursive data without a driver-level syntax switch.</li>
+<li><code>Evaluation</code> freezes and retains one completed heap. <code>Observation</code> takes the
+same shared heap, and a structural <code>Value::Data</code> shares it with its root.
+Scalar and closure results remain ordinary visible values while their result
+owner retains any locations reachable through a captured environment.</li>
+<li>Successful orchestration drops the concrete tree after Surface projection
+and drops the Surface program after resolution. Later stages own every fact
+they retain, so neither predecessor remains live during elaboration.</li>
+</ul>
+<p>The exact audit below found 242 occurrences in production files at the
+checkpoint. It locates declarations and consumers; it is not an edit count.</p>
+<pre tabindex="0"><code class="language-text">rg -n \
+  'TokenKind::(Type|Match|UpperIdentifier|Wildcard|Pipe|FatArrow)|'\
+'Type::(Tuple|Nominal)|CorePattern|HeapCell' src
+</code></pre>
+<h2 id="what-localized">What localized</h2>
+<p>Two-pass type and constructor allocation, expected-type pattern checking, the
+shared usefulness relation, guarded-root analysis, heap cells, alias handling,
+and active-path rendering have one implementation owner. Match arms,
+equational clauses, and local irrefutability all call the same usefulness
+function. Constructor expressions use ordinary unary application after one
+registry lookup determines their type.</p>
+<p>Match synthesis and checking remain two paths through the same elaboration
+owner. Synthesis lets the first arm determine the result type. Checking carries
+the surrounding expected type and its diagnostic cause to every arm, including
+the first, so checking-only forms do not require a second match representation.</p>
+<p>The explicit heap avoided Rust ownership cycles. Recursive data names denote
+numeric slots; constructor cells and tuple cells contain numeric locations.
+The 10,000-member cyclic group evaluates, renders, and drops on a 256 KiB host
+stack. Iterative matching and rendering, rather than recursive Rust ownership,
+make that boundary possible.</p>
+<p>Review hardening aligned parser admission with every downstream pattern and
+type wrapper. Full-pipeline tests exercise the admitted constructor-pattern,
+nested-match, multi-pattern equation, tuple-domain header, and synthesized
+type-wrapper boundaries on a 256 KiB stack. Unchecked Core patterns and
+registry payloads have independent limits and stack-safe rejection paths.</p>
+<p>Coverage uses both a memoized-state limit and one cumulative work budget shared
+by all usefulness queries in a case group. A 512-constructor exhaustive match
+is the retained practical-width regression; an 800-constructor group reaches
+the default budget and reports compiler resource exhaustion rather than a
+source-level coverage result. Pattern shaping charges each visited tuple and
+constructor cell before scheduling its children, so repeated conversion of
+earlier wide rows cannot run outside that budget. A direct 100-arm by 200-field
+tuple reproduction reached the resource failure at the one-million-work limit
+in 20.11 seconds with 77,924 KiB maximum resident memory on the environment
+above. Root and specialized states charge every copied pattern and type cell
+before allocation. States shared by the active set, memo table, choices, and
+work frames use one immutable allocation rather than cloning complete matrices.
+Before syntax remediation, the full-source 100,000-field tuple regression
+reached the same structured resource failure in 1.47 seconds with 214,144 KiB
+maximum resident memory; that measurement included its lexer, parser, resolved
+tree, and partially built Core. A 1,000,001-field source took 12.25 seconds and
+peaked at 1,945,036 KiB before coverage rejected it. Counting-allocation probes
+at 25,000, 50,000, and 100,000 fields attributed about 989 requested bytes per
+field to parser tokens, events, and CST; Surface added 208, resolution added
+323, partial elaboration added 231, and transient elaboration work added 432 at
+the peak. Explicitly releasing the concrete and Surface stages reduced the
+unbounded million-field probe by about 30 percent but did not provide a bound.</p>
+<p>The retained correction charges syntax work before allocation. The
+100,000-field case uses about 1,400,040 syntax units, remains admitted to
+coverage, and now completes in 1.42 seconds with 153,576 KiB maximum resident
+memory. A temporary 1,000,001-field version of the syntax-resource fixture
+stopped during syntax construction in 1.68 seconds with 159,280 KiB maximum
+resident memory, then was restored to its retained 110,000-field width. The
+structured result renders <code>internal.resource.syntax-work</code>, reports
+<code>parse.resource</code>, and is not a source rejection. The direct unchecked-Core
+test keeps coverage resource mapping observable without passing through the
+source budget.</p>
+<p>Registry lookup indexes keep identity lookup independent of declaration
+width. Core registry closure validation also checks reverse constructor
+ownership at the constructor identity's source-order index rather than scanning
+the owning declaration. The 10,000-constructor
+<code>validates_ten_thousand_constructor_owner_links_without_pairwise_scanning</code>
+regression completes that path in 0.06 seconds in the environment above.</p>
+<h2 id="what-necessarily-crossed-stages">What necessarily crossed stages</h2>
+<p>Nominal identity must survive resolution, type equality, constructor typing,
+coverage, validation, evaluation, and source-facing type display. Tuple shape
+likewise crosses parsing, typing, constructor payload metadata, pattern
+checking, application, matching, and rendering. These are semantic facts, not
+registration data.</p>
+<p>The registry now owns source-facing type rendering. It resolves nominal
+identities to declaration spellings while formatting tuples and arrows with an
+explicit work stack. Structured argument, binding, definition-result, pattern,
+operator, and application diagnostics use that rendering. General mismatch
+values retain their identity-bearing <code>Type</code> members while their textual view
+uses the same source spelling. <code>Type</code>'s registry-free display remains the
+internal identity view.</p>
+<p>The normative static account now exposes the same bidirectional boundary:
+separate match synthesis and checking rules share pattern usefulness and
+exhaustiveness, while function and local-binding rules extend their bodies with
+all bindings returned by one typed irrefutable pattern. The dynamic account
+enters each guarded data initializer under an explicit continuation and stores
+its returned constructor location in a separate one-step transition. Derived
+integer and closure examples bind values directly and introduce no heap
+allocation beyond the location-bearing data forms.</p>
+<p>Constructor-guarded recursion changes group initialization. Function templates
+alone cannot represent it: all member slots must exist before initialization,
+data initializers must run in source order, and completed slots alias their
+constructed roots. Observation must retain the evaluation heap because a
+cyclic value cannot be copied into an acyclic host enum. The retained
+<code>returned_closure_retains_the_heap_for_captured_structural_values</code> and
+<code>returned_closure_observation_retains_its_captured_structural_heap</code> regressions
+also prove that a closure result cannot discard a heap referenced from its
+captured environment.</p>
+<h2 id="maintenance-mutations">Maintenance mutations</h2>
+<p>Three deliberate uncommitted mutations tested discoverability in the first
+candidate implementation. Each was reverted with a targeted patch. The
+private file named below no longer exists; the results remain evidence about
+the transferred registry and heap design, not about the retained composition
+boundary.</p>
+<h3 id="constructor-registry-accessor">Constructor registry accessor</h3>
+<p>Renaming the candidate <code>Registry::constructor</code> produced four unique
+missing-method errors: name lookup, payload coverage, witness display, and
+value rendering. Rust exposed all candidate consumers in one check. In the
+retained implementation, registry lookups now cross elaboration, usefulness,
+Core validation, evaluation, and observation rendering; those crossings are
+named directly in the changed-composition audit instead of treated as a
+feature-private boundary.</p>
+<h3 id="observed-heap-contract">Observed heap contract</h3>
+<p>Adding one required field to <code>ObservedHeap</code> produced one missing-field error at
+the sole heap-freezing boundary. This confirms that evaluation-to-observation
+ownership has one constructor.</p>
+<h3 id="type-family">Type family</h3>
+<p>Adding a temporary <code>Type::Probe</code> variant produced six unique non-exhaustive
+match errors in four files: Core payload admission, elaboration provenance,
+the shared type display/equality owner, and three data-pipeline consumers. The
+compiler located the closed semantic joins without a search. The wildcard in
+the equality decision remained an intentional review point because a new type
+must not compare equal accidentally.</p>
+<p>After reverting all probes, <code>cargo check --all-targets</code> passed. The later
+shared-pipeline remediation removed the candidate parser, Core wrapper,
+recursive evaluator, source-text routing, and their public API variants.</p>
+<h2 id="transfer-from-earlier-evidence">Transfer from earlier evidence</h2>
+<p>DN-0007's central split transferred: tuples are structural, nominal sums use
+declaration identity, constructors are ordinary values, patterns check against
+expected types, local bindings require irrefutability, and matches and equations
+share coverage. Records, polymorphic constructors, and access control did not
+transfer because the implemented increment excludes them.</p>
+<p>DN-0019's simplification rule also transferred. Ordinary application carries
+payload constructors and higher-order construction. One typed pattern and
+coverage representation serves three surface contexts. The new facts that
+could not lower away—nominal registries, structured patterns, and heap
+locations—remain explicit at validation and observation boundaries.</p>
+<p>The recursive-definition evidence correctly predicted the runtime difference:
+allocate-all-then-check scope transferred, while cyclic constructor data needed
+preallocation and initialization rather than function templates alone.</p>
+<h2 id="requirement-audit">Requirement audit</h2>
+<p>The retained tests assign each increment evidence family to a named owner. This
+table records the primary owners; the complete suites also retain the earlier
+first-stratum invariants.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Evidence family</th>
+<th>Primary retained tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Grammar, recovery, token coverage, spans, projection refusal, admitted depth, and bounded retained syntax</td>
+<td><code>data_and_pattern_forms_build_one_token_complete_concrete_tree</code>, <code>data_and_pattern_recovery_stays_balanced_and_synchronizes_at_the_arm_line</code>, <code>projects_data_declarations_tuples_matches_and_pattern_vectors</code>, <code>public_parse_reasons_describe_only_retained_diagnostics</code>, <code>structural_depth_budget_bounds_nested_constructor_patterns</code>, <code>structural_depth_budget_bounds_nested_matches</code>, <code>cumulative_syntax_work_stops_before_constructing_an_oversized_tree</code>, <code>wider_tuple_syntax_reports_a_structured_internal_resource_failure</code>, <code>admitted_nested_patterns_complete_the_full_pipeline_on_a_small_stack</code>, and <code>admitted_type_depth_survives_synthesized_tuple_and_function_wrappers</code></td>
+</tr>
+<tr>
+<td>File-wide identities, namespaces, recursive references, pattern scope, shadowing, and restoration</td>
+<td><code>data_and_pattern_resolution_allocates_file_wide_identities_and_pattern_binders</code>, <code>data_namespaces_report_stable_resolution_reasons</code>, <code>match_arm_pattern_scope_does_not_leak_to_later_arms</code>, <code>nominal_declarations_are_file_wide_recursive_and_distinct</code>, and <code>failed_nested_and_recursive_resolution_restore_the_scope_stack</code></td>
+</tr>
+<tr>
+<td>Nominal and tuple typing, constructor values, function domains, pattern typing, coverage, irrefutability, clause arity, guarded recursion, contextual matches, and bounded usefulness</td>
+<td><code>nominal_identity_and_tuple_structure_share_one_type_equality_rule</code>, <code>contextually_typed_matches_check_every_anonymous_function_arm</code>, <code>a_wide_constructor_set_has_practical_exhaustive_coverage</code>, <code>an_over_budget_case_group_reports_an_internal_resource_failure</code>, <code>a_wide_tuple_case_group_charges_type_and_specialization_cells</code>, <code>usefulness_charges_every_pattern_cell_while_shaping</code>, <code>usefulness_charges_tuple_type_cells_before_materializing_the_root_state</code>, and the typing and coverage cases in <code>data_and_adts</code></td>
+</tr>
+<tr>
+<td>Registry, identity, source order, constructor, pattern, scope, coverage, provenance, handle, reachability, resource, ownership-cycle, and safe-destruction validation</td>
+<td><code>rejects_malformed_data_registries_and_constructor_annotations</code>, <code>rejects_registry_identity_order_spelling_and_source_forgery</code>, <code>validates_ten_thousand_constructor_owner_links_without_pairwise_scanning</code>, <code>rejects_and_destroys_overdeep_registry_payloads_on_a_small_stack</code>, <code>rejects_missing_and_redundant_structured_match_arms</code>, <code>validates_a_deep_guarded_initializer_on_a_small_stack</code>, <code>oversized_unchecked_match_maps_coverage_exhaustion_to_resource</code>, and the existing malformed-Core cases in <code>core_validation</code></td>
+</tr>
+<tr>
+<td>Strict order, capture, mixed groups, finite and cyclic data, rendering, result-heap ownership, transition ownership, match selection, runtime failures, explicit stacks, and destruction</td>
+<td><code>constructor_tuple_payloads_enter_elements_strictly_left_to_right</code>, <code>returned_closure_retains_the_heap_for_captured_structural_values</code>, <code>returned_closure_observation_retains_its_captured_structural_heap</code>, <code>match_trace_enters_the_scrutinee_once_and_only_the_selected_body</code>, <code>recursive_data_initializers_store_each_slot_before_entering_the_next</code>, <code>every_core_feature_has_one_named_entry_owner_and_explicit_return_owners</code>, <code>mixed_recursive_groups_support_functions_and_guarded_data</code>, <code>rendering_repeats_shared_values_and_marks_only_active_cycles</code>, <code>defensive_transition_failures_remain_structured</code>, and <code>ten_thousand_member_cycle_evaluates_renders_and_drops_on_a_small_stack</code></td>
+</tr>
+<tr>
+<td>Transform validation and differential evaluation</td>
+<td><code>shared_pipeline_elaborates_and_validates_finite_data_core</code>, which independently validates and evaluates identity and literal-folding results, plus the existing transform suite in <code>semantics</code></td>
+</tr>
+<tr>
+<td>Executable specification, tool behavior, structured diagnostics, and provenance</td>
+<td>the data-and-pattern cases in <code>spec_examples</code>, including <code>static_semantics_contextual_match_checks_function_arms</code>, <code>static_semantics_operational_tuple_pattern_is_executable</code>, <code>checked_match_arms_retain_the_definition_result_cause</code>, <code>data_resolution_diagnostics_retain_names_and_binder_sites</code>, <code>coverage_diagnostics_retain_arm_spans_and_concrete_witnesses</code>, <code>nominal_mismatches_render_source_declaration_spellings</code>, <code>unguarded_recursive_use_retains_the_transporting_expression_span</code>, and <code>provenance</code></td>
+</tr>
+</tbody>
+</table>
+<p>The parser rejection corpus covers integer, record, guarded, or-pattern, and
+other excluded pattern syntax. The type grammar and registry tests admit no
+parameters, aliases, records, modules, empty declarations, or unary tuples.
+Core retains structured matches rather than pattern-compilation or decision
+forms. The heap is private to one evaluation and exposes neither mutation nor
+stable source-level identity.</p>
+<p>Fresh post-review runs of <code>cargo test --all-targets</code> and <code>cargo xtask verify</code>
+pass at the retained checkpoint. The latter includes formatting, build,
+warning-free Clippy, all targets, and rustdoc. Changed Markdown passes with the
+project-approved line-length and repeated-heading exceptions; changed relative
+links and anchors resolve.</p>
+<h2 id="external-notation-tooling">External notation tooling</h2>
+<p>The repository continues to use readable <code>ebnf</code> and <code>sequent</code> fences with
+matching prose. The previously recorded lack of an external railroad or
+sequent renderer remains outside this repository. This increment adds no
+renderer dependency or conformance claim.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#scope-and-environment">Scope and environment</a><a href="#changed-composition-points">Changed composition points</a><a href="#what-localized">What localized</a><a href="#what-necessarily-crossed-stages">What necessarily crossed stages</a><a href="#maintenance-mutations">Maintenance mutations</a><a href="#transfer-from-earlier-evidence">Transfer from earlier evidence</a><a href="#requirement-audit">Requirement audit</a><a href="#external-notation-tooling">External notation tooling</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

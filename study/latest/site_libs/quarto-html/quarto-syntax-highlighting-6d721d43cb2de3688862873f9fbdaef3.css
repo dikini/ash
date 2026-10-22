@@ -1,0 +1,12 @@
+/* quarto syntax highlight colors */
+/* other quarto variables */
+:root {
+  --quarto-font-monospace: "IBM Plex Mono", "DejaVu Sans Mono", monospace;
+}
+
+/* syntax highlight based on Pandoc's rules */
+.prevent-inlining {
+  content: "</";
+}
+
+/*# sourceMappingURL=4819c36228ad5ebb1e45c45c8057ce09.css.map */

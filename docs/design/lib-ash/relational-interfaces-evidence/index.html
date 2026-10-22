@@ -1,0 +1,239 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Multi-Parameter Relational-Interface Evidence · Ash</title><meta name="description" content="This report retains implementation evidence for the fourth bounded lib-ash increment: complete ordered multi-parameter interface applications and one optional total forward determination edge. It is informative, not…"><meta name="robots" content="index, follow"><meta property="og:title" content="Multi-Parameter Relational-Interface Evidence · Ash"><meta property="og:description" content="This report retains implementation evidence for the fourth bounded lib-ash increment: complete ordered multi-parameter interface applications and one optional total forward determination edge. It is informative, not…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Multi-Parameter Relational-Interface Evidence · Ash"><meta name="twitter:description" content="This report retains implementation evidence for the fourth bounded lib-ash increment: complete ordered multi-parameter interface applications and one optional total forward determination edge. It is informative, not…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/lib-ash/relational-interfaces-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/lib-ash/relational-interfaces-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/relational-interfaces-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Multi-Parameter Relational-Interface Evidence","headline":"Multi-Parameter Relational-Interface Evidence","description":"This report retains implementation evidence for the fourth bounded lib-ash increment: complete ordered multi-parameter interface applications and one optional total forward determination edge. It is informative, not…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/lib-ash/relational-interfaces-evidence/","@id":"https://dikini.github.io/ash/docs/design/lib-ash/relational-interfaces-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/relational-interfaces-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="multi-parameter-relational-interface-evidence" data-pagefind-meta="title">Multi-Parameter Relational-Interface Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/relational-interfaces-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report retains implementation evidence for the fourth bounded <code>lib-ash</code>
+increment: complete ordered multi-parameter interface applications and one
+optional total forward determination edge. It is informative, not normative.
+The <a href="/ash/spec/">Ash specification</a> alone defines the current
+language. Git history retains the accepted proposal, implementation task, and
+execution plan after those transition-only artifacts leave the current tree.</p>
+<p>The revised <code>lib-ash</code> product goal consists of this increment and the three
+earlier retained increments. Integration and any milestone tag are lifecycle
+actions. Associated-output syntax, general
+determination graphs, defaults, effects, proofs, existentials, packages, and
+persistent artifacts remain separate work.</p>
+<h2 id="scope-and-checkpoints">Scope and checkpoints</h2>
+<p>The branch starts from the integrated method-parameter checkpoint <code>a823094</code>.
+Its principal unsigned product checkpoints are:</p>
+<ul>
+<li><code>cf549f9</code>, which accepts CP-0011, creates TASK-0018 and its execution plan,
+and reserves the 65-unit implementation slice;</li>
+<li><code>ade65e6</code>, which retains vector and determination syntax, recovery, resolved
+identities, and predecessor unary migration;</li>
+<li><code>aeb7b82</code>, which carries complete ordered applications through checking,
+summaries, evidence, linking, and Core authentication;</li>
+<li><code>f9868ba</code>, which admits one total partition and makes method determinacy,
+implementation coverage, coherence, orphan ownership, and prerequisite
+decrease use its selection key;</li>
+<li><code>5b6acd2</code>, which retains the fixed one-pass improvement snapshot, determined
+requirements, full-goal selection, and the approved prerequisite-pair order;
+and</li>
+<li><code>e660c17</code>, which retains the compositional linked product, adversarial
+authentication matrix, downstream-pressure inventory, exact resource
+formulas, independent reviews, and full implementation gate; and</li>
+<li><code>87e6bcb</code>, which retains normative reconciliation, executable specification
+and predecessor guards, this durable report, the simplified milestone
+boundary, independent approvals, and the full documentation/product gate.</li>
+</ul>
+<p>Commit identities are evidence boundaries, not language authority.</p>
+<h2 id="implemented-boundary">Implemented boundary</h2>
+<p>An interface declares a nonempty ordered vector of fixed-kinded parameters.
+Every requirement and implementation supplies one complete ordered application
+with exact arity and positional kinds. An interface may also declare exactly
+one total edge:</p>
+<pre tabindex="0"><code class="language-ash">interface Relation&lt;F : Type -&gt; Type, Key, Dep&gt; where (F, Key) -&gt; Dep {
+    relate&lt;X&gt; : (F&lt;Key&gt;, X) -&gt; F&lt;Dep&gt;
+}
+</code></pre>
+<p>Both edge sides are nonempty, disjoint, declaration-ordered, and together name
+every parameter exactly once. The left positions are the selection key; the
+right positions are the dependent complement. With no edge, the complete
+application is the selection key. Unary no-edge interfaces remain the width-one
+predecessor case.</p>
+<p>Every method must mention every selection-key parameter. A dependent may occur
+in a method domain, codomain, nested type, or nowhere. Free variables outside
+the interface set are exactly the explicit method parameters. One occurrence
+freshens the whole interface vector and then the method parameters, applies one
+simultaneous substitution, and creates one complete-application obligation.
+Method-local arguments never participate in improvement or evidence choice.</p>
+<h2 id="requirements-implementations-and-coherence">Requirements, implementations, and coherence</h2>
+<p>A no-edge global requirement requires every application variable to occur in
+the value type. A determined requirement requires every key variable there and
+may retain dependent-only binders in its scheme and Core abstraction. No rule
+propagates information between requirements. For the same <code>InterfaceId</code>,
+complete duplicates are <code>constraint.duplicate-requirement</code>; an equal determined
+key with a different dependent tuple is <code>constraint.determination-conflict</code>.</p>
+<p>Implementation binders cover free variables across the complete head. An
+omitted list follows first occurrence across all arguments. Dependent-head
+variables must be covered by key variables. The all-bare-variable rejection,
+orphan ownership, and generic prerequisite decrease use the selection key;
+prerequisite variable containment and ground cycle identity use the complete
+application. Decrease compares equal-width key tuples pointwise, with identity
+or strict subterm at every position and at least one strict position.</p>
+<p>Prerequisite pairs are classified deterministically after application arity and
+kinds. Each current prerequisite is compared with earlier prerequisites in
+their source order; complete identity is considered before key identity. The
+first classified pair owns the failure. Detached summary admission
+authenticates arity and kinds before replaying the same order.</p>
+<p>Effective environments deduplicate stable implementation identities. Distinct
+heads with non-unifying keys are coherent. If keys and complete heads unify,
+the result is <code>impl.overlap</code>; if keys unify but complete heads cannot, it is
+<code>impl.determination-conflict</code>. No source, dependency, import, or candidate order
+chooses a winner.</p>
+<h2 id="improvement-and-selection">Improvement and selection</h2>
+<p>Ordinary kind-aware unification runs first. Before any improvement mutation,
+the checker snapshots the determined obligations whose complete keys are
+inference-free. It visits only that fixed set, once, in source order, and uses
+the first applicable source:</p>
+<ol>
+<li>an identity-equal abstract key;</li>
+<li>the exact current implementation key; or</li>
+<li>the unique visible independently freshened key match.</li>
+</ol>
+<p>The source supplies the complete dependent tuple. Improvement is mandatory,
+even when ordinary typing already fixed the dependent, and transactionally
+unifies the whole tuple. A conflict publishes no partial inference solution.
+Improvement does not guess or refine keys, reverse the edge, inspect
+prerequisites, construct evidence, record a selection, repeat to saturation, or
+unlock another obligation.</p>
+<p>Full-application evidence selection follows improvement and retains the same
+abstract, exact-current, and concrete priority. A pending determined occurrence
+root must have belonged to the snapshot and must be complete and inference-free.
+An unresolved key, a no-source unresolved dependent, or an outside-snapshot
+pending root is <code>constraint.ambiguous</code>; an eligible complete root without a
+matching source is <code>constraint.unsatisfied</code>. Recursively instantiated
+prerequisites are already complete applications, use ordinary selection and
+full-application active-cycle detection, and require no snapshot membership.
+No-edge roots take the predecessor path and perform no snapshot work.</p>
+<h2 id="summaries-linking-and-core">Summaries, linking, and Core</h2>
+<p>Checked interfaces and every body-free mirror retain ordered parameter records
+and optional determinant positions. Requirements, implementation heads,
+prerequisites, and evidence roots retain complete applications. Summary
+admission and linked validation authenticate arity, declaration order,
+identities, kinds, origins, determinant positions, complete arguments,
+substitutions, routes, and prerequisite trees.</p>
+<p><code>EvidenceSelection</code> remains opaque and occurrence-owned. Its only producers are
+abstract requirements, exact current implementations, and concrete
+implementations. Linked validation checks the recorded selection and never
+chooses another candidate.</p>
+<p>Elaboration simultaneously substitutes every interface argument in declaration
+order before method-local arguments and evidence applications. Generated
+adapters preserve implementation-head parameters before method parameters.
+Determination adds no type binder, evidence method, Core node, validator
+dialect, evaluator value, runtime dictionary, registry, lookup, frame,
+transition, or failure mode. Determinant positions erase before Core; complete
+applications may survive only in inert static authentication relationships
+through transforms and independent validation. Complete substituted types and
+those existing relationships remain sufficient; the evaluator does not inspect
+them or make them control or state.</p>
+<p>Identity and literal-folding transforms preserve or rebuild the complete
+relationships. Original and transformed programs pass fresh validation and
+evaluate equally.</p>
+<h2 id="linked-product-and-adversarial-evidence">Linked product and adversarial evidence</h2>
+<p>The retained fixture in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/fixtures/relational-interfaces/linked-composite"><code>tests/fixtures/relational-interfaces/linked-composite</code></a>
+contains a higher-kinded three-parameter relation, a composite key, a
+polymorphic method, a generic public implementation, an abstract constrained
+helper, direct and unequal-length facade routes, and a concrete entry
+selection. Body-free summaries retain one stable implementation identity and
+the shortest authorization route. The library, CLI, identity transform, and
+literal-folding transform all observe <code>42 : Int</code>.</p>
+<p>The negative matrices independently reject:</p>
+<ul>
+<li>missing, extra, reordered, wrong-identity, or wrong-kind parameter records;</li>
+<li>invalid determinant positions and missing, extra, or reordered application
+arguments;</li>
+<li>key-only, dependent-only, abstract-root, implementation-root, prerequisite,
+route, and substitution disagreement;</li>
+<li>substitution of a same-shaped but identity-distinct hidden nominal;</li>
+<li>head-versus-method type-argument swaps and stale transformed authority; and</li>
+<li>partial publication after source, summary, linking, or Core validation
+failure.</li>
+</ul>
+<p>Separate hidden, same-shaped private-twin, and public-opaque dependent nominals
+cross summaries without making a hidden spelling nameable or an opaque
+constructor accessible.</p>
+<h2 id="diagnostics-and-migration">Diagnostics and migration</h2>
+<p>The structured failure families retain exact causal ownership for argument
+count and positional kinds, determination partitions, method seeds,
+requirement pairs, implementation coverage, coherence, improvement conflict,
+ambiguity, cycles, and unsatisfied evidence. The specification records the
+ten-stage precedence from parsing through independent Core validation.</p>
+<p>Every predecessor unary interface fixture remains valid as a one-parameter,
+no-edge declaration. The executable specification corpus separately retains a
+dependent-absent positive case, an ordinary no-edge omission rejection as
+<code>interface.method-parameter</code>, an invalid partition rejection as
+<code>interface.determination-parameter</code>, and the linked relational program.</p>
+<h2 id="exact-resources">Exact resources</h2>
+<p>No production limit changes. The final retained exact boundaries are:</p>
+<ul>
+<li><code>3P/2P</code> constraint/type work for method-free interface ingress;</li>
+<li><code>7P+5/2P</code> for a leaf complete application;</li>
+<li><code>17/2</code> imported and <code>18/2</code> local generic unary implementation ingress;</li>
+<li><code>12L+11I/2(L+I)</code> for mixed zero-parameter implementation closures;</li>
+<li><code>6W+11/6</code> for a wide improvement candidate scan;</li>
+<li>11 type units for one constrained relational lowering owner;</li>
+<li>6,516 constraint units for the fixed cross-stage graph, with an atomic
+one-short rejection at 6,515 before Core or evaluation; and</li>
+<li>determination snapshot boundaries <code>17/6</code> and <code>3W+14/6</code>.</li>
+</ul>
+<p>The wide driver coefficients are 37, 53, 64, 67, and 116. At <code>W = 4890</code>,
+linked work is 327,655, the unchanged constraint limit is 327,680, and
+validation work is 567,320:</p>
+<pre tabindex="0"><code class="language-text">327655 &lt; 327680 &lt; 567320
+</code></pre>
+<p>The retained <code>7P+5</code> formula charges the header, mirror comparison, candidate
+carrier, interface authentication, scope, and structural traversal. An
+additional per-parameter charge would count an existing visit twice. Generic
+implementation-candidate ingress is different: its simultaneous vector and
+owner index are separately retained and therefore each receive their own <code>P</code>
+charge before allocation. Interface ingress retains only one vector and proves
+module qualification, uniqueness, and declaration order in constant state.</p>
+<p>All vector allocation, cloning, traversal, rejection, retry, and disposal
+tests preserve charge-before-allocation, atomic publication, exact retry from
+unchanged inputs, bounded explicit work stacks, and small-stack disposal.</p>
+<h2 id="reviews-verification-and-exclusions">Reviews, verification, and exclusions</h2>
+<p>Checkpoint 6 semantic and security review approved the implemented semantics
+without findings. Rust and resource review identified a missing second owner
+for implementation candidates, a missing exact lowering probe, capability-free
+goal validation, and an avoidable interface index. The corrections were
+re-reviewed without remaining findings.</p>
+<p>The <code>e660c17</code> product gate passed 801 library tests, 57 evidence tests, 46
+interface-matching tests, 28 architecture tests, 64 Core-validation tests, 24
+interface-module tests, and four method-parameter resource tests, plus
+formatting, all-target checking, strict Clippy, and diff hygiene. Checkpoint 7
+adds executable normative and predecessor-corpus guards. Its focused
+specification and corpus suites pass 64/64 and 11/11. Independent semantic and
+documentation/resource/lifecycle reviews approve without findings after
+correcting the pending-root snapshot boundary, same-<code>InterfaceId</code> pair
+premises, stale milestone prose, and suite counts. The retained tree passes
+<code>cargo xtask verify</code>, including all integration suites, the xtask self-test,
+doctests, and Rustdoc; Markdown lint, relative-link, and diff checks also pass.</p>
+<p>Closed inventory checks confirm that no effect row or handler, proof term or
+proof authority, existential binder or pack/unpack node, common universal
+evidence family, associated declaration or projection, general edge graph,
+default member, new Core form, or evaluator mechanism entered. Effects may
+reuse identities but require separate dynamic authority. Proofs require a
+separate authenticated evidence family. Existentials may encapsulate complete
+applications and evidence without changing interface-head representation, but
+still require separate scope, generativity, Core, and authority rules.</p>
+<h2 id="lifecycle-state">Lifecycle state</h2>
+<p>This report is the durable replacement for the transition proposal, completed
+task, and execution plan. Commit <code>cf2c4b0</code> records their final 65/65 result and
+both independent approvals before the following cleanup removes those
+transition-only artifacts and their index entries. Integration, repeated root
+verification, and any tag follow their owning lifecycle; none changes the
+language boundary recorded here.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#scope-and-checkpoints">Scope and checkpoints</a><a href="#implemented-boundary">Implemented boundary</a><a href="#requirements-implementations-and-coherence">Requirements, implementations, and coherence</a><a href="#improvement-and-selection">Improvement and selection</a><a href="#summaries-linking-and-core">Summaries, linking, and Core</a><a href="#linked-product-and-adversarial-evidence">Linked product and adversarial evidence</a><a href="#diagnostics-and-migration">Diagnostics and migration</a><a href="#exact-resources">Exact resources</a><a href="#reviews-verification-and-exclusions">Reviews, verification, and exclusions</a><a href="#lifecycle-state">Lifecycle state</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

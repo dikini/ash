@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-cancelling-a-stable-sort.html" rel="next">
+<link href="./cases-redacting-before-publication.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Check proposed edits · Ash</title><meta name="description" content="A worker can propose a plausible result without having permission to make its changes. A controller needs more than a finished list: it needs the proposed edits, the original list it trusts, and the positions the…"><meta name="robots" content="index, follow"><meta property="og:title" content="Check proposed edits · Ash"><meta property="og:description" content="A worker can propose a plausible result without having permission to make its changes. A controller needs more than a finished list: it needs the proposed edits, the original list it trusts, and the positions the…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Check proposed edits · Ash"><meta name="twitter:description" content="A worker can propose a plausible result without having permission to make its changes. A controller needs more than a finished list: it needs the proposed edits, the original list it trusts, and the positions the…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-checking-proposed-edits.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-checking-proposed-edits.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Check proposed edits","headline":"Check proposed edits","description":"A worker can propose a plausible result without having permission to make its changes. A controller needs more than a finished list: it needs the proposed edits, the original list it trusts, and the positions the…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-checking-proposed-edits.html","@id":"https://dikini.github.io/ash/study/latest/cases-checking-proposed-edits.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/checking-proposed-edits/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-checking-proposed-edits.html"><span class="chapter-title">Check proposed edits</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#keep-the-original-outside-the-proposal" id="toc-keep-the-original-outside-the-proposal" class="nav-link active" data-scroll-target="#keep-the-original-outside-the-proposal">Keep the original outside the proposal</a></li>
+  <li><a href="#construct-a-candidate-by-rebuilding-its-prefix" id="toc-construct-a-candidate-by-rebuilding-its-prefix" class="nav-link" data-scroll-target="#construct-a-candidate-by-rebuilding-its-prefix">Construct a candidate by rebuilding its prefix</a></li>
+  <li><a href="#reconstruct-the-answer-independently" id="toc-reconstruct-the-answer-independently" class="nav-link" data-scroll-target="#reconstruct-the-answer-independently">Reconstruct the answer independently</a></li>
+  <li><a href="#observe-three-ways-to-finish-review" id="toc-observe-three-ways-to-finish-review" class="nav-link" data-scroll-target="#observe-three-ways-to-finish-review">Observe three ways to finish review</a></li>
+  <li><a href="#distinguish-policy-boundaries-from-candidate-agreement" id="toc-distinguish-policy-boundaries-from-candidate-agreement" class="nav-link" data-scroll-target="#distinguish-policy-boundaries-from-candidate-agreement">Distinguish policy boundaries from candidate agreement</a></li>
+  <li><a href="#consume-a-continuation-exactly-once" id="toc-consume-a-continuation-exactly-once" class="nav-link" data-scroll-target="#consume-a-continuation-exactly-once">Consume a continuation exactly once</a></li>
+  <li><a href="#practice-preserve-both-kinds-of-correctness" id="toc-practice-preserve-both-kinds-of-correctness" class="nav-link" data-scroll-target="#practice-preserve-both-kinds-of-correctness">Practice: preserve both kinds of correctness</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-checking-proposed-edits.html"><span class="chapter-title">Check proposed edits</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Check proposed edits</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>A worker can propose a plausible result without having permission to make its changes. A controller needs more than a finished list: it needs the proposed edits, the original list it trusts, and the positions the worker may change. It can then reconstruct the expected result before allowing the worker to complete.</p>
+<p>The <a href="./cases-running-a-scripted-session.html">scripted session</a> separated a calculation from the commands supplied by its handler. Here one immutable proposal contains an entire edit batch and its candidate artifact. Continue from <a href="./effects-resuming-a-calculation.html">resumption</a> and <a href="./effects-stopping-a-calculation.html">early stopping</a>: resuming a worker safely and approving its data are separate responsibilities.</p>
+<section id="keep-the-original-outside-the-proposal" class="level2">
+<h2 class="anchored" data-anchor-id="keep-the-original-outside-the-proposal">Keep the original outside the proposal</h2>
+<p>Use a finite list of integers as the artifact. Positions start at zero. The controller owns original <code>[10,20,30]</code> and allowed positions <code>[1,2]</code>. A worker proposes <code>1 := 25</code>, then <code>2 := 35</code>, together with candidate <code>[10,25,35]</code>. Square brackets and <code>:=</code> here are non-executable notation; the Ash data below uses constructors.</p>
+<p>The proposal contains an edits list and one candidate. It contains neither an authoritative original nor an authoritative permission list. That keeps the question precise: does this proposed artifact result from these edits to <em>our</em> original, and is each requested position permitted? Reviewing an entire immutable batch also avoids a changing current artifact between review rounds. A session with several rounds would need an additional agreement about that current state.</p>
+<p>Derive the operation contracts from the desired result. <code>make_proposal</code> receives an original and edits and constructs their candidate. <code>Review.propose</code> takes the proposal and requests a <code>Decision</code>. <code>Allow</code> lets the worker return <code>Completed(candidate)</code>; <code>Reject(reason)</code> lets it return <code>Rejected(reason)</code>. A controller that stops the waiting worker instead constructs <code>Cancelled</code>. Those constructors are ordinary data; their names confer no permission.</p>
+<p>The controller must establish three conditions before allowing the batch:</p>
+<ol type="1">
+<li>Every requested position exists in its original artifact.</li>
+<li>Every requested position appears in its allowed-position list.</li>
+<li>The complete candidate equals the result of applying the edits in order.</li>
+</ol>
+<p>Existence comes first so position <code>7</code> is missing, while existing position <code>0</code> is forbidden. A write of <code>0 := 10</code> is still forbidden even though it would leave that field unchanged. Permission is about the proposed operation, not only the difference between final artifacts.</p>
+</section>
+<section id="construct-a-candidate-by-rebuilding-its-prefix" class="level2">
+<h2 class="anchored" data-anchor-id="construct-a-candidate-by-rebuilding-its-prefix">Construct a candidate by rebuilding its prefix</h2>
+<p>For one edit, walk the remaining suffix with an index starting at zero. Keep already visited values in a reversed prefix. When the index equals the target position, replace the current value and rebuild the prefix onto that suffix. The invariant is non-executable notation:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>artifact before this edit = reverse(prefix) ++ suffix</code></pre>
+<p>For <code>1 := 25</code>, the reversed prefix becomes <code>[10]</code> and the suffix is <code>[20,30]</code>. Replacing its head gives <code>[25,30]</code>; rebuilding yields <code>[10,25,30]</code>. The next edit starts again at index zero with that updated artifact, so <code>2 := 35</code> yields <code>[10,25,35]</code>.</p>
+<p><code>rebuild</code> preserves prefix order by moving its head onto the suffix and recursing on the smaller reversed prefix. <code>replace_from</code> advances through a smaller suffix until equality selects the replacement. If no position matches, it rebuilds the unchanged artifact; that behavior alone does not authorize a missing position. <code>worker_candidate</code> applies the remaining edits to each updated artifact. An empty batch returns its input unchanged, and repeated writes therefore use the last value.</p>
+<p>Keep the data and worker definitions in <code>edits.ash</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub type Artifact = End
+    | Item(Int, Artifact)
+pub type Edit = Edit(Int, Int)
+pub type Edits = NoEdits
+    | More(Edit, Edits)
+pub type Proposal = Proposal(Edits, Artifact)
+pub type RejectReason = ForbiddenPosition(Int)
+    | MissingPosition(Int)
+    | CandidateMismatch
+    | ScriptedRejection
+pub type Decision = Allow
+    | Reject(RejectReason)
+pub type Result = Completed(Artifact)
+    | Rejected(RejectReason)
+    | Cancelled
+
+pub effect Review {
+    propose : Proposal -&gt; Decision
+}
+
+pub effect AfterReview {
+    reached : Unit -&gt; Unit
+}
+
+rebuild : (Artifact, Artifact) -&gt; Artifact
+rebuild (End, suffix) = suffix
+rebuild (Item(value, prefix), suffix) = rebuild (prefix, Item(value, suffix))
+
+replace_from : (Int, Int, Int, Artifact, Artifact) -&gt; Artifact
+replace_from (position, value, index, prefix, End) = rebuild (prefix, End)
+replace_from (position, value, index, prefix, Item(current, suffix)) = {
+    match index == position {
+        true =&gt; rebuild (prefix, Item(value, suffix))
+        false =&gt; replace_from (
+            position, value, index + 1, Item(current, prefix), suffix
+        )
+    }
+}
+
+pub worker_candidate : (Artifact, Edits) -&gt; Artifact
+worker_candidate (original, NoEdits) = original
+worker_candidate (original, More(Edit(position, value), rest)) = {
+    let updated = replace_from (position, value, 0, End, original)
+    worker_candidate (updated, rest)
+}
+
+pub valid_batch : Unit -&gt; Edits
+valid_batch () = More(Edit(1, 25), More(Edit(2, 35), NoEdits))
+
+pub make_proposal : (Artifact, Edits) -&gt; Proposal
+make_proposal (original, edits) = Proposal (
+    edits, worker_candidate (original, edits)
+)
+
+pub worker : Proposal -&gt; Result ! {Review, AfterReview}
+worker proposal = {
+    let decision = perform Review.propose proposal
+    let ignored = perform AfterReview.reached ()
+    match decision {
+        Allow =&gt; {
+            let Proposal(ignored_edits, candidate) = proposal
+            Completed candidate
+        }
+        Reject(reason) =&gt; Rejected reason
+    }
+}</code></pre>
+<p>The worker’s post-request suffix begins with <code>AfterReview.reached</code>. This small observation request records whether execution continued after review; it is not an authorization operation. The following match interprets the supplied decision. Notice that an ordinary rejection still runs that suffix before returning its reason.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#effects">effect contract</a> checks the proposal and answer types. <code>Review.propose</code> does not itself know the original or the allowed positions. Likewise, <code>worker_candidate</code> can calculate a forbidden edit. These functions construct and communicate data; the controller must judge that data.</p>
+</section>
+<section id="reconstruct-the-answer-independently" class="level2">
+<h2 class="anchored" data-anchor-id="reconstruct-the-answer-independently">Reconstruct the answer independently</h2>
+<p>A checker that calls the worker’s replacement function could repeat its mistake. Use a different calculation in the controller. <code>model_at</code> traverses the whole artifact by index, selects the new value at the matching index, and reconstructs every list node. It has no reversed prefix and does not call <code>replace_from</code>. Applying these full passes sequentially gives <code>model</code>.</p>
+<p>On each pass, a nonmatching index preserves the current value; the matching index supplies the replacement. Both cases recurse on the remaining tail. Consequently, an existing position changes exactly once per edit and the list length stays fixed. Sequential passes explain both last-write-wins behavior and why the empty batch preserves the original.</p>
+<p>Derive <code>validate : Proposal -&gt; Decision</code> from that model. First inspect every edit for existence and permission using controller-owned values. Only when those checks pass, compare the candidate against <code>model(original, edits)</code>. <code>same_artifact</code> checks corresponding integers, both empty tails, and unequal shapes, so a matching prefix is insufficient.</p>
+<p>In <code>controller.ash</code>, <code>original</code> and <code>allowed_positions</code> have no worker inputs. The proposal pattern binds only <code>edits</code> and <code>candidate</code>. Their declared types alone do not establish trust; these definitions and call sites establish which values the controller actually uses:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import edits as Edits
+
+pub type Script = Check
+    | Refuse
+    | Cancel
+
+type Inspection = Accepted
+    | Problem(Edits.RejectReason)
+
+pub original : Unit -&gt; Edits.Artifact
+original () = Edits.Item(10, Edits.Item(20, Edits.Item(30, Edits.End)))
+
+pub allowed_positions : Unit -&gt; Edits.Artifact
+allowed_positions () = Edits.Item(1, Edits.Item(2, Edits.End))
+
+model_at : (Edits.Artifact, Int, Int, Int) -&gt; Edits.Artifact
+model_at (Edits.End, index, position, value) = Edits.End
+model_at (Edits.Item(current, rest), index, position, value) = {
+    let selected = match index == position {
+        true =&gt; value
+        false =&gt; current
+    }
+    Edits.Item(selected, model_at (rest, index + 1, position, value))
+}
+
+pub model : (Edits.Artifact, Edits.Edits) -&gt; Edits.Artifact
+model (artifact, Edits.NoEdits) = artifact
+model (artifact, Edits.More(Edits.Edit(position, value), rest)) = {
+    model (model_at (artifact, 0, position, value), rest)
+}
+
+position_exists : (Edits.Artifact, Int, Int) -&gt; Bool
+position_exists (Edits.End, index, position) = false
+position_exists (Edits.Item(ignored_value, rest), index, position) = {
+    match index == position {
+        true =&gt; true
+        false =&gt; position_exists (rest, index + 1, position)
+    }
+}
+
+permitted : (Edits.Artifact, Int) -&gt; Bool
+permitted (Edits.End, position) = false
+permitted (Edits.Item(allowed, rest), position) = match allowed == position {
+    true =&gt; true
+    false =&gt; permitted (rest, position)
+}
+
+same_artifact : (Edits.Artifact, Edits.Artifact) -&gt; Bool
+same_artifact (Edits.End, Edits.End) = true
+same_artifact (Edits.Item(left, left_rest), Edits.Item(right, right_rest)) = {
+    match left == right {
+        true =&gt; same_artifact (left_rest, right_rest)
+        false =&gt; false
+    }
+}
+same_artifact (left, right) = false
+
+inspect_edits : Edits.Edits -&gt; Inspection
+inspect_edits Edits.NoEdits = Accepted
+inspect_edits (Edits.More(Edits.Edit(position, ignored_value), rest)) = {
+    match position_exists (original (), 0, position) {
+        false =&gt; Problem (Edits.MissingPosition position)
+        true =&gt; match permitted (allowed_positions (), position) {
+            false =&gt; Problem (Edits.ForbiddenPosition position)
+            true =&gt; inspect_edits rest
+        }
+    }
+}
+
+pub validate : Edits.Proposal -&gt; Edits.Decision
+validate (Edits.Proposal(edits, candidate)) = match inspect_edits edits {
+    Problem(reason) =&gt; Edits.Reject reason
+    Accepted =&gt; match same_artifact (candidate, model (original (), edits)) {
+        true =&gt; Edits.Allow
+        false =&gt; Edits.Reject Edits.CandidateMismatch
+    }
+}
+
+pub run_proposal : (Script, Edits.Proposal) -&gt; (Edits.Result, Bool)
+run_proposal (script, proposal) = handle {
+    let result = handle (Edits.worker proposal) with Edits.Review {
+        propose offered =&gt; match script {
+            Check =&gt; resume (validate offered)
+            Refuse =&gt; resume (Edits.Reject Edits.ScriptedRejection)
+            Cancel =&gt; {
+                let ignored = discard
+                Edits.Cancelled
+            }
+        }
+    }
+    (result, false)
+} with Edits.AfterReview {
+    reached ignored =&gt; {
+        let (result, ignored_later) = resume ()
+        (result, true)
+    }
+}
+
+pub run : Script -&gt; (Edits.Result, Bool)
+run script = run_proposal (
+    script, Edits.make_proposal (original (), Edits.valid_batch ())
+)</code></pre>
+<p><code>position_exists</code> increases an index while consuming a finite list. <code>permitted</code> compares the requested position with each allowed integer. Neither needs an integer ordering operator: equality and finite structural recursion supply the bounds checks. A target that never equals an enumerated index is missing.</p>
+<p>The <code>Check</code> clause validates the actual <code>offered</code> proposal before supplying its decision through <code>resume</code>. The <code>Refuse</code> script supplies an ordinary rejected decision. The <code>Cancel</code> script instead consumes its owned continuation with <code>discard</code> and then constructs <code>Cancelled</code>. The right to resume or discard stays in this local operation clause; a helper computes the ordinary decision. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#effect-handlers-and-completion">completion rules</a> explain why resumption restores the waiting worker and discard abandons its suffix.</p>
+<p>The outer <code>AfterReview</code> handler resumes the marker request and returns <code>true</code> as the pair’s second field. Without a marker request, that field stays <code>false</code>. This observes execution after the review request without mutable state. It adds no permission check and does not change which proposal gets validated.</p>
+<p>For an artifact of length <code>n</code>, <code>m</code> edits, and <code>a</code> allowed positions, each worker edit scans and rebuilds at most <code>n</code> nodes. Each model pass visits <code>n</code> nodes; validation also searches for each position and permission and compares the complete candidate. Source-level list work is therefore bounded by <code>O(m(n + a) + n)</code>. Reconstructing lists allocates nodes; this bound claims no constant stack space or compiler optimization. The original remains available as an immutable value throughout review.</p>
+</section>
+<section id="observe-three-ways-to-finish-review" class="level2">
+<h2 class="anchored" data-anchor-id="observe-three-ways-to-finish-review">Observe three ways to finish review</h2>
+<p>Enter <code>checking-proposed-edits/src</code> from the Cases directory. The three entries share the original, batch, worker, and controller. Only their script choice changes. Predict both the ordinary result and whether the worker’s post-request marker is reached.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import edits as Edits
+import controller as Controller
+
+main : Unit -&gt; (Edits.Result, Bool)
+main () = Controller.run Controller.Check</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 01-allow.ash
+(Completed(Item(10, Item(25, Item(35, End)))), true) : (Result, Bool)</code></pre>
+<p>All validation conditions pass, so the clause resumes with <code>Allow</code>. The worker reaches its marker and returns the candidate <code>[10,25,35]</code>. The <code>true</code> records that resumed suffix, not a separate claim that the artifact is correct.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import edits as Edits
+import controller as Controller
+
+main : Unit -&gt; (Edits.Result, Bool)
+main () = Controller.run Controller.Refuse</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 02-reject.ash
+(Rejected(ScriptedRejection), true) : (Result, Bool)</code></pre>
+<p><code>Refuse</code> resumes with <code>Reject(ScriptedRejection)</code>. The worker still continues after the request, reaches the marker, and returns <code>Rejected</code> with that reason. Rejecting the proposal is an ordinary answer to the operation.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import edits as Edits
+import controller as Controller
+
+main : Unit -&gt; (Edits.Result, Bool)
+main () = Controller.run Controller.Cancel</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 03-cancel.ash
+(Cancelled, false) : (Result, Bool)</code></pre>
+<p><code>Cancel</code> supplies no operation answer. Discard consumes the continuation that would have reached the marker and interpreted the decision. The clause then returns <code>Cancelled</code>, leaving the marker false. This local capture owns no resource or cleanup obligation; the accepted discard does not establish that an arbitrary suspended worker can always be abandoned safely.</p>
+</section>
+<section id="distinguish-policy-boundaries-from-candidate-agreement" class="level2">
+<h2 class="anchored" data-anchor-id="distinguish-policy-boundaries-from-candidate-agreement">Distinguish policy boundaries from candidate agreement</h2>
+<p>A few differing inputs test the controller’s three conditions separately. Before running <code>04-batch-boundaries.ash</code>, predict these decisions:</p>
+<ul>
+<li>Existing but forbidden position <code>0</code>, even when writing its original value.</li>
+<li>Missing position <code>7</code>, which also does not appear in the permission list.</li>
+<li>Valid edits paired with the unchanged original as a wrong candidate.</li>
+<li>Two authorized writes to position <code>1</code>, first <code>25</code>, then <code>27</code>.</li>
+<li>An empty batch paired with the original, then with a different candidate.</li>
+</ul>
+<p>The entry also returns the worker and model artifacts for valid, repeated, and empty edits. Compare each calculation with a hand-derived whole artifact; agreement with each other alone would not rule out a shared mistaken answer.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import edits as Edits
+import controller as Controller
+
+main : Unit -&gt; (
+    (Edits.Decision, Edits.Decision, Edits.Decision),
+    (Edits.Decision, Edits.Decision, Edits.Decision),
+    (Edits.Artifact, Edits.Artifact, Edits.Artifact),
+    (Edits.Artifact, Edits.Artifact, Edits.Artifact)
+)
+main () = {
+    let original = Controller.original ()
+    let valid = Edits.valid_batch ()
+    let repeated = Edits.More (
+        Edits.Edit(1, 25), Edits.More(Edits.Edit(1, 27), Edits.NoEdits)
+    )
+    let Edits.Proposal(ignored_valid, valid_candidate) = (
+        Edits.make_proposal (original, valid)
+    )
+    let Edits.Proposal(ignored_repeated, repeated_candidate) = (
+        Edits.make_proposal (original, repeated)
+    )
+    let Edits.Proposal(ignored_empty, empty_candidate) = (
+        Edits.make_proposal (original, Edits.NoEdits)
+    )
+    let forbidden = Edits.Proposal (
+        Edits.More(Edits.Edit(0, 10), Edits.NoEdits), original
+    )
+    let missing = Edits.Proposal (
+        Edits.More(Edits.Edit(7, 99), Edits.NoEdits), original
+    )
+    (
+        (
+            Controller.validate forbidden,
+            Controller.validate missing,
+            Controller.validate (Edits.Proposal(valid, original))
+        ),
+        (
+            Controller.validate (Edits.Proposal(repeated, repeated_candidate)),
+            Controller.validate (Edits.Proposal(Edits.NoEdits, original)),
+            Controller.validate (Edits.Proposal(Edits.NoEdits, valid_candidate))
+        ),
+        (valid_candidate, repeated_candidate, empty_candidate),
+        (
+            Controller.model (original, valid),
+            Controller.model (original, repeated),
+            Controller.model (original, Edits.NoEdits)
+        )
+    )
+}</code></pre>
+<p>Run <code>ash 04-batch-boundaries.ash</code>. It returns one four-part tuple. The following list and table select every field of that one captured result; the surrounding tuple structure and type annotation are omitted. The first two groups contain these decisions, in source order:</p>
+<ul>
+<li>First group, <code>0 := 10</code>, unchanged candidate: <code>Reject(ForbiddenPosition(0))</code>.</li>
+<li>First group, <code>7 := 99</code>, unchanged candidate: <code>Reject(MissingPosition(7))</code>.</li>
+<li>First group, valid edits, unchanged candidate: <code>Reject(CandidateMismatch)</code>.</li>
+<li>Second group, <code>1 := 25</code>, then <code>1 := 27</code>: <code>Allow</code>.</li>
+<li>Second group, empty edits, original candidate: <code>Allow</code>.</li>
+<li>Second group, empty edits, changed candidate: <code>Reject(CandidateMismatch)</code>.</li>
+</ul>
+<p>The third and fourth groups hold complete worker and model artifacts:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 23%">
+<col style="width: 37%">
+<col style="width: 37%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Edits</th>
+<th style="text-align: left;">Worker artifact</th>
+<th style="text-align: left;">Model artifact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Valid</td>
+<td style="text-align: left;"><code>Item(10, Item(25, Item(35, End)))</code></td>
+<td style="text-align: left;"><code>Item(10, Item(25, Item(35, End)))</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Repeated position</td>
+<td style="text-align: left;"><code>Item(10, Item(27, Item(30, End)))</code></td>
+<td style="text-align: left;"><code>Item(10, Item(27, Item(30, End)))</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Empty</td>
+<td style="text-align: left;"><code>Item(10, Item(20, Item(30, End)))</code></td>
+<td style="text-align: left;"><code>Item(10, Item(20, Item(30, End)))</code></td>
+</tr>
+</tbody>
+</table>
+<p>The unchanged forbidden write shows why checking only the candidate’s changed positions would miss the policy violation. The missing-position reason shows which check runs first. Candidate equality then distinguishes both the wrong valid-batch candidate and the wrong empty-batch candidate. The repeated position confirms sequential interpretation rather than rejecting duplicates or letting the first write win.</p>
+<p>Now remove the validation decision itself. <code>05-approve-all.ash</code> gives every proposal <code>Allow</code>, including a write of <code>0 := 99</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import edits as Edits
+import controller as Controller
+
+main : Unit -&gt; (Edits.Result, Bool)
+main () = {
+    let forbidden_edits = Edits.More(Edits.Edit(0, 99), Edits.NoEdits)
+    let proposal = Edits.make_proposal (Controller.original (), forbidden_edits)
+    handle {
+        let result = handle (Edits.worker proposal) with Edits.Review {
+            propose ignored =&gt; resume Edits.Allow
+        }
+        (result, false)
+    } with Edits.AfterReview {
+        reached ignored =&gt; {
+            let (result, ignored_later) = resume ()
+            (result, true)
+        }
+    }
+}</code></pre>
+<p>Predict whether the compiler accepts this controller and which artifact the worker returns:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 05-approve-all.ash
+(Completed(Item(99, Item(20, Item(30, End)))), true) : (Result, Bool)</code></pre>
+<p>The continuation is consumed once, and all operation, answer, and result types fit. Yet the completed artifact changes forbidden position <code>0</code>. This accepted program violates the chosen policy. A <code>Decision</code> type cannot by itself make every <code>Allow</code> justified. The controller’s checks and its trusted inputs supply that justification; safe continuation use does not supply it.</p>
+</section>
+<section id="consume-a-continuation-exactly-once" class="level2">
+<h2 class="anchored" data-anchor-id="consume-a-continuation-exactly-once">Consume a continuation exactly once</h2>
+<p>The previous mistake produced an ordinary wrong application result. A different mistake tries to use the same continuation twice. Isolate that boundary from the edit data in <code>06-double-resume.ash</code>; its local review asks only for a Boolean:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>effect Review {
+    propose : Unit -&gt; Bool
+}
+
+main : Unit -&gt; Bool
+main () = handle (perform Review.propose ()) with Review {
+    propose ignored =&gt; {
+        let result = resume true
+        resume result
+    }
+}</code></pre>
+<p>The first <code>resume</code> receives the waiting computation’s result. Predict what right remains before the next line, then run from the same <code>src</code> directory:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 06-double-resume.ash
+This path has already resumed or discarded the continuation; it cannot do so again.
+  --&gt; /path/to/ash-doc/content/cases/checking-proposed-edits/src/06-double-resume.ash:9:9
+9 |         resume result
+  |         ^ This path has already resumed or discarded the continuation; it cannot do so again.
+reason: effect.resume-already-consumed</code></pre>
+<p>The label points at the second <code>resume result</code>. The preceding <code>resume true</code> already consumed this clause’s capability, so the later use encounters a consumed continuation. The message describes that reuse; its secondary reason is <code>effect.resume-already-consumed</code>.</p>
+<p>Return the ordinary result after the first resumption instead. The complete repair is <code>08-resume-once.ash</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>effect Review {
+    propose : Unit -&gt; Bool
+}
+
+main : Unit -&gt; Bool
+main () = handle (perform Review.propose ()) with Review {
+    propose ignored =&gt; {
+        let result = resume true
+        result
+    }
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 08-resume-once.ash
+true : Bool</code></pre>
+<p>The right to resume is consumed once; using the returned Boolean needs no second resumption. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#effects">effect rules</a> govern consumption on each normally completing path. They do not promise termination or authorize the Boolean supplied by the handler.</p>
+<p><code>07-missing-resume.ash</code> makes the opposite mistake: it returns a Boolean without answering or abandoning the waiting computation:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>effect Review {
+    propose : Unit -&gt; Bool
+}
+
+main : Unit -&gt; Bool
+main () = handle (perform Review.propose ()) with Review {
+    propose ignored =&gt; false
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en 07-missing-resume.ash
+This path can finish without resuming or safely discarding the continuation.
+  --&gt; /path/to/ash-doc/content/cases/checking-proposed-edits/src/07-missing-resume.ash:7:24
+7 |     propose ignored =&gt; false
+  |                        ^ This path can finish without resuming or safely discarding the continuation.
+reason: effect.resume-not-consumed</code></pre>
+<p>The label points at the clause’s <code>false</code>, where the path finishes while its capability remains available. Returning an ordinary value did not consume it. The message names both permitted ways to finish that obligation; its secondary reason is <code>effect.resume-not-consumed</code>.</p>
+<p>If the intention is to continue, use the one-resume pattern. If the intention is to stop this locally owned work, consume it with discard and then supply the handler’s result, as in <code>09-owned-discard.ash</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>effect Review {
+    propose : Unit -&gt; Bool
+}
+
+main : Unit -&gt; Bool
+main () = handle (perform Review.propose ()) with Review {
+    propose ignored =&gt; {
+        let ignored = discard
+        false
+    }
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash 09-owned-discard.ash
+false : Bool</code></pre>
+<p>Discard produces unit, which the binding sets aside. The subsequent <code>false</code> is the handler’s Boolean result; it was never supplied as an answer to the operation. These complete diagnostic captures describe this edition’s tool presentation. Their consumption reasons identify language boundaries, while the wording and printed layout are not a language contract.</p>
+</section>
+<section id="practice-preserve-both-kinds-of-correctness" class="level2">
+<h2 class="anchored" data-anchor-id="practice-preserve-both-kinds-of-correctness">Practice: preserve both kinds of correctness</h2>
+<p>Make scratch copies outside this lesson’s <code>src</code> directory, keeping <code>edits.ash</code> and <code>controller.ash</code> beside the entries that import them. Predict each changed result before running it.</p>
+<ol type="1">
+<li>Reverse the repeated edits in <code>04-batch-boundaries.ash</code>. Derive the worker and model artifacts and explain what the checker should require.</li>
+<li>Give the forbidden unchanged write the <code>Check</code> script through <code>run_proposal</code>. Predict the result and marker, comparing ordinary rejection with cancellation.</li>
+<li>Change the trusted allowed-position list to include <code>0</code>. Identify which boundary observations may change and which checks still apply.</li>
+<li>Keep valid edits but make a candidate with one extra list item. Explain which part of <code>same_artifact</code> must prevent approval.</li>
+<li>Repair the missing-consumption example using resumption instead of discard. Explain which Boolean is an operation answer and which is a handler result.</li>
+</ol>
+<p>An accepted controller uses its continuation safely. A correct controller also checks each edit against its own authority and reconstructs the whole artifact from its own original. Keeping those obligations separate makes an unjustified approval visible as an application mistake. Next comes a related question for a longer calculation: which properties can a partially completed result promise when its continuation is cancelled?</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-redacting-before-publication.html" class="pagination-link" aria-label="Redact before publication">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Redact before publication</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-cancelling-a-stable-sort.html" class="pagination-link" aria-label="Cancel a stable sort">
+        <span class="nav-page-text"><span class="chapter-title">Cancel a stable sort</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

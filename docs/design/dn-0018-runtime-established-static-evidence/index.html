@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0018: Runtime-Established Static Evidence · Ash</title><meta name="description" content="Can a successful runtime check introduce unforgeable, erasable evidence about a value or relationship so later code can use the established fact without adding arbitrary runtime values to Ash types?"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0018: Runtime-Established Static Evidence · Ash"><meta property="og:description" content="Can a successful runtime check introduce unforgeable, erasable evidence about a value or relationship so later code can use the established fact without adding arbitrary runtime values to Ash types?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0018: Runtime-Established Static Evidence · Ash"><meta name="twitter:description" content="Can a successful runtime check introduce unforgeable, erasable evidence about a value or relationship so later code can use the established fact without adding arbitrary runtime values to Ash types?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0018-runtime-established-static-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0018-runtime-established-static-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0018-runtime-established-static-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0018: Runtime-Established Static Evidence","headline":"DN-0018: Runtime-Established Static Evidence","description":"Can a successful runtime check introduce unforgeable, erasable evidence about a value or relationship so later code can use the established fact without adding arbitrary runtime values to Ash types?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0018-runtime-established-static-evidence/","@id":"https://dikini.github.io/ash/docs/design/dn-0018-runtime-established-static-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0018-runtime-established-static-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0018-runtime-established-static-evidence" data-pagefind-meta="title">DN-0018: Runtime-Established Static Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0018-runtime-established-static-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0018</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008: Typed Core and Elaboration</a>, <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010: Identities and Resource Lifetimes</a>, <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013: Session and Resource Protocol Stress Tests</a>, <a href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">DN-0017: Resource Management and Storage Policy</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It explores runtime checks that produce
+statically tracked evidence; it does not define current Ash, accept refinement
+or dependent types, or authorize trusted compiler primitives. All notation is
+illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can a successful runtime check introduce unforgeable, erasable evidence about a
+value or relationship so later code can use the established fact without adding
+arbitrary runtime values to Ash types?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>Some useful facts are difficult or undesirable to derive through ordinary type
+checking:</p>
+<ul>
+<li>a buffer satisfies an alignment requirement;</li>
+<li>an input has passed validation or authentication;</li>
+<li>two mutable views are disjoint;</li>
+<li>a mapping relates a handle and an address range;</li>
+<li>a dynamically acquired object belongs to a fresh validity generation.</li>
+</ul>
+<p>Rejecting every such program loses useful static structure. Adding general
+refinement arithmetic or arbitrary term indices would enlarge the type system.
+Repeating the check at every use wastes work and obscures the boundary where the
+fact became trusted.</p>
+<p><a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a> already explores fresh
+identities and witnesses. This note asks whether the same generative mechanism
+can brand a checked value or relation. The source exploration calls these
+runtime-established witnesses certificates. <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008</a>
+owns how evidence remains valid through transformations.</p>
+<h2 id="constraints">Constraints</h2>
+<p>A candidate must:</p>
+<ul>
+<li>make evidence impossible to construct through ordinary untrusted source code;</li>
+<li>identify the operation or trusted boundary that establishes the fact;</li>
+<li>preserve which values and identities the evidence relates;</li>
+<li>prevent evidence from being reused after a relevant value, state, or identity
+changes;</li>
+<li>define what remains at runtime after checking and what may erase;</li>
+<li>keep a failed check on an ordinary typed error path;</li>
+<li>avoid claiming that a brand proves predicates the checker never established.</li>
+</ul>
+<h2 id="candidate-model">Candidate model</h2>
+<h3 id="brand-one-checked-value">Brand one checked value</h3>
+<p>A checking operation could return a package containing a fresh evidence identity:</p>
+<pre tabindex="0"><code class="language-text">check : T -&gt; Result&lt;(exists c. Checked&lt;c, T&gt;), Error&gt;
+</code></pre>
+<p>Code outside the package cannot name or forge <code>c</code>. Operations that require the
+checked property accept <code>Checked&lt;c, T&gt;</code> or an explicit witness associated with
+it. The brand may erase when runtime representation does not depend on it, while
+the checked value remains.</p>
+<p>The type constructor alone is insufficient. The design must restrict its
+constructor or otherwise make the evidence introduction rule explicit.</p>
+<h3 id="brand-a-relationship">Brand a relationship</h3>
+<p>A check may relate several values rather than classify one:</p>
+<pre tabindex="0"><code class="language-text">check_disjoint :
+    (Slice&lt;a, T&gt;, Slice&lt;b, T&gt;)
+    -&gt; Result&lt;(exists c. Disjoint&lt;c, a, b&gt;), Error&gt;
+</code></pre>
+<p>An operation that mutates both slices can require the <code>Disjoint</code> witness. The
+type checker preserves provenance and identity equality; it need not reproduce
+the range arithmetic performed by the check.</p>
+<p>Symmetry, transitivity, weakening, and composition of relationship evidence are
+independent rules. They must not follow merely because the relationship name
+suggests them.</p>
+<h3 id="introduce-abstract-places-only-under-demonstrated-pressure">Introduce abstract places only under demonstrated pressure</h3>
+<p>Whole-resource identity may be too coarse when one allocation is decomposed
+into independently mutable views. A split operation could introduce fresh place
+identities and evidence that the places are disjoint. These are abstract names,
+not runtime integer ranges in types.</p>
+<p>Place identity should remain a deferred candidate until a concrete corpus shows
+that whole-resource uniqueness plus ordinary runtime checking rejects important
+safe programs. A general place calculus would add joins, projections, mutation
+invalidation, and diagnostic obligations.</p>
+<h3 id="keep-authority-separate-from-evidence">Keep authority separate from evidence</h3>
+<p>Evidence that two places are disjoint does not itself grant authority to mutate
+them. The operation must also receive values carrying the required unique or
+mutable authority. Likewise, an authenticated brand records a successful check;
+policy still decides what operations that fact authorizes.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="generative-brands-and-explicit-witnesses">Generative brands and explicit witnesses</h3>
+<p>Fresh identities record provenance, while abstract constructors restrict
+introduction. This reuses the identity questions in <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a>
+and keeps the checker responsible for equality and scope rather than the checked
+predicate. It may add packaging and evidence-passing overhead in source or Core.</p>
+<h3 id="refinement-or-dependent-types">Refinement or dependent types</h3>
+<p>The type system could represent the predicate and prove some checks statically.
+This may remove runtime validation and express derived relationships, but it
+adds normalization, proof, inference, and diagnostic work far beyond the narrow
+brand model.</p>
+<h3 id="dynamic-wrappers-only">Dynamic wrappers only</h3>
+<p>A validated wrapper could hide its representation and expose safe operations
+without a fresh identity. This is simpler when the fact concerns one value. It
+may not express relationships among independently used values or distinguish
+separate validation generations.</p>
+<h3 id="compiler-only-analysis-facts">Compiler-only analysis facts</h3>
+<p>An analysis could attach non-source evidence used only for optimization. This
+avoids surface evidence but cannot support library APIs that need to exchange a
+checked fact. Such facts also need explicit invalidation and validation rules.</p>
+<p>The candidates may coexist for different consumers. The experiment must show
+which minimum mechanism is needed for each case rather than select the richest
+system globally.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>Use one small model to compare at least generative brands and dynamic wrappers:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Required observation</th>
+<th>Failure observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Successful check</td>
+<td>Later operations accept the established fact without repeating the check.</td>
+<td>The check result cannot cross an ordinary abstraction boundary.</td>
+</tr>
+<tr>
+<td>Failed check</td>
+<td>No evidence is produced and the error remains explicit.</td>
+<td>Failure creates a partial or forgeable witness.</td>
+</tr>
+<tr>
+<td>Forgery</td>
+<td>Ordinary construction, coercion, and unrelated brands are rejected.</td>
+<td>A caller fabricates or substitutes evidence.</td>
+</tr>
+<tr>
+<td>Generation separation</td>
+<td>Two successful checks introduce distinct evidence when their validity generations differ.</td>
+<td>Equal payload shapes collapse unrelated checks.</td>
+</tr>
+<tr>
+<td>Relationship provenance</td>
+<td>Evidence applies only to the values or identities checked.</td>
+<td>It can justify an operation on different values.</td>
+</tr>
+<tr>
+<td>Mutation invalidation</td>
+<td>A mutation that may falsify the predicate consumes or invalidates the evidence.</td>
+<td>Stale evidence survives a fact-destroying update.</td>
+</tr>
+<tr>
+<td>Abstraction</td>
+<td>An existential or opaque package preserves usable relationships without exposing the brand.</td>
+<td>Opening the package loses the equality or leaks the brand globally.</td>
+</tr>
+<tr>
+<td>Erasure</td>
+<td>Removing proof-only representation after its last checked use preserves behavior and validation.</td>
+<td>Erasure removes runtime data or precedes the last consumer.</td>
+</tr>
+<tr>
+<td>Optimization</td>
+<td>Core consumes validated evidence and rejects stale or unchecked facts.</td>
+<td>Backend metadata becomes the only authority for correctness.</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Errors identify the missing, mismatched, or invalidated evidence.</td>
+<td>Users see an unexplained identity mismatch.</td>
+</tr>
+</tbody>
+</table>
+<p>For place decomposition, compare whole-resource rejection with a checked split
+that produces two usable mutable views. Record whether abstract names and one
+relationship witness suffice. Do not add range arithmetic unless the abstract
+model fails a named case.</p>
+<p>A prototype is disposable. Retain its design evidence only if constructors
+remain unforgeable, provenance survives abstraction, invalidation is explicit,
+and Core can validate the evidence lifecycle. Production intrinsics require a
+later architectural decision or semantic proposal and an authorized task.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Is a branded wrapper sufficient, or do useful APIs require first-class
+evidence values?</li>
+<li>Which language boundary may introduce evidence, and how is that authority
+represented and audited?</li>
+<li>Does every successful check need a fresh identity, or can some evidence use a
+stable nominal proposition?</li>
+<li>How do mutation, aliasing, ownership transfer, suspension, and cancellation
+invalidate or retain evidence?</li>
+<li>Which relationship rules are built in, supplied by trusted libraries, or
+carried as separately checked evidence?</li>
+<li>Can existential packaging and ordinary equality constraints preserve all
+useful relationships without higher-rank types?</li>
+<li>What part of evidence survives at runtime for dynamic dispatch, diagnostics,
+or foreign calls?</li>
+<li>When should an optimizer consume evidence rather than preserve it for a later
+pass?</li>
+<li>Which concrete split, projection, or foreign-memory case justifies abstract
+resource places?</li>
+<li>Which bounded-resource properties belong to optional whole-program analysis
+rather than branded expression types?</li>
+</ul>
+<p>The hypothesis survives only if the checker can track provenance and validity
+without understanding each dynamic predicate, while untrusted code cannot turn
+the abstraction into a general cast.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#constraints">Constraints</a><a href="#candidate-model">Candidate model</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">← DN-0017: Resource Management and Storage Policy</a><a rel="next" href="/ash/docs/design/dn-0019-primitive-feature-composition/">DN-0019: Primitive Feature Composition →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

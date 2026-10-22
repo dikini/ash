@@ -1,0 +1,639 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Resource analysis algebra study · Ash</title><meta name="description" content="The compiler must preserve exact lexical Type/Row instantiation, resource identity and inferred control obligations. See current type instantiation and static semantics. AD-0007 retains independent Core validation;…"><meta name="robots" content="index, follow"><meta property="og:title" content="Resource analysis algebra study · Ash"><meta property="og:description" content="The compiler must preserve exact lexical Type/Row instantiation, resource identity and inferred control obligations. See current type instantiation and static semantics. AD-0007 retains independent Core validation;…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Resource analysis algebra study · Ash"><meta name="twitter:description" content="The compiler must preserve exact lexical Type/Row instantiation, resource identity and inferred control obligations. See current type instantiation and static semantics. AD-0007 retains independent Core validation;…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/provider-experiments/analysis-algebra/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/provider-experiments/analysis-algebra/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/analysis-algebra.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Resource analysis algebra study","headline":"Resource analysis algebra study","description":"The compiler must preserve exact lexical Type/Row instantiation, resource identity and inferred control obligations. See current type instantiation and static semantics. AD-0007 retains independent Core validation;…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/provider-experiments/analysis-algebra/","@id":"https://dikini.github.io/ash/docs/design/provider-experiments/analysis-algebra/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/analysis-algebra.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="resource-analysis-algebra-study" data-pagefind-meta="title">Resource analysis algebra study</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/analysis-algebra.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>Informative <a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>
+study retained after TASK-0035 execution was superseded. The
+<a href="/ash/docs/design/provider-experiments/analysis-closure/">disposition</a> records retained and rejected results.
+Equations below describe proposed implementation equivalences, not new Ash rules.</p>
+</blockquote>
+<h2 id="semantic-model-and-measured-pressure">Semantic model and measured pressure</h2>
+<p>The compiler must preserve exact lexical Type/Row instantiation, resource
+identity and inferred control obligations. See current
+<a href="/ash/spec/dynamic-semantics/#type-instantiation-and-erasure">type instantiation</a>
+and <a href="/ash/spec/static-semantics/">static semantics</a>.
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> retains independent Core
+validation; <a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a> retains
+inspectable lexical environments. DN-0036 extends the implementation only in
+its bounded experimental branch.</p>
+<p>The current pipeline combines immutable typed syntax, finite value equations,
+value and control graph construction, contextful live propagation, cleanup
+inference/checking and public summary publication. Source checking and final
+Core reconstruction call this machinery independently. These concern boundaries
+do not require independent enumeration of every identical structural input;
+their conclusions and authentication boundaries remain distinct.</p>
+<p>Completed baseline receipt 274 establishes real contextual volume. In copying's
+source analysis, 1,498 of 1,534 Invoke contexts are type applications; their
+callees return Function nodes. Four exact wrappers account for 14,936 of
+16,894 Invoke-origin lifetime slots. Evidence Calls independently account for
+1,498 contexts and 14,778 lifetime slots. These populations are not additive
+costs, first-pass slot measurements or proof of equivalent environments.</p>
+<p>The wrappers are <code>read_null</code>, <code>read_empty</code>, <code>finish_copy</code> and <code>read_first</code> in the
+exact source receipt. They carry one to five captured ports. Empty-environment
+or simple forwarding shortcuts therefore do not cover the dominant class.
+The NUL case has corresponding counts and its own source coordinates. Neither
+String content nor SQL result size explains this static contextual volume.</p>
+<h2 id="typed-stage-inventory">Typed stage inventory</h2>
+<p>The following are descriptive signatures of existing responsibilities. They
+do not propose new Rust public APIs. Each borrowed slice denotes one exact
+original revision and operation projection.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Stage</th>
+<th>Input</th>
+<th>Output and completion boundary</th>
+<th>Current source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Structural inventory</td>
+<td>Typed nodes, globals, selected methods, domain</td>
+<td>Exact binder/parameter maps, resource/discard flags</td>
+<td><code>capture.rs::build_capture_graph</code></td>
+</tr>
+<tr>
+<td>Finite values</td>
+<td>Nodes, binder maps, imported callables</td>
+<td>Completed ordered <code>Value</code> summaries; recursive rounds finish first</td>
+<td><code>capture.rs::solve_capture_values</code></td>
+</tr>
+<tr>
+<td>Lexical capture projection</td>
+<td>Body root, term parameters, method routes, capture cuts</td>
+<td>Ordered free binders after bound-binder filtering</td>
+<td><code>capture.rs::free_values_with_methods</code></td>
+</tr>
+<tr>
+<td>Metadata projection</td>
+<td>Same original nodes, type/row binders, operation projection</td>
+<td>Ordered surviving Type/Row identities, qualified subtree facts</td>
+<td><code>capture.rs::FunctionMetadataPreparation</code></td>
+</tr>
+<tr>
+<td>Evidence capture projection</td>
+<td>Body root, original method/adapters, capture cuts</td>
+<td>Ordered graph capture coordinates and original symbol actions</td>
+<td><code>value.rs::Graph::abstract_captures</code></td>
+</tr>
+<tr>
+<td>Value graph construction</td>
+<td>Nodes, all three projections, imports, selected evidence</td>
+<td>Original Expr/slot recipes and provenance</td>
+<td><code>value.rs::Graph::build_in_domain</code></td>
+</tr>
+<tr>
+<td>Control graph construction</td>
+<td>Nodes, completed finite values, original value ports</td>
+<td>Control code, callable/type inventory, source roots</td>
+<td><code>capture.rs::compile_with_boundary</code></td>
+</tr>
+<tr>
+<td>Contextual propagation</td>
+<td>Graph, exact contexts, live ports</td>
+<td>Growing ordered atoms/edges and completed transfer stamps</td>
+<td><code>value.rs::Analysis</code>, <code>control.rs::Analysis</code></td>
+</tr>
+<tr>
+<td>Cleanup and publication</td>
+<td>Completed required equations and checked rows</td>
+<td>Inferred cleanup requirements, validated capture summaries</td>
+<td><code>capture.rs::cleanup_requirements</code>, <code>check_builder</code></td>
+</tr>
+</tbody>
+</table>
+<p>Source capture publication calls cleanup solving before <code>check_builder</code> in
+<code>elaborate.rs::capture_completed_module_roots</code>. Final Core calls <code>check_nodes</code>
+from its independently authenticated nodes. Fusing implementation traversals
+cannot substitute a source-produced permission for that independent derivation.</p>
+<h2 id="candidate-equivalence-laws">Candidate equivalence laws</h2>
+<h3 id="bottoms-demand-and-rust-formulation">Bottoms, demand and Rust formulation</h3>
+<p>Algebraic equational reasoning remains the derivation method. Use fission to
+expose typed stages and dependencies, and fusion to eliminate repeated work.
+Types, demand and behavior at bottom supply the laws' premises; then express
+the derived algorithm in Rust. Explicit deferred inputs, continuations or
+worklists can express the required demand in an eager language.</p>
+<p>The main semantic distinction is behavior at bottom, <code>⊥</code>: a computation
+that is undefined or does not terminate in the chosen semantic model. A rewrite
+can agree on all total results yet change which partial computations it demands.</p>
+<p>For example, in a lazy model choose <code>h</code>, <code>a</code> and <code>b</code> as constant-zero functions.
+The algebra equation <code>h . a = b . fmap h</code> holds, but a fold that must inspect its
+input satisfies:</p>
+<pre tabindex="0"><code class="language-text">h (fold a ⊥) = 0
+fold b ⊥     = ⊥
+</code></pre>
+<p>The total finite-input induction below intentionally excludes this case. To
+extend a law to partial values, prove definedness as well as value equality and
+state its strictness/continuity conditions. For the usual fold-fusion theorem,
+strictness of <code>h</code> means <code>h ⊥ = ⊥</code>; Gibbons explicitly notes strictness conditions
+in <a href="https://www.cs.ox.ac.uk/jeremy.gibbons/publications/fission.pdf">sections 2.5–2.6</a>.
+Otherwise justify totality for the admitted inputs or derive a formulation that
+preserves the required demand without imposing that theorem unchanged.</p>
+<p>An explicit <code>Err</code>, an analysis <code>Unknown</code> or a not-yet-populated graph port is
+not automatically semantic bottom. The least fact in a dataflow lattice and
+nontermination are distinct unless a model explicitly relates them. Preserve
+returned errors and relevant panic/unwind observations separately.</p>
+<p>The equations below therefore need both a semantic argument and a Rust
+execution/cost argument for their chosen formulation. Rust
+evaluates ordinary call operands before entering the call, in source order;
+see the <a href="https://doc.rust-lang.org/reference/expressions.html#evaluation-order-of-operands">Rust Reference</a>.
+An eager recursive fold computes child results before the parent algebra can
+discard them. To avoid that work, test demand before descending or creating
+the context, using an explicit control path, worklist or deferred computation.</p>
+<p>Rust's <a href="https://doc.rust-lang.org/std/iter/index.html#laziness">iterator adapters are lazy</a>.
+<code>iter.map(g).map(f)</code> pulls through both adapters when consumed; it does not
+materialize two collections. In contrast, collecting the first map into a
+<code>Vec</code> completes that phase before a later consumer starts. Removing that
+collection interleaves producer and consumer actions and changes intermediate
+lifetimes. The fallible-map counterexample below concerns such a phase barrier,
+not a barrier inherent in chained iterator adapters.</p>
+<p>A direct Rust accumulator fold evaluates each update eagerly. Deferred fields
+or steps require an explicit representation. A directly recursive unfold that
+builds an owned tree similarly constructs that tree eagerly; streaming requires
+an iterator, worklist or other deferred representation. The finite total
+structural equalities below remain usable, but do not by themselves establish
+productivity, definedness on partial inputs or space behavior.</p>
+<p>For each rewrite, name the actual schedule and preserve required error,
+publication and destruction order, including relevant panic/unwind boundaries.
+Product fusion changes two complete concern passes into interleaved updates;
+deferred recipes may be needed to keep the original fallible phase. Account for
+moves, clones, allocations, retained borrows, accumulator/recipe storage and
+stack depth. Lower the mathematical recursion to the compiler's bounded
+iterative machinery where deep inputs require it.</p>
+<p>Neither an iterator nor an <code>Environment -&gt; Summary</code> closure automatically
+memoizes results. Replaying it for each context can retain the original growing
+factor. Any sharing must be explicit and justified by the exact input-dependence
+proof. Do not count an already-streaming map chain as eliminated traversals or
+claim an asymptotic gain from removing a fixed number of materialized passes.</p>
+<h3 id="composing-maps">Composing maps</h3>
+<p>For total pure <code>g : A -&gt; B</code> and <code>f : B -&gt; C</code> over the same functor:</p>
+<pre tabindex="0"><code class="language-text">map f . map g = map (f . g)
+</code></pre>
+<p>This can eliminate an intermediate carrier and one enumeration. The proposed
+wrapper/evidence study must identify the actual A/B/C, exact environments and
+coordinate-preserving transports before applying this law to its recipes.
+Equal types, scalar results or equal current atom sets cannot replace those
+inputs.</p>
+<p>Fallible maps need a stronger law. Suppose <code>g(x1)</code> succeeds, <code>g(x2)</code> fails with
+G and <code>f(g(x1))</code> fails with F. Separate left-to-right stages report G; interleaved
+fusion reports F. Therefore value-level map composition alone does not preserve
+the compiler's first error, source labels or publication. Fuse total structural
+preparation, preserve the original validation barrier, or prove an appropriate
+error/ordering equivalence for the selected carrier.</p>
+<h3 id="moving-a-map-into-its-consumer">Moving a map into its consumer</h3>
+<p>For a sequence, total pure <code>g</code> and an ordered accumulator step:</p>
+<pre tabindex="0"><code class="language-text">foldl step z (map g xs)
+  = foldl (\acc x -&gt; step acc (g x)) z xs
+</code></pre>
+<p>The accumulator can consume a producer's structural recipe directly, avoiding
+the mapped collection. Preserve source order and every required owned result.
+For graph recipes, establish whether any independent consumer or focused query
+observes the intermediate node before removing it.</p>
+<h3 id="product-folds">Product folds</h3>
+<p>For total independent folds over the same ordered input:</p>
+<pre tabindex="0"><code class="language-text">(foldl a a0 xs, foldl b b0 xs)
+  = foldl (\(u,v) x -&gt; (a u x, b v x)) (a0,b0) xs
+</code></pre>
+<p>The components retain their types and results. A scope-sensitive structural
+version carries inherited binders and selected evidence explicitly. The shared
+driver is eligible only where each projected event stream agrees with the
+original collector, including duplicate/reference order and per-concern cuts.</p>
+<h3 id="restricting-an-unfold-by-demand">Restricting an unfold by demand</h3>
+<p>Let <code>produce : A -&gt; B</code>, <code>keep : B -&gt; Bool</code> and a cheaper exact demand test
+<code>needed : A -&gt; Bool</code>. If <code>needed x = keep (produce x)</code> for every admitted x,
+and producing a rejected x has no required observable obligation, then:</p>
+<pre tabindex="0"><code class="language-text">filter keep (map produce xs)
+  = map produce (filter needed xs)
+</code></pre>
+<p>The producer's dependency closure, errors and publication are part of the
+precondition. Demand for one concern can be absent while a Function body's
+other validation obligations remain. Unknown/open facts retain conservative
+demand. An uncalled exported function or currently empty port is not a proof
+of irrelevance.</p>
+<h3 id="unfoldfold-elimination-and-fixed-points">Unfold/fold elimination and fixed points</h3>
+<p>A producer/consumer composition over an acyclic structural carrier can compute
+its final accumulator without retaining the entire intermediate tree. Recursive
+bindings, live Unknown dependencies and cyclic graph edges require a separate
+equation/fixed-point argument. Establish the actual domains, monotonicity,
+termination, demanded projections and refusal boundaries before combining
+solver stages or adopting a dependency-driven schedule.</p>
+<h2 id="source-grounded-opportunities-and-contrary-evidence">Source-grounded opportunities and contrary evidence</h2>
+<h3 id="derivation-method-for-the-next-batch">Derivation method for the next batch</h3>
+<p>The user selected equational reasoning and inductive decomposition as the next
+priority. F-2 establishes a constant-factor reduction. The larger objective is
+to remove repeated work whose frequency grows with program structure, demanded
+contexts or solver rounds.</p>
+<p>Gibbons's <a href="https://www.cs.ox.ac.uk/jeremy.gibbons/publications/fission.pdf">Fission for Program Comprehension, sections 2.5–2.6</a>
+describes recovering recursive structure, fold fusion and eliminating an
+unfold/fold intermediary. The following is this study's derivation framework
+for Ash, not a claim that its effectful graph solver is already a tree fold.</p>
+<p>Start with a finite, well-founded ordered structural model. Let <code>F</code> describe one
+layer, <code>Tree</code> its recursive carrier, and <code>in : F Tree -&gt; Tree</code> its constructor.
+For total functions and a lawful <code>fmap</code>, use these types and obligation:</p>
+<pre tabindex="0"><code class="language-text">a : F A -&gt; A
+b : F B -&gt; B
+h : A -&gt; B
+
+h . a = b . fmap h
+</code></pre>
+<p>The obligation permits an induction over the input constructor:</p>
+<pre tabindex="0"><code class="language-text">h (fold a (in children))
+  = h (a (fmap (fold a) children))
+  = b (fmap h (fmap (fold a) children))
+  = b (fmap (fold b) children)
+  = fold b (in children)
+</code></pre>
+<p>The second equality uses the algebra obligation; the third uses map composition
+and the inductive hypotheses for the children. Check each constructor, including
+binding and nullary cases. Where inherited scope matters, the carrier can be
+<code>Environment -&gt; Summary</code>; the environment includes exact Type/Row substitutions,
+term ownership, selected evidence and concern demand. Original node identities
+remain labels. Equal current results do not identify environments.</p>
+<p>If the obligation fails because the parent lacks a child fact, strengthen the
+inductive result to a product of primary and auxiliary facts. Derive one algebra
+over that product and project the requested result afterward. The auxiliary
+component is justified by a specific repeated subcomputation, rather than a
+general cache. Include its construction, merge and storage costs. A growing
+descendant set copied at every parent can retain quadratic work even when the
+driver visits each node once.</p>
+<p>For producer/consumer elimination, let <code>u : Seed -&gt; F Seed</code> and <code>a : F A -&gt; A</code>.
+When the generated structure is finite and total, the fused equation is:</p>
+<pre tabindex="0"><code class="language-text">solve seed = a (fmap solve (u seed))
+solve = fold a . unfold u
+</code></pre>
+<p>Removing the intermediate structure alone need not change the asymptotic bound.
+An Ash candidate must name the repeated producer or consumer work it removes.
+For graph inputs, preserve sharing by original identities and the exact inherited
+state. Treating a shared DAG as a tree can itself create exponential work;
+combining summaries with different inherited environments is unsound. Cycles
+require a fixed-point argument, not structural induction alone.</p>
+<p>Fallible preparation and live installation are separate obligations. Equality of
+completed results must also preserve required validation, diagnostic order,
+symbolic roots, live dependencies and observable publication. A pure routing
+equation does not by itself authorize deleting an intermediate queried port.
+The first F-2 experiment retains its phase barrier for precisely this reason.</p>
+<h3 id="cost-obligations-and-candidate-ranking">Cost obligations and candidate ranking</h3>
+<p>Use explicit independent parameters: original nodes <code>n</code>, structural edges <code>e</code>,
+requested roots <code>q</code>, exact demanded contexts <code>c</code>, solver rounds <code>r</code>, and produced
+facts or live updates <code>p</code>. Do not hide an increasing environment or summary size
+inside a constant local step.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate family</th>
+<th>Existing cost skeleton</th>
+<th>Desired elimination and proof gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contextful wrapper/evidence transport</td>
+<td>Shared static preparation plus routing/install work for each exact context</td>
+<td>Compose inherited routing equations and demand before materialization; prove which intermediate work is unobserved without merging distinct required environments or losing live edges</td>
+</tr>
+<tr>
+<td>Nested root/body analysis</td>
+<td>Sum of visited body sizes; nested chain can give <code>T(n) = T(n-1) + Theta(n)</code></td>
+<td>Strengthened child results could give a constant local step, but prove scope/DAG/order laws and account for summary merges and output size</td>
+</tr>
+<tr>
+<td>Whole-graph finite-value rounds</td>
+<td><code>Theta(r*n)</code> node-scan skeleton plus value copying, joins and instantiation</td>
+<td>Derive dependencies and update consumers incrementally; prove fixed-point equality, dynamic target discovery and ordered diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>The first row has measured contextual volume, but the existing immutable
+capture topology is already shared. A second topology cache cannot eliminate
+that contextual factor. The second row is a source-grounded candidate family,
+not a measured explanation of the remaining SQLite cost. A linear-time target
+is conditional on bounded local combination and output; explicit output may
+itself be quadratic. The third row describes the actual scan in
+<code>solve_capture_values</code>, not proof that its current round count dominates.</p>
+<p>For a fixed-point projection, first identify complete ordered domains and the
+equation systems. One possible semantic proof uses strict continuous projection
+<code>p</code> and continuous operators <code>Phi</code> and <code>Psi</code> with <code>p . Phi = Psi . p</code>; preservation
+of the bottom and directed limits then transports the least fixed point.
+Ash's current ordered values and diagnostics still need their own preservation
+argument. Monotonicity, projection closure and scheduling independence are
+obligations to establish, not assumptions imported from mathematical sets.</p>
+<p>Before selecting the next Rust slice, provide a typed decomposition, failed
+fusion obligation, strengthened accumulator or demanded projection, constructor
+or fixed-point proof, and before/after recurrence. Name a growing input family
+that could falsify the claimed bound and reuse completed original-program
+evidence to rank its practical importance. Keep Common's existing wrapper and
+queue studies coordinated; introduce no competing traversal or observer.</p>
+<h3 id="observed-wrapper-recurrence">Observed wrapper recurrence</h3>
+<p>Common's Bounds study reconstructs the copying source context parents in
+receipt 274's historical observed lane. Independent rechecking of its raw rows
+confirms eight wrapper counts across seven successive links:</p>
+<pre tabindex="0"><code class="language-text">2 -&gt; 8 -&gt; 20 -&gt; 44 -&gt; 92 -&gt; 188 -&gt; 380 -&gt; 764
+N(d+1) = 2*N(d) + 4
+</code></pre>
+<p>At each measured link, every previous type Invoke has a sibling Evidence Call
+with the same parent. Both channels parent one next-wrapper Invoke each. The
+four additional parents are context zero, two symbolic Function roots and one
+ordinary term Invoke. This is a causal account of published context counts;
+it does not establish equivalent environments, removable live dependencies or
+current candidate counts.</p>
+<p>If an inductive source argument extends this recurrence to a family of depth
+<code>d</code>, its solution is <code>N(d) = (N(0)+4)*2^d - 4</code>. The finite receipt alone is not
+that proof, nor a theorem about total checker cost. It gives the next derivation
+a concrete target: explain whether already-bound lexical captures are being
+expanded again as deferred type/dictionary recipes. An ordinary-term-only
+shortcut cannot remove the observed pair of multiplying channels.</p>
+<p>For a qualifying wrapper family, test whether the derived representation can
+instead establish <code>M(d+1) &lt;= M(d)+k</code>, with bounded local work and fixed <code>k</code>.
+That would give linear context growth in depth. The proof must account for
+growing capture/input sets, live updates and required output: sharing a recipe
+while replaying it along every old path does not establish this bound. No such
+improved recurrence is established yet.</p>
+<p>The study input is <code>bounds/wrapper-channel-cause-study-6a9/parent-bijection.json</code>
+under the external evidence root below. Its raw source is
+<code>author/context-prefix-measurement-runner-274/observed-copying-combined271.json</code>,
+SHA-256 <code>ffb3168e786e81e6a77c811d56bed9764916f48dc2bdaf77c8a1595dc2243af6</code>.</p>
+<h3 id="f-1-wrapper-and-evidence-transport-composition">F-1: wrapper and evidence transport composition</h3>
+<p>The dominant measured class is a type-wrapper Function returning another
+Function. Current Call transfer constructs an exact Invoke context, installs
+formal/actual and captured-port edges, and links the original body output.
+Inner Function evaluation publishes its Closure with that Invoke creation and
+feeds the mandatory symbolic body root. Evidence separately constructs its
+exact Call context and installs capture/dictionary routes.</p>
+<p>Study composing their immutable routing equations while retaining every live
+environment edge. Required inputs include both original Function IDs, ordered
+formal/captured metadata ports, the exact Type/Row substitution, original
+evidence selection and lexical creation environment. A candidate must first
+distinguish these proposed roles within the current mixed capture list:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate role</th>
+<th>Inductive obligation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Already-bound lexical value</td>
+<td>Prove independence from the new type/dictionary inputs; retain the saved lexical environment and all live incoming updates</td>
+</tr>
+<tr>
+<td>Type/Row-dependent metadata</td>
+<td>Retain the complete free-input support and apply the exact substitution</td>
+</tr>
+<tr>
+<td>Deferred method or dictionary recipe</td>
+<td>Retain the selected evidence and formal inputs; specialize in the required environment</td>
+</tr>
+</tbody>
+</table>
+<p>These roles are a proof question, not a new annotation or an implemented
+classification. Equal current values, same-shaped types or a different internal
+closure number prove neither input independence nor dependence. TypeAbstraction,
+formal-dependent and dictionary-dependent recipes remain specialization cases.</p>
+<p>The next law may relate different internal graph representations. Define a
+relation between old and candidate states, including correspondence of required
+query paths. Show that processing each required input/update preserves that
+relation and agrees on body validation, owner escape, inferred control and
+diagnostics at their observation boundaries. Preserve original source/owner
+identities, actual lexical control environments and complete Type/Row/evidence
+inputs. Internal Invoke/Call/Closure allocation ordinals need not be identical
+if that correspondence proves the required observations and live edges agree.
+This refinement relaxes an implementation proof criterion, not Ash semantics.</p>
+<p>The main open condition is whether any intermediate coordinate/publication is
+required by control discovery or a focused cut, and how a changed representation
+serves that query. Keep the existing route until the correspondence is proved;
+there is no authorization to merge environments or suppress symbolic roots.
+Common owns the role/phase study and any implementation handoff. This task
+supplies the inductive law and review rather than a competing implementation.</p>
+<h4 id="separate-the-output-and-symbolic-root-projections">Separate the output and symbolic-root projections</h4>
+<p>The follow-up source review uses Common's frozen <code>value.rs</code> revision
+<code>6a900a2c22206274e056cb93a53ff0b20d94d7d01084171e9353eb88f92c1e17</code>
+and <code>bounds/wrapper-evidence-fusion-proof-6a9/proposal.md</code> in the external
+evidence archive. It identifies two distinct observations of inner Function
+construction, which a strengthened inductive result must retain.</p>
+<p>Let <code>V(q,c)</code> denote the live value equation at original capture coordinate <code>q</code>
+in exact environment <code>c</code>. Let <code>R(G,q)</code> denote that capture's port in the symbolic
+root for <code>G</code>'s body. <code>Graph::start</code> seeds this port from <code>V(q,0)</code> and admits the
+body with Unknown formal inputs. Each later <code>FunctionCaptureInstallation</code> of
+<code>G</code> at creation <code>c</code> adds a live edge from <code>V(q,c)</code> into <code>R(G,q)</code>, then publishes
+<code>Closure(G,c)</code>. These are separate actions, not one output-value projection.</p>
+<p>For the proposed wrapper, <code>c</code> is the outer type Invoke <code>I</code>. Evidence routing
+then constructs specialized environment <code>E</code>, installs exact dictionary routes
+and publishes <code>Closure(G,E)</code>. <code>ReadyClosure::publish</code> does not itself add the
+Function-construction root feeds. Control discovery later calls <code>root_context</code>
+and <code>port</code> for required body roots; provider and resource checks also inspect
+closure capture projections. Root contributions therefore cannot be discarded
+merely because ordinary source calls consume the specialized Evidence output.</p>
+<p>Replacing the removed generic feed with the specialized capture is not a
+general algebraic identity. A symbolic countermodel is:</p>
+<pre tabindex="0"><code class="language-text">V(q,0) has no owner
+V(q,I) reaches owner A
+V(q,E) reaches owner B after dictionary replacement
+
+original root contribution:    A
+substituted root contribution: B
+</code></pre>
+<p>Exact evidence replacement can change a captured dependency; the existing
+<code>topology_graph</code> law retains different binding routes for Evidence 8 and 9.
+The countermodel falsifies unconditional feed substitution. It is not a newly
+executed Ash program, a demonstrated lifecycle failure or proof that a suitable
+representation relation is impossible. A semantic rejection still needs a
+required query that distinguishes the representations.</p>
+<p>Fission exposes a stronger logical result: specialized output equations,
+generic root-feed equations and correspondence for required queries. Their
+producers share the original typed structure but inherit different inputs:</p>
+<pre tabindex="0"><code class="language-text">prepare    : OriginalShape -&gt; Result PreparedRouting Failure
+generic    : (PreparedRouting, ExactEnv) -&gt; Result RootFeedEquations Failure
+specialize : (PreparedRouting, ExactEnv, DictionaryEnv)
+             -&gt; Result OutputEquations Failure
+</code></pre>
+<p>These are candidate internal roles, not new APIs or implemented carriers.
+<code>OriginalShape</code> includes authenticated Function/capture/method provenance;
+<code>ExactEnv</code> includes the saved lexical and complete Type/Row inputs. Equations
+retain live input coordinates rather than current atoms. Preserve every
+creation contribution, late update and original source owner. Neither the
+output nor the generic projection is the union of all free input owners: an
+input type owner can be absent from the returned Function's captures.</p>
+<p>The next inductive proof must either derive both projections from this shared
+routing result or show the generic contribution redundant under every required
+root/query observation. Alias/Merge ordering, current formals, dictionary
+replacement, opaque cuts and Function output capture sets are separate cases.
+Conserve the original fallible publication barrier and account for cycles with
+the actual fixed-point relation; the total structural induction does not settle
+them. Keeping the original generic expansion as a fallback can preserve its
+behavior, but may retain the multiplying channel. Removing only the intermediate
+Closure allocation therefore establishes no improved context-growth bound.</p>
+<h3 id="f-2-lexical-and-evidence-capture-product">F-2: lexical and evidence capture product</h3>
+<p>For ordinary Functions, TypeAbstractions and handler clauses, current value
+construction calls the lexical free-value collector, metadata collector and
+abstract-evidence collector on the same body root. This is a concrete product
+fold opportunity, with important projection differences:</p>
+<ul>
+<li>Lexical collection stops below a selected method replacement. Abstract
+evidence collection currently still descends there.</li>
+<li>Capture-port cuts contribute no free lexical binder, but contribute a
+retained abstract capture coordinate.</li>
+<li>Term binder filtering and Type/Row binder filtering have different domains.</li>
+<li>Abstract collection allocates symbols/evidence slots after lexical and
+metadata installation; moving those actions earlier changes graph IDs.</li>
+</ul>
+<p>A candidate shared structural walk needs separate concern demand/visited state
+and ordered output accumulators. It can collect an immutable evidence recipe
+and replay it at the original publication point. A single visited set or one
+global pruning decision is invalid for these different projections. Metadata's
+existing compact subtree preparation should be reused; adding its traversal to
+an already sufficient product may cost more than it saves.</p>
+<p>This source opportunity has no whole-owner benefit measurement yet. It ranks
+below the measured F-1 contextual volume until its gross work is known.</p>
+<p>The first implementation slice uses these descriptive carriers:</p>
+<pre tabindex="0"><code class="language-text">Body = (original nodes, root, operation projection)
+LexicalInputs = (term parameters, method routes, capture-port cuts)
+AbstractInputs = (original method records, adapter routes, capture-port cuts)
+Projection = (ordered free binders, ordered deferred abstract recipe)
+
+collect : (Body, LexicalInputs, AbstractInputs) -&gt; Result Projection Failure
+install_lexical : (Graph, ordered free binders) -&gt; Result Graph Failure
+install_metadata : (Graph, existing metadata output) -&gt; Result Graph Failure
+replay_abstract : (Graph, deferred abstract recipe) -&gt; Result Graph Failure
+</code></pre>
+<p>These are proposed internal roles, not claims about current Rust signatures.
+The recipe retains only capture ports and original method sites, plus an
+abstract-phase invalid-input marker if needed. It allocates no graph symbol or
+evidence slot. Replay consumes the original records and adapter routes.</p>
+<p>The preservation argument has three obligations. Project the shared LIFO
+visitation trace separately for lexical and abstract concerns, retaining each
+concern's own visited state and cuts. Apply the original complete bound-binder
+filter to lexical references, preserving their duplicates. Finally, replay
+abstract actions after lexical and metadata installation, in original order,
+using the original deduplication and adapter traversal. An abstract-only
+invalid subtree must not preempt an earlier lexical or metadata failure.</p>
+<p>A shared DAG node may first occur below a lexical method cut and later on an
+active lexical path. An unqualified union visited set would lose that later
+lexical visit. Per-concern visited bits preserve it while allowing common
+child enumeration when both concerns are active. Charge recipe retention and
+replay, the new state and all continued evidence-only walks. Completed-owner
+measurements must establish whether this trade is beneficial.</p>
+<h3 id="r-1-demand-before-contextual-expansion">R-1: demand before contextual expansion</h3>
+<p>Infer a concern's required inputs from exact checked facts and backwards
+dependencies. Test whether an immutable routing equation can carry a symbolic
+input until its particular projection is required, without eagerly multiplying
+contexts. All exported/uncalled body checks, complete Type/Row identity,
+dictionary routes, captured-control obligations and late owners remain.</p>
+<p>This is a relevance hypothesis. The current census proves contextual volume;
+it does not prove those vertices irrelevant. A positive restriction law and
+an actual suppressed producer operation are prerequisites to implementation.</p>
+<h3 id="p-1-fixed-point-scheduling">P-1: fixed-point scheduling</h3>
+<p>The finite-value solver scans all nodes until no result changes. Its scan
+skeleton is O(rounds * nodes), with additional per-value work. A dependency
+schedule could avoid unrelated reevaluation, but it must account for dynamic
+callee targets, imported results and recursive substitutions. It must reach
+the required completed result and preserve diagnostics. No measured saving or
+accepted solver replacement follows from this source observation.</p>
+<p>Common's dirty-edge study addresses the live graph's empty-prefix scans.
+Share a completed event/phase design with that work; do not install an
+independent cursor or duplicate observer.</p>
+<h2 id="initial-execution-result">Initial execution result</h2>
+<p>The first source inventory establishes F-1 as the measured composition question
+and F-2 as a concrete structural product with distinct concern cuts. It rejects
+unqualified fallible map fusion, one global visited set, scalar-based owner
+erasure and a second generic body-plan cache. R-1 remains a hypothesis requiring
+an exact demand law. No shared Rust implementation or compiled rewrite result
+is claimed.</p>
+<p>The external evidence archive is
+<code>/home/dikini/.codex/ash-provider-evidence/common-resource-support-2026-10-04/requested-root-metadata-160/</code>.
+Receipt inputs are <code>author/context-prefix-measurement-runner-274/return.json</code>,
+<code>bounds/actual-residual-decisions-274/report-corrected.md</code> and
+<code>author/fanout-census-274/report.md</code>. The <a href="/ash/docs/design/provider-experiments/analysis-closure/">disposition</a>
+distinguishes later retained implementation from this initial read-only analysis.</p>
+<h2 id="f-2-measured-candidate">F-2 measured candidate</h2>
+<p>Common compiled and measured the first product-fold candidate after importing
+the reviewed plan. The existing metadata producer, contextual solver, control
+graph and validation policy remain unchanged. A shared iterative walk emits
+ordered lexical free binders and sparse abstract Port/Methods steps. Original
+method and adapter actions replay after lexical and metadata installation.
+The implementation charges concern state, recipe retention and replay.</p>
+<p>Normal connected receipt 280 passes 1,635 Ash library cases, 40 adapter cases,
+six native-buffer cases, 230 public integration cases and the original realistic
+resume case. It includes a graph-construction regression for the shared-DAG
+cut counterexample and exact metadata/adapter/evidence allocation order.
+Independent review verifies the source law, formatted successor and raw logs.</p>
+<p>The following diagnostic completed-program comparison uses the authenticated
+Outcome 279 candidate as its baseline. It runs the four original programs and
+native assertions, with temporary completion allowances restored afterward.
+These are separate work-budget owners, not additive runtime costs:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Program</th>
+<th align="right">Source work</th>
+<th align="right">Source raw change</th>
+<th align="right">Independent Core work</th>
+<th align="right">Core raw change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copying</td>
+<td align="right">1,214,621</td>
+<td align="right">-1,997</td>
+<td align="right">909,269</td>
+<td align="right">-5,259</td>
+</tr>
+<tr>
+<td>Bound-NUL copying</td>
+<td align="right">1,214,621</td>
+<td align="right">-1,997</td>
+<td align="right">909,264</td>
+<td align="right">-5,259</td>
+</tr>
+<tr>
+<td>Persistence</td>
+<td align="right">599,918</td>
+<td align="right">-5,051</td>
+<td align="right">1,618,759</td>
+<td align="right">-7,309</td>
+</tr>
+<tr>
+<td>Captured resume</td>
+<td align="right">203,519</td>
+<td align="right">-1,298</td>
+<td align="right">290,599</td>
+<td align="right">-1,786</td>
+</tr>
+</tbody>
+</table>
+<p>Resolution, module linking, linked-interface checking and final elaboration
+are exactly unchanged for all four programs. Persistence's source raw change
+includes a separately observed -51 original binder-capacity debit; the remaining
+change outside that debit is -5,000. Preserve the raw total and both components;
+neither component is a quota discount or a replacement total.</p>
+<p>The candidate adds temporary key/mask state, wider pending entries and a sparse
+ordered recipe for one body. It introduces no per-context or per-slot cache.
+Allocation bytes and peak resident memory have not been measured, so this
+result establishes reduced charged work, not reduced memory or an asymptotic
+improvement. At this measured checkpoint, Source checking still exceeds
+327,680 for copying, NUL copying and persistence. Persistence also exceeds
+independent Core and final elaboration. The candidate is a partial reduction.</p>
+<p>Retention review passes, conditional on the full integrated repository gate.
+The raw measurement archive is <code>requested-root-metadata-160/author/f2-candidate-only-measurement-runner/</code>
+under the external Common evidence root. Its <code>return.json</code> hash is
+<code>df5f900004db12f7a629d4cf2bd5661411cd9271e3ceba865f0f3e2821642ad4</code>.
+The formatted candidate and normal logs are in <code>f2-product-candidate-280/</code>
+under <code>/home/dikini/.codex/ash-provider-evidence/common-resource-support-2026-10-04/</code>.
+The <a href="/ash/docs/design/provider-experiments/analysis-closure/">later disposition</a> records F-2 retention and the
+user-selected calibrated ordinary admission. These F-2 measurements alone do
+not establish ordinary acceptance or completion of the optimization objective.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#semantic-model-and-measured-pressure">Semantic model and measured pressure</a><a href="#typed-stage-inventory">Typed stage inventory</a><a href="#candidate-equivalence-laws">Candidate equivalence laws</a><a href="#source-grounded-opportunities-and-contrary-evidence">Source-grounded opportunities and contrary evidence</a><a href="#initial-execution-result">Initial execution result</a><a href="#f-2-measured-candidate">F-2 measured candidate</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

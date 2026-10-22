@@ -1,0 +1,343 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0045: Native Compilation and Interactive Execution · Ash</title><meta name="description" content="How should Ash compile to machine code while supporting both ahead-of-time (AOT) artifacts and interactive development? Which backend and Ash-owned intermediate representations should it use, and where should…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0045: Native Compilation and Interactive Execution · Ash"><meta property="og:description" content="How should Ash compile to machine code while supporting both ahead-of-time (AOT) artifacts and interactive development? Which backend and Ash-owned intermediate representations should it use, and where should…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0045: Native Compilation and Interactive Execution · Ash"><meta name="twitter:description" content="How should Ash compile to machine code while supporting both ahead-of-time (AOT) artifacts and interactive development? Which backend and Ash-owned intermediate representations should it use, and where should…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0045-native-compilation-and-interactive-execution.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0045: Native Compilation and Interactive Execution","headline":"DN-0045: Native Compilation and Interactive Execution","description":"How should Ash compile to machine code while supporting both ahead-of-time (AOT) artifacts and interactive development? Which backend and Ash-owned intermediate representations should it use, and where should…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/","@id":"https://dikini.github.io/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0045-native-compilation-and-interactive-execution.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0045-native-compilation-and-interactive-execution" data-pagefind-meta="title">DN-0045: Native Compilation and Interactive Execution</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0045-native-compilation-and-interactive-execution.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0045</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/decisions/ad-0001-implementation-environment/">AD-0001</a>,
+<a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a>,
+<a href="/ash/docs/decisions/ad-0010-human-diagnostic-presentation-and-localization/">AD-0010</a>,
+<a href="/ash/docs/design/dn-0002-core-representation/">DN-0002</a>,
+<a href="/ash/docs/design/dn-0030-typed-compiler-macros-and-hooks/">DN-0030</a>,
+<a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a>,
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
+<a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a>,
+<a href="/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/">DN-0046</a></li>
+</ul>
+<blockquote>
+<p>This note is informative. It explores native compilation and interactive
+execution for human and AI programmers. It defines no current Ash semantics,
+accepts no backend or lowering architecture, and authorizes no implementation
+or prototype. The comparisons below need separate scope before execution.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>How should Ash compile to machine code while supporting both ahead-of-time
+(AOT) artifacts and interactive development? Which backend and Ash-owned
+intermediate representations should it use, and where should continuation-
+passing style (CPS) enter the pipeline?</p>
+<p>Ash is intended for human and AI programmers. Both native delivery and rapid,
+trustworthy feedback are design goals. Priority should follow representative
+programming workflows and deployment needs, rather than treating compilation
+speed and runtime performance as an audience choice.</p>
+<h2 id="context">Context</h2>
+<h3 id="current-language-and-architecture">Current language and architecture</h3>
+<p>The <a href="/ash/spec/">specification</a> defines passive source modules,
+rank-1 functions, interface evidence, effects and scoped resources. Linking
+produces one validated program around the entry module's <code>main ()</code>; imports
+have no runtime initialization. <a href="/ash/spec/elaboration/#effect-core-lowering">Effect Core</a>
+retains exact computation rows and operation identities over shared ordinary
+value and computation families.</p>
+<p><a href="/ash/spec/dynamic-semantics/">Current execution</a> includes mathematical
+integers, lexical closures, ordinary aggregate storage and recursive data.
+Ordinary allocation is not a source-selectable effect. An empty outward row
+therefore establishes neither allocation-free execution nor absence of
+internal continuation capture. Pure type operations erase, while Effect
+execution retains lexical instantiation needed for exact operation matching.
+Native lowering must preserve that distinction or justify specialization.</p>
+<p><a href="/ash/docs/decisions/ad-0001-implementation-environment/">AD-0001</a> selects Rust,
+an initial interpreter, backend-independent shared representations and
+isolated unsafe runtime, FFI or backend adapters. It expects later REPL, AOT
+and JIT paths to reuse suitable components. It does not select a native backend.
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> requires independent
+validation and direct executability of retained semantic Core dialects.
+Transforms declare their dialect boundaries and preserve causal provenance.
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a> selects explicit
+first-order evaluator control, without accepting a native calling convention.</p>
+<h3 id="ffi-and-storage-pressure">FFI and storage pressure</h3>
+<p><a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a> explores generated
+typed native bridges linked into a host using the evaluator. This direction
+does not compile Ash functions to machine code. Its checked target, signature,
+conversion, access and completion contracts could serve both execution paths;
+native lowering would still need independent verification. Foreign-library
+ABIs and a stable external Ash ABI remain separate questions.</p>
+<p><a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a> explores selectable storage, control
+and platform services. It is not an accepted storage design. Initial native
+compilation needs a stated implementation for ordinary values and captured
+control, while preserving room to compare service policies later. Compiled
+code does not imply a collector, scheduler or evaluator, but required bigint,
+allocation and completion services must be accounted for.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Preserve values, strict evaluation order, lexical capture, recursive data,
+exact effect selection, resource dependencies and required completion.</li>
+<li>Keep backend types outside Core and shared transforms. Validate Ash-owned
+lowering boundaries before handing their results to a backend adapter.</li>
+<li>Retain current mathematical <code>Int</code> behavior. Machine-width fast paths need
+checked fallback or a proof that their range is sufficient.</li>
+<li>Preserve sharing and cycles wherever the native path claims compatibility.
+A reclamation policy must address the graphs it admits.</li>
+<li>Keep development and release modes semantically consistent. Necessary
+checking, ownership and control lowering cannot depend on optimization level.</li>
+<li>Preserve source relationships through lowering for diagnostics and debugging.
+Partial editor information must remain distinct from an accepted executable.</li>
+<li>State target and foreign-boundary assumptions. AD-0001's x86-64 and ARM64
+application-class reach supplies pressure; an initial Linux x86-64 comparison
+would not establish portability or introduce a microcontroller requirement.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="shared-services-and-two-delivery-paths">Shared services and two delivery paths</h3>
+<p>The working preference is one shared checking and lowering foundation, with
+different compilation policies and artifact delivery:</p>
+<pre tabindex="0"><code class="language-text">source -&gt; resolution and checking -&gt; validated Pure / Effect Core
+       -&gt; Ash control and representation lowering -&gt; backend adapter
+           -&gt; native objects -&gt; linked executable or library
+           -&gt; native code installed for interactive execution
+</code></pre>
+<p>This is a boundary sketch, not a fixed pass order. Pattern compilation,
+specialization, closure conversion, control lowering and storage layout can
+interact. Each retained boundary needs an explicit input, output and validation
+contract. Neither full monomorphization nor CPS-to-Core reconstruction is a
+prerequisite selected here.</p>
+<p>AOT should support native delivery, reproducible builds and substantial
+optimization. Interactive execution should reduce time to a useful result,
+using less optimization and reusing unaffected work where sound. A JIT
+generates and installs machine code during a session; incremental compilation
+avoids repeating unaffected compiler work. These solve different costs.</p>
+<p>Compiler state can persist without retaining every program's live state.
+Source versions, imported facts, target settings and compiler options must
+determine reuse. An edit to a type, effect or evidence fact can invalidate
+consumers even when their text is unchanged. Explicit, resettable execution
+contexts are a candidate starting point; hot replacement of code referenced
+by live closures, handlers or resources needs a further lifetime contract.</p>
+<h3 id="human-and-ai-feedback-needs">Human and AI feedback needs</h3>
+<p>Human interaction should make types, effects, dependencies and small execution
+results available while a programmer develops an idea. AI interaction should
+offer the same compiler knowledge through compact, structured observations,
+with enough causal information to choose the next edit or experiment.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Feedback capability</th>
+<th>Human use</th>
+<th>AI use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fast local checking</td>
+<td>Keep consequences close to the edit</td>
+<td>Reject invalid assumptions before broader generation</td>
+</tr>
+<tr>
+<td>Small executable probes</td>
+<td>Explore examples and debug behavior</td>
+<td>Test a hypothesis or obtain a counterexample</td>
+</tr>
+<tr>
+<td>Semantic queries</td>
+<td>Understand types, evidence and dependencies</td>
+<td>Retrieve checked facts instead of inferring them from text</td>
+</tr>
+<tr>
+<td>Source-linked diagnostics</td>
+<td>Explain a failure and its cause</td>
+<td>Make a precise correction from structured evidence</td>
+</tr>
+<tr>
+<td>Explicit execution state</td>
+<td>Understand which experiment produced a result</td>
+<td>Repeat, batch or compare experiments against known inputs</td>
+</tr>
+</tbody>
+</table>
+<p><a href="/ash/docs/decisions/ad-0010-human-diagnostic-presentation-and-localization/">AD-0010</a>
+already separates human presentation from a schema-versioned JSON automation
+contract. Future editor and agent interfaces should consume compiler-owned
+facts rather than reconstruct semantics from rendered diagnostics.</p>
+<p>The main measurement is time to a reliable answer: checking, lowering, code
+generation, execution and reporting. Measure cold and warm runs, small edits,
+broad invalidations and selected test workloads. A faster code generator may
+still lose when slower generated code dominates execution; repeated front-end
+work may dominate both backends. No universal latency target follows from the
+human and AI distinction.</p>
+<p>LSP is an intended tooling direction, not an implemented Ash service established
+by this note. <a href="/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/">DN-0046</a>
+depends on these shared checking, source-version and execution boundaries to
+explore an agent interface combining navigation, semantic search and probes.
+That dependency does not make completed optimizing AOT or JIT a prerequisite
+for every interactive capability: the interpreter can supply early experiments.</p>
+<h3 id="backend-alternatives">Backend alternatives</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Route</th>
+<th>Capability</th>
+<th>Comparison question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ash-owned lowering IRs to LLVM</td>
+<td>Optimizing CPU backend, native objects and ORC JIT execution</td>
+<td>Can one adapter meet both delivery and feedback goals?</td>
+</tr>
+<tr>
+<td>Ash-owned lowering IRs through MLIR to LLVM</td>
+<td>Progressive dialect lowering, rewrite infrastructure and reusable domain transformations</td>
+<td>Does a concrete workload justify the additional framework and conversions?</td>
+</tr>
+<tr>
+<td>Ash-owned lowering IRs to Cranelift</td>
+<td>Rust implementation, AOT and JIT, emphasis on compilation speed</td>
+<td>Does faster code generation improve the complete programming loop enough to justify it?</td>
+</tr>
+</tbody>
+</table>
+<p>LLVM's <a href="https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl08.html">object tutorial</a>
+and <a href="https://llvm.org/docs/ORCv2.html">ORC documentation</a> establish that one
+backend can support both delivery paths. Its <a href="https://llvm.org/docs/CommandGuide/llc.html">code generator</a>
+offers different optimization levels. These capabilities do not establish
+Ash's latency. LLVM with a low-optimization development policy and an
+optimizing release policy is the initial comparison preference.</p>
+<p><a href="https://mlir.llvm.org/docs/Rationale/Rationale/">MLIR</a> is a framework for
+multiple abstraction levels, not merely a tensor system. Its documented
+<a href="https://mlir.llvm.org/docs/TargetLLVMIR/">LLVM target</a> progressively converts
+operations and translates them to LLVM IR. It does not supply Ash's handler
+semantics. DN-0030's structured kernels could motivate its reusable lowering
+machinery; ordinary compiler transformations could also justify it with evidence.</p>
+<p><a href="https://cranelift.dev/">Cranelift</a> prioritizes compilation speed and supports
+native AOT and JIT. Both interactive and standalone needs can be met by either
+LLVM or Cranelift. Two native adapters become a candidate if measured
+workflow costs justify their maintenance, rather than following automatically
+from having two delivery paths.</p>
+<h3 id="cps-and-explicit-control">CPS and explicit control</h3>
+<p>Keep structured Effect Core as the semantic representation and compare a
+separate control-lowering dialect. The <a href="/ash/spec/dynamic-semantics/#effect-handlers-and-completion">current handler rules</a>
+move a one-shot, non-escaping capture through the nearest accepting exact
+handler. The clause executes outside that segment. Resume restores its nesting,
+then returns to any remaining work after the resume expression in the clause.</p>
+<p>Discard completes recursively owned captures in structural order without
+executing abandoned suffixes or restoring captured source handlers. Running
+<a href="/ash/spec/dynamic-semantics/#scoped-cleanup-actions">cleanup</a> remains
+required completion and may itself be captured and resumed. A control IR must
+represent these boundaries; an ordinary return continuation alone is insufficient.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Control route</th>
+<th>Benefit</th>
+<th>Obligation or cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uniform CPS</td>
+<td>One explicit control convention and a useful comparison baseline</td>
+<td>Transform ordinary paths too; still represent delimited control, ownership and storage</td>
+</tr>
+<tr>
+<td>Selective CPS</td>
+<td>Keep proven ordinary paths direct and materialize saved control where needed</td>
+<td>Sound classification and adapters for indirect or effect-polymorphic calls</td>
+</tr>
+<tr>
+<td>Direct code with explicit yield propagation</td>
+<td>Portable ordinary calls with saved state at yielding boundaries</td>
+<td>Propagate requests and reconstruct the correct continuation and handler context</td>
+</tr>
+<tr>
+<td>Direct code with a segmented-stack runtime</td>
+<td>Transfer one-shot stack segments while retaining ordinary calls</td>
+<td>Dedicated stack, target, foreign-boundary and ownership machinery</td>
+</tr>
+</tbody>
+</table>
+<p>Selective lowering must examine actual control behavior, not only outward rows.
+A closed row can hide internal capture. Unknown higher-order calls and open
+rows need conservative treatment. Existing <a href="/ash/spec/static-semantics/#effects">control summaries</a>
+are relevant evidence, but do not yet define a native calling convention or
+prove a selective-CPS analysis sufficient. Type and row specialization must
+also preserve exact identities that may become equal.</p>
+<p>Control convention and continuation representation are separate choices.
+Uniform CPS, selective CPS and explicit yielding can all use first-order
+continuation records. Local continuations can lower to blocks and branches;
+CPS need not allocate a closure for every continuation. Captured control needs
+explicit storage and completion ownership. If transfers become machine calls, bounded
+stack use requires guaranteed tail transfers or a trampoline. LLVM's
+<a href="https://llvm.org/docs/LangRef.html#call-instruction"><code>tail</code> and <code>musttail</code></a>
+have different guarantees and ABI constraints. The evaluator decision does not
+already establish a language-wide native proper-tail-call guarantee.</p>
+<p><a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2021/03/multip-tr-v2.pdf">Generalized Evidence Passing</a>
+demonstrates an effect-handler translation using explicit yielding and
+tail-resumption optimization in a C backend. It provides a comparison mechanism,
+not a compiler-correctness result for Ash. DN-0033's one-shot experiments
+likewise inform ownership obligations within their stated proof scope.</p>
+<p>The working preference is explicit control lowering with selective direct
+paths. A uniform CPS baseline should challenge that preference before it
+becomes an accepted architecture. Supporting interactive use selects neither
+CPS nor a particular continuation runtime by itself.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>A separately scoped native experiment should distinguish backend integration
+from control strategy. Begin with one backend and compare control candidates
+on the same programs; compare a second backend only with sufficiently equivalent
+lowering and service contracts to attribute differences.</p>
+<p>The corpus should cover closures, recursive and shared data, mathematical
+integers beyond machine range, polymorphic and indirect evidence calls, exact
+effect matching after specialization, nested capture, work after resume,
+recursive discard and cleanup reporting. Add the completed checked FFI case
+when its governing contract is available. It is not evidence for callbacks,
+borrowing or an external Ash ABI that the FFI work excludes.</p>
+<p>Require independent lowered validation and differential execution against
+retained Core for values, strict order, effect selection and completion.
+Compare development and release policies, long control chains, native-stack
+growth, continuation allocation and peak retained storage. Record target,
+compiler and dependency pins; no platform claim follows from one host run.</p>
+<p>Feedback comparisons should include finding and fixing a type or resource
+failure, inspecting an indirect call, probing a small function, editing an
+imported declaration and running selected tests. Record useful-answer latency,
+source freshness, diagnostic quality, compilation cost, execution cost and
+artifact size. Human exploratory tasks and agent repair loops should receive
+separate observations rather than one assumed audience multiplier.</p>
+<p><a href="https://www.microsoft.com/en-us/research/publication/supporting-exploratory-data-analysis-live-programming/">DeLine and Fisher</a>
+found preference and fewer errors for live exploratory-data updates, with
+comparable numbers of self-rated insightful results. <a href="https://arxiv.org/html/2405.15793v3">SWE-agent</a>
+found that action and feedback design affected repository-repair outcomes.
+Their tasks support comparing useful feedback; neither study establishes an
+Ash speed threshold, a required REPL model or a backend choice.</p>
+<p>Retain source pins, cases, measurements and contrary findings as design
+evidence. Dispose of prototype machinery after the comparison, or retain it
+only as an explicitly isolated experiment with a reproducible scope. Product
+retention requires an accepted architectural decision and task; a semantic
+delta requires a change proposal, implementation, tests and specification update.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which Ash-owned lower boundaries make control, storage and source provenance
+independently reviewable without duplicating whole-program facts?</li>
+<li>Can LLVM meet both workflow goals before a second adapter becomes worthwhile?</li>
+<li>Which source and imported-fact changes invalidate cached checking and native
+code, and how should incomplete editor snapshots report their status?</li>
+<li>Which continuation representation preserves all completion rules with the
+least compilation and execution cost? Are existing summaries sufficient for
+selective lowering, especially across indirect and generic calls?</li>
+<li>Which initial ordinary storage policy preserves sharing and cycles while
+keeping DN-0044's service-selection questions open?</li>
+<li>How should compiled Ash libraries express entry, result lifetime, required
+services and failure without prematurely promising a stable external ABI?</li>
+<li>Which interactive experiments need native execution for faithful ABI and
+representation evidence, and which are adequately served by Core execution?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0044-no-default-runtime/">← DN-0044: No Default Runtime</a><a rel="next" href="/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/">DN-0046: Agent Semantic Exploration and Feedback →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

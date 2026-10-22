@@ -1,0 +1,560 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0043: Shorter Surface Alternatives · Ash</title><meta name="description" content="Which Ash features could offer shorter alternatives while retaining their full descriptive forms? For each feature, compare omission of recoverable syntax, word or symbol synonyms, alternative binding and scope…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0043: Shorter Surface Alternatives · Ash"><meta property="og:description" content="Which Ash features could offer shorter alternatives while retaining their full descriptive forms? For each feature, compare omission of recoverable syntax, word or symbol synonyms, alternative binding and scope…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0043: Shorter Surface Alternatives · Ash"><meta name="twitter:description" content="Which Ash features could offer shorter alternatives while retaining their full descriptive forms? For each feature, compare omission of recoverable syntax, word or symbol synonyms, alternative binding and scope…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0043-shorter-surface-alternatives/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0043-shorter-surface-alternatives/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0043-shorter-surface-alternatives.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0043: Shorter Surface Alternatives","headline":"DN-0043: Shorter Surface Alternatives","description":"Which Ash features could offer shorter alternatives while retaining their full descriptive forms? For each feature, compare omission of recoverable syntax, word or symbol synonyms, alternative binding and scope…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0043-shorter-surface-alternatives/","@id":"https://dikini.github.io/ash/docs/design/dn-0043-shorter-surface-alternatives/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0043-shorter-surface-alternatives.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0043-shorter-surface-alternatives" data-pagefind-meta="title">DN-0043: Shorter Surface Alternatives</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0043-shorter-surface-alternatives.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0043</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005</a>,
+<a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a>,
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a></li>
+</ul>
+<blockquote>
+<p>This design note catalogues possible shorter surface forms. It defines no
+current Ash semantics, selects no final grammar, and authorizes no product
+implementation. The agreed discussion constraints below guide exploration;
+they are not accepted language changes. This discussion is independent of
+the common resource workstream and adds no requirements to other workstreams.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Which Ash features could offer shorter alternatives while retaining their full
+descriptive forms? For each feature, compare omission of recoverable syntax,
+word or symbol synonyms, alternative binding and scope forms, and ordinary
+library abstractions where current types can express them.</p>
+<p>The aim is a catalogue of the solution space. Effect-operation requests and
+mutable variables as resources provide acceptable reference compromises;
+they do not select one abbreviation policy for every feature.</p>
+<h2 id="context">Context</h2>
+<p>Current authority remains the specification:</p>
+<ul>
+<li><a href="/ash/spec/static-semantics/#effects">Effect typing</a> distinguishes an exact
+operation request from an ordinary call with a latent effect row. <code>perform</code>
+requests an operation; it does not identify a particular handler body.</li>
+<li><a href="/ash/spec/dynamic-semantics/#effect-handlers-and-completion">Request execution</a>
+selects the nearest accepting boundary for the exact instantiated identity.</li>
+<li><a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">Resource typing</a>
+separates scope-owned release from reusable non-owning access. Acquisition
+introduces a rigid identity, a handle, sealed evidence and an interpreter.</li>
+<li><a href="/ash/spec/static-semantics/#scoped-native-buffers">Native-buffer acquisition</a>
+returns <code>Outcome&lt;body_result&gt;</code>. Failure creates no body scope; nested outcomes
+remain nested.</li>
+<li><a href="/ash/spec/syntax/#grammar">Surface syntax</a> currently requires <code>perform</code>,
+a written resource identity and a resource body block. It admits no mutable
+variable declaration or assignment form.</li>
+<li><a href="/ash/spec/elaboration/">Core elaboration</a> retains exact request identities,
+resource relationships and completion operations for independent validation.</li>
+</ul>
+<p><a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/#surface-forms-derived-from-the-contracts">DN-0038</a>
+explores mutable-variable syntax against shared mediated access, linear state
+threading and uniqueness checking. It does not implement or select one of those
+models. The same source convenience may need different checked elaborations.</p>
+<h2 id="constraints">Constraints</h2>
+<p>These are agreed constraints for this exploration:</p>
+<ul>
+<li>Retain the current full descriptive syntax. Short forms are additional choices.</li>
+<li>Recover an action from resolved declarations and checked contracts, rather than
+treating a familiar spelling as authority.</li>
+<li>Inference may discover authority established by a checked contract. It cannot
+manufacture copying, sharing, borrowing, movement, disposal or completion
+authority.</li>
+<li>A well-resolved access with no permitted action is a type error. If several
+permitted actions remain possible after checking, unresolved ambiguity is also
+a type error. A diagnostic may suggest explicit disambiguation.</li>
+<li>Every accepted program determines one authorized action at each access.
+Runtime selection of the nearest exact handler remains defined execution,
+rather than unresolved static ambiguity.</li>
+<li>Explicit syntax selects an action and still requires that action to typecheck.
+Writing a marker cannot repair missing authority.</li>
+<li>Preserve evaluation order and multiplicity, exact identities, rows, captures,
+acquisition failure, completion order and result wrapping.</li>
+<li>Keep resource declaration and access separate. Recognizing access does not
+establish another acquisition or another owner.</li>
+<li>Keep syntax errors and name-resolution failures in their existing phases. The
+authority and ambiguity criteria do not reclassify every failure as typing.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<p>All short-form examples in this note are illustrative, unimplemented spellings.
+Code fences marked <code>text</code> do not claim executable Ash syntax. Current full forms
+remain the reference for candidates that abbreviate implemented behavior.</p>
+<h3 id="effect-operation-requests">Effect-operation requests</h3>
+<p>For an effect declaring <code>read : Unit -&gt; A</code>, the current full application is:</p>
+<pre tabindex="0"><code class="language-ash">read_number : Unit -&gt; Int ! {Read&lt;Int&gt;}
+read_number () = perform Read&lt;Int&gt;.read ()
+</code></pre>
+<p>The declaration of <code>Read</code> would be supplied by the surrounding module or import.
+Compare these shorter spellings:</p>
+<pre tabindex="0"><code class="language-text">read_number () = Read&lt;Int&gt;.read ()
+read_number () = !Read&lt;Int&gt;.read()
+</code></pre>
+<p><code>Read</code> resolves to an effect, <code>Int</code> fixes its instance and <code>read</code> selects its
+operation. Recognizing that direct application need not inspect a handler or
+guess from the result's effect row. An ordinary effectful function remains an
+ordinary call.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Option</th>
+<th>Information retained</th>
+<th>Tradeoff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Optional <code>perform</code></td>
+<td>The resolved operation target determines the request.</td>
+<td>Least syntax; readers may need declaration context.</td>
+</tr>
+<tr>
+<td>Symbol synonym such as prefix <code>!</code></td>
+<td>A visible direct-request marker and exact target.</td>
+<td>Short cue; needs precedence rules and shares punctuation with effect rows.</td>
+</tr>
+<tr>
+<td>Keyword and symbol, marker required</td>
+<td>Every direct request has a cue.</td>
+<td>Less omission; shorter marked form remains available.</td>
+</tr>
+<tr>
+<td>Omission, keyword and symbol</td>
+<td>Authors choose compactness or a visible assertion.</td>
+<td>More equivalent spellings and style variation.</td>
+</tr>
+</tbody>
+</table>
+<p>The marker continues to assert an operation target. It must not silently apply
+to an ordinary function. A candidate symbol consumes the same one operand as
+<code>perform</code>; parentheses can group that operand. Curried applications, tuple
+operands and function-valued operation results require explicit grouping tests.</p>
+<p>Accepting a direct call does not decide whether bare <code>Read&lt;Int&gt;.read</code> is a
+first-class value, or whether effect arguments may be omitted. Those are
+separate choices. <code>perform</code> currently marks direct requests; ordinary calls
+such as <code>read_number ()</code> can already reach handlers without that marker.</p>
+<h3 id="resource-declaration">Resource declaration</h3>
+<p>The current full cell form is:</p>
+<pre tabindex="0"><code class="language-ash">resource cell&lt;R&gt; c = 41 {
+    Cell.read c
+}
+</code></pre>
+<p>This fragment assumes the builtin API imported as <code>Cell</code>. The initializer runs
+before acquisition introduces <code>R</code> and <code>c</code>. The scope owns release; <code>c</code> supplies
+access while the owner is live.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Option</th>
+<th>Short-form sketch</th>
+<th>Information still required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Omit the written identity</td>
+<td><code>resource cell c = 41 { body }</code></td>
+<td>Generate a fresh rigid identity; allow a written name when source needs it.</td>
+</tr>
+<tr>
+<td>Omit the keyword in a recognizable header</td>
+<td><code>cell&lt;R&gt; c = 41 { body }</code></td>
+<td>The header must uniquely denote an acquisition, including its provider.</td>
+</tr>
+<tr>
+<td>Use a mutable-binding declaration</td>
+<td><code>var x = 41</code> or <code>let mut x = 41</code></td>
+<td>Specify the mutable resource, access contract and owner scope.</td>
+</tr>
+<tr>
+<td>Scope a sequential declaration over the block remainder</td>
+<td>A resource declaration followed by ordinary local declarations.</td>
+<td>Define nesting, completion order and the result of the whole remainder.</td>
+</tr>
+<tr>
+<td>Offer a short word or symbol marker</td>
+<td>A marked acquisition header with a body.</td>
+<td>Preserve acquisition recognition and ownership; no symbol is selected here.</td>
+</tr>
+<tr>
+<td>Use a scoped library combinator</td>
+<td>A provider invokes a body under acquired authority.</td>
+<td>Express fresh identity, non-escape and completion in its checked contract.</td>
+</tr>
+</tbody>
+</table>
+<p>The mutable-variable pressure case is:</p>
+<pre tabindex="0"><code class="language-text">{
+    var x = 41
+    x := x + 1
+    x
+}
+</code></pre>
+<p>An acceptable candidate keeps the declaration's mutability cue, can infer its
+payload type and generate an unnamed acquisition identity, and specifies a
+lexical owner scope. <code>var</code> and <code>let mut</code> remain alternative spellings. Mutability
+is not retroactively inferred from a later assignment to an ordinary <code>let</code>.</p>
+<p>Replacing a resource's additional body block with the enclosing block remainder
+can remove nesting. It needs a fixed scope rule; inferred last use alone does
+not determine completion. An inner block can express an earlier closing point.
+Fallible providers must retain declared failure behavior and result wrapping.
+Native buffers prevent treating every acquisition as a successful ordinary
+binding. No convenience spelling silently flattens their outcomes.</p>
+<p>Ordinary handle types cannot alone distinguish acquiring ownership from storing
+an existing alias. The current fixed provider designators are contextual syntax,
+not general resource declarations. A future library-defined provider requires
+its own checked acquisition contract. A scoped combinator also needs a way to
+relate its body to a fresh identity; current rank-1 arrows do not automatically
+supply that abstraction.</p>
+<h3 id="resource-access-and-mutable-payloads">Resource access and mutable payloads</h3>
+<p>For a mutable binding, bare <code>x</code> in a value position may stand for a payload read,
+and <code>x := value</code> may stand for replacement. The declaration and operation
+contracts must determine those actions. They do not require a repeated resource
+keyword, provider name or identity annotation.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Option</th>
+<th>Benefit</th>
+<th>Constraint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Explicit operation calls through access values</td>
+<td>Reads, replacement and sharing remain visible.</td>
+<td>Repeated operation syntax can dominate ordinary arithmetic.</td>
+</tr>
+<tr>
+<td>Bare reads and explicit assignment</td>
+<td>Compact mutable-variable use.</td>
+<td>Reads and replacement must be authorized and uniquely determined.</td>
+</tr>
+<tr>
+<td>Symbol or word synonyms for individual actions</td>
+<td>Short explicit copy, take, borrow or access forms.</td>
+<td>Each synonym retains the operation's checked contract.</td>
+</tr>
+<tr>
+<td>Infer a local action from its full checked context</td>
+<td>Can omit otherwise redundant markers.</td>
+<td>Missing authority and remaining ambiguity are type errors.</td>
+</tr>
+</tbody>
+</table>
+<p>For a copied integer, <code>let y = x</code> saves a snapshot. Sharing the resource uses a
+distinct access expression; <code>access x</code> is an illustrative spelling. Bare <code>x</code>
+should not switch between reading contents and sharing storage merely because
+a parameter annotation changes. A closure reading <code>x</code> retains resource access;
+a closure retaining an earlier copied integer retains only that snapshot.
+Escape checks must preserve the difference.</p>
+<p>Restricted payloads are a useful design constraint. A read cannot fabricate copy
+authority; replacement cannot silently discard old contents without authority.
+Take, borrow, copy and replace stay distinct where their contracts differ.
+Missing authority remains a type error even with explicit syntax. Unresolved
+choice between permitted actions is also a type error, with possible advice to
+write an explicit action. No accepted program retains that ambiguity.</p>
+<p>Repeated source operations can elaborate to shared mediated access, linear
+successors or checked unique permissions. Convenient syntax does not choose
+one model or prove its invariants. Each read occurs where written; a shorthand
+cannot silently cache <code>x + x</code> as one read or duplicate an assignment operand.</p>
+<h3 id="catalogue-of-other-features">Catalogue of other features</h3>
+<p>The following review extends the solution space. These candidates have not
+received the discussion agreement recorded for requests and mutable access.
+Each retains its full form and needs a separate semantic comparison before a
+proposal. The table identifies families of alternatives rather than a priority
+order or final set of spellings.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Feature</th>
+<th>Options to compare</th>
+<th>Boundary to preserve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Handler installation</td>
+<td>Reordered header; sequential scope; short marker.</td>
+<td>Exact target, exhaustive clauses and interpretation extent.</td>
+</tr>
+<tr>
+<td>Handler completion</td>
+<td>Symbol synonyms; marked resuming clauses.</td>
+<td>One authorized resume or discard on each completing path.</td>
+</tr>
+<tr>
+<td>Cleanup</td>
+<td>Sequential <code>cleanup</code>; short word; delayed-code block.</td>
+<td>Action evaluation, captures, effects and one invocation owner.</td>
+</tr>
+<tr>
+<td>Hook registration</td>
+<td>Sequential <code>register</code>; short word or symbol.</td>
+<td>Exact chain, callback context, ordering and removal.</td>
+</tr>
+<tr>
+<td>Hook roots</td>
+<td>Sequential <code>hook</code>; short marker; checked target omission.</td>
+<td>Exact chain boundary, including nested roots.</td>
+</tr>
+<tr>
+<td>Anonymous functions</td>
+<td>Arrow forms; expression bodies; operator sections.</td>
+<td>Function creation, parameter grouping and capture behavior.</td>
+</tr>
+<tr>
+<td>Sequencing</td>
+<td>Intermediate expression lines; discard-binding synonym.</td>
+<td>Evaluation once in order, with ordinary type checking.</td>
+</tr>
+<tr>
+<td>Boolean branching</td>
+<td><code>if</code> expression; conditional symbol form.</td>
+<td>One scrutinee, exhaustive branches and compatible results.</td>
+</tr>
+<tr>
+<td>Exact evidence</td>
+<td>Single-method body; compact supplied equations.</td>
+<td>Complete interface application and evidence authority.</td>
+</tr>
+<tr>
+<td>Small declarations</td>
+<td>Single-member effect/interface/implementation forms.</td>
+<td>Declaration kind, identities, parameters and complete membership.</td>
+</tr>
+<tr>
+<td>Type and row notation</td>
+<td>Single-effect rows; explicit inference holes.</td>
+<td>Exact identities, solved arguments and public contracts.</td>
+</tr>
+<tr>
+<td>Nominal wrappers</td>
+<td>Short <code>newtype</code> header; explicit unwrap shorthand.</td>
+<td>Nominal distinction and constructor visibility.</td>
+</tr>
+<tr>
+<td>Imports</td>
+<td>Combined spelling of explicit name and evidence selection.</td>
+<td>Independent visibility and implementation channels.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="handler-installation-and-completion">Handler installation and completion</h4>
+<p>Current <a href="/ash/spec/syntax/#grammar">handler syntax</a> is
+<code>handle body with E { clauses }</code>. A header-first alternative could place the
+exact target and clauses before the body. A sequential <code>handle E { clauses }</code>
+could scope over the enclosing block remainder. A word or symbol marker could
+also abbreviate the existing structure. These choices shorten different costs:
+repetition, distant delimiters and nested blocks. None infers a handler merely
+because a row contains its effect.</p>
+<p>For completion, compare a short synonym for <code>resume</code> or <code>discard</code> with a
+distinct clause marker that expands to an explicit resume. For example:</p>
+<pre tabindex="0"><code class="language-text">read ignored =&gt;&gt; 42
+</code></pre>
+<p>This illustrative marked clause would expand to <code>read ignored =&gt; resume 42</code>.
+The marker distinguishes it from the current general clause body. It must
+retain <a href="/ash/spec/static-semantics/#effects">continuation checking</a>, including
+argument evaluation, non-escape, branch agreement and exactly-once consumption.
+Resuming and abandoning remain distinct actions; no default discard is inferred.</p>
+<p>Silently interpreting an ordinary clause result as the resumed value would
+confuse the operation result with the complete handler result. Those types may
+even be equal. A separately marked clause can express the choice without
+allowing unresolved action ambiguity. Multi-step clauses retain the full form.</p>
+<h4 id="cleanup-actions">Cleanup actions</h4>
+<p>Current <a href="/ash/spec/static-semantics/#scoped-cleanup-actions">cleanup</a> writes
+<code>cleanup action { body }</code>. Compare:</p>
+<ul>
+<li>A sequential <code>cleanup action</code> covering the block remainder.</li>
+<li>A shorter word or symbol synonym for the same retained callable and scope.</li>
+<li>A delayed-code form such as <code>defer { expression }</code>, which explicitly constructs
+the required <code>Unit -&gt; Unit</code> action.</li>
+<li>A library helper where its callback contract can express the same obligations.</li>
+</ul>
+<p>The first two can retain current eager evaluation of the action expression and
+later invocation of its resulting function. Delaying an expression is a
+different abbreviation: its wrapper must define what is captured at registration
+and what is evaluated at completion. Capturing a copied value and reading a
+mutable resource later are observably different. Every form preserves structural
+completion order, cleanup effects, surviving interpreter requirements and the
+barrier against capturing an enclosing resume capability.</p>
+<p>The word <code>defer</code> would not make an arbitrary expression safe to discard or
+authorize omission of an owner. The body, action and pending close operation
+retain their own completion checks.</p>
+<h4 id="hook-registration-and-roots">Hook registration and roots</h4>
+<p>Current <a href="/ash/spec/static-semantics/#synchronous-typed-hooks">hook forms</a> are
+<code>register H transformer { body }</code> and <code>hook H { body }</code>. Compare sequential
+declarations covering the block remainder, short word or symbol synonyms, and
+target-argument omission when the checked context determines one exact instance.</p>
+<p>The transformer's type <code>P -&gt; P</code> cannot alone identify <code>H</code>: several hook APIs can
+share the same payload type. Unresolved target choice must fail checking rather
+than select a nearby name. A registration still evaluates its transformer once
+before entering the scope, preserves outer-before-inner callback order, and
+removes its owner once. Its callback uses registration-site interpretation.</p>
+<p>A root is an explicit chain boundary. A nested root for the same exact instance
+cuts off outer registrations, so eliding a root merely because another root is
+active would change behavior. Inferring a target and implicitly creating a root
+are different options; publication does not by itself establish a root scope.</p>
+<p>Sequential cleanup, registration, root and resource forms could share a rule
+that wraps the following lexical remainder. That common presentation does not
+erase their different typing, completion and result contracts. In particular,
+hook scopes must not be converted into body functions that change resume scope.</p>
+<h4 id="anonymous-functions">Anonymous functions</h4>
+<p>Current <a href="/ash/spec/static-semantics/#functions-and-application">functions</a>
+write <code>fn(patterns) { body }</code>. Compare arrow synonyms, expression-body forms and
+operator sections. For example:</p>
+<pre tabindex="0"><code class="language-text">value =&gt; value + 1
+\value -&gt; value + 1
+</code></pre>
+<p>Both sketches could denote the same function as <code>fn(value) { value + 1 }</code>.
+Tuple-domain parameter lists must remain distinct from curried functions.
+Expected typing, pattern coverage and closure dependencies remain checked.</p>
+<p>The current local-generalization rule recognizes syntactic anonymous-function
+initializers. A synonym must count as the same function form at that boundary;
+otherwise abbreviation could change polymorphism. Ordinary application
+initializers stay monomorphic. Operator sections additionally need an explicit
+account of which operands are evaluated or captured at function creation and
+which are evaluated on each call.</p>
+<h4 id="sequencing-and-boolean-branching">Sequencing and Boolean branching</h4>
+<p>Current <a href="/ash/spec/static-semantics/#blocks">blocks</a> sequence local declarations
+and finish with one result expression. An intermediate expression line could
+abbreviate <code>let _ = expression</code>; a short discard-binding marker is another
+option. The final line remains the block result. Evaluation occurs once in
+source order, and an unused expression still needs a complete checked type.
+This is ordinary sequencing, not a new selectable bind or computation wrapper.</p>
+<p>Ignoring a result does not establish payload disposal authority. If a later
+resource model restricts weakening, the abbreviated discard must fail wherever
+its full form would fail. Implicit asynchronous work or cleanup is outside this
+option.</p>
+<p>An <code>if condition then left else right</code> expression or a conditional symbol form
+could abbreviate a complete two-arm Boolean
+<a href="/ash/spec/static-semantics/#patterns-matches-and-coverage">match</a>. It evaluates
+the condition once and preserves result typing, branch rows and continuation or
+ownership checks. A library function with eager ordinary arguments cannot by
+itself abbreviate selective branch evaluation. General pattern matches retain
+their full form; omitting an arm is not part of this comparison.</p>
+<h4 id="exact-evidence-and-small-declarations">Exact evidence and small declarations</h4>
+<p>A single-method <a href="/ash/spec/static-semantics/#scoped-exact-evidence">local evidence declaration</a>
+could offer a compact method body instead of a braced equation set. A shorter
+method-head spelling is another option when the exact interface declaration
+determines the sole method. Multi-method interfaces could allow compact complete
+equations without omitting membership checks.</p>
+<p>The complete interface application, active local nominal key and contextual
+method parameters remain required facts. Short syntax cannot infer an unrelated
+implementation, create missing evidence, or expose a polymorphic method scheme
+as an ordinary first-class value. A method body still sees only the preceding
+evidence scope and cannot gain implicit self or sibling evidence.</p>
+<p>Single-operation effect declarations, single-method interfaces and single-method
+implementations could also offer one-line forms without body braces. Retain the
+declaration's explicit category, parameter and kind contracts, stable member
+identity, visibility and complete method set. An equal signature does not turn
+an interface method into an effect operation. This option saves delimiters;
+inferring public signatures from bodies is a separate semantic change.</p>
+<h4 id="type-arguments-rows-and-inference-holes">Type arguments, rows and inference holes</h4>
+<p>For a closed row containing one exact effect, <code>! E&lt;A&gt;</code> could abbreviate
+<code>! {E&lt;A&gt;}</code>. An open tail needs a distinct spelling so that an effect instance
+cannot be confused with a row variable. Empty-row omission and omitted global
+binder lists already have current meanings; preserve those meanings.</p>
+<p>Other candidates are explicitly marked inference holes for type arguments or
+kinds, and omitted effect arguments at requests or handlers where checking
+determines one complete exact instance. A result type can constrain a <code>Read&lt;A&gt;</code>
+operation's argument; phantom parameters or several matching instances can leave
+the request ambiguous. Such ambiguity is a type error, never a default to the
+nearest installed handler.</p>
+<p><a href="/ash/spec/static-semantics/#inference-and-rank-1-restrictions">Current inference</a>
+already rejects unsolved variables before retaining checked facts. Extending
+inference sites needs new evidence. In particular, an omitted declaration kind
+currently means <code>Type</code>; it does not request kind inference. An explicitly marked
+hole could offer an additional mode without changing that existing default.
+Exact evidence headers currently require complete inference-free arguments;
+abbreviating them needs its own proposal rather than borrowing operation rules.</p>
+<h4 id="nominal-wrappers-and-imports">Nominal wrappers and imports</h4>
+<p>For <a href="/ash/spec/name-resolution/#type-and-constructor-scope">newtypes</a>, a short
+header such as <code>newtype UserId = Int</code> could retain the nominal declaration and
+generate its same-spelled one-field constructor. An explicit <code>unwrap value</code>
+could abbreviate a sole-constructor match where the constructor is accessible.
+Construction is already compact through <code>UserId(value)</code>.</p>
+<p>Neither candidate creates implicit representational coercion, interface evidence
+or resource authority. Unwrapping an opaque imported newtype remains rejected.
+Choosing <code>newtype</code> automatically for a one-constructor ordinary <code>type</code> would
+change its representation contract and is outside a spelling abbreviation.</p>
+<p>Current <a href="/ash/spec/name-resolution/#imports-and-namespaces">imports</a> already
+provide targeted names and local renames. A combined item could shorten explicit
+selection of an interface name and its implementation channel, but its marker
+must still request both channels. Ordinary method or interface imports must not
+silently select implementations. Wildcard imports and inferred evidence imports
+would change visibility and selection policy; they need separate evaluation.</p>
+<h3 id="cross-feature-comparison">Cross-feature comparison</h3>
+<p>The catalogue exposes several independent dimensions:</p>
+<ul>
+<li>Word or symbol synonyms change the visible spelling of an explicit action.</li>
+<li>Unique reconstruction removes syntax while keeping its checked information.</li>
+<li>Generated names omit identities that source does not need to mention.</li>
+<li>Sequential scope forms replace additional braces with a fixed lexical extent.</li>
+<li>Contextual short bodies retain an explicit feature marker while eliding
+repeated parameters, method names or delimiters.</li>
+<li>Library abstractions reuse ordinary checked functions where those contracts
+express the required scope, evaluation and authority.</li>
+</ul>
+<p>These dimensions can combine. A feature may retain its full form, offer a
+symbol synonym, and permit some argument omission while still requiring an
+ownership marker. No candidate is selected merely because another feature
+supports the same dimension. Compare useful reductions with punctuation reuse,
+reader context, formatting and diagnostic costs.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>The discussion establishes acceptable exploration constraints, not tested
+short-form implementations. Current request, resource and ownership evidence
+transfers only to the checked forms it covers. New syntax needs evidence that
+its elaboration reaches those forms without changing their contracts.</p>
+<p>Compare full and short forms through parsing, resolution, typing, independent
+Core validation, transforms and execution. Count tokens and nesting alongside
+readability, diagnostics, checking cost and retained Core structure.</p>
+<p>Required comparison cases include:</p>
+<ul>
+<li>Exact requests, ordinary effectful calls, renamed imports, nested handler
+selection, operand grouping and function-valued operation results.</li>
+<li>Two acquisitions, generated identities, same-site reentrant execution,
+initializer order and fallible acquisition without body execution.</li>
+<li>Mutable snapshots, aliases, copied captures, access captures and rejected
+escape through closures, aggregates or operation payloads.</li>
+<li>Missing copying or disposal authority, ambiguous permitted actions, explicit
+disambiguation that succeeds, and explicit markers that still fail typing.</li>
+<li>Branches and repeated updates with the selected ownership model, followed by
+exactly the completion required on normal or admitted abandoned paths.</li>
+<li>Handler-clause result versus resume-input types, explicit abandonment, nested
+continuation barriers and short-form clauses that still fail completion checks.</li>
+<li>Cleanup initializer versus delayed expression evaluation, registration-site
+callback context, nested hook roots and closing order under sequential scopes.</li>
+<li>Lambda generalization, tuple versus curried parameters, single evaluation of
+discarded expressions and selective evaluation of conditional branches.</li>
+<li>Complete evidence membership, opaque constructor access, phantom arguments,
+row tails and unchanged explicit implementation-import selection.</li>
+</ul>
+<p>No prototype is authorized by this catalogue. If one later becomes necessary,
+name its feature, exact semantic question, full-form comparison and positive
+and negative cases first. Discard its parser and runtime scaffolding after the
+comparison; retain only reusable evidence unless a proposal authorizes product
+implementation.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which candidates shorten common programs enough to justify another spelling?</li>
+<li>Which markers help readers recognize direct requests or ownership boundaries?</li>
+<li>When does source need a name for a generated acquisition identity?</li>
+<li>Which mutable access model and payload contracts should a later proposal use?</li>
+<li>How should shorter scopes expose acquisition and completion failure results?</li>
+<li>Can library contracts express a candidate without a new surface construct?</li>
+<li>What precedence, formatting and diagnostic rules keep each short form clear?</li>
+<li>Which scope forms share a presentation rule while retaining distinct contracts?</li>
+<li>Which declaration or inference abbreviations require more than a spelling
+change, and how should that extra semantic scope be recorded?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0042-native-interaction-and-efficient-data/">← DN-0042: Native Interaction and Efficient Data</a><a rel="next" href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044: No Default Runtime →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

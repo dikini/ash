@@ -1,0 +1,375 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>First-stratum parser-architecture comparison · Ash</title><meta name="description" content="Which parser organization keeps grammar growth local, represents precedence and ambiguity explicitly, preserves source structure, and produces the required P-001 through P-003 diagnostics without coupling the grammar…"><meta name="robots" content="index, follow"><meta property="og:title" content="First-stratum parser-architecture comparison · Ash"><meta property="og:description" content="Which parser organization keeps grammar growth local, represents precedence and ambiguity explicitly, preserves source structure, and produces the required P-001 through P-003 diagnostics without coupling the grammar…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="First-stratum parser-architecture comparison · Ash"><meta name="twitter:description" content="Which parser organization keeps grammar growth local, represents precedence and ambiguity explicitly, preserves source structure, and produces the required P-001 through P-003 diagnostics without coupling the grammar…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/parser-architecture/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/parser-architecture/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/parser-architecture.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"First-stratum parser-architecture comparison","headline":"First-stratum parser-architecture comparison","description":"Which parser organization keeps grammar growth local, represents precedence and ambiguity explicitly, preserves source structure, and produces the required P-001 through P-003 diagnostics without coupling the grammar…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/parser-architecture/","@id":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/parser-architecture/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/parser-architecture.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="first-stratum-parser-architecture-comparison" data-pagefind-meta="title">First-stratum parser-architecture comparison</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/parser-architecture.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>This comparison is informative evidence governed by
+<a href="/ash/docs/design/dn-0016-first-mini-ash-corpus/">DN-0016</a>. It does not accept a
+parser architecture or define current Ash syntax.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Which parser organization keeps grammar growth local, represents precedence
+and ambiguity explicitly, preserves source structure, and produces the required
+<code>P-001</code> through <code>P-003</code> diagnostics without coupling the grammar to one parser
+framework?</p>
+<h2 id="scope-and-method">Scope and method</h2>
+<p>The written comparison applies four candidate organizations to the provisional
+<a href="/ash/docs/design/mini-ash/first-stratum/grammar/">grammar</a>, every valid source presentation, and the three parser
+failures. It traces concrete dispatch, precedence, span, and recovery behavior.
+No code probe is required at this stage because the distinguishing behavior
+comes from ownership of tokens, events, recovery, and grammar decisions. A
+prototype would otherwise need to choose the unresolved layout and multiline
+equation rules, turning those choices into accidental evidence.</p>
+<p>The candidates are:</p>
+<ol>
+<li>grammar-shaped recursive descent that constructs a spanned surface AST
+directly;</li>
+<li>event-producing recursive descent with a token-complete concrete syntax tree and
+a separate surface-AST projection;</li>
+<li>parser combinators that construct a spanned tree and carry structured
+failure and recovery state;</li>
+<li>a parser generated from a separate grammar, with custom tree and recovery
+actions.</li>
+</ol>
+<p>The comparison treats expression precedence as a subproblem. Each candidate
+must either use precedence climbing, Pratt parsing, layered grammar productions,
+or generated precedence declarations without changing the independent EBNF.</p>
+<h2 id="shared-boundaries">Shared boundaries</h2>
+<p>Every viable candidate needs the same boundaries:</p>
+<pre tabindex="0"><code class="language-text">source text
+  → tokens with source spans and layout boundaries
+  → error-bearing surface representation
+  → validated surface AST without recovery nodes
+  → resolution
+</code></pre>
+<p>Lexing owns token boundaries, reserved words, integers, delimiters, operators,
+and the provisional <code>line_end</code> token. Parsing owns grammar, precedence,
+associativity, grouping, definition boundaries, missing forms, and recovery.
+Neither stage decides name agreement, function grouping from types, or static
+semantics.</p>
+<p>The error-bearing representation retains all consumed tokens, grouping
+delimiters, missing-token markers, error nodes, and diagnostics. Projection to
+the resolver's input must fail while any recovery node remains. This keeps a
+fabricated parser placeholder from becoming a resolved or typed expression.</p>
+<h2 id="candidate-organizations">Candidate organizations</h2>
+<h3 id="direct-spanned-ast-recursive-descent">Direct spanned-AST recursive descent</h3>
+<p>This candidate gives each grammar area a parser function or module. A program
+parser coordinates global definitions and the required result. Dedicated
+parsers own blocks, definitions, patterns, and types. An expression parser owns
+application and infix precedence.</p>
+<p>The control flow is direct and the resulting tree can match resolver needs.
+Checkpointing or lookahead can distinguish a complete global definition from
+the final expression. Right-recursive type parsing naturally makes <code>-&gt;</code>
+right-associative, while an expression precedence loop makes application
+left-associative and higher precedence than multiplication and addition.</p>
+<p>The cost appears at recovery and tooling boundaries. A surface AST must add
+special missing and error variants or maintain a separate recovery structure.
+If it discards punctuation and layout, formatter and editor work must recover
+them from source. If it retains every token and delimiter, it becomes a
+concrete syntax tree under another name. Direct AST construction is therefore
+the smallest batch-parser baseline, but its apparent single representation
+does not survive the corpus's recovery-node and source-coverage requirements.</p>
+<h3 id="event-producing-recursive-descent">Event-producing recursive descent</h3>
+<p>This candidate uses the same grammar-shaped control but emits events rather
+than constructing semantic nodes during recursion:</p>
+<pre tabindex="0"><code class="language-text">StartNode(kind)
+Token(token_id)
+Missing(expected, origin)
+Error(structured_reason)
+FinishNode
+</code></pre>
+<p>The event stream builds a token-complete concrete syntax tree. A separate projection
+constructs the spanned surface AST only after checking that no missing or error
+nodes remain. Parser functions can start a node before enough input is known,
+then assign or wrap its final kind after precedence and lookahead decisions.</p>
+<p>This organization separates three concerns:</p>
+<ul>
+<li>recursive descent decides declaration, block, pattern, and type structure;</li>
+<li>a Pratt or precedence-climbing layer decides expression grouping;</li>
+<li>tree events preserve tokens, recovery, and source coverage.</li>
+</ul>
+<p>Feature components can contribute one or more entry points at an explicit
+dialect boundary:</p>
+<pre tabindex="0"><code class="language-text">global-definition forms
+expression prefix forms
+expression infix operators and binding powers
+pattern forms
+type-atom forms
+</code></pre>
+<p>The selected dialect still has one closed dispatch point. Adding a match
+expression changes the prefix-form selection and its feature parser, not the
+binding, type, or global-definition parsers. Adding an operator changes its
+token and infix table entry, not the nested-construct parsers. This is the
+parser analogue of a closed Core dialect assembled from feature families.</p>
+<p>The additional concrete tree and AST projection cost memory and conversion
+code. The corpus already requires delimiter spans, presentation structure, and
+recovery nodes, so the second representation establishes facts used by
+diagnostics and likely tooling rather than serving as an unmotivated stage.</p>
+<h3 id="parser-combinators">Parser combinators</h3>
+<p>Combinators can mirror grammar productions and make local alternatives easy to
+compose. A suitable result type must distinguish at least:</p>
+<pre tabindex="0"><code class="language-text">Success(value, next_position)
+Recover(value_with_errors, next_position)
+Failure(expected_set, position, committed)
+</code></pre>
+<p>Commitment matters. After consuming <code>fn</code>, an opening block brace, or the left
+side of <code>+</code>, unrestricted backtracking would replace a specific error with an
+unrelated alternative's expectation. Recovery also needs delimiter-aware
+synchronization and access to opening-token spans.</p>
+<p>A small custom combinator layer could provide those operations. Once it adds
+Pratt parsing, committed alternatives, an event sink, structured reasons,
+missing nodes, and synchronization sets, the architectural result approaches
+the event-producing recursive-descent candidate with combinator syntax around
+its functions. The comparison therefore does not reject combinators; it finds
+that generic sequencing and choice do not answer the important corpus
+questions. A future code probe should compare concrete combinator ergonomics
+only after the required event and recovery contracts are fixed.</p>
+<h3 id="generated-parser">Generated parser</h3>
+<p>A generated candidate can keep productions in a dedicated grammar input and
+derive exhaustive parsing tables. It can expose conflicts mechanically and may
+make broad grammar review concise.</p>
+<p>The Ash EBNF must remain independent of generator directives, semantic actions,
+precedence annotations, and recovery productions. The generated candidate
+would therefore maintain both the specification grammar and an implementation
+grammar. It must also construct the same token-complete or equivalently covered
+surface representation and implement the same contextual diagnostics.</p>
+<p>The first corpus is too small and its layout boundary too provisional to show
+that generated conflict reports or tables repay this second grammar and custom
+recovery layer. This candidate remains a later baseline when grammar size or
+ambiguity produces evidence that handwritten dispatch no longer stays local.</p>
+<h2 id="precedence-and-ambiguity">Precedence and ambiguity</h2>
+<p>The event-producing recursive-descent candidate can use a data-defined infix
+table while keeping construct-specific parse code outside the table:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Form</th>
+<th>Relative binding</th>
+<th>Associativity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Juxtaposed application</td>
+<td>Highest expression operator</td>
+<td>Left</td>
+</tr>
+<tr>
+<td><code>*</code></td>
+<td>Above <code>+</code></td>
+<td>Left</td>
+</tr>
+<tr>
+<td><code>+</code></td>
+<td>Above <code>==</code></td>
+<td>Left</td>
+</tr>
+<tr>
+<td><code>==</code></td>
+<td>Lowest named level</td>
+<td>Non-associative</td>
+</tr>
+</tbody>
+</table>
+<p>Application is detected by the start of a primary expression rather than an
+operator token. A repeated <code>==</code> at the same expression level produces a
+structured non-associativity failure instead of silently choosing a tree.
+Parentheses restart expression parsing at the lowest binding power and retain
+both delimiter spans in the concrete tree.</p>
+<p>Function type parsing remains separate. Parsing the codomain recursively after
+one <code>-&gt;</code> produces the right-associated type structure. Neither expression
+binding powers nor parser associativity decide whether an equation head is
+curried or an operational parameter list has a product domain; typing and
+elaboration own that distinction.</p>
+<h2 id="definition-boundaries">Definition boundaries</h2>
+<p>The current top-level starts are distinguishable without semantic feedback:</p>
+<ul>
+<li>an equational global begins with <code>identifier :</code>;</li>
+<li>an inline operational global begins with <code>fn identifier (</code>;</li>
+<li>an anonymous function expression begins with <code>fn (</code>;</li>
+<li>any other expression start begins the required program result.</li>
+</ul>
+<p>An equation group continues only while the next logical line has an equation
+head and <code>=</code> at its current boundary. The interface-name agreement remains a
+resolution check. The parser records each spelling and span rather than making
+the grammar context-sensitive.</p>
+<p>This lookahead depends on the provisional <code>line_end</code>. The exact treatment of a
+multiline equation right-hand side remains unresolved and must be settled in a
+semantic proposal before a retained parser relies on it.</p>
+<h2 id="recovery-traces">Recovery traces</h2>
+<h3 id="p-001-required-result-at-end-of-file"><code>P-001</code>: required result at end of file</h3>
+<p>After completing the last global, the program parser reaches end of input while
+still requiring one expression. It emits <code>parse.expected-result</code> at the empty
+end-of-file span and finishes an error-bearing program node. It does not attach
+the failure to the complete preceding definition.</p>
+<h3 id="p-002-unclosed-parenthesized-argument"><code>P-002</code>: unclosed parenthesized argument</h3>
+<p>The group parser records the opening <code>(</code> before parsing its expression. At end
+of input it emits a missing <code>)</code> event, labels the opening delimiter as primary,
+and records end of input as the point where the close was expected. The partial
+group stays in the concrete tree but cannot project to resolver input.</p>
+<h3 id="p-003-missing-operand-followed-by-an-unclosed-argument"><code>P-003</code>: missing operand followed by an unclosed argument</h3>
+<p>Inside the operational body, the <code>+</code> infix parser commits to a right operand.
+When it sees the body's <code>}</code>, it emits <code>parse.expected-operand</code> related to <code>+</code>
+and a missing-expression node before the close. Recovery does not consume <code>}</code>;
+the block parser closes the body normally.</p>
+<p>Parsing then continues with the program result. Its opening <code>(</code> reaches end of
+input and emits the independent <code>parse.unclosed-group</code> failure. Because the
+first recovery synchronized at the existing brace and did not invent tokens
+beyond it, no errors derived only from the missing operand are produced. The
+result is exactly the two required structured diagnostics.</p>
+<p>These traces define candidate behavior, not final wording or punctuation.</p>
+<h2 id="comparison">Comparison</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Direct spanned AST</th>
+<th>Event-producing recursive descent</th>
+<th>Parser combinators</th>
+<th>Generated parser</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Grammar locality</td>
+<td>Direct functions are local; AST construction can spread edits</td>
+<td>Feature parser plus one closed dialect dispatch point</td>
+<td>Local combinators, subject to shared commitment and recovery contracts</td>
+<td>Local grammar production, plus actions and generated conflicts</td>
+</tr>
+<tr>
+<td>Application and infix precedence</td>
+<td>Explicit precedence code</td>
+<td>Explicit precedence code plus token-complete events</td>
+<td>Needs dedicated precedence combinators or Pratt subparser</td>
+<td>Generator declarations or layered productions</td>
+</tr>
+<tr>
+<td>Non-associative equality</td>
+<td>Direct check</td>
+<td>Direct check with error node around retained tokens</td>
+<td>Requires committed semantic check</td>
+<td>Grammar or action-specific rejection</td>
+</tr>
+<tr>
+<td><code>P-001</code> context</td>
+<td>Program function can name the missing result</td>
+<td>Program event context retains completed globals and EOF</td>
+<td>Requires production-specific reason</td>
+<td>Requires custom production or action</td>
+</tr>
+<tr>
+<td><code>P-002</code> opening span</td>
+<td>Must retain delimiter separately</td>
+<td>Opening token remains in tree</td>
+<td>Combinator state must retain it</td>
+<td>Tree action must retain it</td>
+</tr>
+<tr>
+<td><code>P-003</code> cascade control</td>
+<td>Manual synchronization</td>
+<td>Manual synchronization recorded as events</td>
+<td>Requires cut and recovery primitives</td>
+<td>Requires custom error production or recovery hook</td>
+</tr>
+<tr>
+<td>Source coverage</td>
+<td>Only if AST stores all required tokens or parallel data</td>
+<td>Complete for the lexer token stream</td>
+<td>Depends on output sink</td>
+<td>Depends on generated tree actions</td>
+</tr>
+<tr>
+<td>Formatter/editor pressure</td>
+<td>Weaker if punctuation is discarded</td>
+<td>Concrete tree is reusable without exposing recovery nodes downstream</td>
+<td>Comparable if it emits the same tree</td>
+<td>Comparable if actions emit the same tree</td>
+</tr>
+<tr>
+<td>Specification independence</td>
+<td>Preserved</td>
+<td>Preserved</td>
+<td>Preserved if combinator structure is not published as grammar</td>
+<td>Requires explicit separation from generator grammar</td>
+</tr>
+<tr>
+<td>Current machinery</td>
+<td>Smallest</td>
+<td>Adds events, concrete tree, and projection</td>
+<td>Adds generic control plus the same recovery concepts</td>
+<td>Adds generator, implementation grammar, actions, and recovery integration</td>
+</tr>
+</tbody>
+</table>
+<h2 id="conclusion">Conclusion</h2>
+<p>The evidence favors event-producing recursive descent with a dedicated Pratt or
+precedence-climbing expression layer, token-complete error-bearing concrete
+syntax, and a separate validated surface-AST projection. Whether the lexer
+exposes trivia remains a separate question.</p>
+<p>The recommendation is about responsibilities, not a parser library. Grammar
+features own their local parsers. One explicit dialect assembly point lists the
+accepted global, prefix, infix, pattern, and type forms. The event layer owns
+complete coverage of lexer tokens and recovery structure. Projection owns the
+invariant that resolver input contains no missing or error nodes.</p>
+<p>This organization gives <code>P-001</code> through <code>P-003</code> direct recovery paths and keeps
+operator changes separate from nested constructs. It also preserves enough
+source structure for presentation-specific diagnostics and later tooling
+without making the concrete tree semantic authority.</p>
+<p>The written evidence does not select a parser crate, tree library, token-storage
+strategy, incremental-reparse algorithm, or layout policy. A bounded code probe
+should wait until an accepted architecture and proposed syntax define which of
+those implementation details must be measured.</p>
+<h2 id="accepted-outcome">Accepted outcome</h2>
+<p><a href="/ash/docs/decisions/ad-0005-parser-architecture/">AD-0005</a> accepts these
+properties:</p>
+<ul>
+<li>lexing and parsing are separate checked boundaries with source spans on every
+token;</li>
+<li>grammar-shaped feature parsers emit events for a token-complete concrete syntax
+representation;</li>
+<li>expressions use one explicit application and infix precedence mechanism;</li>
+<li>the selected parser dialect has one closed assembly point for feature forms
+and operator entries;</li>
+<li>parser recovery preserves missing and error nodes only in the error-bearing
+surface representation;</li>
+<li>projection to resolver input fails while recovery nodes remain;</li>
+<li>parser diagnostics carry structured reasons, primary spans, related spans,
+expected forms, and synchronization context;</li>
+<li>implementation grammar structure remains non-normative and is checked against
+the applicable specification grammar.</li>
+</ul>
+<p>The decision does not accept provisional Ash syntax, choose a parser or tree
+library, define layout or semicolon behavior, require incremental parsing, or
+settle the final expression versus result-binding question.</p>
+<h2 id="remaining-questions">Remaining questions</h2>
+<ul>
+<li>Which concrete tree and event representation gives sufficient source coverage
+without storing redundant span data?</li>
+<li>Should the first retained parser preserve trivia losslessly even though the
+current corpus excludes comments?</li>
+<li>How should multiline equation bodies and logical <code>line_end</code> tokens interact?</li>
+<li>Which recovery synchronization sets remain stable as declarations and nested
+constructs grow?</li>
+<li>When does grammar size justify comparing a generated implementation grammar
+again?</li>
+</ul>
+<p>These questions need accepted syntax or a larger corpus before a code probe can
+answer them without inventing language behavior.</p>
+<h2 id="retention-boundary">Retention boundary</h2>
+<p>This comparison uses written control and recovery traces. It creates no parser
+prototype. Any later prototype remains disposable until an accepted
+architectural decision and implementation task retain it. Its concrete grammar
+must remain separate from normative Ash syntax.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#scope-and-method">Scope and method</a><a href="#shared-boundaries">Shared boundaries</a><a href="#candidate-organizations">Candidate organizations</a><a href="#precedence-and-ambiguity">Precedence and ambiguity</a><a href="#definition-boundaries">Definition boundaries</a><a href="#recovery-traces">Recovery traces</a><a href="#comparison">Comparison</a><a href="#conclusion">Conclusion</a><a href="#accepted-outcome">Accepted outcome</a><a href="#remaining-questions">Remaining questions</a><a href="#retention-boundary">Retention boundary</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

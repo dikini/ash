@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-querying-an-immutable-world.html" rel="next">
+<link href="./cases-preserving-outcomes-through-cleanup.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Supplying a local pricing policy · Ash</title><meta name="description" content="A shop can quote the same order under several tariffs. Its calculation needs one unit price for each product; the caller chooses how those prices are supplied. In the earlier order calculation, an effect asked a…"><meta name="robots" content="index, follow"><meta property="og:title" content="Supplying a local pricing policy · Ash"><meta property="og:description" content="A shop can quote the same order under several tariffs. Its calculation needs one unit price for each product; the caller chooses how those prices are supplied. In the earlier order calculation, an effect asked a…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Supplying a local pricing policy · Ash"><meta name="twitter:description" content="A shop can quote the same order under several tariffs. Its calculation needs one unit price for each product; the caller chooses how those prices are supplied. In the earlier order calculation, an effect asked a…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-supplying-a-local-pricing-policy.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-supplying-a-local-pricing-policy.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Supplying a local pricing policy","headline":"Supplying a local pricing policy","description":"A shop can quote the same order under several tariffs. Its calculation needs one unit price for each product; the caller chooses how those prices are supplied. In the earlier order calculation, an effect asked a…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-supplying-a-local-pricing-policy.html","@id":"https://dikini.github.io/ash/study/latest/cases-supplying-a-local-pricing-policy.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/supplying-a-local-pricing-policy/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-supplying-a-local-pricing-policy.html"><span class="chapter-title">Supplying a local pricing policy</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#give-the-calculation-its-units" id="toc-give-the-calculation-its-units" class="nav-link active" data-scroll-target="#give-the-calculation-its-units">Give the calculation its units</a></li>
+  <li><a href="#supply-the-pricing-function-directly" id="toc-supply-the-pricing-function-directly" class="nav-link" data-scroll-target="#supply-the-pricing-function-directly">Supply the pricing function directly</a></li>
+  <li><a href="#select-an-imported-policy" id="toc-select-an-imported-policy" class="nav-link" data-scroll-target="#select-an-imported-policy">Select an imported policy</a></li>
+  <li><a href="#capture-a-tariff-in-a-local-method" id="toc-capture-a-tariff-in-a-local-method" class="nav-link" data-scroll-target="#capture-a-tariff-in-a-local-method">Capture a tariff in a local method</a></li>
+  <li><a href="#keep-nested-choices-distinct" id="toc-keep-nested-choices-distinct" class="nav-link" data-scroll-target="#keep-nested-choices-distinct">Keep nested choices distinct</a></li>
+  <li><a href="#return-the-quoting-function" id="toc-return-the-quoting-function" class="nav-link" data-scroll-target="#return-the-quoting-function">Return the quoting function</a></li>
+  <li><a href="#distinguish-zero-from-unavailable" id="toc-distinguish-zero-from-unavailable" class="nav-link" data-scroll-target="#distinguish-zero-from-unavailable">Distinguish zero from unavailable</a></li>
+  <li><a href="#repair-three-crossed-boundaries" id="toc-repair-three-crossed-boundaries" class="nav-link" data-scroll-target="#repair-three-crossed-boundaries">Repair three crossed boundaries</a>
+  <ul class="collapse">
+  <li><a href="#keep-money-separate-from-quantity" id="toc-keep-money-separate-from-quantity" class="nav-link" data-scroll-target="#keep-money-separate-from-quantity">Keep money separate from quantity</a></li>
+  <li><a href="#supply-evidence-before-its-call" id="toc-supply-evidence-before-its-call" class="nav-link" data-scroll-target="#supply-evidence-before-its-call">Supply evidence before its call</a></li>
+  <li><a href="#keep-local-identities-out-of-outward-types" id="toc-keep-local-identities-out-of-outward-types" class="nav-link" data-scroll-target="#keep-local-identities-out-of-outward-types">Keep local identities out of outward types</a></li>
+  </ul></li>
+  <li><a href="#account-for-the-work" id="toc-account-for-the-work" class="nav-link" data-scroll-target="#account-for-the-work">Account for the work</a></li>
+  <li><a href="#practice-choose-and-retain-a-policy" id="toc-practice-choose-and-retain-a-policy" class="nav-link" data-scroll-target="#practice-choose-and-retain-a-policy">Practice: choose and retain a policy</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-supplying-a-local-pricing-policy.html"><span class="chapter-title">Supplying a local pricing policy</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Supplying a local pricing policy</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>A shop can quote the same order under several tariffs. Its calculation needs one unit price for each product; the caller chooses how those prices are supplied. In <a href="./cases-supplying-order-prices.html">the earlier order calculation</a>, an effect asked a handler for that behavior. Here the calculation receives a function first, then an interface requirement makes its policy choice explicit. A local policy can capture a tariff, and a returned quoting function can retain that choice after the block that supplied it has returned.</p>
+<p>Consider two books at 2000 cents each and three pens at 300 cents each. The base quote is <code>2 * 2000 + 3 * 300 = 4900</code> cents. A tariff of 100 cents per item changes the unit prices to 2100 and 400, so the quote becomes <code>2 * 2100 + 3 * 400 = 5400</code>. There are five items, although there are only two lines. Charging the tariff once per line would answer a different question.</p>
+<p>The program uses finite, nonnegative prices, quantities, and tariffs. These are promises about the chosen inputs. The types below distinguish money from counts; their constructors do not validate a range. Currency conversion, rounding, and rejected negative inputs are outside this calculation.</p>
+<section id="give-the-calculation-its-units" class="level2">
+<h2 class="anchored" data-anchor-id="give-the-calculation-its-units">Give the calculation its units</h2>
+<p><code>Money</code> represents cents and <code>Quantity</code> represents an item count. Both wrap <code>Int</code>, but <a href="./libraries-wrapping-a-representation.html">nominal wrappers</a> make them different source types. <code>Product</code> has two choices, <code>Book</code> and <code>Pen</code>. A <code>Line</code> pairs one product with a quantity; an <code>Order</code> contains exactly two lines. Thus the example is an order with <code>Line(Book, Quantity(2))</code> followed by <code>Line(Pen, Quantity(3))</code>.</p>
+<p><code>Quote</code> answers two different questions: <code>Priced(Money(cents))</code> supplies an available amount, while <code>Unavailable</code> supplies no amount. A price of zero is still available. The unit-price function returns this same choice before any quantity is applied. This model asks for both line prices, including prices on zero-quantity lines. An unavailable price on either line makes the whole order unavailable.</p>
+<p>Work backward from the total. <code>quote_with</code> needs a <code>Product -&gt; Quote</code> function and an <code>Order</code>. When both prices are available, <code>line_total</code> multiplies one <code>Money</code> amount by one <code>Quantity</code>, retaining <code>Money</code>; <code>add_money</code> then combines the two amounts. Those contracts expose the units before their bodies use integer arithmetic. Save these definitions together in <code>orders.ash</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub newtype Money = Money(Int)
+pub newtype Quantity = Quantity(Int)
+
+pub type Product = Book
+    | Pen
+
+pub type Line = Line(Product, Quantity)
+pub type Order = Order(Line, Line)
+
+pub type Quote = Priced(Money)
+    | Unavailable
+
+pub line_total : (Money, Quantity) -&gt; Money
+line_total (Money(cents), Quantity(count)) = Money(cents * count)
+
+pub add_money : (Money, Money) -&gt; Money
+add_money (Money(left), Money(right)) = Money(left + right)
+
+pub quote_with : (Product -&gt; Quote, Order) -&gt; Quote
+quote_with (unit_price, Order(Line(first, first_count), Line(second, second_count))) = {
+    let first_price = unit_price first
+    let second_price = unit_price second
+    match (first_price, second_price) {
+        (Unavailable, ignored) =&gt; Unavailable
+        (Priced(left), Unavailable) =&gt; Unavailable
+        (Priced(left), Priced(right)) =&gt; Priced(add_money (
+            line_total (left, first_count),
+            line_total (right, second_count)
+        ))
+    }
+}
+
+pub base_price : Product -&gt; Quote
+base_price Book = Priced(Money(2000))
+base_price Pen = Priced(Money(300))
+
+pub tariff_price : Int -&gt; Product -&gt; Quote
+tariff_price tariff product = match base_price product {
+    Unavailable =&gt; Unavailable
+    Priced(Money(cents)) =&gt; Priced(Money(cents + tariff))
+}
+
+pub sample_order : Unit -&gt; Order
+sample_order () = Order(Line(Book, Quantity(2)), Line(Pen, Quantity(3)))</code></pre>
+<p><code>line_total</code> unwraps cents and count separately, multiplies them, and wraps the result as money. <code>add_money</code> unwraps two money amounts and adds them. These explicit constructor patterns and constructions cross the representation boundary; they provide no implicit conversion between money and quantity. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#tuples-and-constructors">newtype and application rules</a> preserve that distinction.</p>
+<p>In <code>quote_with</code>, both <code>unit_price</code> calls occur before the availability match. The first arm handles an unavailable first price, regardless of the second. The next arm handles an available first price and an unavailable second. Only the final arm can calculate both line totals. These cases establish the availability rule independently of the selected pricing function.</p>
+<p><code>base_price</code> supplies the two stated prices. <code>tariff_price</code> keeps the availability distinction and adds its captured tariff to each available unit price. It leaves quantity multiplication to <code>line_total</code>, so a tariff of 100 contributes <code>2 * 100 + 3 * 100</code>, or 500 cents, to this order.</p>
+</section>
+<section id="supply-the-pricing-function-directly" class="level2">
+<h2 class="anchored" data-anchor-id="supply-the-pricing-function-directly">Supply the pricing function directly</h2>
+<p>The calculation can already run with an ordinary function parameter:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+
+main : Unit -&gt; Orders.Quote
+main () = Orders.quote_with (Orders.base_price, Orders.sample_order ())</code></pre>
+<p>Run the commands in this chapter from the <code>content/cases</code> directory. Predict the quote from the two line totals, then run this entry:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash supplying-a-local-pricing-policy/src/01-explicit-policy.ash
+Priced(4900) : Quote</code></pre>
+<p>The book line contributes 4000 cents and the pen line contributes 900 cents. The printed <code>4900</code> is the representation of the <code>Money</code> inside <code>Priced</code>; <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/docs/tools/ash.md#successful-output">the tool renders a newtype through its representation</a>. The source result remains <code>Quote</code>, whose <code>Priced</code> field is <code>Money</code>.</p>
+<p>Passing the function supplies this calculation’s dependency directly. The next question is where a generic operation obtains behavior for a particular policy type.</p>
+</section>
+<section id="select-an-imported-policy" class="level2">
+<h2 class="anchored" data-anchor-id="select-an-imported-policy">Select an imported policy</h2>
+<p>A policy token makes that choice part of an interface contract. In <code>pricing.ash</code>, <code>PricePolicy&lt;P&gt;</code> requires <code>unit_price</code> to accept both a token of type <code>P</code> and a product. The result is still an available unit price or <code>Unavailable</code>. The generic <code>quote_order</code> accepts the same token and an order:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+
+pub interface PricePolicy&lt;P&gt; {
+    unit_price : (P, Orders.Product) -&gt; Orders.Quote
+}
+
+pub quote_order : (P, Orders.Order) -&gt; Orders.Quote where PricePolicy&lt;P&gt;
+quote_order (policy, order) = {
+    let price = fn(product) {
+        unit_price (policy, product)
+    }
+    Orders.quote_with (price, order)
+}</code></pre>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#interfaces-and-constrained-schemes">interface requirement</a> supplies behavior for the complete application <code>PricePolicy&lt;P&gt;</code>. Inside <code>quote_order</code>, <code>price</code> retains the token and calls the required method with each product. It has the ordinary function shape that <code>Orders.quote_with</code> needs. The order itself still comes from the caller; the adapter changes how prices are supplied, not which order is priced.</p>
+<p><code>base_policy.ash</code> owns a public nominal token and its implementation:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+pub import pricing (PricePolicy)
+import pricing (unit_price)
+
+pub newtype BasePolicy = BasePolicy(Unit)
+
+pub impl PricePolicy&lt;BasePolicy&gt; {
+    unit_price (BasePolicy(ignored), product) = Orders.base_price product
+}</code></pre>
+<p><code>BasePolicy</code> carries unit because this implementation needs no configuration. Its method ignores that unit and uses <code>base_price</code>. The public import exposes the existing <code>PricePolicy</code> identity through this module so clients can select its implementation. The private method import makes the <code>unit_price</code> spelling available for the implementation body.</p>
+<p>The entry imports the operation and explicitly selects the public fact:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+import pricing (quote_order)
+import base_policy (BasePolicy, impl PricePolicy)
+
+main : Unit -&gt; Orders.Quote
+main () = quote_order (BasePolicy(()), Orders.sample_order ())</code></pre>
+<p><code>BasePolicy</code> imports the type and its public constructor. The separate <code>impl PricePolicy</code> item selects implementation evidence; it binds no source name. <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#imports-and-namespaces">Importing names alone does not select implementations</a>. Follow the token to <code>PricePolicy&lt;BasePolicy&gt;</code>, then predict the quote:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash supplying-a-local-pricing-policy/src/02-imported-policy.ash
+Priced(4900) : Quote</code></pre>
+<p>The answer is again 4900 cents because the selected method supplies the same unit prices. Selection is checked before execution. The method then runs as an ordinary function, without a runtime policy registry.</p>
+</section>
+<section id="capture-a-tariff-in-a-local-method" class="level2">
+<h2 class="anchored" data-anchor-id="capture-a-tariff-in-a-local-method">Capture a tariff in a local method</h2>
+<p>An imported implementation has a module-owned policy type. A caller can instead introduce a local nominal key and supply exact behavior in a block, following <a href="./libraries-supplying-scoped-evidence.html">scoped evidence</a>. <code>TariffPolicy</code> below carries unit as well: the tariff belongs to the method’s ordinary capture, not the token payload.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+import pricing (PricePolicy, unit_price, quote_order)
+
+main : Unit -&gt; (Orders.Quote, Orders.Quote)
+main () = {
+    newtype TariffPolicy = TariffPolicy(Unit)
+    let order = Orders.sample_order ()
+    let first = {
+        let tariff = 100
+        with PricePolicy&lt;TariffPolicy&gt; {
+            unit_price (TariffPolicy(ignored), product) = Orders.tariff_price tariff product
+        }
+        quote_order (TariffPolicy(()), order)
+    }
+    let second = {
+        let tariff = 200
+        with PricePolicy&lt;TariffPolicy&gt; {
+            unit_price (TariffPolicy(ignored), product) = Orders.tariff_price tariff product
+        }
+        quote_order (TariffPolicy(()), order)
+    }
+    (first, second)
+}</code></pre>
+<p>Each block binds its integer tariff before <code>with</code>. The supplied method can capture that preceding value. The declaration supplies the complete application <code>PricePolicy&lt;TariffPolicy&gt;</code> only in its following lexical remainder, which includes that block’s <code>quote_order</code> call. It is exact evidence rather than a local implementation search.</p>
+<p>The two evidence sources have disjoint scopes. The second begins after the first block has returned, so they never compete for the same active key. Predict both amounts from the five items:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash supplying-a-local-pricing-policy/src/03-local-policy.ash
+(Priced(5400), Priced(5900)) : (Quote, Quote)</code></pre>
+<p>The second tariff adds 1000 cents to the base total: <code>2 * 2200 + 3 * 500 = 5900</code>. The distinction between the blocks concerns which method a source occurrence selects. It does not add runtime nominal creation or a dynamically replaced global policy. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#scoped-exact-evidence">exact-evidence rules</a> define the source scope and the ordinary captures separately.</p>
+</section>
+<section id="keep-nested-choices-distinct" class="level2">
+<h2 class="anchored" data-anchor-id="keep-nested-choices-distinct">Keep nested choices distinct</h2>
+<p>Nested choices need distinct active keys. Reusing the same complete key in two overlapping <code>with</code> declarations would supply duplicate evidence, rather than shadowing the outer source. This version introduces <code>OuterPolicy</code> and <code>InnerPolicy</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+import pricing (PricePolicy, unit_price, quote_order)
+
+main : Unit -&gt; (Orders.Quote, Orders.Quote, Orders.Quote)
+main () = {
+    newtype OuterPolicy = OuterPolicy(Unit)
+    let order = Orders.sample_order ()
+    let tariff = 100
+    with PricePolicy&lt;OuterPolicy&gt; {
+        unit_price (OuterPolicy(ignored), product) = Orders.tariff_price tariff product
+    }
+    let before = quote_order (OuterPolicy(()), order)
+    let inside = {
+        newtype InnerPolicy = InnerPolicy(Unit)
+        let tariff = 200
+        with PricePolicy&lt;InnerPolicy&gt; {
+            unit_price (InnerPolicy(ignored), product) = Orders.tariff_price tariff product
+        }
+        quote_order (InnerPolicy(()), order)
+    }
+    let after = quote_order (OuterPolicy(()), order)
+    (before, inside, after)
+}</code></pre>
+<p>The <code>before</code> and <code>after</code> calls both pass an <code>OuterPolicy</code> token and therefore need <code>PricePolicy&lt;OuterPolicy&gt;</code>. The inner call passes an <code>InnerPolicy</code> token and needs <code>PricePolicy&lt;InnerPolicy&gt;</code>. Both sources are active in the inner remainder, but their nominal keys differ. Predict which tariff each call uses:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash supplying-a-local-pricing-policy/src/04-nested-policies.ash
+(Priced(5400), Priced(5900), Priced(5400)) : (Quote, Quote, Quote)</code></pre>
+<p>The inner integer binding named <code>tariff</code> does not change the 100 already captured by the outer method. Leaving the inner block also leaves the outer source available to <code>after</code>. The result follows the call’s token type and lexical evidence, not the most recently written tariff value.</p>
+</section>
+<section id="return-the-quoting-function" class="level2">
+<h2 class="anchored" data-anchor-id="return-the-quoting-function">Return the quoting function</h2>
+<p>A caller may want to choose a tariff once and retain a function that prices later orders. The public contract needed for that task is <code>Order -&gt; Quote</code>; it does not need to mention the local policy type. <code>make_pricer</code> builds precisely that function:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+import pricing (PricePolicy, unit_price, quote_order)
+
+make_pricer : Int -&gt; (Orders.Order -&gt; Orders.Quote)
+make_pricer tariff = {
+    newtype TariffPolicy = TariffPolicy(Unit)
+    let policy = TariffPolicy(())
+    with PricePolicy&lt;TariffPolicy&gt; {
+        unit_price (TariffPolicy(ignored), product) = Orders.tariff_price tariff product
+    }
+    fn(order) {
+        quote_order (policy, order)
+    }
+}
+
+main : Unit -&gt; (Orders.Quote, Orders.Quote, Orders.Quote)
+main () = {
+    let first = make_pricer 100
+    let second = make_pricer 200
+    let order = Orders.sample_order ()
+    (first order, second order, first order)
+}</code></pre>
+<p>The returned function’s body occurs after <code>with</code>, so <code>quote_order</code> selects <code>PricePolicy&lt;TariffPolicy&gt;</code> there. The checked closure retains the selected method function, its tariff capture, and the token needed by the call. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#local-nominal-scope">local nominal scope rule</a> permits this result because its exposed <code>Orders.Order -&gt; Orders.Quote</code> type contains no local identity.</p>
+<p><code>main</code> constructs both quoting functions before calling either one. The two factory calls use the same lexical nominal declaration; their ordinary tariff captures differ. No runtime-fresh nominal identity is needed. Predict the three calls, including the repeated call to <code>first</code> after <code>second</code> exists:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash supplying-a-local-pricing-policy/src/05-returned-closure.ash
+(Priced(5400), Priced(5900), Priced(5400)) : (Quote, Quote, Quote)</code></pre>
+<p>Both evidence blocks have returned by the time these functions run. Each closure uses its retained method and values. Calling it does not select new evidence in the caller’s scope or export an evidence fact for other calls. This is the separation between lexical availability and retained behavior specified by the <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#scoped-exact-evidence">scoped exact evidence rules</a>.</p>
+</section>
+<section id="distinguish-zero-from-unavailable" class="level2">
+<h2 class="anchored" data-anchor-id="distinguish-zero-from-unavailable">Distinguish zero from unavailable</h2>
+<p>The sample order alone cannot distinguish a zero price from a missing price, or reveal what happens on a zero-quantity line. <code>06-boundary-orders.ash</code> compares those cases. <code>zero_price</code> makes every product available for zero cents; <code>books_only</code> and <code>pens_only</code> leave one product unavailable. The final three calls also pass these behaviors through local interface evidence:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+import orders (Money, Quantity, Product, Quote, Book, Pen, Line, Order, Priced, Unavailable)
+import pricing (PricePolicy, unit_price, quote_order)
+
+zero_price : Product -&gt; Quote
+zero_price product = Priced(Money(0))
+
+books_only : Product -&gt; Quote
+books_only Book = Priced(Money(2000))
+books_only Pen = Unavailable
+
+pens_only : Product -&gt; Quote
+pens_only Book = Unavailable
+pens_only Pen = Priced(Money(300))
+
+main : Unit -&gt; (Quote, Quote, Quote, Quote, Quote, Quote, Quote, Quote, Quote)
+main () = {
+    let empty_order = Order(Line(Book, Quantity(0)), Line(Pen, Quantity(0)))
+    let no_books = Order(Line(Book, Quantity(0)), Line(Pen, Quantity(3)))
+    let no_pens = Order(Line(Book, Quantity(2)), Line(Pen, Quantity(0)))
+    newtype MissingPenPolicy = MissingPenPolicy(Unit)
+    with PricePolicy&lt;MissingPenPolicy&gt; {
+        unit_price (MissingPenPolicy(ignored), product) = books_only product
+    }
+    newtype FreePolicy = FreePolicy(Unit)
+    with PricePolicy&lt;FreePolicy&gt; {
+        unit_price (FreePolicy(ignored), product) = zero_price product
+    }
+    (
+        Orders.quote_with (zero_price, Orders.sample_order ()),
+        Orders.quote_with (Orders.base_price, empty_order),
+        Orders.quote_with (books_only, Orders.sample_order ()),
+        Orders.quote_with (pens_only, no_books),
+        Orders.quote_with (books_only, no_pens),
+        Orders.quote_with (books_only, empty_order),
+        quote_order (MissingPenPolicy(()), Orders.sample_order ()),
+        quote_order (MissingPenPolicy(()), no_pens),
+        quote_order (FreePolicy(()), Orders.sample_order ())
+    )
+}</code></pre>
+<p>Before running, trace the availability match for each call. An order with no books still asks for the book price. Likewise, an order with no pens still asks for the pen price. Check the collected observation:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash supplying-a-local-pricing-policy/src/06-boundary-orders.ash</code></pre>
+<p>The following are all nine quote fields of that one captured result, in tuple order. The surrounding tuple syntax and repeated <code>Quote</code> type names are omitted. Quantities are shown as <code>(books, pens)</code>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Field</th>
+<th style="text-align: left;">Price source</th>
+<th style="text-align: left;">Quantities</th>
+<th style="text-align: left;">Observed quote</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">Explicit zero prices</td>
+<td style="text-align: left;"><code>(2, 3)</code></td>
+<td style="text-align: left;"><code>Priced(0)</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Explicit base prices</td>
+<td style="text-align: left;"><code>(0, 0)</code></td>
+<td style="text-align: left;"><code>Priced(0)</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">Explicit books only</td>
+<td style="text-align: left;"><code>(2, 3)</code></td>
+<td style="text-align: left;"><code>Unavailable</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">Explicit pens only</td>
+<td style="text-align: left;"><code>(0, 3)</code></td>
+<td style="text-align: left;"><code>Unavailable</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">Explicit books only</td>
+<td style="text-align: left;"><code>(2, 0)</code></td>
+<td style="text-align: left;"><code>Unavailable</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">Explicit books only</td>
+<td style="text-align: left;"><code>(0, 0)</code></td>
+<td style="text-align: left;"><code>Unavailable</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">7</td>
+<td style="text-align: left;">Local missing-pen policy</td>
+<td style="text-align: left;"><code>(2, 3)</code></td>
+<td style="text-align: left;"><code>Unavailable</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">8</td>
+<td style="text-align: left;">Local missing-pen policy</td>
+<td style="text-align: left;"><code>(2, 0)</code></td>
+<td style="text-align: left;"><code>Unavailable</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">9</td>
+<td style="text-align: left;">Local free policy</td>
+<td style="text-align: left;"><code>(2, 3)</code></td>
+<td style="text-align: left;"><code>Priced(0)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Fields 1 and 9 price five items at zero; field 2 multiplies available prices by zero quantities. All three yield an available zero total. Fields 4 and 5 show that zero quantity does not excuse a missing price, and field 6 applies that rule even when both quantities are zero. Fields 7 and 8 preserve the same distinction through <code>quote_order</code> and local evidence. Availability is a choice in this application contract, rather than a consequence of multiplication by zero or an implicit meaning of an Ash constructor.</p>
+</section>
+<section id="repair-three-crossed-boundaries" class="level2">
+<h2 class="anchored" data-anchor-id="repair-three-crossed-boundaries">Repair three crossed boundaries</h2>
+<p>The accepted programs rely on separate boundaries: the units of an argument, the evidence available at a call’s source position, and the identity exposed by a block’s result. Isolate each failure before changing the calculation.</p>
+<section id="keep-money-separate-from-quantity" class="level3">
+<h3 class="anchored" data-anchor-id="keep-money-separate-from-quantity">Keep money separate from quantity</h3>
+<p>This entry supplies money in both positions of <code>line_total</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders (Money, line_total)
+
+main : Unit -&gt; Money
+main () = line_total (Money(2000), Money(2))</code></pre>
+<p>The function expects <code>(Money, Quantity)</code>. Predict which argument and contract the tool will connect, then run the rejected entry:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en supplying-a-local-pricing-policy/src/07-mixed-units.ash
+This function argument must have type `(Money, Quantity)`, but has type `(Money, Money)`.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/07-mixed-units.ash:4:22
+4 | main () = line_total (Money(2000), Money(2))
+  |                      ^ This has type `(Money, Money)`.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/orders.ash:13:5
+13 | pub line_total : (Money, Quantity) -&gt; Money
+   |     ^ This function requires an argument of type `(Money, Quantity)`.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/07-mixed-units.ash:4:11
+4 | main () = line_total (Money(2000), Money(2))
+  |           ^ This is the containing function application.
+reason: type.argument</code></pre>
+<p>The primary label identifies the pair of money values. The second label points to <code>line_total</code>, whose signature requires a quantity in the second field; the last label identifies the containing application. Two integer representations do not make those source types equal. Correct the unit at construction:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders (Money, Quantity, line_total)
+
+main : Unit -&gt; Money
+main () = line_total (Money(2000), Quantity(2))</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash supplying-a-local-pricing-policy/src/07-mixed-units-fixed.ash
+4000 : Money</code></pre>
+<p>The corrected pair means 2000 cents per item and two items. Multiplication produces 4000 cents, still typed as money.</p>
+</section>
+<section id="supply-evidence-before-its-call" class="level3">
+<h3 class="anchored" data-anchor-id="supply-evidence-before-its-call">Supply evidence before its call</h3>
+<p>A later <code>with</code> cannot supply an earlier occurrence:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+import pricing (PricePolicy, unit_price, quote_order)
+
+main : Unit -&gt; Orders.Quote
+main () = {
+    newtype TariffPolicy = TariffPolicy(Unit)
+    let tariff = 100
+    let before = quote_order (TariffPolicy(()), Orders.sample_order ())
+    with PricePolicy&lt;TariffPolicy&gt; {
+        unit_price (TariffPolicy(ignored), product) = Orders.tariff_price tariff product
+    }
+    before
+}</code></pre>
+<p>The token and order fix this call’s requirement to <code>PricePolicy&lt;TariffPolicy&gt;</code>. Identify the following remainder of <code>with</code> and compare it with the position of <code>let before</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en supplying-a-local-pricing-policy/src/08-before-evidence.ash
+No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/08-before-evidence.ash:8:18
+8 |     let before = quote_order (TariffPolicy(()), Orders.sample_order ())
+  |                  ^ No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/pricing.ash:7:5
+7 | pub quote_order : (P, Orders.Order) -&gt; Orders.Quote where PricePolicy&lt;P&gt;
+  |     ^ This declaration introduced the interface requirement.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/08-before-evidence.ash:2:42
+2 | import pricing (PricePolicy, unit_price, quote_order)
+  |                                          ^ This import made the declaration available.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/pricing.ash:3:1
+3 | pub interface PricePolicy&lt;P&gt; {
+  | ^ This interface participates in the failing evidence selection.
+4 |     unit_price : (P, Orders.Product) -&gt; Orders.Quote
+  | ^ This interface participates in the failing evidence selection.
+5 | }
+  | ^ This interface participates in the failing evidence selection.
+reason: constraint.unsatisfied</code></pre>
+<p>The first label locates the call that lacks evidence. The remaining labels connect it to the constrained declaration, its import, and the interface. The method body itself is well formed; its evidence source is unavailable at that earlier call. Inference does not move the occurrence into a later lexical scope. Move the call into the following remainder:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import orders as Orders
+import pricing (PricePolicy, unit_price, quote_order)
+
+main : Unit -&gt; Orders.Quote
+main () = {
+    newtype TariffPolicy = TariffPolicy(Unit)
+    let tariff = 100
+    with PricePolicy&lt;TariffPolicy&gt; {
+        unit_price (TariffPolicy(ignored), product) = Orders.tariff_price tariff product
+    }
+    let quoted = quote_order (TariffPolicy(()), Orders.sample_order ())
+    quoted
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash supplying-a-local-pricing-policy/src/08-before-evidence-fixed.ash
+Priced(5400) : Quote</code></pre>
+<p>The tariff is still captured before <code>with</code>, and the quote calculation is the same. The changed order places the occurrence where its evidence is available.</p>
+</section>
+<section id="keep-local-identities-out-of-outward-types" class="level3">
+<h3 class="anchored" data-anchor-id="keep-local-identities-out-of-outward-types">Keep local identities out of outward types</h3>
+<p>Even an unused local token cannot leave its owning block:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>main : Unit -&gt; Int
+main () = {
+    let escaped = {
+        newtype TariffPolicy = TariffPolicy(Unit)
+        TariffPolicy(())
+    }
+    0
+}</code></pre>
+<p>The inner block attempts to return <code>TariffPolicy(())</code> into <code>escaped</code>. <code>main</code> would eventually return an integer, but the intermediate binding already crosses the nominal boundary:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en supplying-a-local-pricing-policy/src/09-local-escape.ash
+This type or effect row exposes a local nominal type outside its scope.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/09-local-escape.ash:5:9
+5 |         TariffPolicy(())
+  |         ^ This type or effect row exposes a local nominal type outside its scope.
+  --&gt; /path/to/ash-doc/content/cases/supplying-a-local-pricing-policy/src/09-local-escape.ash:4:9
+4 |         newtype TariffPolicy = TariffPolicy(Unit)
+  |         ^ This scope owns the local nominal type.
+reason: type.local-nominal-escape</code></pre>
+<p>The labels connect the escaping expression to the declaration that owns its local identity. Ignoring <code>escaped</code> afterward cannot repair its outward type. For the pricing task, keep the token inside and return the function that consumes it. The complete accepted repair is <a href="https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/supplying-a-local-pricing-policy/src/05-returned-closure.ash"><code>05-returned-closure.ash</code></a>, shown above. Its <code>make_pricer</code> returns <code>Order -&gt; Quote</code>, and its checked calls demonstrate the retained tariffs after the local scope returns. The repair changes the outward contract to the result the caller needs, without exporting the token or evidence.</p>
+</section>
+</section>
+<section id="account-for-the-work" class="level2">
+<h2 class="anchored" data-anchor-id="account-for-the-work">Account for the work</h2>
+<p>For this two-line representation, a successful quote calls its price function twice, multiplies twice, and adds the line totals once. A tariff policy also adds a tariff to each available unit price. Both price requests happen before the availability match, while unavailable quotes skip the line arithmetic. There is no order-length recursion in this fixed representation. These are constant counts of operations; integer arithmetic cost also depends on the sizes of the integer values.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/elaboration.md#interface-evidence-lowering">lowering rules</a> turn selected methods into ordinary functions and applications. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#tuples-constructors-and-matches">execution rules</a> erase newtype wrappers without allocating wrapper cells. Constructed <code>Order</code>, <code>Line</code>, and <code>Quote</code> values, tuples, and retained closures still have their ordinary representation costs. This account does not infer allocation behavior or running time from the printed amounts.</p>
+</section>
+<section id="practice-choose-and-retain-a-policy" class="level2">
+<h2 class="anchored" data-anchor-id="practice-choose-and-retain-a-policy">Practice: choose and retain a policy</h2>
+<p>Work in a scratch copy of this directory so the relative module imports remain available.</p>
+<ol type="1">
+<li>Change the tariff in the first block of <code>03-local-policy.ash</code> to 50. Calculate its quote from the unit prices and quantities, then run it. Explain why the second quote keeps its original tariff.</li>
+<li>In <code>04-nested-policies.ash</code>, use an <code>OuterPolicy</code> token for the inner call. Predict its complete interface requirement and all three quotes before checking the result. Keep the two evidence declarations distinct.</li>
+<li>In <code>05-returned-closure.ash</code>, pass an order containing one book and four pens to both returned functions. Update only the order construction, predict both quotes, and explain which captured values they use.</li>
+<li>Change the application contract so a zero-quantity line needs no price. Work first on <code>Orders.quote_with</code> in the scratch copy. Use integer <code>==</code> to identify zero counts, retain <code>Money</code> and <code>Quantity</code> at the boundary, and predict which rows of the boundary table should change. Run both the direct and local-policy calls to compare the revised contract.</li>
+</ol>
+<p>The quote calculation now has explicit units, an availability rule, and a choice of behavior supplied directly, through an imported implementation, or in a local lexical remainder. A retained quoting function can carry the chosen method and tariff while exposing only <code>Order -&gt; Quote</code>. The next design question is what an order representation should do when it contains a varying number of lines; that change would need its own data cases and cost argument.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-preserving-outcomes-through-cleanup.html" class="pagination-link" aria-label="Preserving outcomes through cleanup">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Preserving outcomes through cleanup</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-querying-an-immutable-world.html" class="pagination-link" aria-label="Querying an immutable world">
+        <span class="nav-page-text"><span class="chapter-title">Querying an immutable world</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

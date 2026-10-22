@@ -1,0 +1,799 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Retained-baseline resource calibration, 2026-10-08 · Ash</title><meta name="description" content="This is isolated TASK-0035 evidence under DN-0036. It changes neither Ash semantics nor production resource policy. Further optimization is paused; the user accepts current measured physical costs for continued…"><meta name="robots" content="index, follow"><meta property="og:title" content="Retained-baseline resource calibration, 2026-10-08 · Ash"><meta property="og:description" content="This is isolated TASK-0035 evidence under DN-0036. It changes neither Ash semantics nor production resource policy. Further optimization is paused; the user accepts current measured physical costs for continued…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Retained-baseline resource calibration, 2026-10-08 · Ash"><meta name="twitter:description" content="This is isolated TASK-0035 evidence under DN-0036. It changes neither Ash semantics nor production resource policy. Further optimization is paused; the user accepts current measured physical costs for continued…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/provider-experiments/resource-calibration/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/provider-experiments/resource-calibration/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/README.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Retained-baseline resource calibration, 2026-10-08","headline":"Retained-baseline resource calibration, 2026-10-08","description":"This is isolated TASK-0035 evidence under DN-0036. It changes neither Ash semantics nor production resource policy. Further optimization is paused; the user accepts current measured physical costs for continued…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/provider-experiments/resource-calibration/","@id":"https://dikini.github.io/ash/docs/design/provider-experiments/resource-calibration/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/README.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="retained-baseline-resource-calibration-2026-10-08" data-pagefind-meta="title">Retained-baseline resource calibration, 2026-10-08</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/README.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This is isolated <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/tasks/TASK-0035-resource-analysis-relevance-and-fusion.md">TASK-0035</a>
+evidence under <a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>.
+It changes neither Ash semantics nor production resource policy. Further
+optimization is paused; the user accepts current measured physical costs for
+continued feature development under the provisional decision budgets below.</p>
+<h2 id="finding">Finding</h2>
+<p>The retained compiler executes the realistic SQLite cases with median wall
+times of approximately 0.06–0.23 seconds and 22–42 MiB process peak RSS on this host. Copying and
+persistence exceed ordinary admission charges despite these modest observed
+costs. The old numerical ceilings were not calibrated against these programs.
+There is no evidence here that their practical execution cost requires another
+optimization before delivery.</p>
+<p>Input size alone is a poor allowance predictor. A flat program with 1,546
+surface nodes incurs 10,301 Source charges; copying has 1,480 nodes and
+1,212,707 charges, about 118 times as many. Adding the measured complexity
+terms improves Source coverage but still misses copying and bound NUL. These
+fits cannot serve as general resource-program admission rules.</p>
+<h2 id="baseline-and-scope">Baseline and scope</h2>
+<p>The worktree starts at <code>ef7956a318dee7acef43dae45923902c6181839c</code>, with executable
+source equal to retained Original <code>eee40a1</code> and Common <code>5a1da1c</code>. The rejected
+producer <code>7af4f89</code> is excluded and preserved in its recovery branch. No worktree
+was destructively reset. <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/baseline.json">Baseline provenance</a> pins the source
+and two experimental SQLite input patches from recovery <code>11de19c8</code>.</p>
+<p>Those patches supply the real SQLite library, adapter and native assertions;
+they are separate experimental dependencies. The measured compiler also has
+feature-gated observation hooks and a finite diagnostic allowance. It is not
+an unmodified production binary or a newly verified SQLite delivery.</p>
+<p>The latest retained executable preparation had focused integration and Clippy
+verification. The preceding <code>2a0595d</code> checkpoint had the last complete workspace
+gate. This calibration does not claim a new full workspace gate or authorize
+merging experimental inputs into shared implementation.</p>
+<h2 id="measuring-actual-work">Measuring actual work</h2>
+<p>These quantities remain separate:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Measurement</th>
+<th>Meaning and limits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU execution</td>
+<td>Native-precision <code>getrusage(RUSAGE_CHILDREN)</code> deltas</td>
+<td>Actual user plus system CPU consumed by the timer wrapper and reaped target descendants; excludes the Python runner. It is not a machine instruction count.</td>
+</tr>
+<tr>
+<td>Elapsed time</td>
+<td>Target GNU time and per-phase monotonic timers</td>
+<td>GNU time has centisecond formatting; phase timers retain nanoseconds. Wall time includes scheduling and I/O delays. The paired reference also records matching wrapper wall time.</td>
+</tr>
+<tr>
+<td>Resident memory</td>
+<td>Whole-process peak RSS; <code>/proc/self/status</code> at phase boundaries</td>
+<td>Peak RSS includes libraries and allocator retention. Boundary RSS is not a phase peak, live heap size or allocated-byte total.</td>
+</tr>
+<tr>
+<td>Admission charges</td>
+<td>Six existing ledger endpoints</td>
+<td>Counts visits, comparisons, retained records and precharged storage capacity. These are policy charges, not literal operations or physical memory bytes.</td>
+</tr>
+<tr>
+<td>Input descriptors</td>
+<td>One pre-inference surface graph traversal</td>
+<td>Immutable size/complexity predictors; they never substitute for measured execution.</td>
+</tr>
+</tbody>
+</table>
+<p>For example, <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/capture/value.rs">evidence indexing</a>
+precharges maximum table capacity even when duplicate keys need fewer entries.
+Context path conversion charges <code>3 * length + 1</code> for storage, traversal and
+reversal. Other charges closely follow executed kind traversals or comparison
+attempts. Adding these heterogeneous charges does not produce an instruction
+count. Hardware performance counters were unavailable: the host denied the
+<code>perf</code> probe with <code>perf_event_paranoid=4</code>; no system policy was changed.</p>
+<p>The six reported owners exclude graph-wide interface constraints, separate
+builder/rewrite and coverage budgets, syntax and runtime budgets. Their totals
+are not the complete work of compilation. The diagnostic override reaches
+some unreported owners too; this round does not calibrate every existing limit.</p>
+<h2 id="collection-and-verification">Collection and verification</h2>
+<p>Release compilation occurred once in a connected batch, followed by one
+additional generated-resource test build. Measurements invoke those exact
+artifacts directly; build time is excluded. The same binary runs with
+observation on and off and the same diagnostic base allowance of 16,777,216
+units; Core retains its threefold allowance of 50,331,648. The ordinary
+327,680 / 983,040 constants remain unchanged.</p>
+<p>The historical builds used two Cargo jobs, a deviation from the coordinated
+one-job policy. Their receipts remain unchanged. Future reproduction uses one
+job; no rebuild or replacement of measured artifacts is implied.</p>
+<p>The corpus contains 44 programs: flat declaration width, nested types,
+prerequisite depth, public reexport width/depth, string payload size, repeated
+resource scopes and five unchanged realistic SQLite cases. Twenty programs
+train the models; 24 are held out, including all five SQLite programs.</p>
+<p>Each full round has one warmup and three measured fresh processes per mode:
+352 processes, including 264 measured and 88 warmups. The first round supplied
+the initial fits. A second round added finer CPU measurements of the same
+corpus. Both rounds completed every case with zero failures. This replay is a
+measurement replication, not a new independent validation set. A prior
+12-case smoke batch also passed both modes.</p>
+<p>The native runs execute exactly one named test each and retain original
+database values, persistence/reopen, completion and release assertions. The
+runner rejects zero-test success, malformed records, missing/aborted phases,
+changed inputs/artifacts and timeout. A connected Python self-check covers
+those measurement failures. Feature-off release library checking passed;
+format and evidence checks are recorded in the capsule. There was no full
+workspace gate for this isolated experiment.</p>
+<p>The host was Linux x86-64, AMD Ryzen 7 7435HS, 16 logical CPUs; Rust 1.97.1,
+LLVM 22.1.6, optimized release profile. These are local desktop measurements,
+not cross-machine performance guarantees. Three repetitions report observed
+ranges, not statistical confidence bounds.</p>
+<h2 id="actual-time-and-memory">Actual time and memory</h2>
+<p>These are observation-off medians from the CPU-precision round. Parentheses
+show the three-run CPU range. CPU includes the timer wrapper; target wall time
+and peak RSS come separately from GNU time.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>SQLite case</th>
+<th align="right">Actual CPU seconds</th>
+<th align="right">Target wall seconds</th>
+<th align="right">Peak RSS MiB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copying</td>
+<td align="right">0.184 (0.180–0.215)</td>
+<td align="right">0.18</td>
+<td align="right">33.57</td>
+</tr>
+<tr>
+<td>Persistence</td>
+<td align="right">0.229 (0.228–0.259)</td>
+<td align="right">0.23</td>
+<td align="right">42.38</td>
+</tr>
+<tr>
+<td>Resume</td>
+<td align="right">0.062 (0.061–0.066)</td>
+<td align="right">0.06</td>
+<td align="right">22.54</td>
+</tr>
+<tr>
+<td>Bound NUL</td>
+<td align="right">0.182 (0.179–0.184)</td>
+<td align="right">0.18</td>
+<td align="right">33.50</td>
+</tr>
+<tr>
+<td>Forwarding</td>
+<td align="right">0.064 (0.063–0.065)</td>
+<td align="right">0.06</td>
+<td align="right">22.15</td>
+</tr>
+</tbody>
+</table>
+<p>Small programs consume real CPU even when GNU time prints <code>0.00</code>: flat width
+one consumes a median 6.5 ms of wrapper-inclusive child CPU; width 128 consumes
+25.0 ms. These measurements include startup, rendering and teardown. They
+must not be interpreted as pure checking costs or infer asymptotic complexity
+from such small totals.</p>
+<p>The flat-width/copying comparison illustrates the distinction: about 118 times
+the Source charge corresponds to about 7.3 times the measured whole-process
+CPU, or 16 times the observed Source wall time, in this round. These are
+different programs and costs; there is no universal conversion from a charge
+unit to CPU time.</p>
+<p>Input collection traverses each finite surface module once; it does not unroll
+recursive calls. Actual checker timing includes every traversal, context
+expansion or repeated analysis the implementation executes. Runtime recursion
+belongs to the separately timed evaluation phase. Recursive call structure
+was not an independent scaling axis in this corpus, so the estimates do not
+characterize that dimension.</p>
+<p>For compiler allowances, complexity means the checking work induced by source
+structure. Runtime algorithmic complexity is a separate axis: executing one
+recursive function many times need not require equivalent static unfolding.
+Similarly sized sources can induce different instantiation, constraint and
+capture-analysis costs. The present aggregate descriptors do not establish
+which of those dimensions explains the observed gap.</p>
+<p>The phase timers separate compilation from evaluation. In the first full
+round, evaluation consumed 0.4–1.8% of pipeline time. Copying's median Source
+time was 96.6 ms, about 52% of its pipeline; Core was 55.5 ms, about 30%.
+Persistence's Source was 55.1 ms, about 26%; Core was 105.3 ms, about 49%.
+Persistence has half copying's Source charge but is slower overall because its
+Core and final-elaboration costs are larger. Source charge alone cannot rank
+total compiler cost.</p>
+<p>Whole-process peak memory also needs separate interpretation. Copying's
+high-water RSS is already near its final peak during Source checking.
+Persistence rises substantially during Core validation. Cumulative visits
+cannot establish peak live memory or isolate temporary allocations.</p>
+<p>Observation-on/off CPU median differences for the five SQLite programs range
+from approximately −0.1% to +7.2% in the precision round. Small negative
+differences reflect measurement variation, not negative observer cost. Both
+modes retain feature-enabled allowance machinery. This comparison does not
+measure that machinery against a separately built ordinary executable.</p>
+<h2 id="existing-ash-language-fixtures">Existing Ash language fixtures</h2>
+<p>Eight existing positive fixtures supplement the resource corpus. Each completed
+one warmup and three measurements in both observation modes, with exact outputs
+and source/test provenance checked. These are ordinary language baselines,
+not an application corpus. The table uses observation-on charge medians and
+observation-off physical measurements. GNU wall time is formatted in 10 ms
+steps; <code>0.00</code> does not mean zero elapsed time.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Existing fixture</th>
+<th align="right">Source units</th>
+<th align="right">Final units</th>
+<th align="right">Core units</th>
+<th align="right">OFF CPU median (ms)</th>
+<th align="right">OFF CPU range (ms)</th>
+<th align="right">OFF wall median (s)</th>
+<th align="right">OFF peak RSS median (MiB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Higher-order application</td>
+<td align="right">180</td>
+<td align="right">200</td>
+<td align="right">326</td>
+<td align="right">9.734</td>
+<td align="right">6.401–10.518</td>
+<td align="right">0.00</td>
+<td align="right">12.28</td>
+</tr>
+<tr>
+<td>Global recursive scope</td>
+<td align="right">238</td>
+<td align="right">262</td>
+<td align="right">377</td>
+<td align="right">6.795</td>
+<td align="right">6.509–7.129</td>
+<td align="right">0.00</td>
+<td align="right">12.31</td>
+</tr>
+<tr>
+<td>Local recursive scope</td>
+<td align="right">166</td>
+<td align="right">180</td>
+<td align="right">388</td>
+<td align="right">7.417</td>
+<td align="right">7.016–8.619</td>
+<td align="right">0.00</td>
+<td align="right">12.08</td>
+</tr>
+<tr>
+<td>Combined effects/rows</td>
+<td align="right">5,159</td>
+<td align="right">3,936</td>
+<td align="right">1,993</td>
+<td align="right">13.596</td>
+<td align="right">10.355–13.784</td>
+<td align="right">0.01</td>
+<td align="right">14.22</td>
+</tr>
+<tr>
+<td>Newtype facade</td>
+<td align="right">275</td>
+<td align="right">197</td>
+<td align="right">346</td>
+<td align="right">7.031</td>
+<td align="right">6.692–7.299</td>
+<td align="right">0.00</td>
+<td align="right">12.29</td>
+</tr>
+<tr>
+<td>Higher-kinded linked</td>
+<td align="right">1,390</td>
+<td align="right">765</td>
+<td align="right">783</td>
+<td align="right">7.902</td>
+<td align="right">7.803–8.354</td>
+<td align="right">0.00</td>
+<td align="right">14.26</td>
+</tr>
+<tr>
+<td>Polymorphic methods</td>
+<td align="right">5,486</td>
+<td align="right">3,206</td>
+<td align="right">4,147</td>
+<td align="right">10.222</td>
+<td align="right">9.685–11.527</td>
+<td align="right">0.00</td>
+<td align="right">15.10</td>
+</tr>
+<tr>
+<td>Relational module bundle</td>
+<td align="right">9,244</td>
+<td align="right">4,101</td>
+<td align="right">5,032</td>
+<td align="right">15.936</td>
+<td align="right">13.284–16.874</td>
+<td align="right">0.01</td>
+<td align="right">14.86</td>
+</tr>
+</tbody>
+</table>
+<p>All six reported ledgers remain below their ordinary limits in these fixtures.
+Global/local recursive examples exercise simultaneous scope and retained
+recursive references; their executed path terminates without invoking the
+retained back-reference. They do not measure deep runtime recursion or scaling
+in recursive checker obligations. The repository still lacks an established
+basic application corpus of parsers, data pipelines and substantial algorithms
+for this comparison.</p>
+<p>The original supplemental manifest declared pinned test source hashes but
+omitted their snapshot paths. The collector correctly rejected all 64 records
+for incomplete provenance snapshots, although outputs and file hashes agreed.
+Adding the missing paths corrected the manifest; the 64-process rerun passed.
+Both rounds remain preserved, and rejected records stay excluded from estimates.
+The paired and supplemental collection therefore used 256 processes instead
+of the planned 192, with 192 valid and 64 rejected. Serial execution including
+review and correction finished in 95.6 seconds, within the frozen 180-second
+window. Common's compiler window has been returned; no further engines ran.</p>
+<h2 id="budget-work-and-limit">Budget, work and limit</h2>
+<p>The user's terminology distinguishes three roles:</p>
+<ul>
+<li>A <strong>budget</strong> predicts how much a language structure should typically cost.</li>
+<li><strong>Work</strong> records how much processing actually occurred; CPU/time/memory
+record corresponding execution costs in their own units.</li>
+<li>A <strong>limit</strong> controls whether checking may continue. Headroom and stopping
+thresholds belong to this policy, not to the typical-cost estimate.</li>
+</ul>
+<p>Existing implementation names such as <code>TypeWorkBudget</code> refer to bounded
+accounting. Keep their recorded charges distinct from a new predictive budget
+and from executed-operation counts: their reservation component prevents
+calling every charged unit actual processing. The next instrumentation must
+separate those components before fitting a language-level work budget.</p>
+<p>For the known witnesses, measured medians provide reference costs. They are
+not general budgets for other structures. The initial fitted envelopes below
+include cushions/headroom and were evaluated as possible allowances; they
+must not be relabeled typical-cost predictions.</p>
+<h2 id="charges-and-allowance-estimates">Charges and allowance estimates</h2>
+<p>The median charge vector preserves the previous baseline, allowing small
+fresh-process capacity variations where recorded. Source and Core ownership
+remain separate; repeated per-module cumulative counts are never summed.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th align="right">Source</th>
+<th align="right">Final elaboration</th>
+<th align="right">Independent Core</th>
+<th>Ordinary-limit deficit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copying</td>
+<td align="right">1,212,707</td>
+<td align="right">165,717</td>
+<td align="right">903,995</td>
+<td>Source</td>
+</tr>
+<tr>
+<td>Persistence</td>
+<td align="right">597,882</td>
+<td align="right">376,641</td>
+<td align="right">1,609,087</td>
+<td>Source, final elaboration, Core</td>
+</tr>
+<tr>
+<td>Resume</td>
+<td align="right">203,215</td>
+<td align="right">103,738</td>
+<td align="right">289,063</td>
+<td>None in these three owners</td>
+</tr>
+<tr>
+<td>Bound NUL</td>
+<td align="right">1,212,707</td>
+<td align="right">165,717</td>
+<td align="right">903,990</td>
+<td>Source</td>
+</tr>
+<tr>
+<td>Forwarding</td>
+<td align="right">216,584</td>
+<td align="right">107,066</td>
+<td align="right">315,193</td>
+<td>None in these three owners</td>
+</tr>
+</tbody>
+</table>
+<p>The estimator uses each case's maximum raw charge, nonnegative coefficients
+and a training-only positive residual cushion. It freezes all coefficients
+and cushions before collecting held-out cases. Independent review found exact
+agreement between frozen and completed values for all 24 phase/model pairs.
+Fitting requires full column rank, sufficient samples and multiple families.</p>
+<p>Each provisional envelope is
+<code>min(16_777_216, ceil(2 * max(1, prediction + training_cushion)))</code>.
+The twofold headroom and absolute cap are explicit experimental choices, not
+calibrated production recommendations. No held-out miss was caused by clipping
+at the cap. Raising that cap would not fix the inadequate predictions.</p>
+<p>Let <code>n</code> be surface nodes, <code>T = type_nodes * type_depth</code>,
+<code>I = imports * module_depth</code>, and <code>R = resource_sites * n</code>.
+The Source interaction prediction is
+<code>12.1522*n + 35.9890*T + 2.99266*I + 18.9161*R</code>, with cushion <code>31522.5643</code>.
+It proposes approximately 353,396 units for copying against 1,212,707 observed.
+The full equations, residuals and per-case coverage are preserved in the JSON
+evidence; rounded numbers here explain the result rather than define policy.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Owner</th>
+<th align="right">Simple size coverage</th>
+<th align="right">Interaction coverage</th>
+<th>Remaining interaction misses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resolution</td>
+<td align="right">24/24</td>
+<td align="right">24/24</td>
+<td>None in this corpus</td>
+</tr>
+<tr>
+<td>Module linking</td>
+<td align="right">24/24</td>
+<td align="right">24/24</td>
+<td>None in this corpus</td>
+</tr>
+<tr>
+<td>Linked interface</td>
+<td align="right">21/24</td>
+<td align="right">21/24</td>
+<td>Persistence, resume, forwarding</td>
+</tr>
+<tr>
+<td>Source</td>
+<td align="right">21/24</td>
+<td align="right">22/24</td>
+<td>Copying, bound NUL</td>
+</tr>
+<tr>
+<td>Final elaboration</td>
+<td align="right">19/24</td>
+<td align="right">19/24</td>
+<td>All five SQLite cases</td>
+</tr>
+<tr>
+<td>Independent Core</td>
+<td align="right">18/24</td>
+<td align="right">18/24</td>
+<td>All five SQLite cases, 64 KiB string</td>
+</tr>
+</tbody>
+</table>
+<p>A separate type-depth model covers 23/24 linked-interface cases, missing
+persistence. No model covers realistic final-elaboration/Core costs adequately.
+Resolution and linking estimates remain provisional within the sampled domain.</p>
+<h2 id="growth-and-interpretation">Growth and interpretation</h2>
+<ul>
+<li>Flat Source charges increase exactly 80 units per added function across
+widths 1–128; final elaboration adds 84 and Core adds 105.</li>
+<li>Nested type and prerequisite families have positive constant second
+differences over depths 8/12/16, supporting a quadratic component in this
+tested range. This is not an asymptotic proof.</li>
+<li>Resource scope totals include a large fixed library cost. Marginal Source
+charges per additional scope increase from 5,956 to 6,183.5 over the measured
+widths; sublinear total ratios do not establish linear scaling.</li>
+<li>String payload produces exactly <code>payload_bytes + 152</code> Core charges in the
+three sampled programs. The models record but omit payload bytes, explaining
+that predictable held-out miss. Source and final charges stay constant.</li>
+<li>Reexport depth increases resolution and checking while leaving final/Core
+charges unchanged in this family. One allowance formula for every phase
+would hide this distinction.</li>
+</ul>
+<p>The data establish missing predictors, not the cause of copying's amplification.
+Callable composition, branching, handlers and provider operations are possible
+dimensions to investigate. Claims about their individual contribution require
+controlled families or attribution evidence.</p>
+<p>Keep the retained baseline. The next decision should distinguish a practical
+CPU/memory requirement from an admission-policy requirement before selecting
+another optimization. Any revised source predictor must be tested against new
+programs, since this held-out set has now been examined.</p>
+<h2 id="incremental-limit-evaluation">Incremental limit evaluation</h2>
+<p>The user's follow-up proposes evaluating limits incrementally. A whole-program
+estimate before checking is not required. The unsuccessful fits above test one
+possible predictor; their failure does not prevent incremental control.</p>
+<p>Current structural ledgers already accumulate charges as checking proceeds.
+The next design can evaluate whether to continue at phase or bounded-work
+checkpoints, and can refine an allowance as relevant source, type and
+constraint structure becomes known. Size and complexity then inform policy
+and explain observed costs without requiring a complete cost prediction at
+entry. A configured CPU or memory ceiling can also be checked incrementally
+without a size-based prediction.</p>
+<p>The design must distinguish consumed charges, measured execution costs,
+discovered complexity facts and the allowance decision. In particular, it
+should say which discovered facts justify an adjustment and which represent
+work consumed. This lets us assess both expensive legitimate programs and
+unnecessary expansion using the same measurements. Report the reason for
+continuation or refusal and the selected finite overall policy.</p>
+<p>This is a design option, not implemented control. The current observers emit
+phase endpoints; the collector obtains whole-process CPU/RSS after execution
+and enforces an external timeout. It does not periodically enforce CPU or
+memory limits inside a phase, nor adjust allowances during checking. Moving to
+incremental evaluation needs checkpoint placement, ownership, measurement
+overhead and failure/retry behavior to be reviewed. The
+<a href="/ash/spec/static-semantics/#failure-ownership-and-constraint-resources">specification</a>
+already separates bounded compiler policy from Ash value semantics and requires retry
+with sufficient work to agree with a fresh run.</p>
+<p>Budget evaluation can also be incremental. At a checkpoint, compare observed
+work with the budget for the same processed language structure. Record both
+<code>work - budget</code> and <code>work / budget</code> where the budget is positive; keep an
+unfinished obligation separate. The budget may change as new relevant
+structure is discovered. A stopping decision remains a separate limit policy.</p>
+<h2 id="language-level-measures">Language-level measures</h2>
+<p>The user's next clarification sets the unit of study: language structures and
+their checking obligations. A program is a witness of those structures, not
+the definition of complexity. Surface node totals and the five SQLite programs
+alone cannot justify a language-wide allowance or checker design.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration-plan.md#language-structure-follow-up">follow-up measurement plan</a>
+derives measures from current type instantiation, evidence selection, exact
+effect instances, recursive bindings and resource-dependency rules. It pairs
+those structures with actual implementation visits, retained structures and
+CPU/RSS. This separates the question "which obligations arise?" from "how
+much work does this checker perform to discharge them?" without assuming that
+every repeated obligation is redundant.</p>
+<p>These measures may be discovered incrementally. No complete static expansion
+or runtime-recursion unrolling is required before checking begins. The next
+decision needs controlled variation of depth, branching, reuse and lexical
+identity, plus realistic end-to-end witnesses. The new attribution instrumentation remains planned. The bounded structural
+reference below is complete using existing charged ledgers; it does not
+implement the distinction between executed visits and reservations.</p>
+<h2 id="structural-predictions-and-rust-reference">Structural predictions and Rust reference</h2>
+<p>The follow-up reused the same optimized Ash executable without rebuilding it.
+A protocol froze four empirical charged-cost curves before execution, using
+prior completed depths 1, 2, 4, 8, 12 and 16:</p>
+<pre tabindex="0"><code class="language-text">Nested type Source(d) = 15*d^2 + 272*d + 386
+Nested type Core(d)   = 28*d^2 + 269*d + 451
+Prerequisite Source(d) = 25*d^2 + 346*d + 2165
+Prerequisite Core(d)   = (157*d^2 + 623*d + 1752) / 2
+</code></pre>
+<p>All 20 Source/Core predictions matched the observed ledgers at depths 1, 4,
+16, 24 and 32. Eight predictions concerned the previously unmeasured depths
+24 and 32. No coefficient was refitted. This confirms these charged-cost
+curves over the extended tested range. It does not prove asymptotic bounds,
+predict arbitrary compositions or explain SQLite's amplification. These are
+predictions of heterogeneous charged units, not a new count of actual
+executed operations or a CPU/memory budget.</p>
+<p>Fourteen pairs match flat declaration width, nested algebraic types with
+polymorphic identity use, and recursive interface/trait prerequisites. Width
+zero supplies a startup control. Rust uses a custom Option type and explicit
+generic trait implementations; its result is checked by a separate untimed
+native harness with all 14 assertions. The timed Rust command emits library
+metadata without LLVM, object generation or native linking. It includes
+resolution, type/trait and MIR borrow checking plus metadata encoding. This
+boundary follows the pinned <a href="https://github.com/rust-lang/rust/blob/1.97.1/compiler/rustc_interface/src/passes.rs#L1062">Rust 1.97.1 analysis implementation</a>
+and <a href="https://github.com/rust-lang/rust/blob/1.97.1/compiler/rustc_session/src/config.rs#L809">output configuration</a>.
+Ash includes its own checking, independent Core validation, evaluation,
+rendering and teardown. These shared structures permit a useful reference;
+the compilers do not perform equivalent work. Rust work-unit counters are
+unavailable and are not inferred from time.</p>
+<p>Selected observation-off CPU medians and three-run ranges, in milliseconds:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Structure</th>
+<th align="right">Ash CPU ms (range)</th>
+<th align="right">Rust CPU ms (range)</th>
+<th align="right">Ash / Rust peak RSS MiB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>flat-width0</td>
+<td align="right">9.2 (6.1–9.2)</td>
+<td align="right">31.5 (31.2–34.1)</td>
+<td align="right">12.10 / 57.16</td>
+</tr>
+<tr>
+<td>flat-width128</td>
+<td align="right">27.3 (20.6–30.8)</td>
+<td align="right">50.1 (42.3–55.4)</td>
+<td align="right">13.90 / 62.51</td>
+</tr>
+<tr>
+<td>nested_type-depth24</td>
+<td align="right">18.3 (15.3–19.5)</td>
+<td align="right">46.2 (33.5–48.6)</td>
+<td align="right">13.14 / 62.36</td>
+</tr>
+<tr>
+<td>nested_type-depth32</td>
+<td align="right">14.5 (14.5–15.2)</td>
+<td align="right">35.8 (33.9–37.1)</td>
+<td align="right">13.30 / 62.20</td>
+</tr>
+<tr>
+<td>prerequisite-depth24</td>
+<td align="right">18.7 (17.7–22.5)</td>
+<td align="right">37.3 (35.9–39.0)</td>
+<td align="right">14.84 / 68.76</td>
+</tr>
+<tr>
+<td>prerequisite-depth32</td>
+<td align="right">23.9 (23.4–28.9)</td>
+<td align="right">36.9 (36.7–37.6)</td>
+<td align="right">15.20 / 68.81</td>
+</tr>
+</tbody>
+</table>
+<p>Across all 14 pairs, Ash CPU medians are approximately 7.6–27.3 ms and Rust
+medians 31.5–50.1 ms. Startup contributes much of these small totals. Depth 24
+nested-type timing exceeds depth 32 in this round, illustrating variation.
+Report the absolute sampled costs and growth in charges; these measurements
+do not establish general relative compiler efficiency or CPU complexity.
+Do not subtract noisy startup medians or resident memory and call the
+remainder semantic work.</p>
+<p>The new sampler brackets a blocking wait with monotonic wall time and child
+CPU measurements over the same wrapper interval. Every measured Ash process
+has CPU below this matching wall measurement. Target GNU time remains a
+separate measurement with 10 ms formatting granularity. Use the user's
+accepted ±10 ms comparison tolerance for those displayed times; it is not a
+calibration of absolute instrument error. Scheduling and I/O can increase
+wall time independently of the process's CPU consumption. Repeated-run
+ranges remain necessary even with finer timestamp precision.</p>
+<p>The paired round completed 128 valid processes: 84 measured, 28 warmups,
+14 Ash observers and the untimed harness build/run. Independent audit
+verified every raw record, input/executable/log hash, required phase and
+frozen prediction. No Cargo build, optimizer change or production-limit
+change occurred.</p>
+<h2 id="initial-rough-budget-procedure">Initial rough budget procedure</h2>
+<p>The user selected a simple first procedure. The offline
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tools/resource_budget_estimates.py">estimator</a> uses one fixed form:</p>
+<pre tabindex="0"><code class="language-text">budget = a + b*nodes
+           + c*(type_nodes*type_depth)
+           + d*(resource_sites*nodes)
+</code></pre>
+<p><code>nodes</code> is the measured surface structure total; <code>type_nodes</code> and <code>type_depth</code>
+describe surface type syntax. <code>resource_sites</code> counts lexical resource
+initialization/binding sites, not dynamic operations. These existing input
+descriptors are available before inference. They are rough proxies for the
+language obligations identified in the follow-up plan, not the new typed
+attribution measures that remain unimplemented.</p>
+<p>Use the procedure as follows:</p>
+<ol>
+<li>Collect completed case medians with a pinned compiler and measurement
+boundary. Keep CPU seconds, peak RSS KiB and each ledger's charged units
+separate.</li>
+<li>Fit nonnegative coefficients for each response using the same four terms.
+Keep a single point estimate; do not add cushions or headroom to the budget.</li>
+<li>Freeze the model and input hash. For a new measured feature vector, evaluate
+the formula and flag values outside recorded feature ranges. Being inside
+every range does not establish that a new combination is well represented.</li>
+<li>Compare actual cost with prediction in the same units. Record the signed
+residual and actual/predicted ratio. Recalibrate explicitly when new evidence
+warrants it; repeated observations are not new language examples.</li>
+<li>Decide stopping limits separately. The estimator neither changes compiler
+allowances nor feeds expanded work back into its own budget.</li>
+</ol>
+<p>The first <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/rough-budget-model.json">model artifact</a> recalibrates on all 44
+completed CPU-precision cases, including the already examined former held-out
+cases. It fits per-case medians, not maxima. The
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/rough-budget-transfer.json">transfer comparison</a> describes the eight existing
+Ash fixtures without refitting. Those measurements were already examined;
+this is not blind validation. Every response fit converged. Poor predictions
+remain visible, with no extra feature search or family classifier.</p>
+<p>RMSE measures absolute prediction error in each response's own units:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Response</th>
+<th>Units</th>
+<th align="right">44-case fitting error</th>
+<th align="right">Eight-fixture transfer error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cpu_seconds</td>
+<td>ms</td>
+<td align="right">26.30</td>
+<td align="right">6.40</td>
+</tr>
+<tr>
+<td>peak_rss_kib</td>
+<td>MiB</td>
+<td align="right">2.92</td>
+<td align="right">1.24</td>
+</tr>
+<tr>
+<td>source-checking</td>
+<td>charged units</td>
+<td align="right">188,590.77</td>
+<td align="right">22,379.57</td>
+</tr>
+<tr>
+<td>final-elaboration</td>
+<td>charged units</td>
+<td align="right">36,917.91</td>
+<td align="right">1,480.73</td>
+</tr>
+<tr>
+<td>independent-effect-core</td>
+<td>charged units</td>
+<td align="right">188,455.50</td>
+<td align="right">12,943.99</td>
+</tr>
+</tbody>
+</table>
+<p>For example, the CPU estimate is 105 ms against copying's observed 184 ms, and
+175 ms against persistence's 229 ms. Predicted RSS is 25.75 MiB versus 33.57
+MiB for copying, and 36.52 MiB versus 42.38 MiB for persistence. These are rough
+references. The fitted CPU intercept is zero, although measured startup has a
+real cost; small-program CPU predictions understate that fixed cost. Relative
+error can therefore be large even when absolute error is a few milliseconds.</p>
+<p>Ledger predictions are much weaker: copying Source is estimated at 476,786
+against 1,212,707 charged units, while many basic programs are overestimated.
+Neither that miss nor an excessive ledger ratio proves excessive physical
+compiler cost. Use CPU and memory evidence alongside the charges when deciding
+whether optimization is needed. This initial procedure is implemented; a
+general calibrated budget or revised stopping policy is not.</p>
+<p>The model is reproducible from completed evidence:</p>
+<pre tabindex="0"><code class="language-bash">python3 tools/resource_budget_estimates.py fit SUMMARY_JSON --output MODEL_JSON
+python3 tools/resource_budget_estimates.py predict MODEL_JSON FEATURES_JSON
+python3 tools/resource_budget_estimates.py evaluate MODEL_JSON ANOTHER_SUMMARY_JSON
+</code></pre>
+<p><code>FEATURES_JSON</code> supplies <code>nodes</code>, <code>type_nodes</code>, <code>type_depth</code> and
+<code>resource_sites</code>, or a case with those fields inside <code>features</code>. The artifact
+pins the estimator, existing fitter and training summary hashes. The original
+allowance-envelope fits remain unchanged. Bayesian inference and richer
+predictors are deferred until a practical decision needs them. Prediction
+beyond the observed domain still needs confirmation; see the
+<a href="https://www.itl.nist.gov/div898/handbook/pri/section5/pri5998.htm">NIST guidance on extrapolation</a>.</p>
+<h2 id="accepted-current-costs-and-decision-budgets">Accepted current costs and decision budgets</h2>
+<p>The <a href="/ash/docs/design/provider-experiments/resource-calibration/decision-budgets/">decision-support calibration</a> accepts all 52 primary
+measured cases under provisional current-workload objectives of <strong>300 ms CPU
+and 64 MiB peak RSS</strong>. No further optimization is required by these measurements.
+The largest observations are 259.204 ms CPU and 42.5625 MiB peak RSS.</p>
+<p>The raw four-term coefficients and charged-unit predictions remain unchanged.
+A measured startup control supplies a 10 ms CPU prediction floor. Separate
+review tolerances are twice predicted CPU plus 10 ms and 1.5 times predicted
+RSS, rounded to 10 ms and 4 MiB. Point predictions, tolerances, engineering
+targets and compiler stopping limits remain distinct. Ordinary compiler limits
+are unchanged, and new program shapes still need completed measurements.</p>
+<h2 id="adopted-calibration-and-accepted-deficits">Adopted calibration and accepted deficits</h2>
+<p>The <a href="/ash/docs/design/provider-experiments/resource-calibration/accepted-deficits/">adopted offline assessment</a> now distinguishes
+<code>accepted-with-deficit</code>: measured median or maximum costs may exceed an
+original review threshold or workload target by at most 10% of each exceeded
+baseline. Every excess reports its original baseline as a future optimization
+target. Larger excesses require review, and missing/out-of-range observations
+remain outside calibration. Predictions and baselines are unchanged.</p>
+<p>The current 52 cases still pass without deficits; the separate reference keeps
+nine acceptable and five outside-calibration cases. Thirty synthetic boundary
+replays verify the exact rule. The accompanying Type/Core work-budget review
+is scope-qualified advice for Common's separate admission work, with no
+compiler policy or Rust change in this checkpoint.</p>
+<h2 id="functional-rust-sqlite-reference">Functional Rust SQLite reference</h2>
+<p>Five working Rust counterparts now cover copying, persistence, resume,
+bound-NUL refusal and forwarding. All 60 fresh compiler jobs and ten native
+validations passed in one bounded round. Median Rust metadata checking cost
+98–135 ms CPU and 107–111 MiB peak RSS; complete native compilation cost
+232–384 ms CPU at O0 and 434–830 ms at O3. The shared Rust bridge is compiled
+in every job, and the source size is 17.8–20.2 KB versus Ash's 8.2–13.2 KB.</p>
+<p>The <a href="/ash/docs/design/provider-experiments/resource-calibration/sqlite-rust/">full Rust comparison</a> reports per-case CPU, wall, RSS,
+source sizes, executable sizes and semantic differences. Rust lifetimes and
+one-shot closures approximate the overlapping resource behavior; they do not
+reproduce Ash's effect machinery or independent Core verification. These
+informational results do not reopen optimization or change compiler policy.</p>
+<h2 id="evidence-and-reproduction">Evidence and reproduction</h2>
+<p><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/manifest.json">The capsule manifest</a> pins compressed raw runs, generated
+inputs, collector versions, compiler source hashes, artifact hashes, build
+receipts and analysis. The original archives omit compiled binaries; build them from
+this isolated source checkpoint. The separate <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/reference-evidence.json">reference evidence index</a>
+authenticates the paired and supplemental rounds, generated inputs, tool bytes,
+rejected records, corrected manifest and execution receipt. Original archives
+and their manifest remain byte-identical. Recorded local paths identify historical
+inputs and need relocation for reproduction.</p>
+<p>From this worktree, build with <code>RUSTC_WRAPPER=</code> and
+<code>CARGO_TARGET_DIR=target/calibration</code>:</p>
+<pre tabindex="0"><code class="language-bash">cargo test --offline --locked --release --no-run --features resource-calibration --bin ash --test provider_sqlite_copying --test provider_sqlite_sessions --test provider_sqlite_control --test resource_calibration_native --jobs 1 --message-format=json
+</code></pre>
+<p>Use the returned release binary paths with the
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tools/resource_calibration_cases.py">corpus generator</a>, then run
+the <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tools/resource_calibration.py">collector</a> against its manifest:</p>
+<pre tabindex="0"><code class="language-bash">python3 tools/resource_calibration.py run MANIFEST --output NEW_DIRECTORY --warmups 1 --repetitions 3 --timeout 30 --limit 16777216 --model-cap 16777216
+</code></pre>
+<p>The generator's <code>generate --help</code> lists the required CLI and four native test
+artifact arguments. <code>self-check</code> verifies the collector without running Ash.
+No estimate is applied to the compiler automatically.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#finding">Finding</a><a href="#baseline-and-scope">Baseline and scope</a><a href="#measuring-actual-work">Measuring actual work</a><a href="#collection-and-verification">Collection and verification</a><a href="#actual-time-and-memory">Actual time and memory</a><a href="#existing-ash-language-fixtures">Existing Ash language fixtures</a><a href="#budget-work-and-limit">Budget, work and limit</a><a href="#charges-and-allowance-estimates">Charges and allowance estimates</a><a href="#growth-and-interpretation">Growth and interpretation</a><a href="#incremental-limit-evaluation">Incremental limit evaluation</a><a href="#language-level-measures">Language-level measures</a><a href="#structural-predictions-and-rust-reference">Structural predictions and Rust reference</a><a href="#initial-rough-budget-procedure">Initial rough budget procedure</a><a href="#accepted-current-costs-and-decision-budgets">Accepted current costs and decision budgets</a><a href="#adopted-calibration-and-accepted-deficits">Adopted calibration and accepted deficits</a><a href="#functional-rust-sqlite-reference">Functional Rust SQLite reference</a><a href="#evidence-and-reproduction">Evidence and reproduction</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

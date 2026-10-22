@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-searching-ordered-tree.html" rel="next">
+<link href="./cases-dictionary-as-list.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Folding branching data · Ash</title><meta name="description" content="The dictionary offered one possible rest after its current entry. A tree crosses a wider boundary: every Node offers both a left tree and a right tree. A function derived from that data must decide what each branch…"><meta name="robots" content="index, follow"><meta property="og:title" content="Folding branching data · Ash"><meta property="og:description" content="The dictionary offered one possible rest after its current entry. A tree crosses a wider boundary: every Node offers both a left tree and a right tree. A function derived from that data must decide what each branch…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Folding branching data · Ash"><meta name="twitter:description" content="The dictionary offered one possible rest after its current entry. A tree crosses a wider boundary: every Node offers both a left tree and a right tree. A function derived from that data must decide what each branch…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-folding-branching-data.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-folding-branching-data.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Folding branching data","headline":"Folding branching data","description":"The dictionary offered one possible rest after its current entry. A tree crosses a wider boundary: every Node offers both a left tree and a right tree. A function derived from that data must decide what each branch…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-folding-branching-data.html","@id":"https://dikini.github.io/ash/study/latest/cases-folding-branching-data.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/folding-branching-data/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-folding-branching-data.html"><span class="chapter-title">Folding branching data</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#replace-each-tree-form" id="toc-replace-each-tree-form" class="nav-link active" data-scroll-target="#replace-each-tree-form">Replace each tree form</a></li>
+  <li><a href="#count-nodes-and-preserve-shape" id="toc-count-nodes-and-preserve-shape" class="nav-link" data-scroll-target="#count-nodes-and-preserve-shape">Count nodes and preserve shape</a></li>
+  <li><a href="#separate-node-count-from-dependency-depth" id="toc-separate-node-count-from-dependency-depth" class="nav-link" data-scroll-target="#separate-node-count-from-dependency-depth">Separate node count from dependency depth</a></li>
+  <li><a href="#search-before-folding-or-after-it" id="toc-search-before-folding-or-after-it" class="nav-link" data-scroll-target="#search-before-folding-or-after-it">Search before folding or after it</a></li>
+  <li><a href="#follow-structural-occurrences" id="toc-follow-structural-occurrences" class="nav-link" data-scroll-target="#follow-structural-occurrences">Follow structural occurrences</a></li>
+  <li><a href="#keep-the-boundary-narrow" id="toc-keep-the-boundary-narrow" class="nav-link" data-scroll-target="#keep-the-boundary-narrow">Keep the boundary narrow</a></li>
+  <li><a href="#practice-and-continue" id="toc-practice-and-continue" class="nav-link" data-scroll-target="#practice-and-continue">Practice and continue</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-folding-branching-data.html"><span class="chapter-title">Folding branching data</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Folding branching data</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The dictionary offered one possible <code>rest</code> after its current entry. A tree crosses a wider boundary: every <code>Node</code> offers both a <code>left</code> tree and a <code>right</code> tree. A function derived from that data must decide what each branch contributes before it can replace the current node.</p>
+<p>The working model is still data directed. <code>Empty</code> contributes a base result. <code>Node(left, value, right)</code> contributes a result from <code>left</code>, the current <code>value</code>, and a result from <code>right</code>. This chapter asks what that second recursive field changes: first for a fold, then for the depth of its source dependencies, and finally for a search that may not need both branches.</p>
+<p>The derivation follows ideas recorded from HtDP about <a href="https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/research/how-to-design-programs-recursive-algorithms.md">designing from self-referential data and naming source operations</a>. Separating the traversal from the operations that replace its data forms comes from the project record on <a href="https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/research/functional-programming-with-bananas.md">recursion operators</a>. These are sources of inspiration only. The prose, programs, tree shapes, calculations, and exercises here are original; HtDP’s teaching-language behavior and the paper’s lazy semantics, notation, fusion results, and examples do not govern Ash.</p>
+<section id="replace-each-tree-form" class="level2">
+<h2 class="anchored" data-anchor-id="replace-each-tree-form">Replace each tree form</h2>
+<p>The shared module starts with three transparent types. <code>Tree&lt;A&gt;</code> and <code>Option&lt;A&gt;</code> are parameterized. <code>Tree&lt;A&gt;</code> has an ending form and a form containing two smaller trees. <code>Natural</code> provides visible unary heights later, and <code>Option&lt;A&gt;</code> separates a found value from an absent one. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/syntax.md#grammar">syntax grammar</a> provides the declarations and constructor patterns. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#type-and-constructor-scope">type and constructor scope</a> makes <code>Tree</code> visible in its own <code>Node</code> payload and associates every constructor with its nominal type.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub type Tree&lt;A&gt; =
+    Empty
+    | Node(Tree&lt;A&gt;, A, Tree&lt;A&gt;)
+
+pub type Natural =
+    Zero
+    | Next(Natural)
+
+pub type Option&lt;A&gt; =
+    None
+    | Some(A)
+
+pub fold_tree : (B -&gt; A -&gt; B -&gt; B) -&gt; B -&gt; Tree&lt;A&gt; -&gt; B
+fold_tree combine base Empty = base
+fold_tree combine base Node(left, value, right) = {
+    let folded_left = fold_tree combine base left
+    let folded_right = fold_tree combine base right
+    combine folded_left value folded_right
+}
+
+pub size : Tree&lt;A&gt; -&gt; Int
+size tree = fold_tree (fn(left_size) {
+    fn(ignored) {
+        fn(right_size) {
+            left_size + right_size + 1
+        }
+    }
+}) 0 tree
+
+pub map_tree : (A -&gt; B) -&gt; Tree&lt;A&gt; -&gt; Tree&lt;B&gt;
+map_tree transform tree = fold_tree (fn(mapped_left) {
+    fn(value) {
+        fn(mapped_right) {
+            Node(mapped_left, transform value, mapped_right)
+        }
+    }
+}) Empty tree
+
+maximum : Natural -&gt; Natural -&gt; Natural
+maximum Zero right = right
+maximum left Zero = left
+maximum Next(left) Next(right) = Next(maximum left right)
+
+pub nodes_and_height : Tree&lt;A&gt; -&gt; (Int, Natural)
+nodes_and_height tree = fold_tree (fn(left_summary) {
+    fn(ignored) {
+        fn(right_summary) {
+            let (left_nodes, left_height) = left_summary
+            let (right_nodes, right_height) = right_summary
+            (
+                left_nodes + right_nodes + 1,
+                Next(maximum left_height right_height)
+            )
+        }
+    }
+}) (0, Zero) tree
+
+pub find_counted : (A -&gt; Bool) -&gt; Tree&lt;A&gt; -&gt; (Option&lt;A&gt;, Int)
+find_counted matches Empty = (None, 0)
+find_counted matches Node(left, value, right) = match matches value {
+    true =&gt; (Some(value), 1)
+    false =&gt; {
+        let (left_found, left_visits) = find_counted matches left
+        match left_found {
+            Some(found) =&gt; (Some(found), left_visits + 1)
+            None =&gt; {
+                let (right_found, right_visits) = find_counted matches right
+                (right_found, left_visits + right_visits + 1)
+            }
+        }
+    }
+}
+
+choose_counted : (A -&gt; Bool) -&gt; (Option&lt;A&gt;, Int) -&gt; A -&gt; (Option&lt;A&gt;, Int) -&gt; (Option&lt;A&gt;, Int)
+choose_counted matches (left_found, left_visits) value (right_found, right_visits) = {
+    let visits = left_visits + right_visits + 1
+    match matches value {
+        true =&gt; (Some(value), visits)
+        false =&gt; match left_found {
+            Some(found) =&gt; (Some(found), visits)
+            None =&gt; (right_found, visits)
+        }
+    }
+}
+
+pub find_through_fold_counted : (A -&gt; Bool) -&gt; Tree&lt;A&gt; -&gt; (Option&lt;A&gt;, Int)
+find_through_fold_counted matches tree = fold_tree (choose_counted matches) (None, 0) tree</code></pre>
+<p>The fold follows the two forms of <code>Tree</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Empty                         -&gt; base
+Node(left, value, right)      -&gt; combine (fold left) value (fold right)</code></pre>
+<p>The source writes the second replacement more precisely. The first binding completes <code>fold_tree combine base left</code>. The second then completes <code>fold_tree combine base right</code>. Only after both initializers have returned does evaluation of the complete curried expression <code>combine folded_left value folded_right</code> begin. Ash’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#bindings">sequential binding rules</a> and strict <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#application">application rules</a> establish that order.</p>
+<p><code>fold_tree</code> is an ordinary rank-1 Ash function, not built-in fold syntax. Its signature implicitly quantifies <code>A</code> and <code>B</code>, and its two exhaustive equations replace the two constructors. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/syntax.md#global-function-presentations">global function presentation</a>, module-wide <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#global-scope">global scope</a>, static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#functions-and-application">function and application rules</a> and <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#globals-and-modules">global and module rules</a> check that definition. Its equations cover <code>Empty</code> and <code>Node</code> under the static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#patterns-matches-and-coverage">pattern and coverage rules</a>. The imported entries use the public types, constructors, and functions through Ash’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#imports-and-namespaces">import namespace</a>.</p>
+<p>Before counting any completed fold, fix its boundary. A tree has a <em>finite structural expansion</em> when following both fields of every encountered <code>Node</code> eventually reaches <code>Empty</code> on every path. We also assume that every combiner application required by the fold returns. The recursive type alone does not establish either premise.</p>
+</section>
+<section id="count-nodes-and-preserve-shape" class="level2">
+<h2 class="anchored" data-anchor-id="count-nodes-and-preserve-shape">Count nodes and preserve shape</h2>
+<p>The first entry builds a three-node tree. <code>size</code> replaces <code>Empty</code> with <code>0</code> and each <code>Node</code> with its two branch sizes plus one. <code>map_tree</code> replaces <code>Empty</code> with <code>Empty</code> and each node with one transformed node in the same left and right positions.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import trees as Trees
+
+increment : Int -&gt; Int
+increment value = value + 1
+
+main : Unit -&gt; (Int, Trees.Tree&lt;Int&gt;)
+main () = {
+    let tree = Trees.Node(
+        Trees.Node(Trees.Empty, 1, Trees.Empty),
+        2,
+        Trees.Node(Trees.Empty, 3, Trees.Empty)
+    )
+    (Trees.size tree, Trees.map_tree increment tree)
+}</code></pre>
+<p>Predict before running. The root and its two children give size <code>3</code>. <code>increment</code> changes the left, root, and right values to <code>2</code>, <code>3</code>, and <code>4</code>, but does not exchange either branch.</p>
+<p>Run the entry from <code>content/cases</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash folding-branching-data/src/01-size-and-map.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(3, Node(Node(Empty, 2, Empty), 3, Node(Empty, 4, Empty))) : (Int, Tree&lt;Int&gt;)</code></pre>
+<p>The observed pair contains the predicted size and mapped tree. Its type says that the first field is an <code>Int</code> and the second is a <code>Tree&lt;Int&gt;</code>. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#tuples-and-constructors">constructor and tuple typing rules</a> check those forms, while structural <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">observation</a> and the tool’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/docs/tools/ash.md#successful-output">successful-output contract</a> account for the exact line, empty standard error, and status <code>0</code>.</p>
+<p>For a finite structural expansion with <code>n</code> <code>Node</code> encounters, <code>size</code> performs two primitive integer additions per node, or <code>2 * n</code> additions. This names source operations; it does not measure the internal bit work of arbitrary-precision integer addition. The pinned static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#primitive-operations">primitive operation typing rules</a> and dynamic <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#primitive-operations">evaluation rules</a> define the additions and the <code>Int</code> result.</p>
+<p>Assume in addition that <code>transform</code> returns at every encountered value. <code>map_tree</code> then applies it exactly <code>n</code> times and completes exactly <code>n</code> output <code>Node</code> constructor applications. Each output node receives <code>mapped_left</code> in its left field and <code>mapped_right</code> in its right field, so mapping preserves the input’s branch shape.</p>
+</section>
+<section id="separate-node-count-from-dependency-depth" class="level2">
+<h2 class="anchored" data-anchor-id="separate-node-count-from-dependency-depth">Separate node count from dependency depth</h2>
+<p>Two trees can have the same number of nodes but different shapes. Let <code>n</code> be the number of <code>Node</code> encounters in a finite structural expansion. Let <code>h</code> be the greatest number of <code>Node</code> forms on a path from the root to <code>Empty</code>, with height <code>0</code> for <code>Empty</code>.</p>
+<p>The next entry keeps <code>n = 3</code> for both trees. The balanced root has two one-node branches, so predict height <code>2</code>, written <code>Next(Next(Zero))</code>. The right-skewed tree has three nodes on its longest path, so predict height <code>3</code>, written <code>Next(Next(Next(Zero)))</code>.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import trees as Trees
+
+main : Unit -&gt; ((Int, Trees.Natural), (Int, Trees.Natural))
+main () = {
+    let balanced = Trees.Node(
+        Trees.Node(Trees.Empty, 1, Trees.Empty),
+        2,
+        Trees.Node(Trees.Empty, 3, Trees.Empty)
+    )
+    let skewed = Trees.Node(
+        Trees.Empty,
+        1,
+        Trees.Node(
+            Trees.Empty,
+            2,
+            Trees.Node(Trees.Empty, 3, Trees.Empty)
+        )
+    )
+    (
+        Trees.nodes_and_height balanced,
+        Trees.nodes_and_height skewed
+    )
+}</code></pre>
+<p>Run the shape comparison:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash folding-branching-data/src/02-balanced-and-skewed.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>((3, Next(Next(Zero))), (3, Next(Next(Next(Zero))))) : ((Int, Natural), (Int, Natural))</code></pre>
+<p>The two <code>(Int, Natural)</code> fields confirm equal node counts and different unary heights. The complete tuple is printed structurally under the same pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">observation</a> and <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/docs/tools/ash.md#successful-output">successful-output contract</a>.</p>
+<p>For a completed <code>fold_tree</code> over these premises, the <code>Node</code> equation completes its combiner exactly <code>n</code> times. Along a deepest path, <code>h</code> <code>Node</code> results are pending while the recursive dependency follows the next branch. At the terminal step, those results wait while one <code>Empty</code> call returns the base. Counting that active terminal call gives <code>h + 1</code> simultaneous <code>fold_tree</code> calls in the source dependency chain. The balanced and skewed trees therefore complete three node combiners, but have pending-result depths <code>2</code> and <code>3</code>. These are source dependencies, not claims about native stack frames or how a host implementation represents calls.</p>
+<p>The executable height justifies a closer look at its extra work. <code>nodes_and_height</code> completes one fold combiner for each node and constructs one outer <code>Next</code> per node. At a node whose branch heights are <code>l</code> and <code>r</code>, private <code>maximum</code> makes one recursive call and reconstructs one inner <code>Next</code> for each level that is nonzero on both sides: <code>min(l, r)</code> of each. The base equation then returns the remaining unary height. Across the complete tree, this helper work depends on the branch heights at every node; it is not included in the fold’s <code>n</code> combiner count or its <code>h</code> pending-result count. The two integer additions used for each node count also have unmeasured arbitrary-precision internal work. We therefore do not replace this source account with a single claim that the complete measurement takes linear work.</p>
+<p>Sequential tuple destructuring in the combiner follows the static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#blocks">block rules</a>. The three <code>maximum</code> equations cover the two unary constructors under the static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#patterns-matches-and-coverage">pattern, match, and coverage rules</a>.</p>
+</section>
+<section id="search-before-folding-or-after-it" class="level2">
+<h2 class="anchored" data-anchor-id="search-before-folding-or-after-it">Search before folding or after it</h2>
+<p>A direct search can place its predicate before either recursive call. Here <code>find_counted</code> uses current-left-right pre-order control. It tests the current value first. A current hit avoids both branches. After a current mismatch, it searches left; a left hit avoids right, and only left absence enters the right recursive call. Ash evaluates the match scrutinee once and enters only its selected arm under the pinned dynamic <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#tuples-constructors-and-matches">match rules</a>.</p>
+<p>Folded search separates evaluation order from result priority. <code>choose_counted</code> prefers a current match, then a found left result, then the right result. That is the same current-left-right <em>result priority</em> as the direct search. But <code>fold_tree</code> has already completed the left fold and then the right fold before <code>choose_counted</code> applies the current predicate. Changing the combiner’s choice cannot make those earlier branch traversals selective.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import trees as Trees
+
+is_42 : Int -&gt; Bool
+is_42 value = value == 42
+
+main : Unit -&gt; ((Trees.Option&lt;Int&gt;, Int), (Trees.Option&lt;Int&gt;, Int))
+main () = {
+    let tree = Trees.Node(
+        Trees.Node(Trees.Empty, 1, Trees.Empty),
+        42,
+        Trees.Node(Trees.Empty, 2, Trees.Empty)
+    )
+    (
+        Trees.find_counted is_42 tree,
+        Trees.find_through_fold_counted is_42 tree
+    )
+}</code></pre>
+<p>The root is <code>42</code>. Predict that direct search applies <code>is_42</code> once and returns the root without entering either branch. Folded search returns the same value, but its strict traversal applies the predicate at both children before the root, for three applications.</p>
+<p>Run both searches over the same tree:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash folding-branching-data/src/03-selective-and-fold.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>((Some(42), 1), (Some(42), 3)) : ((Option&lt;Int&gt;, Int), (Option&lt;Int&gt;, Int))</code></pre>
+<p>The two <code>(Option&lt;Int&gt;, Int)</code> fields confirm equal selected values and different predicate counts. The pinned static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#primitive-operations">primitive-operation rules</a> require the two operands of <code>==</code> to be <code>Int</code> and give the expression type <code>Bool</code>. The dynamic <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#primitive-operations">integer-equality rules</a> produce <code>true</code> exactly when the two integer values are equal. The exact structural line follows the pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/docs/tools/ash.md#successful-output">successful-output contract</a>.</p>
+<p>For direct search, assume every predicate application required along its chosen control path returns. Let <code>m</code> be the number of nodes visited through and including the first current-left-right match, or <code>n</code> for a complete miss. Direct search applies the predicate exactly <code>m</code> times. Its unentered branches impose no predicate-return condition. For folded search over a finite structural expansion, completion requires the predicate application at every node to return; it applies the predicate exactly <code>n</code> times. The root-hit observation makes the difference visible as <code>1</code> and <code>3</code>.</p>
+</section>
+<section id="follow-structural-occurrences" class="level2">
+<h2 class="anchored" data-anchor-id="follow-structural-occurrences">Follow structural occurrences</h2>
+<p>The finite-expansion premise is about paths through fields, not physical identity. If the same acyclic subtree value is placed in both fields of a node, these traversals follow and count it once through each structural occurrence. Ash’s pinned dynamic <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">structural observation rules</a> render shared acyclic data in full at each occurrence; they do not reveal pointer identity or physical sharing.</p>
+<p>Ash can admit constructor-guarded recursive data under its static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#recursive-block-groups">recursive block-group rules</a> and dynamic <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#recursive-bindings">recursive binding rules</a>. A cyclic <code>Tree</code> value may prevent these functions from returning. The nominal <code>Tree</code> type therefore does not establish finiteness, and this chapter makes no claim about infinite-tree traversal.</p>
+</section>
+<section id="keep-the-boundary-narrow" class="level2">
+<h2 class="anchored" data-anchor-id="keep-the-boundary-narrow">Keep the boundary narrow</h2>
+<p>This case introduces no ordering, ordered insertion or lookup, duplicate-key policy, balancing, opacity, mutation, laziness, or generic tree infrastructure. Its operation counts do not measure elapsed time, machine instructions, native stack size, tail-call optimization, exact heap bytes, garbage collection, pointer identity, physical sharing, arbitrary-precision integer bit cost, or compiler representation and optimization.</p>
+</section>
+<section id="practice-and-continue" class="level2">
+<h2 class="anchored" data-anchor-id="practice-and-continue">Practice and continue</h2>
+<ol type="1">
+<li>Define <code>sum_tree : Tree&lt;Int&gt; -&gt; Int</code> through <code>fold_tree</code>. Use <code>0</code> for <code>Empty</code>, and add the folded left result, current value, and folded right result at <code>Node</code>. Apply it to the balanced and skewed shapes from the second entry after choosing values that give equal sums. Explain why both folds complete three node combiners while their longest pending-result chains still have depths <code>2</code> and <code>3</code>.</li>
+<li>Move <code>42</code> from the root of the search tree into its left child, leaving a nonmatching root and right child. Predict the direct and folded results and counts before running the entry. Explain from the source why direct search avoids the right branch after the left hit, while folded search still completes it.</li>
+</ol>
+<p>The list method extended by accounting for two recursive results instead of one. Shape now affects dependency depth, and strict folding cannot express the branch avoidance of direct search. What if each node also carried an ordering invariant that could choose one branch before recursion?</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-dictionary-as-list.html" class="pagination-link" aria-label="Representing a dictionary as a list">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Representing a dictionary as a list</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-searching-ordered-tree.html" class="pagination-link" aria-label="Searching an ordered tree">
+        <span class="nav-page-text"><span class="chapter-title">Searching an ordered tree</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Provisional first-stratum dynamics · Ash</title><meta name="description" content="The provisional relation e -> e' takes one deterministic reduction step. The values are integer and Boolean literals, (), and anonymous function values. Inline operational and equational globals may elaborate to the…"><meta name="robots" content="index, follow"><meta property="og:title" content="Provisional first-stratum dynamics · Ash"><meta property="og:description" content="The provisional relation e -> e' takes one deterministic reduction step. The values are integer and Boolean literals, (), and anonymous function values. Inline operational and equational globals may elaborate to the…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Provisional first-stratum dynamics · Ash"><meta name="twitter:description" content="The provisional relation e -> e' takes one deterministic reduction step. The values are integer and Boolean literals, (), and anonymous function values. Inline operational and equational globals may elaborate to the…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/dynamics/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/dynamics/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/dynamics.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Provisional first-stratum dynamics","headline":"Provisional first-stratum dynamics","description":"The provisional relation e -> e' takes one deterministic reduction step. The values are integer and Boolean literals, (), and anonymous function values. Inline operational and equational globals may elaborate to the…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/dynamics/","@id":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/dynamics/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/dynamics.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="provisional-first-stratum-dynamics" data-pagefind-meta="title">Provisional first-stratum dynamics</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/dynamics.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>These rules are informative evidence governed by
+<a href="/ash/docs/design/dn-0016-first-mini-ash-corpus/">DN-0016</a>. They support comparison and
+do not define current Ash dynamic semantics or accept an evaluator design.</p>
+</blockquote>
+<p>The provisional relation <code>e -&gt; e'</code> takes one deterministic reduction step. The
+values are integer and Boolean literals, <code>()</code>, and anonymous function values.
+Inline operational and equational globals may elaborate to the same or similar
+anonymous function form for the binder-only cases in this stratum. Block-local
+bindings elaborate to nested nonrecursive binding terms. Both elaborations
+retain source origins and definition-specific facts even when those facts have
+no runtime action.</p>
+<p><code>substitute(e, x, v)</code> is capture-avoiding replacement of occurrences resolved
+to binder <code>x</code> in expression <code>e</code> by value <code>v</code>. The written rules use substitution
+to keep the semantic account independent of evaluator representation. A direct
+evaluator may use explicit environments and function data, while an
+explicit-machine candidate may use frames; both must produce the same results
+and observable traces.</p>
+<p>Grouping parentheses have already been removed by surface elaboration before
+the reduction relation applies. Their delimiters remain in source provenance,
+so a diagnostic can still label the grouping written by the user.</p>
+<h2 id="presentation-elaboration">Presentation elaboration</h2>
+<p>For binder-only definitions, the two surface forms can produce the same semantic
+function value after their distinct surface checks:</p>
+<pre tabindex="0"><code class="language-text">name : τ₁ -&gt; τ₂        fn name(x : τ₁) -&gt; τ₂ { body }
+name x = body                      |
+          \                        /
+                fn(x) { body }
+</code></pre>
+<p>This diagram is explanatory text rather than an inference rule. A multi-clause
+equational definition instead elaborates to a function whose body is a typed
+match. The equivalent inline operational definition writes that match
+explicitly. Pattern typing and coverage occur before both reach comparable Core.</p>
+<p>Whole-program elaboration binds each checked global over the remainder of the
+file in source order:</p>
+<pre tabindex="0"><code class="language-text">definition₁
+definition₂
+result
+  ⇝ let name₁ = function₁;
+       let name₂ = function₂;
+         result
+</code></pre>
+<p>Each generated initializer is outside its own binding's scope, while its body
+contains the later definitions and result. Globals are therefore nonrecursive
+and visible only to the source that follows them in this stratum. Generated
+bindings and function values retain the interface, presentation, and source
+origins from which they were elaborated.</p>
+<p>For X-001, the equational clauses build the match that the inline operational
+definition writes explicitly:</p>
+<pre tabindex="0"><code class="language-text">negate : Bool -&gt; Bool          fn negate(value : Bool) -&gt; Bool {
+negate true = false                match value {
+negate false = true                   true  =&gt; false
+               |                      false =&gt; true
+               |                  }
+               |              }
+               v                      |
+          fn(value) {                 |
+              match value { &lt;---------+
+                  true  =&gt; false
+                  false =&gt; true
+              }
+          }
+</code></pre>
+<p>The equation group carries implicit scrutinee construction; the inline body
+carries an explicit source match. After shared pattern and coverage checks,
+their typed match bodies can converge without losing their different origins.</p>
+<p>X-003 follows the function type rather than attaching a separate arity to a
+name. Its equational and inline operational definitions have these distinct
+elaboration shapes:</p>
+<pre tabindex="0"><code class="language-text">add : Int -&gt; Int -&gt; Int           fn add(left : Int, right : Int) -&gt; Int
+add left right = left + right
+              |                                  |
+              v                                  v
+fn(left) { fn(right) {              fn(arguments : (Int, Int)) {
+    left + right                         let (left, right) = arguments
+} }                                      left + right
+                                     }
+</code></pre>
+<p>The equational use supplies arguments through successive applications. The
+operational use constructs one tuple value as its product-domain argument. Both
+can calculate the same result, but their Core type and application structure
+must remain distinct.
+For this comparison only, a tuple of values is a value and its elements evaluate
+strictly from left to right. The operational parameter list elaborates to one
+tuple pattern over that value; general tuple dynamics remain outside the first
+retained boundary.</p>
+<p>The following probe-only rules make that claim executable for a two-component
+product. The tuple steps its left component first, then its right component. An
+inserted tuple binding substitutes both components only after they are values.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-product-pressure-steps"><h3 id="sequent-family-product-pressure-steps">product-pressure-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">left → left'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Tuple-Left</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">(left, right) → (left', right)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">right → right'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Tuple-Right</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">(left_value, right) → (left_value, right')</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Tuple</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">let (x, y) = (left_value, right_value); body → substitute(substitute(body, x, left_value), y, right_value)</span></figcaption></figure></div></div></section></div>
+<p>Here <code>left_value</code> and <code>right_value</code> range over values, and <code>x</code> and <code>y</code> are
+distinct resolved binders that are not in scope in the initializer. These rules
+exist only to make X-003's product-domain comparison derivable; they do not add
+general product data or pattern bindings to the retained boundary.</p>
+<h2 id="bindings">Bindings</h2>
+<p>The initializer of an elaborated binding steps to a value before substitution
+into its body. This makes bindings strict and nonrecursive.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-binding-steps"><h3 id="sequent-family-binding-steps">binding-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">initializer → initializer'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Step</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">let x = initializer; body → let x = initializer'; body</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Value</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">let x = value; body → substitute(body, x, value)</span></figcaption></figure></div></div></section></div>
+<p>The semicolon separates fields of the semantic binding term and does not claim
+surface punctuation. In <code>E-Let-Value</code>, <code>value</code> ranges only over the value forms
+listed above. V-004 can therefore substitute the captured integer into the
+function body before application; an environment-based evaluator must preserve
+the same lexical fact explicitly.</p>
+<h2 id="applications">Applications</h2>
+<p>Application evaluates the function first and the argument second. Juxtaposition
+associates to the left, so <code>f a b</code> means <code>(f a) b</code>. Once both sides are values,
+application substitutes the argument for the function parameter.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-application-steps"><h3 id="sequent-family-application-steps">application-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">function → function'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Apply-Function</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">function argument → function' argument</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">argument → argument'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Apply-Argument</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">(fn(x) { body }) argument → (fn(x) { body }) argument'</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Beta</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">(fn(x) { body }) value → substitute(body, x, value)</span></figcaption></figure></div></div></section></div>
+<p>The second rule applies only after the function expression is a function value.
+A well-typed closed program cannot apply a non-function value; <code>T-003</code> is
+rejected before evaluation.</p>
+<h2 id="cross-stratum-boolean-matches">Cross-stratum Boolean matches</h2>
+<p>The X-001 probe steps the match scrutinee before selecting the arm whose Boolean
+pattern equals the resulting value. Successful coverage checking ensures that
+one arm is available; X-002 is rejected before evaluation.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-boolean-match-steps"><h3 id="sequent-family-boolean-match-steps">boolean-match-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">scrutinee → scrutinee'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Match-Scrutinee</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">match scrutinee { arms } → match scrutinee' { arms }</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">selected-arm(boolean, arms) = body</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Match-Boolean</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">match boolean { arms } → body</span></figcaption></figure></div></div></section></div>
+<p>These rules distinguish equation elaboration from runtime behavior. They are
+pressure for the shared match machinery described by DN-0007, not part of the
+first retained dynamic semantics.</p>
+<h2 id="primitive-operations">Primitive operations</h2>
+<p>Each primitive operation evaluates left to right. The calculation rules apply
+only to literal operands and produce the corresponding mathematical integer or
+Boolean result.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-addition-steps"><h3 id="sequent-family-addition-steps">addition-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">left → left'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Add-Left</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">left + right → left' + right</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">right → right'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Add-Right</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">n + right → n + right'</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">n_3 is the integer sum of n_1 and n_2</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Add-Values</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">n_1 + n_2 → n_3</span></figcaption></figure></div></div></section><section class="sequent-family" aria-labelledby="sequent-family-multiplication-steps"><h3 id="sequent-family-multiplication-steps">multiplication-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">left → left'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Multiply-Left</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">left * right → left' * right</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">right → right'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Multiply-Right</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">n * right → n * right'</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">n_3 is the integer product of n_1 and n_2</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Multiply-Values</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">n_1 * n_2 → n_3</span></figcaption></figure></div></div></section><section class="sequent-family" aria-labelledby="sequent-family-equality-steps"><h3 id="sequent-family-equality-steps">equality-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">left → left'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Equal-Left</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">left == right → left' == right</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">right → right'</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Equal-Right</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">n == right → n == right'</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">b is true exactly when n_1 and n_2 are the same integer</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Equal-Values</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">n_1 == n_2 → b</span></figcaption></figure></div></div></section></div>
+<p>The integer model, overflow behavior, and literal range remain unresolved. A
+prototype may use host integers only if it reports where host behavior appears
+and does not present that behavior as Ash semantics.</p>
+<h2 id="representative-traces">Representative traces</h2>
+<p>V-001 demonstrates precedence before dynamics begin:</p>
+<pre tabindex="0"><code class="language-text">1 + 2 * 3
+→ 1 + 6
+→ 7
+</code></pre>
+<p>After block elaboration and name resolution, V-003 demonstrates lexical
+shadowing with distinct binder identities:</p>
+<pre tabindex="0"><code class="language-text">let value₁ = 1; let value₂ = value₁ + 1; value₂
+→ let value₂ = 1 + 1; value₂
+→ let value₂ = 2; value₂
+→ 2
+</code></pre>
+<p>V-008 demonstrates whole-program elaboration and nested strict applications.
+The trace uses short resolved binder names but makes both generated global
+bindings explicit:</p>
+<pre tabindex="0"><code class="language-text">let increment = fn(i) { i + 1 };
+  let double = fn(d) { d * 2 };
+    double (increment 20)
+→ let double = fn(d) { d * 2 };
+    double ((fn(i) { i + 1 }) 20)
+→ (fn(d) { d * 2 }) ((fn(i) { i + 1 }) 20)
+→ (fn(d) { d * 2 }) (20 + 1)
+→ (fn(d) { d * 2 }) 21
+→ 21 * 2
+→ 42
+</code></pre>
+<p>X-003's operational form reduces through one tuple argument and the generated
+product binding:</p>
+<pre tabindex="0"><code class="language-text">(fn(arguments) {
+    let (left, right) = arguments;
+    left + right
+}) (20, 22)
+→ let (left, right) = (20, 22); left + right
+→ 20 + 22
+→ 42
+</code></pre>
+<p>The trace is cross-stratum evidence only. It demonstrates the product shape
+without making tuple construction or destructuring a retained first-stratum
+feature.</p>
+<h2 id="evaluator-comparison">Evaluator comparison</h2>
+<p>Compare a structured direct evaluator and an explicit first-order machine on:</p>
+<ul>
+<li>agreement between both V-002 definitions and every other valid result;</li>
+<li>agreement with the representative reduction traces;</li>
+<li>whether evaluation order is observable in inspectable data;</li>
+<li>whether the Rust call stack or panic behavior can leak into Ash behavior;</li>
+<li>the machinery required for lexical functions in the pure stratum;</li>
+<li>reuse of typed values and validation without erasing representation
+invariants.</li>
+</ul>
+<p>No continuation form is required merely because later effects may need one. If
+the explicit machine wins for current reasons, its frames must be typed,
+inspectable data rather than Rust closures.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#presentation-elaboration">Presentation elaboration</a><a href="#bindings">Bindings</a><a href="#applications">Applications</a><a href="#cross-stratum-boolean-matches">Cross-stratum Boolean matches</a><a href="#primitive-operations">Primitive operations</a><a href="#representative-traces">Representative traces</a><a href="#evaluator-comparison">Evaluator comparison</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

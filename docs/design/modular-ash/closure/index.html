@@ -1,0 +1,302 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Modular Ash Closure Report · Ash</title><meta name="description" content="This report records the final Modular Ash implementation and simplification checkpoint described by DN-0020 and DN-0025. It is informative and does not define the language. The specification remains authoritative."><meta name="robots" content="index, follow"><meta property="og:title" content="Modular Ash Closure Report · Ash"><meta property="og:description" content="This report records the final Modular Ash implementation and simplification checkpoint described by DN-0020 and DN-0025. It is informative and does not define the language. The specification remains authoritative."><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Modular Ash Closure Report · Ash"><meta name="twitter:description" content="This report records the final Modular Ash implementation and simplification checkpoint described by DN-0020 and DN-0025. It is informative and does not define the language. The specification remains authoritative."><meta property="og:url" content="https://dikini.github.io/ash/docs/design/modular-ash/closure/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/modular-ash/closure/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/closure.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Modular Ash Closure Report","headline":"Modular Ash Closure Report","description":"This report records the final Modular Ash implementation and simplification checkpoint described by DN-0020 and DN-0025. It is informative and does not define the language. The specification remains authoritative.","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/modular-ash/closure/","@id":"https://dikini.github.io/ash/docs/design/modular-ash/closure/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/closure.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="modular-ash-closure-report" data-pagefind-meta="title">Modular Ash Closure Report</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/closure.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report records the final Modular Ash implementation and simplification
+checkpoint described by
+<a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">DN-0020</a> and
+<a href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025</a>. It is informative and
+does not define the language. The
+<a href="/ash/spec/">specification</a> remains authoritative.</p>
+<h2 id="retained-dialect">Retained dialect</h2>
+<p>Current Ash is one pure, rank-1 Modular Ash dialect. It contains:</p>
+<ul>
+<li>passive acyclic source modules with public and private declarations, opaque
+and transparent exports, qualified imports, and targeted direct imports;</li>
+<li>one stable compilation-local identity for each canonical module source,
+independent of aliases, roots, and alternate routes;</li>
+<li>dependency-ordered checking against immutable body-free summaries, so a
+dependent does not retain or recheck its dependency's body;</li>
+<li>one local, monomorphic, unconstrained entry <code>main : Unit -&gt; R</code>, where <code>R</code> is
+closed;</li>
+<li>method-only interfaces with one type parameter, anonymous <code>impl</code>, explicit
+constraints and prerequisites, and implementation availability through the
+defining module or an authenticated direct dependency;</li>
+<li>checked structural evidence that survives occurrence checking, is
+authenticated once after linking, and erases during Core synthesis; and</li>
+<li>one linked pure Core program containing every dependency-ordered definition
+group around the generated call <code>main ()</code>.</li>
+</ul>
+<p>The <a href="/ash/spec/#current-ash">current specification</a> owns these
+facts. This report records why the implementation retains their boundaries; it
+does not add features to that inventory.</p>
+<h2 id="stage-boundaries">Stage boundaries</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Facts retained by the next stage</th>
+<th>Facts released</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loading to resolution</td>
+<td>canonical module and source identities, acyclic dependency order, projected source modules, owning roots, and import provenance</td>
+<td>filesystem traversal state, inactive pending work, and unused path spellings</td>
+</tr>
+<tr>
+<td>Resolution to checking</td>
+<td>stable declaration and evidence identities, resolved bodies and schemes, direct-dependency routes, defining registries, and body-free imported facts</td>
+<td>aliases as identity, unavailable private names, and mutable namespace search state</td>
+</tr>
+<tr>
+<td>Checking to summaries and linking</td>
+<td>closed public schemes, public and hidden summary closure, complete checked definition groups, structural evidence, module ownership, and dependency order</td>
+<td>dependency bodies from dependent checking, private dependency scopes, selection search state, and inference substitutions after obligation closure</td>
+</tr>
+<tr>
+<td>Linking to evidence validation</td>
+<td>exact entry closure, group ownership, combined registries, retained selections, availability routes, types, and provenance</td>
+<td>module-local assembly state and already-authenticated import syntax</td>
+</tr>
+<tr>
+<td>Evidence validation to Core synthesis</td>
+<td>authenticated checked definitions and one capability to synthesize their selected evidence</td>
+<td>the validator-local linked-interface registry and its indexes</td>
+</tr>
+<tr>
+<td>Core synthesis to Core validation</td>
+<td>ordinary typed Core with its combined nominal and constructor registry, source provenance, the result type, and its computed source-facing display</td>
+<td>checked bodies, structural evidence, implementation routes, the display-registry clone, and remaining interface metadata when the explicit typed synthesis scope exits; an eager wrapper drop remains inside that scope</td>
+</tr>
+<tr>
+<td>Core validation to evaluation</td>
+<td>one authenticated pure Core program</td>
+<td>validator indexes and remaining static module and evidence policy</td>
+</tr>
+<tr>
+<td>Evaluation to observation</td>
+<td>result value, closed result type, and completed shared heap</td>
+<td>control, continuations, and transient environments not reachable from the result</td>
+</tr>
+</tbody>
+</table>
+<p><code>ResolvedModuleProgram.entry</code> and each definition group's module identity remain
+live through linked evidence validation. They authenticate the exact entry
+closure, group ownership, binders, declarations, and implementation routes;
+their earlier passive-module status as unread fields is historical rather than
+a current cleanup opportunity.</p>
+<h2 id="simplification-audit">Simplification audit</h2>
+<h3 id="constructs-and-lowering">Constructs and lowering</h3>
+<p>Module structure lowers to dependency-ordered ordinary recursive groups around
+the generated application of the entry binder to unit. Imports, paths, aliases,
+summaries, visibility, and opacity leave no Core or runtime module node.</p>
+<p>Interface evidence lowers only after linked validation authenticates the
+selected goal, route, identity, substitution, prerequisite tree, method order,
+scope, type, and provenance. Requirements become ordinary function parameters;
+constrained occurrences become ordinary type and function applications; and
+implementation methods become hidden ordinary globals in their defining
+module's recursive group. Interface, implementation, method, and requirement
+identities then erase. There is no interface Core family, dictionary value,
+runtime registry, lookup, or dispatch rule.</p>
+<p>The resulting program uses the retained pure Core value and computation
+families and the existing evaluator. Modules and interfaces therefore extend
+the authenticated source-to-Core path without extending the runtime inventory.</p>
+<h3 id="core-versus-library">Core versus library</h3>
+<p>The paired <a href="/ash/docs/design/modular-ash/core-library-evidence/">core-and-library audit</a> retains direct
+integer <code>==</code> and Core <code>Primitive::Equal</code>. It also demonstrates an explicit
+source-library capability declared as <code>Equal&lt;A&gt;</code> with <code>Equal&lt;Int&gt;</code> and a
+constrained <code>same</code> function. The source library method ultimately uses the
+same retained integer primitive; it does not replace the operator.</p>
+<p>The two paths remain deliberately distinct. The operator is admitted without
+an import, checks only <code>Int</code> operands, reports primitive-operand diagnostics,
+and lowers directly to <code>Primitive::Equal</code>. The explicit capability requires a
+module and implementation route, selects and authenticates interface evidence,
+reports constraint diagnostics when no implementation is available, and
+lowers to ordinary type, evidence, and value applications before it reaches
+the method body's primitive. Their successful results agree, but their Core
+shape and evaluation traces do not. Ash ships no prelude, package, or reusable
+equality module at this checkpoint.</p>
+<h3 id="budgets-and-resources">Budgets and resources</h3>
+<ul>
+<li>One syntax-work budget spans every admitted source. Module loading separately
+bounds sources, edges, path segments, retained owner facts, and active pending
+work before retaining proportional graph state.</li>
+<li>Resolution and checking use graph-wide type and coverage budgets. One
+interface-and-constraint budget spans summary admission, module checking,
+linking, and linked evidence validation rather than resetting per module.</li>
+<li>Core construction and independent Core validation retain separate cumulative
+bounds for the complete linked program. Evaluation, observation, and
+destruction use explicit work stacks at admitted deep boundaries.</li>
+<li>Syntax work is bounded at 1,500,000 units; type and interface-constraint work
+are each bounded at 327,680 units. Coverage separately bounds work and
+memoized states. Core payload and pattern depth remain explicit admission
+limits.</li>
+</ul>
+<p>Resource exhaustion is a structured internal result. It does not substitute
+for module admission, typing, constraint selection, coverage, or Core-validity
+judgments.</p>
+<h3 id="ownership-lifetimes-and-identity">Ownership, lifetimes, and identity</h3>
+<p>Canonical source, module, declaration, Core arena, and heap identity domains
+remain distinct. Alternate import routes do not create semantic duplicates.
+Core handles, binder identities, and heap locations are numeric identities
+rather than Rust ownership edges, so recursive Core scope and cyclic data do
+not create host ownership cycles.</p>
+<p>Linked evidence validation builds its interface registry locally and does not
+retain it in <code>ValidatedInterfaceProgram</code>. Core synthesis borrows that validated
+wrapper. The wrapper's exact <code>ResolvedModuleProgram</code> payload is checked by
+compiler-exhaustive destructuring. The driver confines interface validation,
+the display-registry clone, Core synthesis and finish, type-display
+computation, and the eager wrapper drop to one explicitly typed block. That
+drop records the last intentional wrapper use; block exit is the ownership
+boundary. The block returns only <code>Type</code>, <code>String</code>, and <code>UnvalidatedProgram</code>, so
+checked bodies, structural evidence, routes, the display clone, and remaining
+interface facts cannot reach independent Core validation. A driver test records
+a weak registry reference at interface validation and proves that only the
+unchecked Core program owns it when Core validation begins.</p>
+<p>An observed structural or cyclic data value owns the heap needed to render its
+locations. The public observation separately keeps the completed evaluation
+heap because a returned closure can capture an environment containing raw heap
+locations. Removing that heap would make an admitted returned closure's
+captured data invalid even though ordinary data observations already retain
+their own heap.</p>
+<h3 id="maintenance-and-locality">Maintenance and locality</h3>
+<p>The module path is concentrated in loading, resolution, checking, summaries,
+the graph driver, and linked synthesis. Interface-specific semantic machinery
+is concentrated in eight production files: the driver, elaborator, evidence
+selection and audit, evidence validation, interface model, resolver, and
+resolved data. The direct equality path crosses 15 production files, while its
+equality-specific Core joins remain the primitive definition, transformation,
+elaboration, and evaluator.</p>
+<p>The closure audit removed actual stale retention rather than adding a parallel
+representation. <code>ValidatedInterfaceProgram</code> does not store the linked
+validator registry, and the driver now uses an explicit typed synthesis scope
+while retaining the eager post-finish drop. It retained the entry identity,
+group module identities, and observation heap after proving their interface-era
+or closure-observation readers. Earlier released alternatives remain absent: a
+Mini-Ash compiler path, source dictionaries, span-keyed evidence maps,
+lowering-time reselection, summary bodies and private scopes, route-specific
+implementation identities, runtime registries, and module or interface Core
+nodes.</p>
+<p>The architecture target checks the single current Modular source pipeline, a
+macro-shadow lexical-scope mechanism witness, and the closed Core and evaluator
+inventories. Compiler-exhaustive wrapper destructuring and the driver's weak
+ownership witness check the production boundary. These are maintenance
+witnesses, not language authority.</p>
+<h2 id="retained-evidence">Retained evidence</h2>
+<ul>
+<li><a href="/ash/docs/design/modular-ash/evidence/">Passive-module evidence</a> records canonical module identity,
+body-free summaries, visibility and opacity, graph-wide resources, linked
+Core construction, and historical Mini-Ash comparison.</li>
+<li><a href="/ash/docs/design/modular-ash/interfaces-evidence/">Interface and implementation evidence</a> records
+method-only checking, direct availability, authenticated structural evidence,
+ordinary Core lowering, diagnostics, resources, and the bounded
+unspecialized evaluation trace.</li>
+<li><a href="/ash/docs/design/modular-ash/core-library-evidence/">Core and library equality evidence</a> records the
+paired admission, typing, diagnostic, Core, evaluation, maintenance, and
+lifetime comparison.</li>
+<li>The <a href="/ash/docs/design/mini-ash/closure/">Mini-Ash closure report</a> retains the predecessor
+dialect without requiring a second current compiler path.</li>
+</ul>
+<p>Together these reports retain the implementation evidence for this final
+checkpoint. The specification remains the source of current language truth.</p>
+<h2 id="verification-checkpoint">Verification checkpoint</h2>
+<p>Lifecycle cleanup removed the completed implementation task and its temporary
+execution plan from the current tree. The initial cleanup gate consisted of
+fresh post-cleanup root verification, an independent specification-and-authority
+review, and an independent code-quality review. Those reviewers inspected the
+cleanup documents as an uncommitted diff while the <code>modular-ash</code> tag was absent
+and approved them before the final cross-cutting whole-branch review.</p>
+<p>A fresh pre-cleanup <code>cargo xtask verify</code> passed at the retained implementation
+checkpoint. It ran formatting, locked metadata and build checks, denied-warning
+Clippy, every workspace unit and integration test with no failures, and
+denied-warning rustdoc. A separate inventory listed 298 library tests, 10 <code>ash</code>
+binary tests, 625 integration tests, and one <code>xtask</code> test: 934 tests.</p>
+<p>The focused architecture target passed all eight tests. The stable equality
+maintenance search returned the recorded 15 production files; the interface
+maintenance search returned the recorded eight production files; and the
+interface-identifier search over <code>src/core</code> and <code>src/eval</code> returned no matches.
+The documentation checkpoint used this full-tree Markdown command:</p>
+<pre tabindex="0"><code class="language-text">markdownlint --disable MD013 -- README.md spec docs
+</code></pre>
+<p>It reported no findings and covered all six changed documents. Manual relative-
+link and anchor review, authority review, and <code>git diff --check</code> also passed.</p>
+<p>A fresh initial post-cleanup <code>cargo xtask verify</code> passed during uncommitted
+cleanup review, before the final whole-branch guard corrections. It repeated
+formatting, locked metadata and build checks, denied-warning Clippy, every
+workspace unit and integration test with no failures, and denied-warning
+rustdoc. A separate
+<code>cargo test --locked --workspace --all-targets --all-features -- --list</code>
+inventory listed 298 library tests, 10 <code>ash</code> binary tests, 625 integration
+tests, and one <code>xtask</code> test: 934 tests.</p>
+<p>The full-tree Markdown command above and <code>git diff --check</code> also reported no
+findings. Manual review confirmed every changed relative link and anchor, while
+a current-tree target scan confirmed that all relative links in 80 Markdown
+files point to existing paths. The authority review kept specification claims
+normative, retained reports and design notes informative, and exploratory
+<code>lib-ash</code> pressure outside this completed milestone. Stale-reference searches
+found no reference to the removed task or plan and no active or not-begun audit
+wording. The retained maintenance searches returned the exact 15-file direct
+equality path, four equality-specific Core joins, eight-file interface path,
+and no interface-family identifier in <code>src/core</code> or <code>src/eval</code>.</p>
+<p>The prior workflow's final cross-cutting whole-branch review found that its
+lifetime guard could accept aliased or additional wrapper state and could count
+nested-control-flow or macro-contained drop tokens as an executed release.
+Adversarial tests first required the wrapper guard to accept only the exact
+immediate retained shape, then required delimiter-aware matching of the
+synthesis, top-level drop statement, and Core-validation sequence. Those
+source-token guards rejected aliases, extra fields, nested or unreachable
+drops, macro-contained tokens, and mismatched delimiters. The same whole-branch
+reviewer approved that prior state after these two Minor findings.</p>
+<p>After every review approved the exact state, a fresh final <code>cargo xtask verify</code>
+passed. It ran formatting, locked metadata and build checks, denied-warning
+Clippy, every workspace unit and integration test with no failures, and
+denied-warning rustdoc. A separate
+<code>cargo test --locked --workspace --all-targets --all-features -- --list</code>
+inventory listed 298 library tests, 10 <code>ash</code> binary tests, 627 integration
+tests, and one <code>xtask</code> test: 936 tests. The focused architecture target ran all
+10 tests with no failures. The <code>modular-ash</code> tag remained absent throughout
+uncommitted review; after this final verification, the closure commit recorded
+the exact reviewed state and the annotated unsigned tag was applied to that
+commit. This ordering kept the marker from claiming an unreviewed state.</p>
+<p>A later maintenance review showed that a macro could introduce a caller-scope
+shadow binding that the prior source-token guard could not see. The same guard's
+attribute scanner also accepted malformed nested delimiters. The current change
+replaces that parser with the typed synthesis scope, compiler-exhaustive payload
+destructuring, the driver ownership witness, and one macro-shadow scope witness.
+The driver test first observed two strong registry owners at Core-validation
+entry in the flat implementation, then observed the required one owner after
+the scope change. The current locked all-target inventory lists 300 library
+tests, 10 <code>ash</code> binary tests, 624 integration tests, and one <code>xtask</code> test: 935
+tests. The library gained two structural tests; the architecture target removed
+four parser tests and added one scope test, leaving seven architecture tests
+and a net reduction of one test.</p>
+<h2 id="intentional-exclusions-and-later-pressure">Intentional exclusions and later pressure</h2>
+<p>This checkpoint does not contain any <code>lib-ash</code> or <code>pack-ash</code> mechanism. It adds
+no higher-kinded or multi-parameter interfaces, associated outputs,
+determination rules, method-local type parameters, method defaults,
+implementation imports or re-exports, name re-exports, package manifests,
+exact dependency resolution, caches, compiled-module or distributable artifact
+formats, or a separate object linker.</p>
+<p>It also excludes module signatures; dynamic providers, loading, registration,
+or runtime lookup; parent traversal, module cycles, and cross-module recursive
+groups; an operator rewrite or implicit prelude; specialization and dead-code
+elimination; effects and handlers; and a selectable current-tree Mini-Ash
+compiler path. Associated types and specialization remain later design
+pressure, not unresolved Modular Ash semantics.</p>
+<p>The annotated unsigned <code>modular-ash</code> tag on the final closure commit retains
+this final dialect checkpoint. The tag is lifecycle metadata; it does not
+supply missing language semantics or change the final state recorded here.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#retained-dialect">Retained dialect</a><a href="#stage-boundaries">Stage boundaries</a><a href="#simplification-audit">Simplification audit</a><a href="#retained-evidence">Retained evidence</a><a href="#verification-checkpoint">Verification checkpoint</a><a href="#intentional-exclusions-and-later-pressure">Intentional exclusions and later pressure</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

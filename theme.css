@@ -1,0 +1,26 @@
+@import url("/ash/tokens.css");
+
+/* Bundled static weights avoid device-installed font substitutions. */
+@font-face {
+  font-family: "Ash Sans";
+  src: url("/ash/fonts/source-sans-3-regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ash Sans";
+  src: url("/ash/fonts/source-sans-3-semibold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+}
+
+/* The website reuses the study publication's licensed display face. */
+@font-face {
+  font-family: "Ash Pagella";
+  src: url("/ash/fonts/texgyrepagella-regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}

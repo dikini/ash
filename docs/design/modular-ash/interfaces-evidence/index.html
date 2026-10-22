@@ -1,0 +1,748 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Interfaces and Implementations Integration Evidence · Ash</title><meta name="description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta name="robots" content="index, follow"><meta property="og:title" content="Interfaces and Implementations Integration Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Interfaces and Implementations Integration Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/interfaces-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Interfaces and Implementations Integration Evidence","headline":"Interfaces and Implementations Integration Evidence","description":"This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/","@id":"https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/interfaces-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="interfaces-and-implementations-integration-evidence" data-pagefind-meta="title">Interfaces and Implementations Integration Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/interfaces-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report records implementation evidence for Modular Ash's interfaces and
+implementations increment. It is informative, not normative. The
+<a href="/ash/spec/">normative specification</a> owns the current language.
+The retained <a href="/ash/docs/design/dn-0023-interfaces-and-implementations/">interface design note</a>,
+<a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">dialect-milestone note</a>, and
+<a href="/ash/docs/design/modular-ash/evidence/">passive-module evidence</a> explain the design pressure and the
+module boundary on which this increment depends.</p>
+<h2 id="scope-and-checkpoints">Scope and checkpoints</h2>
+<p>The comparison baseline is commit
+<code>ca7932877df3553cbb2325c7a73a0b38812b5db8</code>, which accepts the interface
+transition.
+The original increment's normative checkpoint is unsigned commit
+<code>f783271dab81db382e0fdcc1c8a1fe4abb12cea3</code>. The principal checkpoints from the
+accepted transition through the current corrective product work are:</p>
+<ul>
+<li><code>ff2ea36</code>, which authorizes the interface implementation work;</li>
+<li><code>3d53619</code>, which admits interface and implementation syntax;</li>
+<li><code>898afec</code>, which resolves interface identities and constraints;</li>
+<li><code>45790f7</code> and <code>f3bbc3a</code>, which check interface declarations and
+implementation headers;</li>
+<li><code>f4d89e6</code>, which publishes checked body-free interface and implementation
+summaries;</li>
+<li><code>3cd2618</code>, which selects structural checked evidence;</li>
+<li><code>40c4682</code>, which retains exact occurrence and import provenance;</li>
+<li><code>2c2fd28</code>, which independently validates linked interface evidence before
+Core synthesis;</li>
+<li><code>1280299</code>, which lowers validated evidence to the existing Core dialect;</li>
+<li><code>3c78cfd</code>, which completes generic prerequisite evidence;</li>
+<li><code>1dc03c2</code>, which retains the interface integration corpus and bounded
+unspecialized trace;</li>
+<li><code>6f36d77</code>, which closes diagnostic evidence;</li>
+<li><code>a93bdbb</code>, which establishes graph-wide resource boundaries;</li>
+<li><code>301de2a</code>, which historically admits an interface method when an arrow occurs
+anywhere inside its type;</li>
+<li><code>f783271</code>, which replaces the normative interface specification;</li>
+<li><code>364c736</code>, whose corrective product work narrows the former rule to require
+<code>Function</code> as the method type's outermost constructor;</li>
+<li><code>18c04fd</code>, which rebaselines the affected resource evidence and makes rejected
+resolved interface payloads safe to destroy iteratively; and</li>
+<li><code>089c54e</code>, which updates the normative specification and retained evidence for
+the outer-<code>Function</code> correction;</li>
+<li><code>5210beb</code>, which corrects checkpoint scope and task progress; and</li>
+<li><code>ee998a0</code>, which reconciles the remaining historical and current checkpoint
+provenance.</li>
+</ul>
+<p>All named checkpoints are unsigned. The final reviewed product checkpoint is
+<code>ee998a05e9783972dc9952024fce2720b5d41449</code>. Current <code>main</code> at <code>8f4de9a</code> is an
+incorporated ancestor, but the product remains unmerged on
+<code>feature/modular-ash</code>. The review and verification section below records that
+product boundary. This report and transition cleanup do not move it.</p>
+<h2 id="causal-semantic-model">Causal semantic model</h2>
+<p>Parsing and projection retain one-parameter interfaces, ordered methods,
+ordered global requirements, implementation heads, ordered prerequisites, and
+implementation equations. Resolution replaces their source spellings with
+module-qualified identities. It allocates an occurrence-local empty evidence
+slot for each resolved constrained-global or interface-method occurrence and
+retains the exact complete-import declaration or targeted selector used by an
+imported occurrence.</p>
+<p>Checking authenticates top-level function interface shapes, constrained
+schemes, implementation ownership, prerequisite decrease,
+effective-environment non-overlap, membership, method types, and bodies.
+Substituting an implementation or requirement argument preserves each method's
+outer <code>Function</code>, so implementation equations and flattened evidence slots
+remain callable. Evidence selection then resolves each rigid obligation from
+lexical abstract requirements, the exact current implementation, or concrete
+available implementations, in that order. The owning obligation-closure
+boundary fills each structural slot exactly once. This includes an eligible
+unannotated anonymous-function initializer before local generalization, as well
+as constrained globals and implementation methods. Checked definitions retain
+the filled occurrence with their checked group through linking; no later stage
+joins spans or repeats selection.</p>
+<p>A module publishes a body-free immutable summary only after all its declarations
+and bodies check. The summary preserves public interface and method facts,
+public implementation facts, stable identities, checked schemes, ordered
+prerequisites and method mappings, provenance, and the hidden nominal or
+interface closure needed to authenticate those facts. It does not transport a
+body, private name environment, private implementation, or an implementation
+imported from another module. A dependent therefore sees public implementations
+from its direct dependencies only, regardless of complete versus targeted
+import syntax.</p>
+<p>Linking combines complete checked definitions and registries from every module.
+Linked interface-evidence validation authenticates the retained identities,
+occurrence-module availability, exact direct import edge, substitutions,
+prerequisite trees and termination, method order and mappings, scope, types,
+and provenance before Core synthesis. It does not infer, select, or repair
+evidence. Core synthesis then flattens every requirement or prerequisite in
+declaration order and, within it, every interface method in declaration order.
+At an occurrence, generated type applications precede evidence applications,
+which precede source value arguments. The existing Core validator runs after
+this synthesis.</p>
+<p>Abstract evidence lowers to a lexical evidence binder. Concrete evidence lowers
+to the selected implementation-method binder. Generic concrete evidence first
+type-applies the recorded substitution and then supplies recursively lowered
+prerequisite terms. Implementation-method binders join the defining module's
+existing recursive group, so recursion, mutual recursion, global-to-method
+calls, and method-to-global calls use ordinary lexical recursion.</p>
+<h2 id="stable-identity-summaries-and-availability">Stable identity, summaries, and availability</h2>
+<p>The semantic identity families are deliberately distinct:</p>
+<ul>
+<li><code>InterfaceId</code> combines a defining <code>ModuleId</code> and source declaration ordinal;</li>
+<li><code>MethodId</code> combines its <code>InterfaceId</code> and method declaration ordinal;</li>
+<li><code>ImplId</code> combines a defining <code>ModuleId</code> and source declaration ordinal;</li>
+<li><code>ImplMethodId</code> combines its <code>ImplId</code> and exact <code>MethodId</code>;</li>
+<li><code>RequirementId</code> combines a global <code>BinderId</code> or <code>ImplId</code> owner with a
+requirement declaration ordinal; and</li>
+<li>each implementation method also has a hidden defining-module <code>BinderId</code> used
+by ordinary Core variables and recursive binding.</li>
+</ul>
+<p>Aliases, targeted names, complete-import qualification, and alternate graph
+routes do not change these identities. Alternate direct routes deduplicate the
+same <code>ImplId</code>; they do not create an overlap with itself. A public
+implementation is available in its defining module and in a module with an
+authenticated direct dependency edge to its summary. It is not re-exported
+through an intermediary.</p>
+<p>Hidden summary closure preserves identity without granting source access. A
+public constrained global or public implementation may use a public interface
+defined by a direct dependency. Its checked summary retains that foreign public
+interface's parameter and method shape to authenticate the public fact, but it
+does not re-export the interface or create a source binding for it. A private
+interface may constrain a private global declared in its defining module, but
+it can never occur in a public constrained global. Separately, a public
+implementation may retain a private nominal head identity while its private
+spelling and constructors remain unavailable to an importer. An opaque public
+type remains nameable, but its constructors and representation remain
+unavailable in an external implementation body. These carriers authenticate
+composition without turning a checked summary into a source module signature.</p>
+<h2 id="structural-evidence-and-validation">Structural evidence and validation</h2>
+<p>The structural selection is part of each checked resolved occurrence, not a
+side table keyed by source span. Empty slot clones have independent one-shot
+cells; clones of a filled slot share the same immutable flat plan. The plan
+records an abstract requirement identity or a concrete implementation identity,
+its ordered type substitution, its ordered prerequisite subplans, and its
+ordered implementation-method identities. Checked definitions and method groups
+own those occurrences across the checked-module and linked-program transitions.</p>
+<p>The independent validator rejects a linked program before Core synthesis when
+any retained evidence fact is forged or inconsistent. Its checks cover:</p>
+<ul>
+<li>source declaration ordinals and distinct identity families;</li>
+<li>occurrence-module availability, public/private status, and the exact direct
+dependency route admitting an imported implementation;</li>
+<li>selected goal and rigid implementation-head substitution;</li>
+<li>prerequisite count, order, tree ownership, proper decrease, and absence of
+shared or cyclic corruption;</li>
+<li>interface-method count and order, <code>ImplMethodId</code> mapping, and hidden binder
+uniqueness;</li>
+<li>abstract requirement owner and argument;</li>
+<li>linked global and implementation-method schemes, lexical type scope, nominal
+arity, and absence of inference or unbound <code>forall</code>; and</li>
+<li>source and import provenance for the selected occurrence and fact.</li>
+</ul>
+<p>Validation consumes the recorded plan. It neither consults source spelling to
+reselect evidence nor treats an import span as an implementation identity.
+Interface, implementation, method, and requirement identities are released
+only after this validation has authorized ordinary Core synthesis.</p>
+<h2 id="core-inventory-and-unspecialized-execution">Core inventory and unspecialized execution</h2>
+<p>The closed pure Core inventory is:</p>
+<ul>
+<li><code>PureExprKind</code>: <code>Value</code>, <code>Variable</code>, and <code>Computation</code>;</li>
+<li><code>PureValue</code>: <code>Integer</code>, <code>Boolean</code>, <code>Unit</code>, <code>Function</code>, and <code>Constructor</code>;</li>
+<li><code>PureComputation</code>: <code>Bind</code>, <code>RecursiveBind</code>, <code>Apply</code>, <code>Primitive</code>, <code>Tuple</code>,
+<code>Match</code>, <code>TypeAbstraction</code>, and <code>TypeApplication</code>.</li>
+</ul>
+<p>The runtime <code>Value</code> inventory is <code>Integer</code>, <code>Boolean</code>, <code>Unit</code>, <code>Function</code>,
+<code>ConstructorFunction</code>, <code>Location</code>, and <code>Data</code>. Extraction of these declarations
+from <code>src/core/dialect.rs</code> and <code>src/eval/value.rs</code> produces no inventory diff
+between <code>ca79328</code> and <code>f783271</code>. The identifier-level guard
+<code>tests/architecture.rs::core_and_evaluator_keep_interface_evidence_outside_their_closed_inventories</code>
+additionally scans every Core and evaluator Rust source.</p>
+<p>Generated evidence therefore uses ordinary lexical functions and existing
+evaluation transitions. <code>TypeApplication</code> erases the ordinary Core type
+application formed from the recorded substitution; the evaluator does not
+receive or inspect that substitution. <code>RecursiveBind</code> materializes the same
+function closures used by source recursion. <code>Apply</code> performs existing strict
+function and argument evaluation and beta application. There is no runtime
+interface or dictionary value, interface Core node, implementation registry,
+interface lookup, method dispatch, registration, discovery, or interface
+failure mode.</p>
+<p>The bounded test trace in
+<code>tests/interfaces.rs::generic_prerequisite_evidence_has_a_bounded_unspecialized_evaluation_trace</code>
+uses <code>Read&lt;Int&gt;</code> and <code>Read&lt;Wrap&lt;A&gt;&gt; where Read&lt;A&gt;</code> for <code>read(Wrap(42))</code>. The
+generated Core enters the source application, evidence application, type
+application, generic implementation-method variable occurrence, and ground
+prerequisite implementation-method variable occurrence in that order. The
+prerequisite occurrence is entered before the source argument. The result is
+<code>42</code>, the node-entry trace contains at most 32 events, and the machine uses at
+most six frames. This is an unspecialized test trace over existing evaluator
+rules, not a new evaluation rule or a specialization claim.</p>
+<h2 id="required-evidence">Required evidence</h2>
+<p>The required evidence for the accepted transition and corrective work is
+retained by the exact targets and named witnesses below. A target can contain
+additional boundary cases beyond the ones named here.</p>
+<h3 id="lexing-parsing-projection-recovery-and-malformed-forms">Lexing, parsing, projection, recovery, and malformed forms</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/lexer.rs"><code>tests/lexer.rs</code></a>:
+<code>tests/lexer.rs::recognizes_interface_reserved_words_without_stealing_identifier_boundaries</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces_syntax.rs"><code>tests/interfaces_syntax.rs</code></a>:
+<code>tests/interfaces_syntax.rs::projects_ordered_requirements_on_both_global_presentations</code>,
+<code>tests/interfaces_syntax.rs::projects_generic_impl_prerequisites_and_flat_method_equations</code>,
+<code>tests/interfaces_syntax.rs::malformed_interface_and_impl_heads_retain_exact_expected_forms</code>,
+<code>tests/interfaces_syntax.rs::malformed_interface_method_recovers_at_its_logical_line</code>,
+<code>tests/interfaces_syntax.rs::interface_method_body_is_rejected_at_its_equal_and_recovers</code>,
+and <code>tests/interfaces_syntax.rs::preserves_interface_method_source_order</code>.</li>
+</ul>
+<h3 id="stable-identities-namespaces-imports-aliases-routes-and-diamonds">Stable identities, namespaces, imports, aliases, routes, and diamonds</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/resolution.rs"><code>tests/resolution.rs</code></a>:
+<code>tests/resolution.rs::resolves_local_interface_and_method_identities</code>,
+<code>tests/resolution.rs::derives_impl_method_identity_from_impl_and_interface_method</code>,
+and
+<code>tests/resolution.rs::resolved_constraint_occurrences_start_with_owned_empty_evidence_slots</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<code>tests/interface_modules.rs::qualified_public_interface_and_method_keep_their_defining_identities</code>,
+<code>tests/interface_modules.rs::targeted_same_spelled_interface_and_constructor_bind_distinct_namespaces</code>,
+and
+<code>tests/interface_modules.rs::alternate_direct_routes_to_one_impl_identity_do_not_self_overlap</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_identity_diamond.rs"><code>tests/interface_identity_diamond.rs</code></a>:
+<code>tests/interface_identity_diamond.rs::preserves_all_interface_identity_families_through_dependency_diamond</code>.</li>
+</ul>
+<h3 id="summary-atomicity-hidden-closure-direct-availability-and-no-re-export">Summary atomicity, hidden closure, direct availability, and no re-export</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<code>tests/implementations.rs::failed_public_impl_stages_never_produce_a_checked_summary</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/module_elaboration.rs"><code>tests/module_elaboration.rs</code></a>:
+<code>tests/module_elaboration.rs::failed_module_body_never_publishes_an_export_summary</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<code>tests/interface_modules.rs::hidden_interface_metadata_in_a_constrained_summary_is_not_reexported</code>,
+<code>tests/interface_modules.rs::public_impl_fact_is_available_on_a_targeted_direct_import_edge</code>,
+<code>tests/interface_modules.rs::private_impl_fact_remains_local_to_its_defining_module</code>,
+<code>tests/interface_modules.rs::public_impl_retains_its_private_head_identity_as_hidden_metadata</code>,
+and
+<code>tests/interface_modules.rs::public_impls_are_not_reexported_through_an_intermediary</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_generic_summary.rs"><code>tests/interface_generic_summary.rs</code></a>:
+<code>tests/interface_generic_summary.rs::generic_checked_summary_binds_every_retained_parameter_occurrence</code>.</li>
+</ul>
+<h3 id="interface-exposure-method-shape-and-entry-boundaries">Interface exposure, method shape, and entry boundaries</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<code>tests/interface_modules.rs::private_interface_and_method_are_not_qualified_import_bindings</code>
+and <code>tests/interface_modules.rs::private_method_is_not_a_qualified_import_binding</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<code>tests/interfaces.rs::rejects_public_global_requirement_on_private_interface</code>,
+<code>tests/interfaces.rs::accepts_private_global_requirement_on_private_interface</code>,
+<code>tests/interfaces.rs::rejects_interface_method_without_function_arrow</code>,
+<code>tests/interfaces.rs::rejects_interface_method_with_only_nested_function_arrow</code>,
+<code>tests/interfaces.rs::rejects_invalid_parameter_before_nested_function_shape</code>,
+<code>tests/interfaces.rs::accepts_top_level_function_with_nested_function_domain</code>,
+<code>tests/interfaces.rs::accepts_top_level_function_with_function_valued_codomain</code>,
+and
+<code>tests/interfaces.rs::top_level_function_with_nested_function_domain_completes_the_pipeline</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<code>tests/implementations.rs::rejects_public_impl_for_private_interface</code>,
+<code>tests/implementations.rs::rejects_public_impl_with_private_prerequisite</code>,
+and
+<code>tests/implementations.rs::rejects_invalid_interface_method_shape_before_impl_equation_arity</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
+<code>src/elaborate.rs::tests::invalid_outer_method_shape_has_an_exact_stack_safe_constraint_boundary</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/module_entry.rs"><code>tests/module_entry.rs</code></a>:
+<code>tests/module_entry.rs::rejects_a_constrained_main_before_lowering_entry_evidence</code>
+and
+<code>tests/module_entry.rs::existing_entry_shape_failures_precede_main_constrained</code>.</li>
+</ul>
+<h3 id="implementation-ownership-overlap-route-deduplication-and-authentication">Implementation ownership, overlap, route deduplication, and authentication</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<code>tests/implementations.rs::accepts_impl_for_local_interface</code>,
+<code>tests/implementations.rs::accepts_impl_for_local_outer_nominal</code>,
+<code>tests/implementations.rs::rejects_bare_type_variable_impl_head</code>,
+<code>tests/implementations.rs::rejects_identity_equal_local_implementation_heads</code>,
+and
+<code>tests/implementations.rs::rejects_generic_local_overlap_after_pair_local_freshening</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<code>tests/interface_modules.rs::rejects_foreign_interface_and_foreign_nominal_impl_as_orphan</code>,
+<code>tests/interface_modules.rs::rejects_primitive_impl_for_foreign_interface_as_orphan</code>,
+and
+<code>tests/interface_modules.rs::alternate_direct_routes_to_one_impl_identity_do_not_self_overlap</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
+<code>src/elaborate.rs::tests::imported_overlap_uses_retained_route_order_and_exact_budget</code>.</li>
+</ul>
+<h3 id="prerequisite-termination-rigid-selection-abstract-priority-and-failures">Prerequisite termination, rigid selection, abstract priority, and failures</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<code>tests/implementations.rs::accepts_strict_subterm_prerequisite</code>,
+<code>tests/implementations.rs::rejects_expanding_prerequisite</code>, and
+<code>tests/implementations.rs::accepts_ground_prerequisite_without_subterm_decrease</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_selection.rs"><code>tests/interface_selection.rs</code></a>:
+<code>tests/interface_selection.rs::constrained_method_selects_its_exact_abstract_requirement_before_a_matching_impl</code>,
+<code>tests/interface_selection.rs::absent_candidate_reports_constraint_unsatisfied</code>,
+<code>tests/interface_selection.rs::undetermined_obligation_reports_constraint_ambiguous_without_type_guessing</code>,
+and
+<code>tests/interface_selection.rs::rejects_public_global_obligation_instead_of_inferring_exported_requirement</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<code>tests/interfaces.rs::ground_cross_interface_prerequisite_cycle_has_the_exact_reason</code>.</li>
+</ul>
+<h3 id="method-membership-typing-and-recursive-group-interactions">Method membership, typing, and recursive-group interactions</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<code>tests/implementations.rs::checked_membership_uses_interface_order_and_authenticates_source_groups</code>,
+<code>tests/implementations.rs::rejects_missing_impl_method</code>,
+<code>tests/implementations.rs::rejects_duplicate_impl_method_group</code>,
+<code>tests/implementations.rs::rejects_extra_impl_method</code>,
+<code>tests/implementations.rs::checks_impl_method_body_against_the_substituted_interface_signature</code>,
+and <code>tests/implementations.rs::rejects_wrong_impl_method_result_type</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/recursion.rs"><code>tests/recursion.rs</code></a>:
+<code>tests/recursion.rs::implementation_method_recurses_through_current_evidence</code>,
+<code>tests/recursion.rs::implementation_methods_share_mutual_recursive_scope</code>,
+<code>tests/recursion.rs::earlier_global_and_later_implementation_method_share_recursive_scope</code>,
+and
+<code>tests/recursion.rs::earlier_implementation_method_and_later_global_share_recursive_scope</code>.</li>
+</ul>
+<h3 id="constrained-exports-and-abstract-concrete-generic-and-higher-order-evidence">Constrained exports and abstract, concrete, generic, and higher-order evidence</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<code>tests/interfaces.rs::cross_module_constraint_lowers_to_method_evidence</code>,
+<code>tests/interfaces.rs::generic_option_impl_constructs_prerequisite_evidence</code>,
+<code>tests/interfaces.rs::generic_two_prerequisite_slots_preserve_declaration_order</code>,
+and
+<code>tests/interfaces.rs::generic_exact_current_self_carries_abstract_prerequisite_evidence</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<code>tests/interface_corpus.rs::higher_order_abstract_evidence_observes_true</code> and
+<code>tests/interface_corpus.rs::equational_and_operational_constraints_agree</code>.</li>
+</ul>
+<h3 id="hidden-and-opaque-carrier-implementations">Hidden and opaque carrier implementations</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<code>tests/interface_corpus.rs::hidden_carrier_composes_to_forty_two</code> and
+<code>tests/interface_corpus.rs::opaque_carrier_uses_public_operations</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<code>tests/interface_modules.rs::private_impl_head_spelling_and_constructor_remain_unavailable</code>
+and
+<code>tests/interface_modules.rs::rejects_external_opaque_constructor_and_pattern_in_impl_body</code>.</li>
+</ul>
+<h3 id="structural-occurrence-evidence-survives-checking-and-is-consumed-once">Structural occurrence evidence survives checking and is consumed once</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_selection.rs"><code>tests/interface_selection.rs</code></a>:
+<code>tests/interface_selection.rs::constrained_global_occurrence_retains_one_abstract_selection_per_requirement_in_source_order</code>,
+<code>tests/interface_selection.rs::concrete_candidate_retains_impl_substitution_prerequisite_and_ordered_method_identity</code>,
+and
+<code>tests/interface_selection.rs::link_modules_retains_the_checked_occurrences_evidence_selection</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<code>tests/interface_corpus.rs::one_method_occurrence_does_not_retain_unused_same_typed_evidence</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence.rs"><code>src/evidence.rs</code></a>:
+<code>src/evidence.rs::tests::closure_zonks_then_fills_the_exact_structural_slot</code>.</li>
+</ul>
+<h3 id="pre-core-validation-rejects-corrupted-linked-evidence">Pre-Core validation rejects corrupted linked evidence</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_validation.rs"><code>tests/interface_validation.rs</code></a>:
+<code>tests/interface_validation.rs::validates_cross_module_concrete_selection_before_core</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
+<code>src/evidence_validation.rs::tests::rejects_wrong_generic_substitution_and_prerequisite_argument</code>,
+<code>src/evidence_validation.rs::tests::rejects_reordered_prerequisites_and_a_shared_prerequisite_child</code>,
+<code>src/evidence_validation.rs::tests::rejects_linked_implementation_type_scheme_and_provenance_corruption</code>,
+<code>src/evidence_validation.rs::tests::rejects_missing_and_reordered_same_typed_implementation_method_slots</code>,
+<code>src/evidence_validation.rs::tests::rejects_imported_implementation_route_without_its_exact_direct_edge</code>,
+and
+<code>src/evidence_validation.rs::tests::rejects_inference_forall_and_out_of_scope_type_escape_in_selected_goals</code>.</li>
+</ul>
+<h3 id="core-order-recursive-binders-validation-staging-and-closed-inventories">Core order, recursive binders, validation staging, and closed inventories</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<code>tests/interfaces.rs::generic_prerequisite_evidence_has_a_bounded_unspecialized_evaluation_trace</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/recursion.rs"><code>tests/recursion.rs</code></a>:
+<code>tests/recursion.rs::implementation_methods_share_mutual_recursive_scope</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/architecture.rs"><code>tests/architecture.rs</code></a>:
+<code>tests/architecture.rs::core_and_evaluator_keep_interface_evidence_outside_their_closed_inventories</code>
+and
+<code>tests/architecture.rs::synthesis_block_exit_releases_original_state_after_macro_shadow_drop</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
+<code>src/evidence_validation.rs::tests::validated_interface_capability_has_exact_resolved_program_payload</code>
+compiler-checks the capability's exhaustive payload shape.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/driver.rs"><code>src/driver.rs</code></a>:
+<code>src/driver.rs::tests::injected_evidence_failure_stops_before_core_synthesis_consumers</code>
+and
+<code>src/driver.rs::tests::independent_core_validation_starts_with_only_the_core_registry_owner</code>.</li>
+</ul>
+<h3 id="exact-end-to-end-observations">Exact end-to-end observations</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<code>tests/interface_corpus.rs::local_equal_int_observes_true</code>,
+<code>tests/interface_corpus.rs::cross_module_constrained_equal_observes_true</code>,
+<code>tests/interface_corpus.rs::generic_option_evidence_observes_true</code>,
+<code>tests/interface_corpus.rs::hidden_carrier_composes_to_forty_two</code>,
+<code>tests/interface_corpus.rs::opaque_carrier_uses_public_operations</code>,
+<code>tests/interface_corpus.rs::recursive_impl_method_computes_forty_two</code>, and
+<code>tests/interface_corpus.rs::mutual_impl_methods_compute_forty_two</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<code>tests/interfaces.rs::top_level_function_with_nested_function_domain_completes_the_pipeline</code>
+observes <code>42 : Int</code> after implementation checking, selection, lowering,
+validation, and evaluation.</li>
+</ul>
+<h3 id="deterministic-diagnostics-causal-labels-and-no-private-leak">Deterministic diagnostics, causal labels, and no private leak</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_diagnostics.rs"><code>tests/interface_diagnostics.rs</code></a>:
+<code>tests/interface_diagnostics.rs::imported_method_failure_relates_public_cause_without_leaking_private_impl</code>,
+<code>tests/interface_diagnostics.rs::constrained_import_failure_does_not_leak_a_transitive_impl_route</code>,
+<code>tests/interface_diagnostics.rs::qualified_method_failure_relates_the_import_alias_used_by_the_occurrence</code>,
+<code>tests/interface_diagnostics.rs::targeted_global_failure_relates_the_import_binding_used_by_the_occurrence</code>,
+<code>tests/interface_diagnostics.rs::nested_unsatisfied_failure_retains_the_selected_implementation_chain</code>,
+and
+<code>tests/interface_diagnostics.rs::concrete_prerequisite_cycle_retains_each_selected_implementation_chain</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/module_cli.rs"><code>tests/module_cli.rs</code></a>:
+<code>tests/module_cli.rs::cli_renders_the_structured_interface_diagnostic_without_reclassifying_it</code>.</li>
+</ul>
+<h3 id="graph-wide-resources-exact-boundaries-cycles-and-stack-safety">Graph-wide resources, exact boundaries, cycles, and stack safety</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interface_resources.rs"><code>tests/interface_resources.rs</code></a>:
+<code>tests/interface_resources.rs::one_constraint_budget_persists_from_dependency_admission_through_validation</code>
+and
+<code>tests/interface_resources.rs::cycle_precedes_constraint_resource_exhaustion_after_import_admission</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
+<code>src/elaborate.rs::tests::one_type_budget_spans_all_checked_modules</code>,
+<code>src/elaborate.rs::tests::one_constraint_budget_spans_all_checked_modules</code>,
+<code>src/elaborate.rs::tests::impl_method_substitution_uses_the_exact_constraint_budget</code>,
+<code>src/elaborate.rs::tests::imported_overlap_uses_retained_route_order_and_exact_budget</code>,
+and
+<code>src/elaborate.rs::tests::invalid_outer_method_shape_has_an_exact_stack_safe_constraint_boundary</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence.rs"><code>src/evidence.rs</code></a>:
+<code>src/evidence.rs::tests::every_same_interface_candidate_inspection_is_constraint_bounded</code>,
+<code>src/evidence.rs::tests::ground_prerequisite_reentry_is_a_cycle_before_resource_exhaustion</code>,
+and
+<code>src/evidence.rs::tests::deep_ground_prerequisite_chain_selects_and_drops_on_a_small_stack</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence_audit.rs"><code>src/evidence_audit.rs</code></a>:
+<code>src/evidence_audit.rs::tests::traversal_budget_has_an_exact_boundary_before_checked_wrapping</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
+<code>src/evidence_validation.rs::tests::one_constraint_budget_continues_from_linking_through_validation</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/interface.rs"><code>src/interface.rs</code></a>:
+<code>src/interface.rs::tests::evidence_builder_charges_nodes_and_ordered_slots_before_retention</code>
+and
+<code>src/interface.rs::tests::flat_evidence_plan_and_deep_substitution_drop_on_a_small_stack</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/dialect.rs"><code>src/core/dialect.rs</code></a>:
+<code>src/core/dialect.rs::tests::type_abstraction_binders_consume_the_exact_builder_budget</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/validate.rs"><code>src/core/validate.rs</code></a>:
+<code>src/core/validate.rs::tests::linear_type_scope_chain_uses_the_exact_proportional_budget</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<code>tests/interfaces.rs::deep_generic_prerequisite_chain_completes_the_pipeline_on_a_small_stack</code>.</li>
+</ul>
+<h3 id="normative-examples-and-bounded-baseline-trace">Normative examples and bounded baseline trace</h3>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/spec_examples.rs"><code>tests/spec_examples.rs</code></a>:
+<code>tests/spec_examples.rs::overview_local_interface_evidence_example_is_executable</code>,
+<code>tests/spec_examples.rs::overview_cross_module_constrained_example_is_executable</code>,
+<code>tests/spec_examples.rs::static_semantics_generic_prerequisite_evidence_example_is_executable</code>,
+<code>tests/spec_examples.rs::resolution_hidden_carrier_interface_example_uses_public_operations</code>,
+<code>tests/spec_examples.rs::resolution_opaque_carrier_interface_example_uses_public_operations</code>,
+<code>tests/spec_examples.rs::syntax_constrained_global_presentations_are_executable</code>,
+and <code>tests/spec_examples.rs::normative_document_manifest_is_complete</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<code>tests/interfaces.rs::generic_prerequisite_evidence_has_a_bounded_unspecialized_evaluation_trace</code>.</li>
+</ul>
+<h2 id="diagnostics-provenance-and-privacy">Diagnostics, provenance, and privacy</h2>
+<p>Constraint diagnostics retain the selected source occurrence as primary and a
+typed causal chain through its interface declaration, exact admitted import,
+selected implementation, and implementation method. Qualified and targeted
+occurrences retain the import alias or selector item actually used; another
+route to the same stable declaration is not substituted for it. Nested
+unsatisfied prerequisites and cycles retain the declaration-ordered selected
+implementation chain.</p>
+<p>Diagnostic provenance is intentionally narrower than semantic summary closure.
+A private dependency implementation is unavailable and its source span does
+not enter an importer diagnostic. A public implementation available only to an
+intermediate direct dependent is not exposed as a transitive route. A hidden
+foreign-interface shape can authenticate a public fact without re-exporting
+the public interface, while a hidden private nominal identity does not make its
+spelling or constructors available. Neither closure makes implementation
+bodies or import paths renderable to the caller. Existing structured reason
+ownership and CLI rendering remain in place.</p>
+<h2 id="resources-and-stack-ownership">Resources and stack ownership</h2>
+<p>One driver-owned constraint-work budget spans imported summary admission,
+checking across the graph, linking, and linked interface-evidence validation.
+The implementation charges retained facts and planned work before allocation
+or traversal. Imported overlap follows authenticated route order. Candidate
+inspection is bounded even for a wide same-interface environment, and evidence
+construction charges nodes and ordered slots before retaining them. The linked
+validator continues the same budget rather than resetting it at the stage
+boundary.</p>
+<p>This interface-and-constraint budget is distinct from existing inference,
+Core-construction, and Core-validation budgets. Resolution and checking retain
+their existing type-work budgets for inference and type storage. No Core node
+is constructed until linked interface-evidence validation succeeds. Core
+synthesis then uses the existing bounded Core builder, and the independently
+bounded Core validator checks the completed program afterward. An interface-
+evidence failure therefore stops before both Core-construction and
+Core-validation work; neither Core budget is spent to authenticate interface
+metadata.</p>
+<p>Cycle detection owns semantic failure precedence over later resource
+exhaustion. Properly decreasing generic prerequisite chains use explicit work
+stacks. Evidence plans, deep substitutions, checked-body audits, selection
+chains, validator worklists, rejected payloads, and replacement paths have
+small-stack destruction witnesses. These cases make the bound graph-wide and
+independent of module partitioning or recursive Rust call depth.</p>
+<p>Removing recursive nested-arrow search changes the exact checker boundaries.
+One interface exhausts the shared constraint budget at 36 units and succeeds at
+37. An implementation-method substitution exhausts it at 76 and succeeds at
+77. The 10,000-level invalid outer-method fixture exhausts its local check at 7
+and reaches <code>interface.method-not-function</code> at 8 on a 64 KiB stack. Dropping
+that fixture also exercises <code>ResolvedModule::drop</code> and
+<code>discard_resolved_interface_iteratively</code>, so the rejected resolved type is not
+destroyed through recursive Rust calls.</p>
+<h2 id="facts-retained-and-released">Facts retained and released</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Facts retained</th>
+<th>Facts released</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source projection to resolution</td>
+<td>ordered declarations, requirements, prerequisites, equations, source spans</td>
+<td>parser recovery state and unused concrete-tree structure</td>
+</tr>
+<tr>
+<td>Resolution to checking</td>
+<td>stable semantic identities, resolved heads and schemes, exact import provenance, occurrence-local empty evidence slots, imported body-free facts</td>
+<td>aliases as semantic identity, unavailable private names, mutable namespace search state</td>
+</tr>
+<tr>
+<td>Checking to dependency summaries</td>
+<td>public interface and method facts, public implementation heads, checked schemes, ordered prerequisites and mappings, hidden nominal/interface closure, provenance</td>
+<td>bodies, private scope, private implementations, and implementations imported by the publisher</td>
+</tr>
+<tr>
+<td>Checking to linking</td>
+<td>complete checked groups and bodies, defining registries, filled structural occurrences, per-module availability and dependency edges</td>
+<td>selection search work and inference state after obligation closure</td>
+</tr>
+<tr>
+<td>Linking to interface-evidence validation</td>
+<td>combined checked groups and registries, structural plans, occurrence module and import route, stable identities, scope/type/provenance facts</td>
+<td>module-local assembly state</td>
+</tr>
+<tr>
+<td>Validated evidence to Core synthesis</td>
+<td>authenticated checked definitions and evidence capability</td>
+<td>the validator-local linked-interface registry and validation indexes after successful authentication</td>
+</tr>
+<tr>
+<td>Core synthesis to Core validation</td>
+<td>synthesized ordinary Core with its resolved registry, source provenance, the result type, and its computed source-facing display</td>
+<td>the validated interface program, checked bodies, structural evidence, routes, the display-registry clone, and remaining interface identities when the explicit typed synthesis scope exits; an eager wrapper drop remains inside that scope</td>
+</tr>
+<tr>
+<td>Core validation to evaluation</td>
+<td>one validated ordinary pure Core program</td>
+<td>Core validator indexes and all remaining static evidence facts</td>
+</tr>
+</tbody>
+</table>
+<p>Source syntax erases separately from semantic identity. Import spellings and
+interface declarations cease to be source operations after resolution, while
+their stable identities remain through checking and linked evidence validation.
+Linked evidence validation builds its registry locally, uses it to authenticate
+occurrences, and does not store it in the validated capability. Core synthesis
+borrows that capability inside an explicitly typed driver block. The block also
+owns the display-registry clone, type-display computation, synthesis finish,
+and the eager wrapper drop. The drop records the last intentional capability
+use; block exit is the ownership boundary before independent Core validation.
+Only <code>Type</code>, <code>String</code>, and <code>UnvalidatedProgram</code> cross it. Compiler-exhaustive
+destructuring checks the capability's exact <code>ResolvedModuleProgram</code> payload,
+and a driver weak-reference witness proves that only the unchecked Core program
+owns the resolved registry when Core validation begins. The authenticated
+relationships have already become ordinary Core structure, so this boundary
+releases checked bodies, evidence, routes, the display clone, and remaining
+checked interface metadata without changing Core or evaluation. The linked
+validator's registry and indexes already ended locally after successful
+authentication.</p>
+<h2 id="locality-and-maintenance">Locality and maintenance</h2>
+<p>Interface-specific semantic machinery is concentrated in these production
+boundaries:</p>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/interface.rs"><code>src/interface.rs</code></a> owns identities, constrained
+schemes, flat plans, head matching, and their local resource accounting;</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/resolve.rs"><code>src/resolve.rs</code></a> and
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/resolved.rs"><code>src/resolved.rs</code></a> own namespace identity, summary
+closure, import availability, occurrence slots, and provenance;</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/elaborate.rs"><code>src/elaborate.rs</code></a> owns declaration and
+implementation checking, linking, and Core synthesis;</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence.rs"><code>src/evidence.rs</code></a> and
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence_audit.rs"><code>src/evidence_audit.rs</code></a> own structural
+selection and checked-body completeness;</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a> owns the
+independent pre-Core authenticity boundary; and</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/driver.rs"><code>src/driver.rs</code></a> orders linking, evidence validation,
+Core synthesis, Core validation, and evaluation under the graph-wide budget.</li>
+</ul>
+<p>The stable maintenance search</p>
+<pre tabindex="0"><code class="language-text">rg -l '\b(InterfaceId|MethodId|ImplId|ImplMethodId|RequirementId|EvidenceSelection|ConstrainedScheme|validate_interface_evidence)\b' src
+</code></pre>
+<p>returns exactly those eight production files. Surface grammar and projection
+remain at the existing lexer/parser boundaries. Core and evaluator source are
+protected by the closed-inventory architecture guard rather than by a parallel
+interface dispatch subsystem.</p>
+<h2 id="findings-retained-and-released">Findings retained and released</h2>
+<p>Retained findings are:</p>
+<ul>
+<li>stable semantic identities, rather than paths or spans, are the transferable
+currency across summaries, alternate routes, linking, and validation;</li>
+<li>a body-free summary needs hidden checked identity closure distinct from
+public source nameability;</li>
+<li>direct dependency edges own implementation availability, while alternate
+direct routes deduplicate one implementation identity and intermediaries do
+not re-export it;</li>
+<li>occurrence-local one-shot evidence lets selection happen at its checking
+owner and survive without a span-keyed side table or lowering-time search;</li>
+<li>an independent pre-Core validator is required because a structural plan alone
+cannot authenticate linked identity, route, scheme, scope, type, and
+provenance claims;</li>
+<li>flattened lexical functions preserve method order and prerequisites without
+requiring a dictionary value or evaluator dispatch rule; and</li>
+<li>a graph-wide resource budget must cross summary admission, checking, linking,
+and validation to remain independent of module partitioning.</li>
+</ul>
+<p>Released alternatives are source dictionaries, span-keyed evidence maps,
+lowering-time reselection, implementation re-export, summaries containing
+bodies or private scopes, route-specific implementation identities, runtime
+registries, and a new interface Core or evaluator family.</p>
+<h2 id="exclusions-and-downstream-pressure">Exclusions and downstream pressure</h2>
+<p>This increment does not add associated types, projections, normalization,
+multi-parameter or higher-kinded interfaces, default methods, specialization,
+priorities, negative implementations, first-class source dictionaries, named
+implementation values, interface objects, module signatures, inferred exported
+requirements, constrained <code>main</code>, cross-module recursion, dynamic loading,
+registration, discovery, a new Core node, a new evaluator rule, or dead-code
+elimination.</p>
+<p>Its retained unspecialized trace and closed inventory provide a baseline for a
+later, separately authorized core-versus-library audit. That audit may compare
+an existing Core behavior with a library interface after this increment is
+complete and specified. This work does not begin the audit, choose a migration,
+or authorize specialization.</p>
+<h2 id="review-and-verification-checkpoint">Review and verification checkpoint</h2>
+<p>The final reviewed product checkpoint is unsigned commit
+<code>ee998a05e9783972dc9952024fce2720b5d41449</code>. Independent branch-wide reviews of
+language semantics and specification, Rust implementation and resource bounds,
+documentation authority and provenance, and current-<code>main</code> integration are
+clear after the findings below passed their fix and re-review loops. This report
+and transition cleanup record that checkpoint; they do not move the product
+boundary.</p>
+<p>The original increment's reviewed product checkpoint was unsigned commit
+<code>37ef9f8</code>. It included the unsigned namespace fix <code>5398808</code> and
+evidence-validator fix <code>37ef9f8</code>. Unsigned commit <code>07b9129</code> recorded the
+finalized evidence report for that original checkpoint without moving its
+product boundary. The findings remain below as historical provenance.</p>
+<p>The original increment's review found that targeted interface and method maps
+were absent from four local conflict gates. This allowed a targeted interface
+to conflict with a same-spelled local interface or nominal, and a targeted
+method to conflict with a same-spelled local method or renamed constructor.
+Commit <code>5398808</code> adds the four missing checks. Four focused TDD integration
+tests witnessed RED before the fix and GREEN after it.</p>
+<p>That review also found that linked evidence validation authenticated a
+selected node's individual facts without authenticating selection order. It
+accepted a concrete implementation over an identity-equal lexical abstract
+requirement, a freshly instantiated current implementation at the root or below
+another node, and a later duplicate abstract requirement out of source order.
+The validator also rejected a valid exact-current selection with repeated
+identity-equal prerequisites. Commit <code>37ef9f8</code> reconstructs the required order
+with ordered
+<code>RequirementId</code> lookup, exact rigid current-identity substitution, exclusion of
+the current implementation when it is not exact, and mandated prerequisite
+<code>RequirementId</code>s below an exact-current node. Six focused selection-order
+behavior tests captured the RED findings and valid guards, then passed GREEN
+after the fix. Exact resource tests place the abstract-priority scan at 6
+constraint-work units and exact-current authentication with its mandated
+abstract prerequisite at 67 units; one unit less fails and the exact limit
+passes at that original checkpoint.</p>
+<p>Later branch-wide review found that linking authenticated individual checked
+modules but not the selected entry's exact module closure. It accepted an
+omitted direct dependency, a dependency after its importer, an unrelated module,
+and a surplus module that depended on the selected entry. Commit <code>8a37934</code>
+requires dependencies before their importers and requires the linked modules to
+equal the selected entry's complete dependency closure. Four integration tests
+retain those malformed boundaries.</p>
+<p>Review also found that a filled occurrence slot retained selected evidence
+without independently retaining the checker-zonked obligation argument. A
+forged selection could therefore authenticate its own goal while disagreeing
+with the checked occurrence. Commit <code>d55366a</code> atomically retains the checked
+goal and selection in the one-shot evidence slot, and linked validation checks
+their equality before Core synthesis. Focused negative, exact-budget, clone,
+and small-stack tests retain that authentication boundary.</p>
+<p>The language review then found that arrow-anywhere interface admission accepted
+a method type that no positive-pattern implementation equation could check.
+Commit <code>364c736</code> requires <code>Function</code> as the outermost method-type constructor,
+preserves <code>interface.method-parameter</code> precedence, rejects a nested-only arrow,
+retains top-level functions with nested function domains and codomains, checks
+the implementation failure boundary, and completes a <code>42 : Int</code> end-to-end
+case.</p>
+<p>Commit <code>18c04fd</code> remeasures the resource cost after removing recursive
+nested-arrow search. One interface exhausts the constraint budget at 36 units
+and succeeds at 37; implementation-method substitution exhausts it at 76 and
+succeeds at 77; and the 10,000-level invalid outer-method fixture exhausts its
+local check at 7 and reaches <code>interface.method-not-function</code> at 8 on a 64 KiB
+stack. <code>ResolvedModule</code> destroys the rejected interface payload iteratively, so
+the same fixture also retains stack-safe teardown evidence.</p>
+<p>Unsigned merge <code>78c6da9</code> incorporates current <code>main</code> and reconciles DN-0024,
+the design index, and the trajectory with implemented Modular Ash. Commits
+<code>089c54e</code>, <code>5210beb</code>, and <code>ee998a0</code> then align the normative specification,
+retained evidence, task progress, and historical checkpoint provenance with the
+outer-<code>Function</code> correction. Repeated language, Rust and resource,
+documentation, and integration review found no remaining actionable defect at
+<code>ee998a0</code>.</p>
+<p>The complete verification boundary passes at <code>ee998a0</code>:</p>
+<pre tabindex="0"><code class="language-text">cargo fmt --check
+cargo check --locked --all-targets
+cargo test --locked --all-targets
+cargo clippy --locked --all-targets -- -D warnings
+cargo xtask verify
+markdownlint --disable MD013 -- README.md spec docs
+git diff --check
+</code></pre>
+<p>The locked all-target test inventory is exactly 927 tests: 298 library tests,
+10 binary tests, and 619 integration tests. The canonical <code>cargo xtask verify</code>
+workspace verifier additionally runs xtask's own one-test unit suite. Manual
+relative-link, authority-boundary, and formal-notation audits also pass.</p>
+<p>Complete-branch inspection from current <code>main</code> at <code>8f4de9a</code> to <code>ee998a0</code> covers
+133 files, 45,894 insertions, and 5,327 deletions. Current <code>main</code> is an ancestor;
+the branch is 51 commits ahead and 0 behind. Interface-increment inspection
+from <code>ca79328</code> through <code>ee998a0</code> covers 72 files, 31,180 insertions, 3,492
+deletions, and 31 commits. The search</p>
+<pre tabindex="0"><code class="language-text">rg -n '\b(Interface|Impl|Requirement|EvidenceSelection)\b' src/core src/eval
+</code></pre>
+<p>returns no matches. The stable maintenance search still returns exactly the
+eight production files listed above, and the Core and runtime enum inventories
+remain unchanged from <code>ca79328</code>. The worktree was clean at the reviewed product
+checkpoint.</p>
+<p>Transition cleanup is complete in this report-and-cleanup commit: the completed
+proposal, task, execution plan, their index entries, and all live links to them
+have been removed. Git retains their history. This cleanup does not move the
+<code>ee998a0</code> product boundary. The product remains unmerged into <code>main</code>, although
+current <code>main</code> at <code>8f4de9a</code> is incorporated and remains an ancestor. The
+retained unspecialized trace supplied the baseline for the separately
+authorized core-versus-library comparison. That audit is complete and retained
+in the <a href="/ash/docs/design/modular-ash/core-library-evidence/">core-and-library evidence</a>.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#scope-and-checkpoints">Scope and checkpoints</a><a href="#causal-semantic-model">Causal semantic model</a><a href="#stable-identity-summaries-and-availability">Stable identity, summaries, and availability</a><a href="#structural-evidence-and-validation">Structural evidence and validation</a><a href="#core-inventory-and-unspecialized-execution">Core inventory and unspecialized execution</a><a href="#required-evidence">Required evidence</a><a href="#diagnostics-provenance-and-privacy">Diagnostics, provenance, and privacy</a><a href="#resources-and-stack-ownership">Resources and stack ownership</a><a href="#facts-retained-and-released">Facts retained and released</a><a href="#locality-and-maintenance">Locality and maintenance</a><a href="#findings-retained-and-released">Findings retained and released</a><a href="#exclusions-and-downstream-pressure">Exclusions and downstream pressure</a><a href="#review-and-verification-checkpoint">Review and verification checkpoint</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

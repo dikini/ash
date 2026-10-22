@@ -1,0 +1,736 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0001: Ash Reboot Foundations · Ash</title><meta name="description" content="This note captures the current design intent for the Ash language reboot."><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0001: Ash Reboot Foundations · Ash"><meta property="og:description" content="This note captures the current design intent for the Ash language reboot."><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0001: Ash Reboot Foundations · Ash"><meta name="twitter:description" content="This note captures the current design intent for the Ash language reboot."><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0001-reboot-foundations/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0001-reboot-foundations/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0001-reboot-foundations.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0001: Ash Reboot Foundations","headline":"DN-0001: Ash Reboot Foundations","description":"This note captures the current design intent for the Ash language reboot.","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0001-reboot-foundations/","@id":"https://dikini.github.io/ash/docs/design/dn-0001-reboot-foundations/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0001-reboot-foundations.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0001-ash-reboot-foundations" data-pagefind-meta="title">DN-0001: Ash Reboot Foundations</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0001-reboot-foundations.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0001</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/decisions/ad-0004-small-step-semantic-method/">AD-0004: Small-Step Semantic Method</a>, <a href="/ash/docs/design/dn-0002-core-representation/">DN-0002: Core Representation</a>, <a href="/ash/docs/design/dn-0003-parser-architecture/">DN-0003: Parser Architecture</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It records reboot principles, constraints, and open directions; it is not the Ash specification and does not accept the speculative designs it discusses.</p>
+</blockquote>
+<h2 id="purpose">Purpose</h2>
+<p>This note captures the current design intent for the Ash language reboot.</p>
+<p>It is not the Ash specification. It does not define future language semantics. It records the development principles, architectural constraints, and open design directions that should guide the initial reboot work.</p>
+<p>The previous Ash repository at <code>dikini/ash</code> should be treated as a historical archive and source of prior experiments, not as authority for the reboot.</p>
+<hr>
+<h2 id="1-reboot-principle">1. Reboot principle</h2>
+<p>The reboot starts from a small, coherent, pure functional Ash and grows in stages.</p>
+<p>The aim is not to preserve the accumulated feature inventory of historical Ash. The aim is to preserve what was learned from it while rebuilding the language through a simpler development process.</p>
+<p>Mainline should always describe and implement a coherent language.</p>
+<p>A feature should not exist in the current specification merely because it is intended, designed, or partially implemented.</p>
+<p>The canonical specification describes what Ash currently is.</p>
+<hr>
+<h2 id="2-project-artifacts">2. Project artifacts</h2>
+<p>The reboot should keep a small number of artifact classes with sharply different roles.</p>
+<h3 id="specification">Specification</h3>
+<p>The specification describes current implemented Ash.</p>
+<p>It answers:</p>
+<blockquote>
+<p>What is Ash now?</p>
+</blockquote>
+<p>Properties:</p>
+<ul>
+<li>normative;</li>
+<li>describes <code>main</code>;</li>
+<li>contains only implemented language/runtime behaviour;</li>
+<li>does not contain future feature inventories;</li>
+<li>changes together with implementation.</li>
+</ul>
+<p>The specification may be split into independent files or sections, but they form one logical specification.</p>
+<h3 id="change-proposal">Change proposal</h3>
+<p>A change proposal describes a proposed transition from the current specification to a new specification state.</p>
+<p>It answers:</p>
+<blockquote>
+<p>What will Ash become if this change is accepted and implemented?</p>
+</blockquote>
+<p>It should state:</p>
+<ul>
+<li>current behaviour;</li>
+<li>proposed behaviour;</li>
+<li>semantic delta;</li>
+<li>affected specification sections;</li>
+<li>resulting specification truth;</li>
+<li>interactions;</li>
+<li>non-goals;</li>
+<li>required evidence.</li>
+</ul>
+<p>A change proposal is prospective specification text.</p>
+<p>It does not become current Ash until implementation, tests, and the corresponding specification update merge.</p>
+<h3 id="task">Task</h3>
+<p>A task is an implementation planning and execution record.</p>
+<p>It answers:</p>
+<blockquote>
+<p>What work must be done to realize an accepted change or architectural decision?</p>
+</blockquote>
+<p>Tasks record:</p>
+<ul>
+<li>dependencies;</li>
+<li>implementation work;</li>
+<li>progress;</li>
+<li>verification;</li>
+<li>discoveries;</li>
+<li>deviations requiring proposal/design reconsideration.</li>
+</ul>
+<p>Tasks do not define language semantics.</p>
+<p>If implementation discovers that the proposed semantics are wrong, the proposal should change rather than allowing the task to invent new semantics locally.</p>
+<h3 id="design-note">Design note</h3>
+<p>A design note records exploration.</p>
+<p>It answers questions such as:</p>
+<blockquote>
+<p>What options are we considering?
+What pressures should influence the current design?
+What remains uncertain?</p>
+</blockquote>
+<p>Design notes may contain:</p>
+<ul>
+<li>research;</li>
+<li>alternatives;</li>
+<li>experiments;</li>
+<li>tradeoffs;</li>
+<li>speculative future ideas;</li>
+<li>architectural pressure on immediate work.</li>
+</ul>
+<p>They are informative, not normative.</p>
+<h3 id="architectural-decision">Architectural decision</h3>
+<p>Some decisions are important but are not language changes.</p>
+<p>Examples include:</p>
+<ul>
+<li>parser architecture;</li>
+<li>Core representation;</li>
+<li>compiler pass organization;</li>
+<li>repository workflow.</li>
+</ul>
+<p>These should be captured as short architectural decisions after exploration converges.</p>
+<p>A typical flow is:</p>
+<pre tabindex="0"><code class="language-text">research
+→ design note
+→ architectural decision
+→ task
+</code></pre>
+<p>Language changes instead follow:</p>
+<pre tabindex="0"><code class="language-text">research
+→ design note
+→ change proposal
+→ task(s)
+→ implementation + tests + specification update
+</code></pre>
+<hr>
+<h2 id="3-current-tree-versus-history">3. Current tree versus history</h2>
+<p>The repository working tree should contain only current, valid artifacts.</p>
+<p>Superseded, rejected, and historical documents should normally be removed from the current tree.</p>
+<p>Git history preserves historical evidence.</p>
+<p>Important lifetime states may be marked with tags.</p>
+<p>The intended temporal model is:</p>
+<pre tabindex="0"><code class="language-text">working tree
+    current project state
+
+git history
+    how the project evolved
+
+tags
+    important named states
+</code></pre>
+<p>The historical Ash repository should remain external historical evidence. Its documents should not be copied wholesale into the reboot repository.</p>
+<p>A useful rule is:</p>
+<blockquote>
+<p>If deleting a historical document from the current tree does not reduce understanding of current Ash, it belongs in history rather than in the current tree.</p>
+</blockquote>
+<hr>
+<h2 id="4-repository-as-project-context">4. Repository as project context</h2>
+<p>The repository should be sufficient to understand the project without depending on GitHub, GitLab, Linear, or another external system.</p>
+<p>External systems may provide views, collaboration, scheduling, issues, or pull requests, but they are not the semantic source of project state.</p>
+<p>If external systems disappeared, the repository should still answer:</p>
+<ul>
+<li>What is Ash?</li>
+<li>Why is it designed this way?</li>
+<li>What is changing?</li>
+<li>What work is active?</li>
+<li>What future directions currently matter?</li>
+<li>What assumptions and unresolved questions exist?</li>
+</ul>
+<p>The repository is not intended to become a full project-management system or knowledge-management system.</p>
+<p>It should support project management and knowledge management only to the degree needed to understand and evolve Ash.</p>
+<hr>
+<h2 id="5-context-reconstruction">5. Context reconstruction</h2>
+<p>A central goal of the development system is context reconstruction.</p>
+<p>A contributor or agent should not need to understand the entire project before making a correct local decision.</p>
+<p>The system should make it cheap to answer:</p>
+<pre tabindex="0"><code class="language-text">What is true now?
+Why is it true?
+What is changing?
+What remains uncertain?
+What evidence supports this?
+</code></pre>
+<p>Different agents need different views over the same project state.</p>
+<h3 id="design-work">Design work</h3>
+<p>Needs:</p>
+<ul>
+<li>current specification;</li>
+<li>relevant design notes;</li>
+<li>architectural decisions;</li>
+<li>alternatives;</li>
+<li>future architectural pressure.</li>
+</ul>
+<h3 id="implementation-work">Implementation work</h3>
+<p>Needs:</p>
+<ul>
+<li>current specification;</li>
+<li>accepted change proposal;</li>
+<li>relevant decisions;</li>
+<li>active task;</li>
+<li>tests and invariants.</li>
+</ul>
+<h3 id="qa">QA</h3>
+<p>Needs:</p>
+<ul>
+<li>specification obligations;</li>
+<li>proposal acceptance criteria;</li>
+<li>positive and negative cases;</li>
+<li>invariants.</li>
+</ul>
+<h3 id="documentationspecification-work">Documentation/specification work</h3>
+<p>Needs:</p>
+<ul>
+<li>current specification;</li>
+<li>semantic delta from proposals;</li>
+<li>decisions affecting wording or structure.</li>
+</ul>
+<h3 id="planning">Planning</h3>
+<p>Needs:</p>
+<ul>
+<li>trajectory;</li>
+<li>dependencies;</li>
+<li>active proposals;</li>
+<li>task state.</li>
+</ul>
+<p>The goal is:</p>
+<blockquote>
+<p>Reconstruct the minimum sufficient context for the question being answered.</p>
+</blockquote>
+<p>The system should not require agents to read large numbers of unrelated documents.</p>
+<hr>
+<h2 id="6-development-trajectory">6. Development trajectory</h2>
+<p>Development should be represented as a dependency graph rather than one large sequential roadmap.</p>
+<p>Orthogonal capabilities may be developed in parallel and integrated when their dependencies and interaction points are ready.</p>
+<p>Planning detail should decrease with distance.</p>
+<p>Near-term work should be detailed and implementation-ready.</p>
+<p>Further work should preserve:</p>
+<ul>
+<li>intent;</li>
+<li>dependencies;</li>
+<li>major interactions;</li>
+<li>architectural pressure;</li>
+<li>large risks.</li>
+</ul>
+<p>Far-future work may contain speculative detail, but it remains explicitly speculative.</p>
+<p>A useful maturity progression is:</p>
+<pre tabindex="0"><code class="language-text">idea
+→ speculative
+→ outlined
+→ designed
+→ specified
+→ implementation
+</code></pre>
+<p>Dependency readiness and design maturity are separate concerns.</p>
+<p>A feature may be technically unblocked while still being too poorly understood to implement.</p>
+<p>Future nodes should be detailed enough to prevent large architectural mistakes, but not detailed enough to pretend that unresolved decisions have been made.</p>
+<p>Useful future notes should state:</p>
+<pre tabindex="0"><code class="language-text">Current work MUST:
+...
+
+Current work MUST NOT:
+...
+
+Current work NEED NOT:
+...
+</code></pre>
+<p>This allows future thinking to influence immediate architecture without turning future ideas into current requirements.</p>
+<hr>
+<h2 id="7-initial-language-trajectory">7. Initial language trajectory</h2>
+<p>The reboot should begin with a pure functional language.</p>
+<p>The initial nucleus should be deliberately small and coherent.</p>
+<p>Likely early capabilities include:</p>
+<ul>
+<li>primitive values;</li>
+<li>immutable bindings;</li>
+<li>functions and calls;</li>
+<li>recursion;</li>
+<li>algebraic data types;</li>
+<li>pattern matching;</li>
+<li>basic parametric polymorphism.</li>
+</ul>
+<p>Effects, providers, processes, propositions, laws, proofs, and optimizer search should not be required for the first usable implementation.</p>
+<p>The initial implementation exists partly to test the parser, type system, and Core architecture while the language is still small enough to change cheaply.</p>
+<p>Infrastructure may merge before being exposed in surface syntax.</p>
+<p>User-visible language semantics should not merge in an intentionally incomplete form.</p>
+<p>A useful rule is:</p>
+<blockquote>
+<p>Infrastructure may be incomplete while unreachable; accepted language semantics may not be knowingly temporary.</p>
+</blockquote>
+<hr>
+<h2 id="8-parser-and-grammar">8. Parser and grammar</h2>
+<p>The specification and parser architecture must remain separate concerns.</p>
+<h3 id="grammar">Grammar</h3>
+<p>The language grammar should describe the accepted language independently of parser implementation.</p>
+<p>EBNF is the likely normative notation for grammar.</p>
+<p>The grammar should define:</p>
+<ul>
+<li>lexical structure;</li>
+<li>syntax;</li>
+<li>precedence;</li>
+<li>associativity;</li>
+<li>ambiguity rules.</li>
+</ul>
+<h3 id="parser-architecture">Parser architecture</h3>
+<p>Parser extensibility is an implementation concern.</p>
+<p>The parser should be designed so future syntax can be added without repeatedly restructuring unrelated parser code.</p>
+<p>Possible approaches should be researched before committing to a parser architecture.</p>
+<p>Relevant questions include:</p>
+<ul>
+<li>modularity;</li>
+<li>grammar growth;</li>
+<li>precedence handling;</li>
+<li>ambiguity;</li>
+<li>diagnostics;</li>
+<li>error recovery;</li>
+<li>source spans;</li>
+<li>tooling support.</li>
+</ul>
+<p>A suitable flow is:</p>
+<pre tabindex="0"><code class="language-text">parser research
+→ design discussion
+→ design note
+→ architectural decision
+→ implementation task
+</code></pre>
+<p>The specification should not expose parser extension points.</p>
+<hr>
+<h2 id="9-semantic-specification-discipline">9. Semantic specification discipline</h2>
+<p>The reboot should define a consistent semantic notation rather than mixing semantic styles opportunistically.</p>
+<p>Using big-step semantics for some constructs and small-step semantics for others risks creating two normative semantic systems that can drift.</p>
+<p>Ash is expected to include effects, handlers, explicit continuations, concurrency, cancellation, and runtime state.</p>
+<p><a href="/ash/docs/decisions/ad-0004-small-step-semantic-method/">AD-0004</a> selects
+small-step operational semantics as the primary normative method.</p>
+<p>Derived explanatory or big-step views may still be useful, but they should not become competing sources of truth.</p>
+<p>Concrete language behavior remains to be accepted through semantic proposals
+and recorded in the specification; the method decision does not define it.</p>
+<p>The chosen semantics should be as complete as practical rather than selectively formal only around difficult features.</p>
+<hr>
+<h2 id="10-core-ir">10. Core IR</h2>
+<p>Core is an immediate architectural concern because several expected future capabilities depend strongly on its shape.</p>
+<p>The current direction is a Freer-like semantic model for effectful computation:</p>
+<pre tabindex="0"><code class="language-text">Pure a
+Impure op continuation
+</code></pre>
+<p>This is a semantic shape, not yet a commitment to a literal textbook Freer Monad encoding in the implementation language.</p>
+<p>Important Core constraints include:</p>
+<ul>
+<li>Core is typed.</li>
+<li>Pure Ash fits naturally.</li>
+<li>Effects extend Core without requiring a monolithic recursive expression type to grow for every effect family.</li>
+<li>Continuations are explicit compiler data, not host-language closures.</li>
+<li>The representation supports reliable traversal and rewriting.</li>
+<li>The representation has a clean relationship with a separate CPS IR.</li>
+<li>Core remains checkable after transformations.</li>
+<li>The concrete representation should be selected through implementation experiments rather than abstraction preference alone.</li>
+</ul>
+<p>Candidate encodings may include:</p>
+<ul>
+<li>direct first-order Freer-like representation;</li>
+<li>value/computation split;</li>
+<li>explicit bind/step representation;</li>
+<li>explicit continuation graph variants.</li>
+</ul>
+<p>The initial Core work should compare concrete representations using actual compiler operations rather than only theoretical criteria.</p>
+<p>Useful test cases include:</p>
+<ul>
+<li>pure evaluation;</li>
+<li>beta reduction;</li>
+<li>ADTs and match;</li>
+<li>effect operation;</li>
+<li>handler;</li>
+<li>Core → CPS;</li>
+<li>CPS → Core;</li>
+<li>opaque CPS fragment;</li>
+<li>typed rewriting.</li>
+</ul>
+<hr>
+<h2 id="11-core-and-cps-as-complementary-representations">11. Core and CPS as complementary representations</h2>
+<p>Core and CPS should be separate IRs.</p>
+<p>They are expected to make different compiler transformations natural.</p>
+<p>A transformation may be possible in both representations while being significantly simpler and safer in one.</p>
+<p>This motivates a longer-term model where optimization can move between representations rather than following a permanently linear pipeline.</p>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">Core
+  → Core transform
+  → CPS
+  → CPS transform
+  → Core
+  → ...
+</code></pre>
+<p>Optimization may eventually become graph search over:</p>
+<pre tabindex="0"><code class="language-text">representation
++
+program state
++
+legal transformations
+</code></pre>
+<p>Representation changes are themselves transformations.</p>
+<p>This is not an immediate optimizer requirement. It is architectural pressure on Core/CPS design.</p>
+<p>Current work should avoid assuming that Core → CPS is permanently irreversible.</p>
+<hr>
+<h2 id="12-opaque-cps-regions-in-core">12. Opaque CPS regions in Core</h2>
+<p>A CPS → Core transformation can be total by allowing CPS fragments that cannot be reconstructed structurally as normal Core to appear as opaque Core regions.</p>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">OpaqueCps {
+    fragment,
+    typed interface
+}
+</code></pre>
+<p>Core cannot inspect CPS structure inside such a region.</p>
+<p>It may reason only through statically established interface facts.</p>
+<p>Depending on those facts, Core may be able to:</p>
+<ul>
+<li>retain the region;</li>
+<li>move it;</li>
+<li>compose around it;</li>
+<li>lower it back to CPS.</li>
+</ul>
+<p>This allows structuredness to vary rather than requiring every CPS program to reconstruct perfectly into high-level Core.</p>
+<p>The detailed representation remains speculative.</p>
+<hr>
+<h2 id="13-compiler-transforms-and-correctness">13. Compiler transforms and correctness</h2>
+<p>Different graph representations require different rewrite rules.</p>
+<p>The project should not force one universal rewrite formulation if representation-specific rules are simpler and easier to implement correctly.</p>
+<p>A principle worth preserving is:</p>
+<blockquote>
+<p>Prefer changing representation over implementing an unnatural transformation in the wrong representation.</p>
+</blockquote>
+<p>Transform correctness should rely on statically established facts.</p>
+<p>Search or scheduling may be heuristic, but admissibility should remain checkable.</p>
+<p>A useful long-term division is:</p>
+<pre tabindex="0"><code class="language-text">search
+    heuristic
+
+transform applicability
+    statically checked
+
+resulting IR
+    revalidated
+</code></pre>
+<p>Future ML-guided optimization, if explored, should rank or propose legal transformations rather than becoming part of the trusted semantic core.</p>
+<hr>
+<h2 id="14-propositions-laws-and-proofs">14. Propositions, laws, and proofs</h2>
+<p>This is a future language direction, not an immediate requirement.</p>
+<p>The current conceptual distinction is:</p>
+<h3 id="proposition">Proposition</h3>
+<p>A proposition is a general, type-level semantic relation or predicate.</p>
+<p>Examples:</p>
+<pre tabindex="0"><code class="language-text">Idempotent(F)
+Commutes(F, G)
+Associative(Op)
+</code></pre>
+<p>Propositions should eventually be expressible in Ash rather than limited to a built-in compiler catalogue.</p>
+<h3 id="law">Law</h3>
+<p>A law is a required instance of a proposition for specific program entities.</p>
+<p>For example:</p>
+<pre tabindex="0"><code class="language-text">Idempotent(normalize)
+</code></pre>
+<p>The word <code>law</code> is intentionally stronger from the user perspective: it states something that the program is required to obey.</p>
+<h3 id="proof">Proof</h3>
+<p>A proof establishes a law statically.</p>
+<p>The intended development trajectory is:</p>
+<pre tabindex="0"><code class="language-text">no laws
+→ propositions + law declarations
+→ propositions + laws + proofs
+</code></pre>
+<p>The intermediate stage remains useful long-term.</p>
+<p>An unproved law is an explicit assumption.</p>
+<p>It can be observed by tooling and used for:</p>
+<ul>
+<li>QA;</li>
+<li>external analysis;</li>
+<li>generative property testing;</li>
+<li>tracking production assumptions.</li>
+</ul>
+<p>An assumed law does not become a compiler optimization fact merely because it has survived testing.</p>
+<hr>
+<h2 id="15-generative-testing-of-laws">15. Generative testing of laws</h2>
+<p>A law is a single semantic obligation.</p>
+<p>Testing and proof are different ways of interrogating it.</p>
+<p>For example, an assumed idempotence law may generate attempts to falsify:</p>
+<pre tabindex="0"><code class="language-text">forall x:
+    f(f(x)) == f(x)
+</code></pre>
+<p>One counterexample refutes the law.</p>
+<p>Large numbers of passing generated cases do not prove it.</p>
+<p>The distinction between unproved, tested, and proven must remain explicit.</p>
+<p>The intended principle is:</p>
+<blockquote>
+<p>The law is the obligation; testing attempts to falsify it; proof establishes it.</p>
+</blockquote>
+<h3 id="search-and-exploration">Search and exploration</h3>
+<p>The future testing direction is to explore inputs and executions that make
+plausible faults observable. QuickCheck-style generation is one starting point.
+AFL-style coverage feedback could guide exploration, but coverage is only one
+signal. Even complete coverage under a chosen metric does not establish that a
+trace exposing a fault has been executed. Values, operation ordering, and state
+relationships can differ while exercising the same branches.</p>
+<p>Candidate feedback includes code coverage, boundary values, new state
+transitions, and domain-specific classifications. A case may remain useful even
+when it adds no code coverage. Passing results mean no counterexample was found
+within the recorded search and budget; they do not discharge the law or authorize
+compiler optimization.</p>
+<h3 id="library-composition-and-supporting-capabilities">Library composition and supporting capabilities</h3>
+<p>Generators and search strategies appear to be library concerns. The architectural
+pressure is to support their definition and composition without committing to
+language syntax, a library API, or a particular search algorithm.</p>
+<p>A useful conceptual distinction is between constructing candidates and deciding
+which candidates to explore next. Composition could include:</p>
+<ul>
+<li>constructing larger values from smaller generators, including choices that
+depend on previously generated values or model state;</li>
+<li>combining fresh generation, mutation of retained cases, boundary exploration,
+and bounded enumeration;</li>
+<li>allocating effort among strategies using observations from earlier runs.</li>
+</ul>
+<p>Adaptive exploration needs to retain state and consume execution feedback.
+Controllable, replayable generation choices could let a search strategy reuse a
+generator while changing how it explores those choices. Automatically derived
+generators could supply defaults, with libraries adding domain knowledge. These
+are capabilities to investigate, not a selected representation or protocol.</p>
+<p>Compiler or runtime support may be needed to collect observations; the policy
+using them can remain in a library. For tests of Ash programs, investigate
+coverage associated with Ash/Core execution sites: host coverage of the evaluator
+can emphasize interpreter machinery rather than distinguish branches in the
+tested program. Testing the evaluator itself has a different coverage target.</p>
+<h3 id="evaluation-pressures-and-open-questions">Evaluation pressures and open questions</h3>
+<ul>
+<li>Type-correct generation does not ensure semantic preconditions. Compare
+construction of valid inputs with rejection and feedback-guided search; keep
+discarded cases distinct from successful checks.</li>
+<li>Preserve fresh exploration alongside adaptive search. Coverage can plateau
+while relevant values and executions remain unexplored.</li>
+<li>Replay must account for adaptive search history. Retained concrete cases or
+generation choices may be needed beyond an initial random seed.</li>
+<li>Shrinking should preserve the failure and its preconditions, without requiring
+all coverage discovered during exploration to remain.</li>
+<li>Effectful laws need explicit initial conditions and observations for comparing
+executions. Search cannot supply a missing definition of equivalence.</li>
+<li>Compare fault discovery under equal wall-clock budgets, including observation
+overhead, rather than judging strategies by coverage alone. Historical
+regressions and deliberately seeded faults could provide evidence, while their
+selection may bias the comparison.</li>
+</ul>
+<p>No implementation or experiment is selected here. A later experiment should
+compare ordinary generation with guided alternatives on representative laws,
+including sparse preconditions, branch-heavy behavior, and algebraic properties
+where coverage provides little guidance.</p>
+<h3 id="research-references">Research references</h3>
+<ul>
+<li>Lampropoulos, Hicks, and Pierce,
+<a href="https://lemonidas.github.io/pdf/FuzzChick.pdf">Coverage Guided, Property Based Testing</a>
+(2019): FuzzChick combines QuickChick with coverage feedback and type-aware
+mutation. Its abstract-machine experiments show improved fault discovery for
+sparse preconditions; carefully tuned handwritten generators can still do
+better. This supports investigating guided search, not a general performance
+claim for Ash.</li>
+<li>Padhye et al.,
+<a href="https://people.eecs.berkeley.edu/~ksen/papers/zest.pdf">Semantic Fuzzing with Zest</a>
+(2019): Zest mutates the parameters underlying QuickCheck-style generators and
+uses coverage and input validity as feedback. Its structured Java benchmarks
+provide an alternative to direct typed-value mutation. Neither approach is
+selected for Ash.</li>
+</ul>
+<hr>
+<h2 id="16-compiler-use-of-laws">16. Compiler use of laws</h2>
+<p>The trusted compiler optimization path should use only facts established by Ash's static semantics.</p>
+<p>Eventually, proven laws may supply compiler facts.</p>
+<p>Assumed but unproved laws should not authorize normal correctness-critical optimization.</p>
+<p>The compiler should not need to hardcode the logical expression defining every proposition.</p>
+<p>Propositions are type-level Ash expressions that the compiler can interpret or normalize statically.</p>
+<p>Transforms should consume the fact that a required proposition has been established.</p>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">facts ⊢ RequiredProposition(entity)
+</code></pre>
+<p>rather than:</p>
+<pre tabindex="0"><code class="language-text">if proposition_name == "idempotent" ...
+</code></pre>
+<p>The compiler may understand only a selected subset of proposition identities for transforms.</p>
+<p>User-defined propositions may still exist without optimizer meaning.</p>
+<hr>
+<h2 id="17-future-compiler-scripting">17. Future compiler scripting</h2>
+<p>A distant possibility is allowing transforms to be written in Ash or distributed in libraries.</p>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">transform collapse_nested_call&lt;F&gt;
+where Idempotent(F)
+</code></pre>
+<p>This is explicitly downstream.</p>
+<p>It should not influence immediate language complexity beyond avoiding architecture that makes safe, typed transform APIs impossible.</p>
+<p>Future transforms should operate through checked IR interfaces and should be revalidated by the compiler.</p>
+<hr>
+<h2 id="18-documentation-and-communication-style">18. Documentation and communication style</h2>
+<p>Writing quality is part of engineering quality.</p>
+<p>Project documents should prefer plain, direct language.</p>
+<p>Principles include:</p>
+<ul>
+<li>avoid unnecessary jargon;</li>
+<li>prefer short words where they are equally precise;</li>
+<li>prefer active voice;</li>
+<li>remove words that add no information;</li>
+<li>avoid fashionable abstractions and architecture-by-adjective;</li>
+<li>distinguish facts, decisions, and ideas explicitly;</li>
+<li>keep explanation proportional to commitment;</li>
+<li>avoid overexplaining;</li>
+<li>avoid overdesigning.</li>
+</ul>
+<p>Technical vocabulary is appropriate where it names a stable concept.</p>
+<p>Words such as:</p>
+<ul>
+<li>bounded;</li>
+<li>robust;</li>
+<li>extensible;</li>
+<li>scalable;</li>
+<li>explicit;</li>
+<li>principled;</li>
+<li>modular;</li>
+<li>compositional;</li>
+</ul>
+<p>should normally be followed by the concrete property they claim.</p>
+<p>Instead of:</p>
+<blockquote>
+<p>Core is extensible.</p>
+</blockquote>
+<p>Prefer:</p>
+<blockquote>
+<p>Adding an effect family does not require adding a new recursive Core expression form.</p>
+</blockquote>
+<p>A useful general rule is:</p>
+<blockquote>
+<p>Prefer nouns and verbs over adjectives.</p>
+</blockquote>
+<p>Orwell's writing rules are a useful influence, not a rigid formal standard.</p>
+<hr>
+<h2 id="19-tooling-the-development-discipline">19. Tooling the development discipline</h2>
+<p>The process should not rely on contributors manually maintaining large amounts of metadata.</p>
+<p>At the same time, process tooling must not become another major project.</p>
+<p>The initial system should be small.</p>
+<p>Possible progression:</p>
+<h3 id="stage-0">Stage 0</h3>
+<p>Plain repository structure and templates.</p>
+<h3 id="stage-1">Stage 1</h3>
+<p>Validation tooling:</p>
+<ul>
+<li>stable artifact IDs;</li>
+<li>unique IDs;</li>
+<li>valid references;</li>
+<li>required sections;</li>
+<li>artifact status validation.</li>
+</ul>
+<h3 id="stage-2">Stage 2</h3>
+<p>Derived artifact/reference graph.</p>
+<h3 id="stage-3">Stage 3</h3>
+<p>History and context queries.</p>
+<p>Examples:</p>
+<pre tabindex="0"><code class="language-text">What options have we considered for Core representation?
+
+Why did we choose this parser architecture?
+
+What proposal introduced this semantic rule?
+
+What future features depend on this decision?
+</code></pre>
+<h3 id="stage-4">Stage 4</h3>
+<p>Agent-oriented context assembly.</p>
+<p>Tooling should be local and repository-based.</p>
+<p>No external database should be required.</p>
+<p>The graph should be derivable from repository content and git history.</p>
+<hr>
+<h2 id="20-design-archaeology">20. Design archaeology</h2>
+<p>The history system should preserve choices, not merely changes.</p>
+<p>A useful historical query is:</p>
+<blockquote>
+<p>What options have we considered for X, and why?</p>
+</blockquote>
+<p>The answer should reconstruct:</p>
+<ul>
+<li>alternatives;</li>
+<li>experiments;</li>
+<li>decisions;</li>
+<li>reasons for rejection;</li>
+<li>current direction;</li>
+<li>relevant specification state.</li>
+</ul>
+<p>Current artifacts should contain only current knowledge.</p>
+<p>Historical reasoning remains recoverable through git history, tags, logs, and artifact references.</p>
+<hr>
+<h2 id="21-agent-support">21. Agent support</h2>
+<p>The repository should support new and experienced human contributors as well as design, implementation, QA, documentation, and planning agents.</p>
+<p>Agents should not be expected to remember Ash.</p>
+<p>They should reconstruct the context needed for the task.</p>
+<p>The project succeeds when an agent can find:</p>
+<pre tabindex="0"><code class="language-text">What exists?
+Why?
+What is changing?
+What do I need to do?
+What remains uncertain?
+</code></pre>
+<p>without reading large amounts of irrelevant material.</p>
+<p>The primary purpose of development artifacts is therefore:</p>
+<blockquote>
+<p>context reconstruction for future contributors and agents.</p>
+</blockquote>
+<hr>
+<h2 id="22-immediate-reboot-work">22. Immediate reboot work</h2>
+<p>Before substantial language implementation, establish:</p>
+<ol>
+<li>repository purpose and historical relationship;</li>
+<li>development and artifact model;</li>
+<li>specification methodology;</li>
+<li>writing/communication guidelines;</li>
+<li>initial trajectory;</li>
+<li>Core representation research/design note;</li>
+<li>parser architecture research/design note;</li>
+<li>tiny current specification;</li>
+<li>first implementation tasks.</li>
+</ol>
+<p>Do not migrate the historical Ash documentation wholesale.</p>
+<p>Use it as reference when a current decision needs historical evidence.</p>
+<p>The first implementation should remain intentionally small enough that parser, type-system, and Core architecture can be corrected cheaply.</p>
+<hr>
+<h2 id="23-guiding-test">23. Guiding test</h2>
+<p>For process:</p>
+<blockquote>
+<p>Can a contributor reconstruct the minimum sufficient context for a decision quickly and verify where that context came from?</p>
+</blockquote>
+<p>For specification:</p>
+<blockquote>
+<p>Does the canonical spec describe exactly the Ash that exists on <code>main</code>?</p>
+</blockquote>
+<p>For design:</p>
+<blockquote>
+<p>Does future thinking prevent obvious mistakes without forcing speculative implementation today?</p>
+</blockquote>
+<p>For implementation:</p>
+<blockquote>
+<p>Are accepted language constructs complete through their current semantic and execution route?</p>
+</blockquote>
+<p>For writing:</p>
+<blockquote>
+<p>Does every sentence reduce uncertainty?</p>
+</blockquote>
+<p>These are the main constraints for the reboot.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#purpose">Purpose</a><a href="#1-reboot-principle">1. Reboot principle</a><a href="#2-project-artifacts">2. Project artifacts</a><a href="#3-current-tree-versus-history">3. Current tree versus history</a><a href="#4-repository-as-project-context">4. Repository as project context</a><a href="#5-context-reconstruction">5. Context reconstruction</a><a href="#6-development-trajectory">6. Development trajectory</a><a href="#7-initial-language-trajectory">7. Initial language trajectory</a><a href="#8-parser-and-grammar">8. Parser and grammar</a><a href="#9-semantic-specification-discipline">9. Semantic specification discipline</a><a href="#10-core-ir">10. Core IR</a><a href="#11-core-and-cps-as-complementary-representations">11. Core and CPS as complementary representations</a><a href="#12-opaque-cps-regions-in-core">12. Opaque CPS regions in Core</a><a href="#13-compiler-transforms-and-correctness">13. Compiler transforms and correctness</a><a href="#14-propositions-laws-and-proofs">14. Propositions, laws, and proofs</a><a href="#15-generative-testing-of-laws">15. Generative testing of laws</a><a href="#16-compiler-use-of-laws">16. Compiler use of laws</a><a href="#17-future-compiler-scripting">17. Future compiler scripting</a><a href="#18-documentation-and-communication-style">18. Documentation and communication style</a><a href="#19-tooling-the-development-discipline">19. Tooling the development discipline</a><a href="#20-design-archaeology">20. Design archaeology</a><a href="#21-agent-support">21. Agent support</a><a href="#22-immediate-reboot-work">22. Immediate reboot work</a><a href="#23-guiding-test">23. Guiding test</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/">← Overview</a><a rel="next" href="/ash/docs/design/dn-0002-core-representation/">DN-0002: Core Representation →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

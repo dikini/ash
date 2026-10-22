@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-rolling-back-a-cancellable-journal.html" rel="next">
+<link href="./cases-supplying-a-local-pricing-policy.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Querying an immutable world · Ash</title><meta name="description" content="An entity can have a position without a velocity. Another entity can have a velocity without a position. A movement step needs both components for the same entity: it adds that entity's velocity to its position and…"><meta name="robots" content="index, follow"><meta property="og:title" content="Querying an immutable world · Ash"><meta property="og:description" content="An entity can have a position without a velocity. Another entity can have a velocity without a position. A movement step needs both components for the same entity: it adds that entity's velocity to its position and…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Querying an immutable world · Ash"><meta name="twitter:description" content="An entity can have a position without a velocity. Another entity can have a velocity without a position. A movement step needs both components for the same entity: it adds that entity's velocity to its position and…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-querying-an-immutable-world.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-querying-an-immutable-world.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Querying an immutable world","headline":"Querying an immutable world","description":"An entity can have a position without a velocity. Another entity can have a velocity without a position. A movement step needs both components for the same entity: it adds that entity's velocity to its position and…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-querying-an-immutable-world.html","@id":"https://dikini.github.io/ash/study/latest/cases-querying-an-immutable-world.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/querying-an-immutable-world/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-querying-an-immutable-world.html"><span class="chapter-title">Querying an immutable world</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#keep-one-binding-per-entity" id="toc-keep-one-binding-per-entity" class="nav-link active" data-scroll-target="#keep-one-binding-per-entity">Keep one binding per entity</a></li>
+  <li><a href="#join-identifiers-before-moving-positions" id="toc-join-identifiers-before-moving-positions" class="nav-link" data-scroll-target="#join-identifiers-before-moving-positions">Join identifiers before moving positions</a></li>
+  <li><a href="#state-which-store-the-system-needs" id="toc-state-which-store-the-system-needs" class="nav-link" data-scroll-target="#state-which-store-the-system-needs">State which store the system needs</a></li>
+  <li><a href="#retain-snapshots-across-two-steps" id="toc-retain-snapshots-across-two-steps" class="nav-link" data-scroll-target="#retain-snapshots-across-two-steps">Retain snapshots across two steps</a></li>
+  <li><a href="#test-the-absent-cases" id="toc-test-the-absent-cases" class="nav-link" data-scroll-target="#test-the-absent-cases">Test the absent cases</a></li>
+  <li><a href="#a-well-typed-join-can-still-match-the-wrong-entities" id="toc-a-well-typed-join-can-still-match-the-wrong-entities" class="nav-link" data-scroll-target="#a-well-typed-join-can-still-match-the-wrong-entities">A well-typed join can still match the wrong entities</a></li>
+  <li><a href="#distinguish-missing-evidence-from-a-wrong-component" id="toc-distinguish-missing-evidence-from-a-wrong-component" class="nav-link" data-scroll-target="#distinguish-missing-evidence-from-a-wrong-component">Distinguish missing evidence from a wrong component</a></li>
+  <li><a href="#count-the-work-this-representation-performs" id="toc-count-the-work-this-representation-performs" class="nav-link" data-scroll-target="#count-the-work-this-representation-performs">Count the work this representation performs</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-querying-an-immutable-world.html"><span class="chapter-title">Querying an immutable world</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Querying an immutable world</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>An entity can have a position without a velocity. Another entity can have a velocity without a position. A movement step needs both components for the <em>same entity</em>: it adds that entity’s velocity to its position and leaves every other position alone. Keeping the previous world lets a caller inspect the state before the step as well as the state after it.</p>
+<p>The <a href="./cases-dictionary-as-list.html">list dictionary</a> already gives us lookup and retained versions. Its newest binding shadows an older binding with the same key, however. A component store must enumerate each entity once, or one movement step could visit the same entity more than once. We will replace an existing binding at its enumeration position and append an absent binding. Then we can separate two questions: which component store does a system need, and which entities occur in both stores? This arrangement — entities, one store per component type, and systems that query those stores — is called an <em>entity-component system</em>; this world is its finite form, with two fixed stores rather than an open registry.</p>
+<p>Use three entities with positions in this order:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Entity</th>
+<th style="text-align: left;">Position</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">(10, 5)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">(20, 7)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">(30, 9)</td>
+</tr>
+</tbody>
+</table>
+<p>Put velocities in a deliberately different order:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Entity</th>
+<th style="text-align: left;">Velocity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">(1, 2)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">(2, -1)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">(9, 9)</td>
+</tr>
+</tbody>
+</table>
+<p>Before writing the movement step, identify its joined rows. Entity <code>1</code> pairs <code>Position(10, 5)</code> with <code>Velocity(2, -1)</code>; entity <code>3</code> pairs <code>Position(30, 9)</code> with <code>Velocity(1, 2)</code>. Entity <code>2</code> stays still because it lacks a velocity. Entity <code>4</code> contributes no position. The order of this join follows the positions: <code>1</code>, then <code>3</code>.</p>
+<section id="keep-one-binding-per-entity" class="level2">
+<h2 class="anchored" data-anchor-id="keep-one-binding-per-entity">Keep one binding per entity</h2>
+<p><code>EntityId</code> wraps an integer so an identifier has its own nominal type. <code>Position</code> and <code>Velocity</code> each contain two integers, but their distinct nominal types give coordinates and displacements different roles. These are ordinary <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#tuples-and-constructors">data declarations and constructor applications</a>; the types alone do not assert that two identifiers are equal or that a store is unique.</p>
+<p>A <code>Rows&lt;C&gt;</code> value enumerates zero or more entity-component pairs. A <code>Store&lt;C&gt;</code> wraps those rows and hides its constructor. Clients can read an enumeration through <code>entries</code>, but they cannot construct a <code>Store</code> from arbitrary rows. Under the <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#imports-and-namespaces">opaque export rules</a>, only the module below can use its <code>Store</code> constructor or pattern.</p>
+<p>Derive its operations from the desired result. <code>lookup</code> needs an identifier and a store, and returns <code>Option&lt;C&gt;</code> because absence is possible. <code>put</code> needs an identifier, a component, and a store, and returns a new store of the same component type. <code>entries</code> needs only the store. Each operation receives one value; the multiple inputs of <code>lookup</code> and <code>put</code> form a tuple.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub type EntityId = EntityId(Int)
+
+pub type Position = Position(Int, Int)
+
+pub type Velocity = Velocity(Int, Int)
+
+pub type Option&lt;C&gt; = None
+    | Some(C)
+
+pub type Rows&lt;C&gt; = NoRows
+    | Row(EntityId, C, Rows&lt;C&gt;)
+
+pub opaque type Store&lt;C&gt; = Store(Rows&lt;C&gt;)
+
+pub empty : Unit -&gt; Store&lt;C&gt;
+empty () = Store(NoRows)
+
+pub entries : Store&lt;C&gt; -&gt; Rows&lt;C&gt;
+entries Store(rows) = rows
+
+same_entity : (EntityId, EntityId) -&gt; Bool
+same_entity (EntityId(left), EntityId(right)) = left == right
+
+lookup_rows : (EntityId, Rows&lt;C&gt;) -&gt; Option&lt;C&gt;
+lookup_rows (query, NoRows) = None
+lookup_rows (query, Row(entity, component, rest)) = match same_entity(query, entity) {
+    true =&gt; Some(component)
+    false =&gt; lookup_rows(query, rest)
+}
+
+pub lookup : (EntityId, Store&lt;C&gt;) -&gt; Option&lt;C&gt;
+lookup (query, Store(rows)) = lookup_rows(query, rows)
+
+put_rows : (EntityId, C, Rows&lt;C&gt;) -&gt; Rows&lt;C&gt;
+put_rows (entity, component, NoRows) = Row(entity, component, NoRows)
+put_rows (entity, component, Row(current, saved, rest)) = match same_entity(entity, current) {
+    true =&gt; Row(entity, component, rest)
+    false =&gt; Row(current, saved, put_rows(entity, component, rest))
+}
+
+pub put : (EntityId, C, Store&lt;C&gt;) -&gt; Store&lt;C&gt;
+put (entity, component, Store(rows)) = Store(put_rows(entity, component, rows))</code></pre>
+<p>At <code>NoRows</code>, lookup returns <code>None</code>. At a row, it compares identifiers: a match returns the component; a mismatch searches the smaller tail. <code>Some</code> and <code>None</code> keep absence separate from any possible component value. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#patterns-matches-and-coverage">pattern and coverage rules</a> check that these cases cover the data.</p>
+<p>For <code>put_rows</code>, the empty case creates one binding. A matching identifier replaces that row’s component and keeps its tail. A mismatch retains the current row and recurses into the smaller tail. Thus replacement preserves the identifier’s position, while insertion reaches the end and appends a row.</p>
+<p>The uniqueness argument needs a premise: the input rows contain at most one binding per identifier. In the matching case, the tail contains no second copy, so replacement retains uniqueness. In the mismatch case, the unchanged head’s identifier differs from the inserted identifier and was absent from the old tail; the recursive result therefore remains distinct from that head. The empty case starts the argument. <code>empty</code> creates unique rows. The only exported store producers in <code>stores.ash</code> are <code>empty</code> and <code>put</code>. The private constructor prevents a client from injecting a duplicate enumeration. This is an argument about this API and its equations, beyond the finite observations below.</p>
+</section>
+<section id="join-identifiers-before-moving-positions" class="level2">
+<h2 class="anchored" data-anchor-id="join-identifiers-before-moving-positions">Join identifiers before moving positions</h2>
+<p>A join walks the position rows. For each identifier it looks up a velocity. An absent velocity contributes no joined row; a present velocity contributes one row containing the original position and its matching velocity. Recursing on the remaining positions preserves their order. Since the position store is unique, the resulting identifiers are unique too.</p>
+<p>Movement then receives the joined rows and the original position store. <code>advance</code> adds <code>(dx, dy)</code> to <code>(x, y)</code>. <code>move_positions</code> puts that new position back under the joined identifier, carrying the returned store into the next recursive call. Every joined identifier already occurs in the position store, so these puts replace existing entries. Unjoined positions keep their values and their positions in the enumeration.</p>
+<p>First keep access concrete. A <code>World</code> contains a position store followed by a velocity store. <code>move_direct</code> unpacks those two fields, joins them, moves the joined positions, and constructs <code>World(moved, velocities)</code>. It keeps the velocity field from its input. The complete world module appears below when we add generic access; this entry uses its concrete operation:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import stores (Rows, Position, Velocity)
+import systems (join_stores)
+import world (World, initial, move_direct)
+
+main : Unit -&gt; (Rows&lt;(Position, Velocity)&gt;, World, World)
+main () = {
+    let original = initial ()
+    let World(positions, velocities) = original
+    (join_stores(positions, velocities), move_direct original, original)
+}</code></pre>
+<p>Run commands from <code>content/cases/</code> throughout this chapter:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="sh"><code>ash querying-an-immutable-world/src/01-direct-movement.ash</code></pre>
+<p>The result is one tuple: the joined rows, the moved world, and the retained original world. Its type is <code>(Rows&lt;(Position, Velocity)&gt;, World, World)</code>. The first field of that captured result is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Row(EntityId(1), (Position(10, 5), Velocity(2, -1)), Row(EntityId(3), (Position(30, 9), Velocity(1, 2)), NoRows))</code></pre>
+<p>This is one complete field, with the surrounding tuple and worlds omitted. The moved world’s positions are <code>1=(12,4)</code>, <code>2=(20,7)</code>, and <code>3=(31,11)</code>. For example, entity <code>1</code> computes <code>(10+2, 5+(-1)) = (12,4)</code>. The velocity store still enumerates <code>3</code>, <code>1</code>, <code>4</code> with their original values. The third field still has positions <code>1=(10,5)</code>, <code>2=(20,7)</code>, <code>3=(30,9)</code>. The checks compare the complete stores, including their order and every component, rather than an aggregate coordinate sum.</p>
+</section>
+<section id="state-which-store-the-system-needs" class="level2">
+<h2 class="anchored" data-anchor-id="state-which-store-the-system-needs">State which store the system needs</h2>
+<p>The concrete operation fixes the world’s representation. A generic movement system can instead require two operations: read a component store and replace that store while keeping the rest of the world. Continue the <a href="./libraries-choosing-implementation-evidence.html">implementation-evidence lesson</a> by giving that requirement two parameters, <code>StoreAccess&lt;W, C&gt;</code>.</p>
+<p>Its <code>component_store</code> method has type <code>W -&gt; Store&lt;C&gt;</code>. Its <code>replace_store</code> method has type <code>(W, Store&lt;C&gt;) -&gt; W</code>. Both parameters occur in each method’s value type, as the <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#interfaces-and-constrained-schemes">interface rules</a> require for an interface without a determination edge. The complete application is the evidence key. For this world we need both <code>StoreAccess&lt;World, Position&gt;</code> and <code>StoreAccess&lt;World, Velocity&gt;</code>.</p>
+<p>A determination edge from <code>W</code> to <code>C</code> would say that a world type determines one component type. Our world has two stores, so that would describe the wrong relationship. Keep both arguments in the key and use ordinary type context to fix the requested component. In <code>joined</code> and <code>move_world</code>, the local result annotations distinguish the two reads of <code>component_store</code>. The final <code>replace_store</code> receives a <code>Store&lt;Position&gt;</code>; its argument fixes the same component choice.</p>
+<p>Here is the system module. It imports storage types and operations and has no import of the concrete world:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import stores (EntityId, Position, Velocity, Store, Rows, NoRows, Row, None, Some, entries, lookup, put)
+
+pub interface StoreAccess&lt;W, C&gt; {
+    component_store : W -&gt; Store&lt;C&gt;
+    replace_store : (W, Store&lt;C&gt;) -&gt; W
+}
+
+join_rows : (Rows&lt;Position&gt;, Store&lt;Velocity&gt;) -&gt; Rows&lt;(Position, Velocity)&gt;
+join_rows (NoRows, velocities) = NoRows
+join_rows (Row(entity, position, rest), velocities) = match lookup(entity, velocities) {
+    None =&gt; join_rows(rest, velocities)
+    Some(velocity) =&gt; Row(entity, (position, velocity), join_rows(rest, velocities))
+}
+
+pub join_stores : (Store&lt;Position&gt;, Store&lt;Velocity&gt;) -&gt; Rows&lt;(Position, Velocity)&gt;
+join_stores (positions, velocities) = join_rows(entries positions, velocities)
+
+pub advance : (Position, Velocity) -&gt; Position
+advance (Position(x, y), Velocity(dx, dy)) = Position(x + dx, y + dy)
+
+pub move_positions : (Rows&lt;(Position, Velocity)&gt;, Store&lt;Position&gt;) -&gt; Store&lt;Position&gt;
+move_positions (NoRows, positions) = positions
+move_positions (Row(entity, pair, rest), positions) = {
+    let updated = put(entity, advance pair, positions)
+    move_positions(rest, updated)
+}
+
+pub joined&lt;W&gt; : W -&gt; Rows&lt;(Position, Velocity)&gt; where StoreAccess&lt;W, Position&gt;, StoreAccess&lt;W, Velocity&gt;
+joined world = {
+    let positions : Store&lt;Position&gt; = component_store world
+    let velocities : Store&lt;Velocity&gt; = component_store world
+    join_stores(positions, velocities)
+}
+
+pub move_world&lt;W&gt; : W -&gt; W where StoreAccess&lt;W, Position&gt;, StoreAccess&lt;W, Velocity&gt;
+move_world world = {
+    let positions : Store&lt;Position&gt; = component_store world
+    let velocities : Store&lt;Velocity&gt; = component_store world
+    let moved = move_positions(join_stores(positions, velocities), positions)
+    replace_store(world, moved)
+}</code></pre>
+<p>The two <code>where</code> requirements let each generic body use the corresponding methods as abstract evidence. When a caller fixes <code>W</code> to <code>World</code>, it must supply the two complete applications. <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#constraint-satisfaction-and-checked-evidence">Constraint satisfaction</a> selects that evidence; importing a method or constrained function name alone does not select an implementation.</p>
+<p><code>move_world</code> finishes all position updates before one call to <code>replace_store</code>. That is one replacement of the world’s position field. Each <code>put</code> inside <code>move_positions</code> still searches and reconstructs part of the association list; we have not made all that work disappear.</p>
+<p>The world module re-exports the interface name and publishes two implementation facts. Each implementation reads one field and replaces only that field. The direct operation uses the same join and position-update calculation, with its field access written explicitly.</p>
+<p>The fixed velocity for entity <code>1</code> needs the integer <code>-1</code>. Ordinary expression <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/syntax.md#grammar">syntax</a> has no negative literal or subtraction operator at this checkpoint. The private constant-only declaration binds <code>DecreaseOne</code> to that ordinary <code>Int</code> through the existing <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#source-foreign-declarations">passive scalar constant form</a>. It declares no symbol and executes no native call. The world uses that value only to construct <code>Velocity(2, DecreaseOne)</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import stores (EntityId, Position, Velocity, Store, empty, put)
+pub import systems (StoreAccess)
+import systems (component_store, replace_store, join_stores, move_positions)
+
+foreign library FixtureNumbers {
+    profile "x86_64-unknown-linux-gnu"
+    repr Signed = signed(64)
+    const DecreaseOne : Signed = -1
+}
+
+pub type World = World(Store&lt;Position&gt;, Store&lt;Velocity&gt;)
+
+pub initial : Unit -&gt; World
+initial () = {
+    let positions = put(EntityId(1), Position(10, 5), empty())
+    let positions = put(EntityId(2), Position(20, 7), positions)
+    let positions = put(EntityId(3), Position(30, 9), positions)
+    let velocities = put(EntityId(3), Velocity(1, 2), empty())
+    let velocities = put(EntityId(1), Velocity(2, DecreaseOne), velocities)
+    let velocities = put(EntityId(4), Velocity(9, 9), velocities)
+    World(positions, velocities)
+}
+
+pub move_direct : World -&gt; World
+move_direct World(positions, velocities) = {
+    let moved = move_positions(join_stores(positions, velocities), positions)
+    World(moved, velocities)
+}
+
+pub impl StoreAccess&lt;World, Position&gt; {
+    component_store World(positions, velocities) = positions
+    replace_store (World(positions, velocities), replacement) = World(replacement, velocities)
+}
+
+pub impl StoreAccess&lt;World, Velocity&gt; {
+    component_store World(positions, velocities) = velocities
+    replace_store (World(positions, velocities), replacement) = World(positions, replacement)
+}</code></pre>
+<p>The module graph remains acyclic: systems depends on stores; world depends on systems and stores. The generic algorithm does not need to import a world that imports it back. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#globals-and-modules">module rules</a> check these dependencies and the public facts crossing each boundary.</p>
+<p>Select the world’s facts explicitly at the generic entry:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import stores (Rows, Position, Velocity)
+import systems (joined, move_world)
+import world (World, initial, impl StoreAccess)
+
+main : Unit -&gt; (Rows&lt;(Position, Velocity)&gt;, World, World)
+main () = {
+    let original = initial ()
+    (joined original, move_world original, original)
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="sh"><code>ash querying-an-immutable-world/src/02-generic-movement.ash</code></pre>
+<p>This produces the same complete joined rows, moved world, and original world as the direct entry, with the same tuple type. Each is checked against the independently specified component values above; equality between two faulty implementations would not establish the intended movement.</p>
+<p>Selected evidence lowers to <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#generated-interface-evidence">ordinary functions and applications</a>. There is no runtime search through the world’s fields. The two methods provide access; their types do not promise that an implementation preserves unrelated fields or that a join matches identifiers. Those properties come from the implementations and calculations we have just followed.</p>
+</section>
+<section id="retain-snapshots-across-two-steps" class="level2">
+<h2 class="anchored" data-anchor-id="retain-snapshots-across-two-steps">Retain snapshots across two steps</h2>
+<p>A second step uses the first step’s returned world. Keep all three values so the result can show whether the earlier positions survived:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import systems (move_world)
+import world (World, initial, impl StoreAccess)
+
+main : Unit -&gt; (World, World, World)
+main () = {
+    let original = initial ()
+    let first = move_world original
+    let second = move_world first
+    (original, first, second)
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="sh"><code>ash querying-an-immutable-world/src/03-repeated-step.ash</code></pre>
+<p>The single result has type <code>(World, World, World)</code>, in original, first, and second order. The table selects its position coordinates; it omits the surrounding constructors and all three velocity fields.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Entity</th>
+<th style="text-align: left;">Original position</th>
+<th style="text-align: left;">After one step</th>
+<th style="text-align: left;">After two steps</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">(10, 5)</td>
+<td style="text-align: left;">(12, 4)</td>
+<td style="text-align: left;">(14, 3)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">(20, 7)</td>
+<td style="text-align: left;">(20, 7)</td>
+<td style="text-align: left;">(20, 7)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">(30, 9)</td>
+<td style="text-align: left;">(31, 11)</td>
+<td style="text-align: left;">(32, 13)</td>
+</tr>
+</tbody>
+</table>
+<p>All three worlds still carry velocities <code>3=(1,2)</code>, <code>1=(2,-1)</code>, <code>4=(9,9)</code>, in that order. There is no position for entity <code>4</code>. Each position enumeration contains identifiers <code>1</code>, <code>2</code>, <code>3</code> exactly once.</p>
+<p>These pure functions construct returned values from their inputs. <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#tuples-constructors-and-matches">Binding and constructor evaluation</a> do not overwrite the original world when a new store or world is constructed. Retaining <code>original</code> therefore retains its components. This says nothing about every field being physically copied: unchanged tails and values can be reused, and the language’s observation is the retained value, not a heap-layout report.</p>
+</section>
+<section id="test-the-absent-cases" class="level2">
+<h2 class="anchored" data-anchor-id="test-the-absent-cases">Test the absent cases</h2>
+<p>The usual input already checks a missing velocity and an extra velocity. Boundary stores let us inspect insertion, replacement, and empty joins separately:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import stores (EntityId, Position, Rows, Option, empty, entries, lookup, put)
+import systems (move_world)
+import world (World, initial, impl StoreAccess)
+
+main : Unit -&gt; (Rows&lt;Position&gt;, Rows&lt;Position&gt;, Option&lt;Position&gt;, World, World, World)
+main () = {
+    let World(positions, velocities) = initial ()
+    let replaced = put(EntityId(1), Position(99, 98), positions)
+    let inserted = put(EntityId(4), Position(40, 12), positions)
+    (
+        entries replaced,
+        entries inserted,
+        lookup(EntityId(4), positions),
+        move_world(World(empty(), empty())),
+        move_world(World(positions, empty())),
+        move_world(World(empty(), velocities))
+    )
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="sh"><code>ash querying-an-immutable-world/src/04-store-boundaries.ash</code></pre>
+<p>The tuple contains the following six observations, in order. These summaries select fields of one captured result; they are not six separate command outputs. The full value and its type are checked together.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 23%">
+<col style="width: 27%">
+<col style="width: 46%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Field</th>
+<th style="text-align: left;">Operation</th>
+<th style="text-align: left;">Selected observation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">Replace position 1</td>
+<td style="text-align: left;">IDs 1, 2, 3; position 1 is (99, 98)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Insert position 4</td>
+<td style="text-align: left;">IDs 1, 2, 3, 4; position 4 is (40, 12)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">Look up absent position 4</td>
+<td style="text-align: left;"><code>None</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">Move two empty stores</td>
+<td style="text-align: left;">Both stores are empty</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">Move with no velocities</td>
+<td style="text-align: left;">All original positions remain</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">Move with no positions</td>
+<td style="text-align: left;">No positions; all original velocities remain</td>
+</tr>
+</tbody>
+</table>
+<p>Replacement leaves one binding for entity <code>1</code>, rather than adding a newer binding in front of an older one. Insertion keeps the original three bindings and appends entity <code>4</code> once. Both operations receive the original store, so the lookup of position <code>4</code> still returns <code>None</code>. An empty join calls no <code>put</code>, and the original positions pass through. A velocity-only world cannot invent a position: the join is driven by position rows.</p>
+</section>
+<section id="a-well-typed-join-can-still-match-the-wrong-entities" class="level2">
+<h2 class="anchored" data-anchor-id="a-well-typed-join-can-still-match-the-wrong-entities">A well-typed join can still match the wrong entities</h2>
+<p>A positional zip looks plausible because the two lists have compatible lengths and every selected value has the expected component type. It pairs the first position with the first velocity, then recurses on the two tails. On our input, that means entity pairs <code>1/3</code>, <code>2/1</code>, and <code>3/4</code>.</p>
+<p>Keep both identifiers in each zipped row so the mismatch is visible. Here the outer <code>Row</code> identifier comes from positions and the identifier inside its payload comes from velocities. <code>move_zipped</code> deliberately ignores the latter identifier when calculating new positions:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import stores (EntityId, Position, Velocity, Store, Rows, NoRows, Row, entries, put)
+import systems (advance, joined)
+import world (World, initial, impl StoreAccess)
+
+zip_rows : (Rows&lt;Position&gt;, Rows&lt;Velocity&gt;) -&gt; Rows&lt;(EntityId, Position, Velocity)&gt;
+zip_rows (NoRows, velocities) = NoRows
+zip_rows (Row(entity, position, rest), NoRows) = NoRows
+zip_rows (Row(entity, position, rest), Row(other, velocity, later)) = {
+    Row(entity, (other, position, velocity), zip_rows(rest, later))
+}
+
+move_zipped : (Rows&lt;(EntityId, Position, Velocity)&gt;, Store&lt;Position&gt;) -&gt; Store&lt;Position&gt;
+move_zipped (NoRows, positions) = positions
+move_zipped (Row(entity, (other, position, velocity), rest), positions) = {
+    let updated = put(entity, advance(position, velocity), positions)
+    move_zipped(rest, updated)
+}
+
+main : Unit -&gt; (Rows&lt;(EntityId, Position, Velocity)&gt;, Rows&lt;Position&gt;, Rows&lt;(Position, Velocity)&gt;)
+main () = {
+    let original = initial ()
+    let World(positions, velocities) = original
+    let wrong = zip_rows(entries positions, entries velocities)
+    (wrong, entries(move_zipped(wrong, positions)), joined original)
+}</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="sh"><code>ash querying-an-immutable-world/src/05-positional-zip.ash</code></pre>
+<p>Ash accepts this entry and exits with status <code>0</code>, with no standard error. Its three result fields are the wrong zipped rows, their moved positions, and the correct joined rows. The first two fields select these pairs and values:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Position entity</th>
+<th style="text-align: left;">Velocity entity</th>
+<th style="text-align: left;">Wrong moved position</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">(11, 7)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">(22, 6)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">(39, 18)</td>
+</tr>
+</tbody>
+</table>
+<p>For example, <code>(10,5) + (1,2)</code> gives <code>(11,7)</code>, but that displacement belongs to entity <code>3</code>. The calculation is well typed and fails the application’s identity requirement. The third field is the correct two-row join shown earlier. Repairing the algorithm means looking up each position identifier in the velocity store, as <code>join_rows</code> does. Selecting evidence does not perform that repair for us.</p>
+</section>
+<section id="distinguish-missing-evidence-from-a-wrong-component" class="level2">
+<h2 class="anchored" data-anchor-id="distinguish-missing-evidence-from-a-wrong-component">Distinguish missing evidence from a wrong component</h2>
+<p>A generic call can fail before any join runs. This entry imports the world’s names but selects no implementation facts:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import systems (move_world)
+import world (World, initial)
+
+main : Unit -&gt; World
+main () = move_world(initial())</code></pre>
+<p>The argument fixes the world type, and <code>move_world</code> fixes the two component types in its requirements. There is no unresolved component choice. Run the explicit English human format from <code>content/cases/</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en querying-an-immutable-world/src/06-missing-evidence.ash
+No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/cases/querying-an-immutable-world/src/06-missing-evidence.ash:5:11
+5 | main () = move_world(initial())
+  |           ^ No available evidence satisfies this interface requirement.
+  --&gt; /path/to/ash-doc/content/cases/querying-an-immutable-world/src/systems.ash:35:5
+35 | pub move_world&lt;W&gt; : W -&gt; W where StoreAccess&lt;W, Position&gt;, StoreAccess&lt;W, Velocity&gt;
+   |     ^ This declaration introduced the interface requirement.
+  --&gt; /path/to/ash-doc/content/cases/querying-an-immutable-world/src/06-missing-evidence.ash:1:17
+1 | import systems (move_world)
+  |                 ^ This import made the declaration available.
+  --&gt; /path/to/ash-doc/content/cases/querying-an-immutable-world/src/systems.ash:3:1
+3 | pub interface StoreAccess&lt;W, C&gt; {
+  | ^ This interface participates in the failing evidence selection.
+4 |     component_store : W -&gt; Store&lt;C&gt;
+  | ^ This interface participates in the failing evidence selection.
+5 |     replace_store : (W, Store&lt;C&gt;) -&gt; W
+  | ^ This interface participates in the failing evidence selection.
+6 | }
+  | ^ This interface participates in the failing evidence selection.
+reason: constraint.unsatisfied</code></pre>
+<p>This exits with status <code>1</code>, with empty standard output. The primary label identifies the <code>move_world</code> occurrence whose requirement lacks evidence. The related labels trace the constrained declaration, its import, and the owning interface. The failure is <code>constraint.unsatisfied</code>: being able to name <code>move_world</code> and <code>World</code> does not select the two facts. Add <code>impl StoreAccess</code> to the world’s import, as the successful generic entry does. That selector makes the public facts available for the complete applications; it does not infer the entity join.</p>
+<p>A different entry supplies a velocity where its result requires a position store:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import stores (EntityId, Position, Velocity, Store, empty, put)
+
+main : Unit -&gt; Store&lt;Position&gt;
+main () = put(EntityId(1), Velocity(2, 1), empty())</code></pre>
+<p>The <code>Velocity</code> argument makes this <code>put</code> call produce a <code>Store&lt;Velocity&gt;</code>. The signature of <code>main</code> requires <code>Store&lt;Position&gt;</code> instead. Run:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en querying-an-immutable-world/src/07-wrong-component.ash
+The function body must return `Store&lt;Position&gt;`, but returns `Store&lt;Velocity&gt;`.
+  --&gt; /path/to/ash-doc/content/cases/querying-an-immutable-world/src/07-wrong-component.ash:4:11
+4 | main () = put(EntityId(1), Velocity(2, 1), empty())
+  |           ^ This has type `Store&lt;Velocity&gt;`.
+  --&gt; /path/to/ash-doc/content/cases/querying-an-immutable-world/src/07-wrong-component.ash:3:16
+3 | main : Unit -&gt; Store&lt;Position&gt;
+  |                ^ This signature requires result type `Store&lt;Position&gt;`.
+reason: type.definition-result</code></pre>
+<p>This also exits with status <code>1</code> and empty standard output, but its cause is an incompatible function result. The primary label identifies the body that produces <code>Store&lt;Velocity&gt;</code>; the related label identifies the signature requiring <code>Store&lt;Position&gt;</code>. Its reason is <code>type.definition-result</code>. The distinct nominal types remain distinct even though both constructors hold two integers. Use <code>Position(2, 1)</code> in this entry for a position insertion, as <code>initial</code> uses <code>Position</code> values, or request a velocity store when inserting a velocity. Adding store-access evidence cannot change this mismatch; this entry needs no interface evidence at all.</p>
+<p>The captured wording records this edition’s tool presentation. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/docs/tools/ash.md#failures">tool’s failure contract</a> separates status, reason, and causal locations from exact prose and layout. Only the checkout prefix is normalized here, to <code>/path/to/ash-doc/</code>.</p>
+</section>
+<section id="count-the-work-this-representation-performs" class="level2">
+<h2 class="anchored" data-anchor-id="count-the-work-this-representation-performs">Count the work this representation performs</h2>
+<p>Let <code>p</code> be the number of positions, <code>v</code> the number of velocities, and <code>j</code> the number of joined entities. A lookup compares at most <code>v</code> velocity identifiers. The join traverses <code>p</code> position rows and performs one lookup per row, so its worst-case work is <code>O(1 + p + p*v)</code>. It constructs <code>j</code> joined rows, in position order. This is a bound derived from the equations, not a timing measurement.</p>
+<p>Each movement <code>put</code> searches a position store of length <code>p</code>. Its identifier is already present, so it replaces a row without changing the store length. Repeated puts cost at most <code>O(j*p)</code> row visits, in addition to the join and traversal of its result. Since <code>j &lt;= p</code>, the whole step has the bound <code>O(1 + p + p*v + j*p)</code> under constant-cost identifier comparison and coordinate arithmetic. These assumptions isolate list work; they are not a claim that arbitrary-size integer operations take constant time.</p>
+<p>The source also constructs values: the join builds rows, <code>advance</code> builds positions, and each <code>put</code> rebuilds its searched prefix and wraps the returned rows. A matched tail can be reused. Replacing the world’s position field once at the end still leaves all those earlier constructions. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#tuples-constructors-and-matches">constructor evaluation rules</a> explain their logical allocation; we have measured neither bytes nor elapsed time and claim no runtime optimization. Retaining several worlds also retains the values reachable from them.</p>
+<p>The fixed world is enough for this comparison. A different storage structure could change lookup and update costs, but it would need its own representation and preservation argument. This program introduces no mutation, packed storage, dynamic component registry, automatic type-index search, or concurrency.</p>
+<p>The completed system separates three obligations. Store producers preserve unique identifiers; the join matches identifiers and chooses its order; the selected access methods connect those stores to a concrete world. Pure returned values let the caller retain earlier snapshots. The finite checks distinguish these obligations on the fixed data, while the arguments explain why the operations preserve them under their stated premises.</p>
+<p>For practice, add a velocity for entity <code>2</code> using the existing <code>put</code> operation. Predict the joined identifier order and all three positions after two steps, then edit an entry and compare your prediction with <code>ash</code>. Next, change the velocity insertion order while keeping its identifier-value pairs. Explain which observations should stay the same and which enumeration should change. Keep the original world in the result so you can inspect that claim as well.</p>
+<p>This leaves a further design question: what representation would let a system find a component without repeatedly searching a list, while retaining the snapshot and identity guarantees?</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-supplying-a-local-pricing-policy.html" class="pagination-link" aria-label="Supplying a local pricing policy">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Supplying a local pricing policy</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-rolling-back-a-cancellable-journal.html" class="pagination-link" aria-label="Rolling back a cancellable journal">
+        <span class="nav-page-text"><span class="chapter-title">Rolling back a cancellable journal</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

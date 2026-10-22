@@ -1,0 +1,291 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0022: Passive Static Modules · Ash</title><meta name="description" content="Can Ash add passive static modules, explicit public and opaque declarations, deterministic imports, and per-module checking while elaborating the complete program into the existing pure Core dialect?"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0022: Passive Static Modules · Ash"><meta property="og:description" content="Can Ash add passive static modules, explicit public and opaque declarations, deterministic imports, and per-module checking while elaborating the complete program into the existing pure Core dialect?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0022: Passive Static Modules · Ash"><meta name="twitter:description" content="Can Ash add passive static modules, explicit public and opaque declarations, deterministic imports, and per-module checking while elaborating the complete program into the existing pure Core dialect?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0022-passive-static-modules/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0022-passive-static-modules/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0022-passive-static-modules.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0022: Passive Static Modules","headline":"DN-0022: Passive Static Modules","description":"Can Ash add passive static modules, explicit public and opaque declarations, deterministic imports, and per-module checking while elaborating the complete program into the existing pure Core dialect?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0022-passive-static-modules/","@id":"https://dikini.github.io/ash/docs/design/dn-0022-passive-static-modules/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0022-passive-static-modules.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0022-passive-static-modules" data-pagefind-meta="title">DN-0022: Passive Static Modules</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0022-passive-static-modules.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0022</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">DN-0020: Ash Dialect Milestones</a>, <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011: Modules, Providers, and Resolution</a>, <a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007: Data and Pattern Typing</a>, <a href="/ash/docs/decisions/ad-0005-parser-architecture/">AD-0005: Parser Architecture</a>, <a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006: Front-End Semantic Boundaries</a>, <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007: Typed Core Dialects</a>, the <a href="/ash/docs/design/mini-ash/closure/">Mini-Ash closure report</a>, and the <a href="/ash/docs/design/modular-ash/evidence/">passive-module evidence</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It records the exploration that led to the
+implemented passive-module increment, but it does not define current Ash.
+The <a href="/ash/spec/">specification</a> is the source of current language
+behavior.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can Ash add passive static modules, explicit public and opaque declarations,
+deterministic imports, and per-module checking while elaborating the complete
+program into the existing pure Core dialect?</p>
+<h2 id="result">Result</h2>
+<p>Yes. Modular Ash implements the recommended model: declarations-only source
+modules, acyclic rooted imports, defining-file exports, generated immutable
+export summaries, separate dependency-ordered checking, and assembly into one
+validated pure Core program. Module syntax and access rules erase before Core;
+there is no runtime module value or module Core node.</p>
+<p>The <a href="/ash/docs/design/modular-ash/evidence/">passive-module evidence</a> records the required
+positive and negative cases, resource boundaries, implementation-locality
+inspection, compiler verification checkpoints, and comparison with the
+historical Mini-Ash tag at commit <code>d62d3ba</code>. Current semantic details belong to
+the <a href="/ash/spec/">specification</a>, not this retained design account.</p>
+<h2 id="context">Context</h2>
+<p>When this note was written, Ash was the Mini-Ash dialect. One source file
+contained mutually visible nominal declarations and global functions followed
+by one result expression. The file could not import another source. Nominal,
+constructor, term, and type-parameter identities were allocated within that
+file, and resolution published one immutable registry to elaboration and Core.</p>
+<p>The <code>mini-ash</code> Git tag retains the completed Mini-Ash implementation, tests,
+specification, and evidence. The selected plan evolved current source into
+Modular Ash rather than keeping Mini-Ash and Modular Ash as selectable dialects
+in one compiler. Historical or differential evidence can build the tag
+separately.</p>
+<p>The closure report supplied the transferable boundary facts. Resolved and Core
+registries were immutable. Nominal identities already distinguished
+declarations by source. Global schemes were fully zonked before they left
+elaboration. Explicit Core type abstractions and applications preserved rank-1
+scope until runtime erasure. Independent Core validation already accepted
+provenance from a set of source files even though the Mini-Ash driver supplied
+one.</p>
+<p><a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007</a> separates the ability to name a
+nominal type from the ability to construct or deconstruct its values. Static
+modules are the first source boundary that can exercise that separation.
+<a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011</a> supplies later dynamic
+pressure but does not require loading, providers, registration, or unloading in
+this increment.</p>
+<p>At the passive-module increment, Ash <code>interface</code> and <code>impl</code> still denoted a
+future Rust-trait- or Haskell-type-class-like relationship. They were not module
+signatures. That increment added modules only; interfaces and implementations
+were the next candidate Modular Ash increment. They are now implemented.</p>
+<h2 id="constraints">Constraints</h2>
+<h3 id="keep-modules-passive">Keep modules passive</h3>
+<p>A module packages declarations and compile-time metadata. Importing a module
+does not evaluate a file result, run initialization, register behavior, or
+create a runtime module value. Modular Ash files contain declarations only.</p>
+<p>The executable selects a local function named <code>main</code> from the entry module,
+requires a monomorphic type <code>Unit -&gt; R</code> with closed <code>R</code>, applies it to unit, and
+observes the result. Imported definitions named <code>main</code> do not satisfy the entry
+contract. The local <code>main</code> need not be public.</p>
+<h3 id="declare-exports-in-the-defining-file">Declare exports in the defining file</h3>
+<p>There are no source-level module signatures. A declaration's modifier controls
+its public surface:</p>
+<ul>
+<li><code>type</code> keeps the type name and constructors private;</li>
+<li><code>pub opaque type</code> exports the type name and parameters but no constructors;</li>
+<li><code>pub type</code> exports the type name, parameters, and complete constructor set;</li>
+<li><code>pub</code> on an equational interface or <code>pub fn</code> exports a global function.</li>
+</ul>
+<p>Individual constructor exports are outside the first increment. A private
+nominal identity may occur in a public function type. Importers can pass values
+of that hidden type among compatible imported functions, but cannot name,
+construct, or deconstruct it. A public opaque type adds nameability without
+revealing representation, allowing downstream modules to declare new functions
+over values created through smart constructors.</p>
+<h3 id="resolve-deterministic-rooted-paths">Resolve deterministic rooted paths</h3>
+<p>Each source file defines one unnamed module. It has no module header. Module
+identity comes from the uniquely resolved source, not a local import alias.</p>
+<p>A relative module path begins in the importing file's directory. For example,
+<code>import math as Math</code> resolves <code>./math.ash</code>, and
+<code>import helpers.math as Math</code> resolves <code>./helpers/math.ash</code>. Relative paths may
+descend into child directories but cannot traverse to a parent.</p>
+<p>An absolute module path begins with a configured named root. For example,
+<code>import @std.collections.list as List</code> resolves
+<code>collections/list.ash</code> beneath the <code>std</code> root. Root configuration belongs to
+the tool boundary. Resolution appends the <code>.ash</code> extension, admits a canonical
+source once, and rejects a path whose canonical target escapes its selected
+root.</p>
+<p>The import graph is acyclic. Cross-module recursion and strongly connected
+module checking are outside the first increment.</p>
+<h3 id="keep-imported-names-explicit">Keep imported names explicit</h3>
+<p>A complete import binds one qualified module alias:</p>
+<pre tabindex="0"><code class="language-ash">import @std.collections.list as List
+</code></pre>
+<p>An importing module refers to public definitions through qualified names such
+as <code>List.map</code> and <code>List.Option</code>.</p>
+<p>A targeted import introduces selected exports as unqualified local names:</p>
+<pre tabindex="0"><code class="language-ash">import @std.collections.list (map, Option as ListOption)
+</code></pre>
+<p>Target selection changes source visibility, not which dependency is checked or
+linked. Unknown, private, duplicate, or conflicting selections are rejected.
+Re-exporting an import is outside the first increment.</p>
+<h2 id="candidate-directions-considered">Candidate directions considered</h2>
+<h3 id="check-modules-separately-and-assemble-one-core-program">Check modules separately and assemble one Core program</h3>
+<p>This was the recommended and selected direction. The driver builds the import
+graph and processes modules in dependency order. Each checked module produces a
+compiler-generated immutable export summary. Dependents resolve and type-check
+against that summary rather than the dependency's private scope or body.</p>
+<p>After every module checks, a graph-owned Core builder assembles all loaded
+definitions and the generated <code>main ()</code> root in one arena. The existing pure
+Core validator and evaluator consume the linked program. Module boundaries
+erase after they have established source visibility and typed references.</p>
+<p>This direction adds no persistent compiled-module format and no runtime module
+node. It preserves the current Core validation and execution boundary while
+making module checking real rather than a preprocessing convention.</p>
+<h3 id="compile-validated-core-fragments-and-link-them">Compile validated Core fragments and link them</h3>
+<p>Each module could emit a persistent validated Core fragment and export summary.
+A linker would combine fragments and construct the entry call. This direction
+prepares for caching and separate compilation, but immediately requires an
+external binder representation, fragment validation, relocation or globally
+qualified handles, an object format, and linker diagnostics. No current
+consumer justifies that machinery.</p>
+<h3 id="flatten-sources-before-resolution">Flatten sources before resolution</h3>
+<p>The loader could rename declarations and construct one synthetic source
+program for the existing pipeline. This is smaller as a prototype, but privacy,
+opacity, targeted imports, hidden identities, and cross-file diagnostics would
+be preprocessing conventions instead of front-end invariants. It would not
+provide the evidence required for module semantics.</p>
+<h2 id="selected-model">Selected model</h2>
+<h3 id="graph-loading-and-source-admission">Graph loading and source admission</h3>
+<p>The tool receives an entry file and zero or more named-root mappings. Loading
+resolves imports recursively, admits each canonical source once, records import
+edges, and rejects cycles. Missing roots, missing files, invalid path segments,
+root escapes, and duplicate root names retain the importing source as their
+causal location.</p>
+<p>Loading, cycle detection, and graph destruction must use explicit worklists
+rather than host recursion at admitted graph depth.</p>
+<h3 id="module-qualified-identity">Module-qualified identity</h3>
+<p>Term binders, nominal types, and constructors receive identities qualified by
+their defining module. Local aliases and alternate import paths cannot create a
+second semantic identity for one admitted source. Existing scheme parameters
+remain scoped binders and may be alpha-renamed at an import boundary.</p>
+<p>One module's own declarations retain Mini-Ash's simultaneous global scope.
+<code>pub</code> changes only what dependents can see; it does not change recursion or
+visibility inside the defining module.</p>
+<h3 id="generated-export-summaries">Generated export summaries</h3>
+<p>The compiler publishes a module's export summary only after that complete
+module resolves, type-checks, and elaborates successfully. The summary contains:</p>
+<ul>
+<li>exported global spellings, module-qualified identities, fully zonked rank-1
+schemes, and provenance;</li>
+<li>transparent nominal names, parameters, identities, and complete constructor
+metadata;</li>
+<li>opaque nominal names, parameters, and identities without constructor access;</li>
+<li>hidden nominal identities referenced by public schemes without a resolvable
+source name or constructor access.</li>
+</ul>
+<p>Repeated occurrences of one private type across public functions retain the
+same hidden identity. Imported global schemes instantiate normally and are not
+re-inferred or re-generalized.</p>
+<p>Qualified imports install one module namespace. Targeted imports install the
+selected identities in their existing term, type, or constructor namespaces.
+They never silently shadow another file-level binding.</p>
+<p>Transparent imported types contribute their complete constructor set to
+pattern checking and coverage. Outside its defining module, an opaque or
+hidden type admits no constructor pattern. Binder and wildcard patterns remain
+valid because they do not inspect representation.</p>
+<h3 id="elaboration-and-core-assembly">Elaboration and Core assembly</h3>
+<p>Modules elaborate in dependency order through the existing bidirectional rule
+interfaces. An imported name can reach elaboration only after resolution has
+authenticated it against an export summary.</p>
+<p>A graph-owned Core builder reserves every module-qualified global binder. Each
+module contributes one simultaneous group for its own globals. Dependency
+groups surround dependent groups, and the linked root applies the entry
+module's local <code>main</code> to unit:</p>
+<pre tabindex="0"><code class="language-text">dependency globals
+  -&gt; dependent globals
+    -&gt; entry globals
+      -&gt; main ()
+</code></pre>
+<p>The linked program carries one combined internal nominal and constructor
+registry and provenance from every participating source. The first increment
+links all loaded definitions and performs no dead-code elimination.</p>
+<p>Privacy and opacity are source access rules. Once resolution and elaboration
+authenticate references, whole-program Core transforms may inspect private
+implementations. Core gains no import, export, opacity, initialization, or
+runtime module node.</p>
+<h3 id="failure-behavior-and-resource-accounting">Failure behavior and resource accounting</h3>
+<p>Failures remain owned by the first stage that can establish them:</p>
+<ul>
+<li>loading owns root, path, file, canonicalization, and cycle failures;</li>
+<li>parsing owns import, modifier, qualified-name, and module-root grammar;</li>
+<li>resolution owns unknown or private exports, alias and selection conflicts,
+unavailable constructors, and binder relationships;</li>
+<li>elaboration owns cross-module type mismatches and imported instantiation;</li>
+<li>entry validation owns missing or malformed <code>main</code>;</li>
+<li>Core validation owns linked registry, scope, type, provenance, and dialect
+invariants.</li>
+</ul>
+<p>Diagnostics relate an importing use to the exported declaration that supplied
+its type. A diagnostic may render a private type as <code>Math.&lt;private T&gt;</code> to
+distinguish identities without making the spelling resolvable in source.</p>
+<p>The compiler reports failures deterministically in dependency and source order.
+Graph-wide recovery is outside the first increment. Existing syntax, coverage,
+type, Core-construction, and validation work accounting extends across the
+complete module graph. Loading also bounds cumulative sources, import edges,
+and path segments before retaining proportional graph state. Exact limits are
+implementation resource policy, not language semantics. The implementation
+supplies boundary evidence for those limits.</p>
+<h2 id="requested-evidence">Requested evidence</h2>
+<p>The note requested positive cases for:</p>
+<ul>
+<li>sibling, nested, and named-root imports;</li>
+<li>complete qualified and targeted renamed imports;</li>
+<li>a diamond graph that admits one shared module identity once;</li>
+<li>private, opaque, and transparent nominal types;</li>
+<li>a private type shared among public smart-constructor operations;</li>
+<li>downstream global functions over a public opaque type;</li>
+<li>cross-module rank-1 instantiation;</li>
+<li>transparent constructor construction, deconstruction, and exhaustive
+matching;</li>
+<li>mutually recursive globals within one module; and</li>
+<li>exact execution and observation of <code>main ()</code>.</li>
+</ul>
+<p>It requested negative cases for:</p>
+<ul>
+<li>unknown roots, missing files, invalid segments, canonical root escapes, and
+duplicate root configuration;</li>
+<li>direct and indirect import cycles;</li>
+<li>duplicate aliases, unknown or private targeted exports, and local binding
+conflicts;</li>
+<li>naming a private type, constructing or matching an opaque type, and mixing
+distinct hidden nominal identities;</li>
+<li>missing <code>main</code>, imported-only <code>main</code>, a non-<code>Unit</code> domain, a polymorphic
+scheme, and a non-closed codomain; and</li>
+<li>malformed combined registries, module-qualified binder collisions, foreign
+provenance, and transformed linked Core.</li>
+</ul>
+<p>The architecture evidence had to show that a dependent module resolves and
+types from an immutable export summary rather than a dependency body, while the
+linked Core validator still authenticates every implementation. Resource tests
+had to exercise graph width, graph depth, source count, import edges, combined
+registry size, and cumulative type work on a small host stack. The retained
+<a href="/ash/docs/design/modular-ash/evidence/">evidence report</a> records these results.</p>
+<p>The milestone comparison built the <code>mini-ash</code> tag in an isolated worktree and
+compared representative unchanged semantics. That comparison did not add the
+historical dialect to current source or routine current-tree verification.</p>
+<h2 id="intentional-exclusions">Intentional exclusions</h2>
+<p>This increment does not add:</p>
+<ul>
+<li>Ash interfaces, <code>impl</code>, associated types, or dictionary evidence;</li>
+<li>individual constructor exports or import re-exports;</li>
+<li>parent traversal or cyclic module graphs;</li>
+<li>source module signatures or module headers;</li>
+<li>persistent compiled-module artifacts, caching, package manifests, version
+resolution, or root search order;</li>
+<li>module initialization, dynamic loading, unloading, runtime resolution, or
+runtime module values; or</li>
+<li>dead-code elimination or a core-versus-library migration.</li>
+</ul>
+<p>At the passive-module checkpoint, interfaces remained the next candidate
+Modular Ash increment. They are now implemented. The resulting module and
+interface boundary can support the core-versus-library audit without requiring
+the current source tree to keep the Mini-Ash implementation dialect.</p>
+<h2 id="resolved-implementation-choices">Resolved implementation choices</h2>
+<p>The implementation assigned structured stage-owned reason families to module,
+resolution, type, entry, Core, runtime, and resource failures. It uses
+compilation-local module-qualified numeric identities, graph-wide cumulative
+resource budgets, and one combined internal registry assembled before Core
+validation. The tool accepts named roots through repeated
+<code>--root name=path</code> options. These are observed results, not design-note
+authority; the specification and tool guide define the current behavior.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#result">Result</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions-considered">Candidate directions considered</a><a href="#selected-model">Selected model</a><a href="#requested-evidence">Requested evidence</a><a href="#intentional-exclusions">Intentional exclusions</a><a href="#resolved-implementation-choices">Resolved implementation choices</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0020-ash-dialect-milestones/">← DN-0020: Ash Dialect Milestones</a><a rel="next" href="/ash/docs/design/dn-0023-interfaces-and-implementations/">DN-0023: Interfaces and Implementations →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

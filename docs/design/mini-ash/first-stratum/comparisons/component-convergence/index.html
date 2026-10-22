@@ -1,0 +1,241 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>First-stratum component convergence · Ash</title><meta name="description" content="Do the completed specification, parser, static-semantics, Core, and evaluator comparisons support one coherent Mini-Ash architecture, and which conclusions are mature enough for architectural-decision review?"><meta name="robots" content="index, follow"><meta property="og:title" content="First-stratum component convergence · Ash"><meta property="og:description" content="Do the completed specification, parser, static-semantics, Core, and evaluator comparisons support one coherent Mini-Ash architecture, and which conclusions are mature enough for architectural-decision review?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="First-stratum component convergence · Ash"><meta name="twitter:description" content="Do the completed specification, parser, static-semantics, Core, and evaluator comparisons support one coherent Mini-Ash architecture, and which conclusions are mature enough for architectural-decision review?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/component-convergence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/component-convergence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/component-convergence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"First-stratum component convergence","headline":"First-stratum component convergence","description":"Do the completed specification, parser, static-semantics, Core, and evaluator comparisons support one coherent Mini-Ash architecture, and which conclusions are mature enough for architectural-decision review?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/component-convergence/","@id":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/component-convergence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/component-convergence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="first-stratum-component-convergence" data-pagefind-meta="title">First-stratum component convergence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/component-convergence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>This convergence record is informative evidence governed by
+<a href="/ash/docs/design/dn-0016-first-mini-ash-corpus/">DN-0016</a>. It does not accept
+syntax, semantics, or architecture. The accepted non-language outcomes are
+recorded separately in AD-0004 through AD-0008.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Do the completed specification, parser, static-semantics, Core, and evaluator
+comparisons support one coherent Mini-Ash architecture, and which conclusions
+are mature enough for architectural-decision review?</p>
+<h2 id="evidence-reviewed">Evidence reviewed</h2>
+<p>The audit compares the conclusions and decision boundaries from:</p>
+<ul>
+<li><a href="/ash/docs/design/mini-ash/first-stratum/comparisons/specification-method/">specification method</a>;</li>
+<li><a href="/ash/docs/design/mini-ash/first-stratum/comparisons/parser-architecture/">parser architecture</a>;</li>
+<li><a href="/ash/docs/design/mini-ash/first-stratum/comparisons/static-semantics-organization/">static-semantics organization</a>;</li>
+<li><a href="/ash/docs/design/mini-ash/first-stratum/comparisons/core-representation/">Core representation</a>;</li>
+<li><a href="/ash/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture/">evaluator architecture</a>.</li>
+</ul>
+<p>It also checks those conclusions against the corpus grammar, typing rules,
+small-step dynamics, diagnostics, representation invariants, AD-0001's Rust and
+validation constraints, and DN-0016's feature-local growth rule.</p>
+<h2 id="converged-data-flow">Converged data flow</h2>
+<p>The component evidence supports this staged flow:</p>
+<pre tabindex="0"><code class="language-text">source text
+  → spanned tokens and layout boundaries
+  → error-bearing token-complete concrete syntax
+  → recovery-free spanned surface AST
+  → binder-resolved surface form
+  → bidirectionally elaborated typed structured Core
+  → independently validated Core
+  → explicit first-order evaluation machine
+  → value or structured runtime failure
+</code></pre>
+<p>Small-step operational rules remain outside this implementation flow as the
+primary semantic account. Parser, elaborator, validator, and evaluator tests
+check their components against the applicable rules and cases; executing an
+implementation does not make it normative.</p>
+<p>Each arrow establishes a fact used by the next stage:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Fact established</th>
+<th>Failure boundary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source to tokens</td>
+<td>Token kind, exact source span, delimiter and layout identity</td>
+<td>Lexical diagnostic</td>
+</tr>
+<tr>
+<td>Tokens to concrete syntax</td>
+<td>Grammar grouping, precedence, missing forms, recovery context, complete source coverage</td>
+<td>Structured parser diagnostics</td>
+</tr>
+<tr>
+<td>Concrete syntax to surface AST</td>
+<td>No missing or error node remains; presentation and required spans survive</td>
+<td>Projection failure before resolution</td>
+</tr>
+<tr>
+<td>Surface AST to resolved form</td>
+<td>Every occurrence has a stable binder identity; lexical and file scopes hold</td>
+<td><code>R-001</code>, <code>R-002</code>, or another structured resolution reason</td>
+</tr>
+<tr>
+<td>Resolved form to typed Core</td>
+<td>Every node has a structural monotype; expected typing and presentation elaboration agree</td>
+<td><code>T-001</code> through <code>T-004</code> or another structured checking reason</td>
+</tr>
+<tr>
+<td>Core construction or transformation to validated Core</td>
+<td>Types, binder scope, dialect membership, and causal provenance are consistent</td>
+<td>Internal compiler failure without source blame</td>
+</tr>
+<tr>
+<td>Validated Core to machine result</td>
+<td>Small-step evaluation order is represented by first-order frames</td>
+<td>Structured runtime or resource failure</td>
+</tr>
+</tbody>
+</table>
+<p>No boundary relies on an error string to reconstruct a prior rule outcome.
+Source origins and related locations cross boundaries as structured data.</p>
+<h2 id="cross-component-consistency">Cross-component consistency</h2>
+<h3 id="grammar-and-static-semantics">Grammar and static semantics</h3>
+<p>The parser records syntax without deciding semantic grouping that follows
+types. Equational pattern lists and juxtaposed applications retain their source
+shape; operational comma lists and tuple applications retain theirs. The typed
+elaborator uses one structural <code>Function(domain, codomain)</code> type to distinguish
+nested arrows from a product domain. No parser arity field can disagree with
+that type.</p>
+<p>Both function presentations remain distinct in concrete and surface syntax.
+Presentation-specific elaboration calls shared function, pattern, coverage, and
+Core-construction rules. Their typed semantic forms may converge while source
+origins preserve the clause, explicit match, header, and body relationships
+needed by diagnostics and tooling.</p>
+<h3 id="core-and-static-semantics">Core and static semantics</h3>
+<p>Resolution's stable binder identities satisfy Core scope validation without
+requiring stable identities for every syntax or Core node. Bidirectional
+checking supplies the structural types stored on Core nodes. Core validation
+recomputes enough facts to detect malformed construction, transformation, or
+deserialization rather than trusting the elaborator because it ran first.</p>
+<p>The Core comparison's feature-family boundary and the static comparison's
+rule-family boundary are compatible. One closed Core dialect lists permitted
+semantic features; one reviewable rule path owns each type, function-exposure,
+pattern, coverage, and elaboration decision. Composition does not mean that an
+open registry replaces exhaustive checking.</p>
+<h3 id="core-and-evaluator">Core and evaluator</h3>
+<p>The first pure Core uses no inhabited effect-operation family. Ordinary
+functions, bindings, applications, primitive operations, and probe-only match
+or product nodes remain direct typed structure. The evaluator consumes only a
+validated dialect and represents lexical closures as Ash code plus an Ash
+environment.</p>
+<p>The explicit machine's frame family may be organized by the same Core feature
+families. That organization can keep transition code local while the selected
+machine dialect remains closed and reviewable. The comparison does not require
+an arena: frames can identify code through recursive references, stable node
+identities, or another storage choice tested during implementation.</p>
+<h3 id="small-step-semantics-and-evaluator">Small-step semantics and evaluator</h3>
+<p>The machine's frames are executable evaluation contexts corresponding to the
+small-step congruence rules. This is an implementation relationship, not a
+second semantic method. Result tests, event traces, and later differential tests
+remain evidence that machine transitions agree with the primary small-step
+account.</p>
+<p>The current frame stack is not an Ash effect continuation. It cannot be
+captured, resumed, duplicated, or discarded by an Ash program. Later handler
+work must define those operations and track one-shot or other continuation
+kinds in the type system before extending Core or runtime behavior.</p>
+<h3 id="diagnostics-and-every-stage">Diagnostics and every stage</h3>
+<p>The parser's token-complete error-bearing tree supplies delimiter and recovery
+spans.
+Resolution supplies definition-use and duplicate-definition relationships.
+Typed elaboration supplies expected and found types plus the origin of each
+expectation. Core validation distinguishes compiler failures from source
+errors. The evaluator returns failures instead of using Rust panic behavior as
+an Ash result.</p>
+<p>This division supports plain explanations and focused corrections while
+retaining precise primary and related spans. Rendering remains separate from
+the structured reasons, so presentation changes do not redefine compiler rule
+outcomes.</p>
+<h2 id="growth-locality">Growth locality</h2>
+<p>The comparisons converge on a repeated organization:</p>
+<pre tabindex="0"><code class="language-text">feature-local components
+  + one explicit closed dialect assembly
+  + validation at the stage boundary
+</code></pre>
+<p>For a future semantic feature, the parser may add prefix, infix, pattern, type,
+or definition parsing; Core may add typed feature nodes; checking may add rule
+handlers; and the machine may add frame transitions. Each selected dialect must
+name the feature at its assembly point. Unrelated feature modules need not gain
+placeholder cases.</p>
+<p>An effect family adds different pressure. The Core computation boundary may be
+parameterized by an operation family so ordinary pure feature nodes do not gain
+one variant per effect family. This remains an architectural seam. Mini-Ash
+does not add unreachable <code>Impure</code> nodes or effect machinery.</p>
+<h2 id="accepted-decisions">Accepted decisions</h2>
+<p>The project accepted five non-language choices as separate architectural
+decisions:</p>
+<ol>
+<li><strong><a href="/ash/docs/decisions/ad-0004-small-step-semantic-method/">Primary semantic specification method</a>.</strong>
+Use one small-step operational account for dynamic semantics; derived traces,
+big-step explanations, and evaluators remain non-normative views checked
+against it.</li>
+<li><strong><a href="/ash/docs/decisions/ad-0005-parser-architecture/">Parser architecture</a>.</strong>
+Separate lexing, use event-producing
+grammar-shaped recursive descent with one application/infix precedence
+layer, retain token-complete error-bearing concrete syntax, and project only
+recovery-free input to the resolver.</li>
+<li><strong><a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">Front-end semantic boundaries</a>.</strong>
+Resolve binder identity and scope before bidirectional typed elaboration;
+centralize semantic rules and structured failures; emit typed structured Core
+with causal provenance.</li>
+<li><strong><a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">Typed Core architecture</a>.</strong>
+Assemble feature-local typed nodes into named closed dialects, validate every
+retained boundary, keep the pure dialect independent of inhabited effect
+operations, and preserve an explicit future operation-family seam without
+selecting storage.</li>
+<li><strong><a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">Evaluator architecture</a>.</strong>
+Execute validated Core with an explicit
+first-order control loop, frame data, inspectable closures, and structured
+failures rather than Rust recursion or closure-encoded language control.</li>
+</ol>
+<p>These decisions are separable because each governs a stable boundary and has
+independent verification evidence. Their acceptance does not accept provisional
+Ash syntax or language semantics.</p>
+<h2 id="choices-not-ready-for-decisions">Choices not ready for decisions</h2>
+<p>The current evidence does not select:</p>
+<ul>
+<li>the first user-visible source grammar or semantic increment;</li>
+<li>final-expression versus result-binding file structure;</li>
+<li>layout, semicolon, multiline equation, comment, or trivia rules;</li>
+<li>parser, concrete-tree, or diagnostic-rendering libraries;</li>
+<li>handwritten sums, generated injections, traits, macros, or another concrete
+Rust mechanism for Core feature composition;</li>
+<li>recursive ownership, arena storage, stable Core node identities, or inline
+versus side-table provenance;</li>
+<li>the eventual full type system, inference solver, generalization, effects on
+function types, or typed evidence passing;</li>
+<li>effect operations, handlers, continuation capture, continuation
+multiplicity, CPS, concurrency, or cancellation;</li>
+<li>integer range, overflow, runtime resource limits, or environment allocation;</li>
+<li>a first semantic proposal or implementation task.</li>
+</ul>
+<p>These choices remain in design notes or require a later corpus stratum. An
+architectural decision must not settle them incidentally.</p>
+<h2 id="next-artifact-sequence">Next artifact sequence</h2>
+<p>AD-0004 now governs substantial normative dynamic-semantics work. AD-0005
+through AD-0008 govern retained parser, front-end, Core, and evaluator
+implementation work. Each remains independently revisable through a later
+architectural decision if implementation evidence contradicts it.</p>
+<p>The next language artifact is a change proposal for the first user-visible
+semantic increment. That proposal must choose from the
+provisional corpus, state the semantic delta, and require one executable path,
+positive and negative tests, user-facing diagnostics, and the normative
+specification update to land together. It must not treat this convergence
+record as language authority.</p>
+<h2 id="retention-boundary">Retention boundary</h2>
+<p>This audit retains written comparison results and links their accepted
+non-language outcomes. The Core and evaluator probes were deleted after their
+evidence was recorded. No parser, resolver, typechecker, Core, evaluator,
+executable, or semantic specification has been added to product code.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#evidence-reviewed">Evidence reviewed</a><a href="#converged-data-flow">Converged data flow</a><a href="#cross-component-consistency">Cross-component consistency</a><a href="#growth-locality">Growth locality</a><a href="#accepted-decisions">Accepted decisions</a><a href="#choices-not-ready-for-decisions">Choices not ready for decisions</a><a href="#next-artifact-sequence">Next artifact sequence</a><a href="#retention-boundary">Retention boundary</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

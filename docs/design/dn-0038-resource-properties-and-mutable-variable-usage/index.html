@@ -1,0 +1,848 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0038: Resource Properties and Mutable Variable Usage · Ash</title><meta name="description" content="How should resource contracts describe linear, affine and unlimited usage, uniqueness, mutation, borrowing, lifetime and completion? Can convenient mutable bindings elaborate to checked resource operations while…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0038: Resource Properties and Mutable Variable Usage · Ash"><meta property="og:description" content="How should resource contracts describe linear, affine and unlimited usage, uniqueness, mutation, borrowing, lifetime and completion? Can convenient mutable bindings elaborate to checked resource operations while…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0038: Resource Properties and Mutable Variable Usage · Ash"><meta name="twitter:description" content="How should resource contracts describe linear, affine and unlimited usage, uniqueness, mutation, borrowing, lifetime and completion? Can convenient mutable bindings elaborate to checked resource operations while…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0038-resource-properties-and-mutable-variable-usage.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0038: Resource Properties and Mutable Variable Usage","headline":"DN-0038: Resource Properties and Mutable Variable Usage","description":"How should resource contracts describe linear, affine and unlimited usage, uniqueness, mutation, borrowing, lifetime and completion? Can convenient mutable bindings elaborate to checked resource operations while…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/","@id":"https://dikini.github.io/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0038-resource-properties-and-mutable-variable-usage.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0038-resource-properties-and-mutable-variable-usage" data-pagefind-meta="title">DN-0038: Resource Properties and Mutable Variable Usage</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0038-resource-properties-and-mutable-variable-usage.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0038</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013</a>,
+<a href="/ash/docs/design/dn-0031-resource-composition-concept-map/">DN-0031</a>,
+<a href="/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/">DN-0032</a>,
+<a href="/ash/docs/design/dn-0034-one-shot-kernel-soundness-and-practicality/">DN-0034</a>,
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>,
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
+</ul>
+<blockquote>
+<p>This design note maps candidate resource properties and mutable-variable
+usage. It defines no current Ash semantics, selects no surface syntax or
+checking architecture, and authorizes no implementation. It is separate from
+DN-0036's ongoing experiments and does not add completion requirements to them.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>How should resource contracts describe linear, affine and unlimited usage,
+uniqueness, mutation, borrowing, lifetime and completion? Can convenient mutable
+bindings elaborate to checked resource operations while preserving these
+properties through calls, closures, branches and effect handlers?</p>
+<p>Compare semantics, Core representations, proof obligations and surface forms
+before choosing a design. Evaluate utility and memory/performance opportunities
+alongside soundness, checking cost and annotation burden. A useful property can
+justify an optimization without selecting its implementation in advance.</p>
+<p>Always follow the types. Identify what a value represents, which operations
+consume it, what those operations return, and what authority survives before
+proposing a spelling for a resource or mutable binding.</p>
+<h2 id="context">Context</h2>
+<p>The <a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">current cell contract</a>
+separates a scope-owned release obligation from a duplicable non-owning handle.
+Its operations read and write integers. Aliases and repeated calls through
+capturing closures are admitted within the owner's lifetime. Reading copies an
+integer; it neither consumes the handle nor proves unique access.</p>
+<p>Current <a href="/ash/spec/static-semantics/#effects">effect checking</a> consumes each
+hidden resume capability once on every normally completing clause path. That
+capability is not a general source value. Ordinary values remain duplicable
+subject to resource dependencies. General linear/affine value types, uniqueness
+types and borrow qualifiers are proposed directions, not current Ash.</p>
+<p><a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/#keep-usage-properties-independent">DN-0013</a>
+already distinguishes usage from alias authority and asks where restrictions
+belong. <a href="/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/#computation-and-usage-kernel">DN-0032</a>
+explores transforming ownership/protocol contexts without copying them.
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/#reusable-values-heap-storage-and-restricted-authority">DN-0035</a>
+separates storage, reusable access and ownership, including borrowing pressure.
+The mutable-variable case gives those directions a concrete comparison.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Linearity means exactly one use of a linear value. Repeated operations require
+distinct successor values or another separately justified access mechanism.</li>
+<li>Affinity means at most one use. It permits discard but does not, by itself,
+specify destruction or prove uniqueness.</li>
+<li>Unlimited use imposes no static upper bound on uses. The unrestricted form
+permits both duplication and discard; whether discard is allowed remains an
+independent property.</li>
+<li>Uniqueness concerns usable aliases and authority over storage. It does not
+specify an exactly-once use count.</li>
+<li>Keep the usage of an owner, an access value and the stored payload separate.
+A reusable handle does not duplicate its owner's completion obligation.</li>
+<li>Preserve current shared cell behavior as a comparison case. A future unique
+or linear resource does not silently change existing cell contracts.</li>
+<li>Surface syntax may infer identities and thread values, but cannot create
+duplication, discard, borrowing or completion authority.</li>
+<li>The initial comparison concerns synchronous operations and scoped resources.
+It does not introduce owner transport, arena-owner packages, concurrent
+mutation, callbacks, asynchronous execution or a new memory collector.</li>
+<li>Concurrency and process implementation are outside this study. Sharing means
+aliases within an ownership domain. Record consequences for future processes
+without introducing scheduling, cross-process sharing or <code>Send</code>/<code>Sync</code>-like
+properties. Sequential effect-handler reentrancy remains in scope.</li>
+<li>Exactly-once checking does not prove termination or eventual release under
+divergence or external termination.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="property-map">Property map</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Property</th>
+<th>Question answered</th>
+<th>Consequence to check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Usage</td>
+<td>Is use exactly once, at most once or unlimited, and may the value be discarded?</td>
+<td>Uses, transfers, fields and captures preserve its permissions.</td>
+</tr>
+<tr>
+<td>Uniqueness and alias authority</td>
+<td>Which references may access the same storage?</td>
+<td>No incompatible usable alias coexists with claimed unique authority.</td>
+</tr>
+<tr>
+<td>Mutability</td>
+<td>Which operations may change state?</td>
+<td>An operation requires the corresponding access permission.</td>
+</tr>
+<tr>
+<td>Borrowing</td>
+<td>Which temporary permissions are granted and suspended?</td>
+<td>Conflicting access remains unavailable for the complete borrow interval.</td>
+</tr>
+<tr>
+<td>Identity and lifetime</td>
+<td>Which acquisition does access depend on, and when is it valid?</td>
+<td>Aliases, stored values, closures and requests cannot outlive required owners.</td>
+</tr>
+<tr>
+<td>Protocol state</td>
+<td>Which operation is legal next?</td>
+<td>An operation returns the stated successor state; stale state cannot authorize use.</td>
+</tr>
+<tr>
+<td>Payload discipline</td>
+<td>May contents be copied, removed or discarded?</td>
+<td>Read, replace, take and completion account for the actual payload.</td>
+</tr>
+<tr>
+<td>Completion</td>
+<td>Who must complete the resource, with what effects and outcomes?</td>
+<td>Required completion is neither lost nor duplicated; failure preserves the stated authority.</td>
+</tr>
+<tr>
+<td>Storage policy</td>
+<td>Where is data held and how is its storage reclaimed?</td>
+<td>Physical reuse or reclamation preserves all other contracts.</td>
+</tr>
+</tbody>
+</table>
+<p>Usage, uniqueness and storage are separate axes even when a particular resource
+requires them together. For example, a shared handle can be unrestricted while
+the scope has one completion obligation; a linear state token can authorize
+updates to the same physical allocation through a sequence of successor values.</p>
+<h3 id="usage-permissions">Usage permissions</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Logical discipline</th>
+<th>Contraction: duplicate</th>
+<th>Weakening: discard</th>
+<th>Usage obligation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linear</td>
+<td>No</td>
+<td>No</td>
+<td>Exactly one use.</td>
+</tr>
+<tr>
+<td>Affine</td>
+<td>No</td>
+<td>Yes</td>
+<td>At most one use.</td>
+</tr>
+<tr>
+<td>Relevant</td>
+<td>Yes</td>
+<td>No</td>
+<td>At least one use; duplication allowed.</td>
+</tr>
+<tr>
+<td>Unrestricted: unlimited use</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Zero, one or arbitrarily many uses; no static upper bound.</td>
+</tr>
+</tbody>
+</table>
+<p>This table records logical possibilities, not four required Ash features. A
+candidate must state whether permissions attach to types, bindings, parameters,
+arrows, captures or resource obligations, and how they propagate. A name such
+as <code>LinearCell</code> cannot supply the checking rule by itself.</p>
+<p>Unlimited use must be an explicit comparison case, not an accidental default or
+an unexamined consequence of ordinary function arrows. It permits repeated
+access through aliases and closures when their access and lifetime contracts
+allow it. It does not copy physical storage, duplicate completion authority or
+establish unique access. A unique-access candidate may also permit unlimited
+operations while preserving its alias invariant.</p>
+<p>Unlimited use and unrestricted use are not identical statements: the former
+sets no upper bound, while the latter also permits discard. The relevant row
+illustrates unlimited duplication with a requirement to use the value. No
+quantitative qualifier spelling, such as <code>omega</code>, is selected by this map.</p>
+<p>Moving a linear value to another binding consumes the previous binding; the new
+binding carries the obligation onward. Completion is one possible consuming
+operation. Passing a value to a function must respect that function's usage
+contract rather than count only occurrences in the caller's source text.</p>
+<p>Discard permission does not determine physical reclamation or effectful
+destruction. An affine access value may disappear while a separate scope owner
+still has to complete the resource. An affine surface owner with implicit
+destruction would need an explicit elaboration and effect contract; that choice
+remains open.</p>
+<h3 id="typed-resource-roles">Typed resource roles</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Role</th>
+<th>Required meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Acquisition identity <code>R</code></td>
+<td>Fresh identity relating the instance, its effects, dependencies and completion.</td>
+</tr>
+<tr>
+<td>Payload type <code>T</code></td>
+<td>The contents and their independently checked duplication/discard properties.</td>
+</tr>
+<tr>
+<td>Protocol state <code>S</code></td>
+<td>A static description of legal operations, when the resource needs one.</td>
+</tr>
+<tr>
+<td>Provider state</td>
+<td>Private representation and authority needed to implement operations.</td>
+</tr>
+<tr>
+<td>Client access</td>
+<td>Non-owning shared access, an owned state value, or a scoped permission, as specified by the candidate.</td>
+</tr>
+<tr>
+<td>Effect interface</td>
+<td>Exact operation input/output types and effect requirements.</td>
+</tr>
+<tr>
+<td>Usage and access contract</td>
+<td>Consumption, successor values, alias rules and retained permissions for each operation.</td>
+</tr>
+<tr>
+<td>Completion contract</td>
+<td>Required consumption, payload disposal, ordering, effects and failure outcomes.</td>
+</tr>
+</tbody>
+</table>
+<p>Neither an effect signature nor an ordinary implementation declaration alone
+establishes the usage or alias contract. The compiler must check its source
+implementation or rely on an explicitly admitted primitive/foreign contract.
+Public facts must retain enough information to check clients independently.</p>
+<h3 id="compare-three-mutable-resource-models">Compare three mutable-resource models</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Representation of access</th>
+<th>Repeated mutation</th>
+<th>Main evidence needed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shared mutable access</td>
+<td>Unrestricted non-owning handles with unlimited use; provider mediates operations.</td>
+<td>Reuse the handle under its scope and operation contracts.</td>
+<td>Alias behavior and completion agree with the declared semantics.</td>
+</tr>
+<tr>
+<td>Linear state threading</td>
+<td>Each current state/access value is linear.</td>
+<td>Consume one value and receive its successor at each operation.</td>
+<td>Old-value reuse, lost successors and duplicated captures reject.</td>
+</tr>
+<tr>
+<td>Uniqueness checking</td>
+<td>A checked unique reference or permission, with specified borrow/transfer rules.</td>
+<td>Preserve uniqueness through repeated access or temporary loans.</td>
+<td>Conflicting aliases, invalid loans and retained access reject.</td>
+</tr>
+</tbody>
+</table>
+<p>Current cells provide the first comparison. The other two require new checking
+contracts. A hybrid may use linear permission tokens to implement a uniqueness
+discipline, but must explain both properties separately. These are semantic
+alternatives, not a selection of compiler representation.</p>
+<h3 id="linear-operation-contracts">Linear operation contracts</h3>
+<p>For comparison, let <code>C&lt;R,T,S&gt;</code> denote a linear current-state value for one cell.
+<code>R</code> is its acquisition identity, <code>T</code> its payload type, and <code>S</code> one of the nominal
+states <code>Full</code> or <code>Empty</code>. Each input value is consumed once; a returned <code>C</code> is a
+successor value with the same acquisition identity. It may reuse the physical
+storage. Whether this value is source-visible or retained only in Core is open.</p>
+<p>The following are schematic signatures, not accepted Ash syntax. <code>tensor</code> is a
+pair whose components retain their usage properties; <code>-o</code> is a linear arrow.
+Each operation also has its exact cell effect requirement, omitted here to
+keep the usage relationship visible.</p>
+<pre tabindex="0"><code class="language-text">read_copy : C&lt;R,T,Full&gt; -o (C&lt;R,T,Full&gt; tensor T)
+replace   : (C&lt;R,T,Full&gt; tensor T) -o (C&lt;R,T,Full&gt; tensor T)
+take      : C&lt;R,T,Full&gt; -o (C&lt;R,T,Empty&gt; tensor T)
+put       : (C&lt;R,T,Empty&gt; tensor T) -o C&lt;R,T,Full&gt;
+finish_empty : C&lt;R,T,Empty&gt; -o Unit
+</code></pre>
+<p><code>read_copy</code> requires permission to duplicate <code>T</code>: one instance remains stored
+and one is returned. <code>replace</code> consumes the incoming payload and returns the
+previous payload alongside the successor cell. <code>take</code> moves the payload out;
+<code>put</code> moves a payload into an empty cell. A read from <code>Empty</code> has no contract.</p>
+<p>Completing a full cell must account for its payload. A consuming disposal
+operation <code>dispose_T : T -o Unit ! delta</code> can contribute effects <code>delta</code> to
+completion. Alternatively, an operation may return the payload while consuming
+the cell. Neither freeing storage nor ignoring a successor disposes of a linear
+payload. A <code>write</code> that returns no old payload requires a permitted discard or
+checked disposal of that old payload.</p>
+<p>These state indices apply to the linear candidate. A duplicable handle cannot
+retain an authoritative <code>Full</code> index after another alias takes the contents
+without an additional shared-state/access mechanism.</p>
+<h3 id="unique-access-contracts">Unique access contracts</h3>
+<p>A uniqueness candidate must identify what remains unique: the storage reference,
+the mutation permission or another checked authority. It must specify whether
+other references may exist but be unavailable during an exclusive operation.
+Being non-duplicable alone does not establish that invariant.</p>
+<p>For each operation, state its parameter mode: transfer authority, temporarily
+borrow read access, temporarily borrow exclusive access, or use mediated shared
+access. The contract gives the returned authority and any retained loan.
+Repeated source uses are checked against that contract; they are not repeated
+uses of one linear value unless successor threading explains them.</p>
+<p>Borrow intervals must include captured control and retained foreign access when
+applicable. A call boundary alone cannot end a loan that the called operation
+retains. A one-shot continuation does not establish freedom from alias conflicts.</p>
+<h3 id="rust-like-usage-and-lifetime-regimes">Rust-like usage and lifetime regimes</h3>
+<p>Rust supplies a useful comparison of combined properties. The Ash column below
+is an interpretation for this study, not a claim that Rust names or implements
+these logical disciplines as Ash resource contracts.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Rust mechanism</th>
+<th>Usage, access or lifetime behavior</th>
+<th>Ash correspondence or gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>T: Copy</code></td>
+<td>A value can be copied while its original remains usable. <a href="https://doc.rust-lang.org/std/marker/trait.Copy.html">Copy documentation</a>.</td>
+<td>Candidate unlimited/unrestricted value use; copying does not duplicate resource ownership unless that is separately justified.</td>
+</tr>
+<tr>
+<td>Owned non-<code>Copy</code> value</td>
+<td>Moving consumes the previous binding; moving out deinitializes the place until refill. <a href="https://doc.rust-lang.org/reference/expressions.html#moved-and-copied-types">Move rules</a>.</td>
+<td>Affine move behavior at the source level; mandatory exact use and required protocol completion are separate questions.</td>
+</tr>
+<tr>
+<td><code>&amp;'a T</code></td>
+<td>Shared, copyable access constrained by a lifetime; interior mutability is an explicit exception to ordinary shared-reference mutation restrictions. <a href="https://doc.rust-lang.org/reference/types/pointer.html">Reference types</a>.</td>
+<td>Unlimited borrowed access with a validity dependency, plus a separately stated shared-mutation policy.</td>
+</tr>
+<tr>
+<td><code>&amp;'a mut T</code></td>
+<td>Non-copyable exclusive borrowed access; the referent has another owner. <a href="https://doc.rust-lang.org/reference/types/pointer.html">Mutable references</a>.</td>
+<td>Affine access-value usage combined with unique access during the loan, not linear ownership of the referent.</td>
+</tr>
+<tr>
+<td>Mutable place</td>
+<td>Assignment and mutable borrowing require a mutable place. <a href="https://doc.rust-lang.org/reference/expressions.html#mutability">Mutability rules</a>.</td>
+<td>Permission to update a binding or location remains distinct from payload usage and alias authority.</td>
+</tr>
+<tr>
+<td><code>FnOnce</code>, <code>FnMut</code>, <code>Fn</code></td>
+<td>Calls respectively consume the closure, borrow it mutably, or borrow it through shared access. Capturing by move alone does not determine the call mode. <a href="https://doc.rust-lang.org/reference/types/closure.html#call-traits-and-coercions">Closure call traits</a>.</td>
+<td>Separate closure-value usage, call parameter mode and captured dependencies. Unlimited calls need not imply a copyable closure.</td>
+</tr>
+<tr>
+<td><code>Drop</code> and drop scopes</td>
+<td>Initialized values are normally dropped on scope exit or overwrite. <a href="https://doc.rust-lang.org/reference/destructors.html">Destructors</a>.</td>
+<td>Candidate implicit completion requires Ash's effects, ordering and outcome contracts; discard permission alone does not specify it.</td>
+</tr>
+</tbody>
+</table>
+<p>Reading the owned non-<code>Copy</code> row as affine is a usage interpretation: Rust
+permits an owned binding to receive no explicit source use and be dropped.
+Moreover, safe <code>mem::forget</code> can suppress destruction, so Rust cleanup cannot
+stand in for an Ash contract requiring a particular completion operation.
+<a href="https://doc.rust-lang.org/std/mem/fn.forget.html#safety">Forget documentation</a>.
+Exactly-once value use and required resource completion remain separate even
+when one operation discharges both.</p>
+<p>This comparison does not adopt Rust's syntax, compiler, allocation strategy or
+every borrowing rule. It identifies combinations to express and test. Shared
+interior mutation remains a separate provider/access policy; it does not gain
+exclusive access merely because a handle is affine.</p>
+<h3 id="lifetime-alternatives">Lifetime alternatives</h3>
+<p>Keep an acquisition identity, storage lifetime, borrow interval and completion
+point distinct. Rust reference lifetimes describe validity constraints, and
+inferred live borrows can end before their lexical binding scope ends.
+<a href="https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html">Borrowing examples</a>.
+Rust also elides signature lifetimes when its rules determine them; ambiguous
+relationships need explicit information.
+<a href="https://doc.rust-lang.org/reference/lifetime-elision.html">Lifetime elision</a>.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate lifetime regime</th>
+<th>Meaning to specify</th>
+<th>Utility and cost to compare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Owner scope dependencies</td>
+<td>Access remains valid within the owning acquisition; no general loan endpoint.</td>
+<td>Reuse the current scoped-resource boundary, while recording cases needing finer conflict control.</td>
+</tr>
+<tr>
+<td>Lexical loan scopes</td>
+<td>An explicit nested interval grants access and suspends incompatible permissions until its checked exit.</td>
+<td>Simple endpoint and proof structure; may reject safe programs or retain restrictions longer than needed.</td>
+</tr>
+<tr>
+<td>Inferred live loans</td>
+<td>Branches, calls and actual retained uses determine endpoints finer than textual scope.</td>
+<td>Less annotation and earlier permission recovery; requires additional flow, capture and failure analysis.</td>
+</tr>
+<tr>
+<td>Public lifetime relationships</td>
+<td>A signature relates returned/stored access to its inputs and required owners.</td>
+<td>Independent client checking without exposing bodies; requires a precise contract and inference boundary.</td>
+</tr>
+</tbody>
+</table>
+<p>These regimes can combine rather than replace one another. An owner may remain
+live across many shorter loans; ending a loan need not release its storage.
+An inferred last use must include destructor access, closure invocation,
+captured control and foreign retention where their contracts require it.
+Completion remains checked even when every ordinary read has finished.</p>
+<p>Public borrowing contracts must identify the owner and valid interval of any
+returned access, permission recovery and outlives requirements. Whether Ash
+represents those relationships through inferred dependencies, indices or another
+checked form remains open. No Rust lifetime spelling or new Ash kind is selected.</p>
+<h3 id="surface-forms-derived-from-the-contracts">Surface forms derived from the contracts</h3>
+<p>The illustrative spelling below represents an integer mutable binding. It does
+not select a keyword, assignment operator or grammar:</p>
+<pre tabindex="0"><code class="language-text">var x : Int = 41
+x := x + 1
+x
+</code></pre>
+<p>Acquisition checks the initializer before introducing the fresh identity and
+binding. For the linear candidate it introduces <code>x0 : C&lt;R,Int,Full&gt;</code>. The body
+can elaborate schematically as follows, using the operation contracts above:</p>
+<pre tabindex="0"><code class="language-text">let (x1, n) = read_copy x0
+let (x2, old) = replace (x1, n + 1)
+let _ = old
+let (x3, result) = read_copy x2
+(x3, result)
+</code></pre>
+<p>Each cell value is used once. Integers permit copying and discard. The final
+pair is an internal body result: the resource boundary consumes <code>x3</code> through
+the completion contract and returns the independent integer. It must not both
+insert this completion and schedule a second completion of the same authority.
+The scope and its current state need an explicit account for owned abandonment
+as well as this normal path.</p>
+<p>The source binding can support unlimited reads and updates without treating
+<code>x0</code> as unlimited. Each evaluation threads its current successor; a loop or
+recursive helper must do the same. Unlimited source operations and linear Core
+values are different levels of the elaboration contract.</p>
+<p>The uniqueness candidate can present the same surface example while elaborating
+to permission-checked access and updates. Its Core must retain the unique/borrow
+facts that justify those operations. Comparing the two requires equivalent
+observations, evaluation order and completion, not identical Core nodes.</p>
+<p>For a linear payload, plain expression use cannot silently copy it. Assignment
+cannot silently discard the previous contents. The surface must distinguish
+copy, move/take, borrow and replace where the contracts require that distinction;
+inference can remove annotations only when it establishes the intended action.</p>
+<p>The first surface comparison uses simple bindings. General assignment places,
+field updates and compound assignment need separate evaluation-order and alias
+contracts. No example licenses repeated evaluation of an effectful operand,
+implicit deep copying or movement of storage between lifetimes.</p>
+<h3 id="composition-and-inference">Composition and inference</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Required account</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Branches</td>
+<td>Each normally completing arm accounts for incoming authority; the join receives compatible successors or an explicit branch-dependent result.</td>
+</tr>
+<tr>
+<td>Recursion or loops</td>
+<td>Thread the current successor or preserve the declared unique-access invariant at each iteration and exit.</td>
+</tr>
+<tr>
+<td>Tuples and constructors</td>
+<td>Wrapping a restricted value preserves its restrictions; independent duplicable fields can still be projected safely.</td>
+</tr>
+<tr>
+<td>Closures</td>
+<td>Capturing owned linear authority restricts use of that closure value. Capturing scoped mediated access may permit repeated calls under a checked call contract.</td>
+</tr>
+<tr>
+<td>Generalization and imports</td>
+<td>Polymorphism and body-free public contracts preserve usage, access, effects and dependency facts.</td>
+</tr>
+<tr>
+<td>Effect requests and handlers</td>
+<td>Operands and captured control preserve the authority they carry; handler substitution cannot fabricate a successor or conflicting access.</td>
+</tr>
+<tr>
+<td>Completion and failure</td>
+<td>Normal return, owned discard, partial acquisition and fallible completion each account for current authority and payloads.</td>
+</tr>
+</tbody>
+</table>
+<p>Infer local successor flow, effects, actual captures and structural usage
+consequences from checked declarations and bodies. Explicitly specify public
+parameter modes, allowed aliasing, foreign retention/invalidation and completion
+behavior where bodies cannot establish them. Decide the annotation boundary
+from concrete ambiguous cases rather than requiring every local use to be marked.</p>
+<h3 id="process-implications-as-future-pressure">Process implications as future pressure</h3>
+<p>Memory disciplines will constrain a later process design even while Ash remains
+sequential. Record the facts a future design would need, without defining
+processes, communication or concurrency here. The shared-nothing direction and
+exclusion of transportable arena-owner packages remain the design boundary.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Memory fact to establish now</th>
+<th>Consequence to retain for later process work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copying can duplicate access rather than independent data.</td>
+<td>A future communication contract must distinguish copied references from independent payloads.</td>
+</tr>
+<tr>
+<td>Sharing preserves common storage and lifetime dependencies.</td>
+<td>Sharing within one domain does not establish permission to share across domains.</td>
+</tr>
+<tr>
+<td>Uniqueness excludes specified conflicting aliases.</td>
+<td>Uniqueness alone does not prove that storage, foreign handles or dependent values can cross a process boundary.</td>
+</tr>
+<tr>
+<td>A move transfers authority within its checked lifetime contract.</td>
+<td>Moving a binding is not automatically transport of its allocation or owning scope.</td>
+</tr>
+<tr>
+<td>An arena bounds the lifetime of its dependent allocations.</td>
+<td>It may inform a later process-heap discipline; this study keeps owners scoped and nontransportable.</td>
+</tr>
+<tr>
+<td>Completion has payload, ordering, effect and failure obligations.</td>
+<td>Later process termination rules must account for those obligations; none is selected here.</td>
+</tr>
+</tbody>
+</table>
+<p>The present alias and loan proofs concern sequential execution, including
+effects and retained control. They establish no race-freedom or synchronization
+contract for hypothetical concurrent use. Memory optimization measurements
+likewise concern sequential programs, not a process scheduler.</p>
+<h3 id="semantic-and-core-comparison">Semantic and Core comparison</h3>
+<p>Decide the source contract and its Core encoding separately. For example,
+uniqueness at the source may be implemented through linear Core permissions;
+that would need both an alias invariant and an exactly-once token account.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Option</th>
+<th>Source semantics</th>
+<th>Candidate Core account</th>
+<th>Surface consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shared mediated access</td>
+<td>Unlimited handle use within the owner; mutations follow the provider's shared-access contract.</td>
+<td>Handle, exact requests and scope-owned completion, with retained dependencies.</td>
+<td>Reads and assignment request operations; sharing remains explicit in the resource contract.</td>
+</tr>
+<tr>
+<td>Linear state threading</td>
+<td>Each current resource value is used once; operations return successors.</td>
+<td>Typed successor values, consumption/flow facts, protocol states and completion.</td>
+<td>Named successors or mutable sugar that threads them without copying or silently dropping payloads.</td>
+</tr>
+<tr>
+<td>Unique access and borrowing</td>
+<td>Transfer and loans preserve a specified alias invariant; compatible operations can repeat.</td>
+<td>Unique-access facts, loan grants/recovery and retained dependencies/control obligations.</td>
+<td>Borrowing and assignment infer temporary permissions where the call and lifetime contracts permit.</td>
+</tr>
+<tr>
+<td>Unique source with linear Core permissions</td>
+<td>Unique/borrowed source access as above.</td>
+<td>Linear permission succession encoding the source invariant, plus explicit loan relationships.</td>
+<td>Source may retain convenient bindings while Core makes authority succession explicit.</td>
+</tr>
+</tbody>
+</table>
+<p>The hybrid is an encoding comparison, not a fourth independent usage discipline.
+None of these rows selects a new node family or permits using an unchecked side
+table as authority. Derive types, rows, public contracts, source origins and
+independent validation before choosing the concrete representation. Compare
+using existing Core forms with retaining new facts or semantic nodes only where
+the contract requires them.</p>
+<h3 id="proof-obligations">Proof obligations</h3>
+<p>These are proposed obligations, not proved results. A candidate first needs a
+precise admitted fragment, primitive contracts, observations and operational
+rules. Follow <a href="/ash/docs/design/dn-0034-one-shot-kernel-soundness-and-practicality/">DN-0034</a>:
+proofs about a model and correspondence with implemented Core/runtime are
+separate claims. Existing one-shot results transfer only under their premises.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Common obligation</th>
+<th>Candidate-specific part</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Typing and execution</td>
+<td>Preservation of types, effects, dependencies and valid protocol states at each transition.</td>
+<td>Linear successor consumption or unique/loan permission preservation.</td>
+</tr>
+<tr>
+<td>Use accounting</td>
+<td>No unsupported contraction or weakening through calls, wrappers, captures or generalization.</td>
+<td>Linear values are used once; affine elimination and unlimited use follow their own contracts.</td>
+</tr>
+<tr>
+<td>Aliases and lifetime</td>
+<td>Every admitted access targets valid storage with the required permission.</td>
+<td>Unique candidates exclude conflicting usable aliases; loan endpoints include retained uses and control.</td>
+</tr>
+<tr>
+<td>Progress and failure</td>
+<td>An admitted operation has a lawful next step or declared failure outcome, under stated native assumptions.</td>
+<td>No empty read, stale-state reuse or unaccounted consumed/refused authority.</td>
+</tr>
+<tr>
+<td>Completion</td>
+<td>Required normal/owned-abandonment completion is neither duplicated nor lost, with valid payload handling and order.</td>
+<td>Dropped access does not erase its owner; taking contents changes what completion must consume.</td>
+</tr>
+<tr>
+<td>Elaboration</td>
+<td>Surface evaluation and its Core translation preserve the selected observations.</td>
+<td>Assignment, implicit loans, successor threading and cleanup preserve order and ownership.</td>
+</tr>
+<tr>
+<td>Validation and transforms</td>
+<td>Independent validation checks the retained contract; each transform preserves it and observations.</td>
+<td>Changed nodes/calls cannot reuse stale consumption, loan or provenance evidence.</td>
+</tr>
+<tr>
+<td>Runtime correspondence</td>
+<td>Validated Core and the evaluator agree on state, access, results and failure/completion.</td>
+<td>Token representation or permission metadata corresponds to the actual provider/native state.</td>
+</tr>
+</tbody>
+</table>
+<p>Observations include results, failure, dispatchable requests, completion order
+and any accounting exposed by the provider. The same returned integer alone
+does not establish equivalence. A theorem about exactly-once use does not prove
+uniqueness, termination, correct foreign behavior or required completion unless
+those premises and conclusions are also present.</p>
+<h3 id="memory-and-performance-opportunities">Memory and performance opportunities</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Opportunity</th>
+<th>Required evidence before optimization</th>
+<th>Cost or limit to measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Destructive update and storage reuse</td>
+<td>A checked access/protocol contract excludes incompatible observers and preserves retained views and payload obligations.</td>
+<td>Avoided allocations/copies versus permission and bookkeeping cost.</td>
+</tr>
+<tr>
+<td>Local cell elimination or scalar replacement</td>
+<td>Equivalent execution without the storage or request machinery; identity, intercepted operations, failure and completion remain consistent.</td>
+<td>Runtime work, retained Core metadata and observable provider accounting.</td>
+</tr>
+<tr>
+<td>Avoiding payload copies</td>
+<td>Ownership transfer or borrowing supplies every required validity and independence property.</td>
+<td>Copied bytes, peak storage, retained storage and rejected useful programs.</td>
+</tr>
+<tr>
+<td>Earlier permission recovery or reclamation</td>
+<td>All relevant uses, including cleanup and captured/foreign access, are accounted for. Ending a loan alone does not authorize release.</td>
+<td>Peak live storage versus inference work and completion effects.</td>
+</tr>
+<tr>
+<td>Removing dynamic access checks</td>
+<td>Static evidence discharges the actual primitive's access assumptions.</td>
+<td>Runtime checks saved versus checking complexity; foreign assumptions remain explicit.</td>
+</tr>
+<tr>
+<td>Fewer reference-count or barrier operations</td>
+<td>A later storage policy provides them and the checked use/alias facts prove a corresponding optimization sound.</td>
+<td>Policy-specific runtime savings; this does not add counting or tracing to the initial study.</td>
+</tr>
+</tbody>
+</table>
+<p>Linearity of a token alone does not prove uniqueness of every reachable payload.
+A unique outer reference does not establish exclusive access to shared children.
+Provider operations may expose allocation failure, capacity, usage or request
+interception, so an apparent storage optimization must preserve that contract.
+These are opportunities to investigate, not automatic benefits of a qualifier.</p>
+<p>Measure annotation burden, diagnostic quality, checking time/work, Core and
+retained-fact size, runtime overhead, allocations, copied bytes and peak memory.
+The shared candidate may already optimize well through ordinary dependency
+analysis; the stricter candidates must earn their additional complexity.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>This note first asks for a typed comparison, not an implementation task. Before
+any prototype, select its candidate contracts, named cases, Core obligations,
+positive/negative outcomes and retention conditions. Do not reopen DN-0036's
+selected native boundary to answer these questions.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Positive evidence</th>
+<th>Nearby rejection or failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Repeated integer update</td>
+<td>Convenient syntax elaborates to lawful successors or checked unique access.</td>
+<td>An old linear state remains usable.</td>
+</tr>
+<tr>
+<td>Unlimited access</td>
+<td>Repeated reads/writes and reusable scoped closures have no static use-count bound under their access contract.</td>
+<td>Unlimited access duplicates completion authority or bypasses a live exclusive loan.</td>
+</tr>
+<tr>
+<td>Linear payload replacement</td>
+<td>The previous payload is returned and consumed lawfully.</td>
+<td>Read duplicates it or assignment discards it without authority.</td>
+</tr>
+<tr>
+<td>Take and refill</td>
+<td>An empty successor is refilled before reading.</td>
+<td>A stale full-state value authorizes a read.</td>
+</tr>
+<tr>
+<td>Affine access</td>
+<td>Unused access is permitted while required scope completion remains accounted for.</td>
+<td>Discard permission silently removes required completion.</td>
+</tr>
+<tr>
+<td>Aliases</td>
+<td>Shared mediated access or compatible loans follow their declared contract.</td>
+<td>Affinity is accepted as proof that no conflicting alias exists.</td>
+</tr>
+<tr>
+<td>Branch and loop</td>
+<td>Successors and exit obligations remain coherent.</td>
+<td>A branch loses authority or an iteration recreates an old state.</td>
+</tr>
+<tr>
+<td>Closure capture</td>
+<td>Owned authority and scoped access produce the appropriate call restrictions.</td>
+<td>A tuple, closure or polymorphic binding restores duplication.</td>
+</tr>
+<tr>
+<td>Handler capture</td>
+<td>Resume preserves authority; admitted discard accounts for owned completion.</td>
+<td>A surrounding handler performs conflicting access while a loan remains captured.</td>
+</tr>
+<tr>
+<td>Loan endpoints and public contracts</td>
+<td>Short loans permit later access, and returned access has independently checked owner/lifetime relationships.</td>
+<td>A loan ends while a destructor, closure, handler or foreign operation can still use it.</td>
+</tr>
+<tr>
+<td>Scope exit</td>
+<td>Copied independent output survives; completion consumes the current resource once.</td>
+<td>Access escapes, linear contents disappear or completion runs twice.</td>
+</tr>
+</tbody>
+</table>
+<p>Compare public types and contracts, annotation burden, diagnostics, Core size,
+checking cost, native/storage observations and rejected useful programs. Under
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>, independent Core validation
+must reconstruct usage/access obligations before and after transforms. Core
+operational semantics must state state succession, alias permissions, payload
+movement and completion before a product implementation is authorized.</p>
+<p>For each case, compare the same operation and completion contract across the
+candidates. First derive its types and operational rules, then its Core account
+and proof obligations, then candidate surface forms. Use a bounded prototype
+only when it answers a named unresolved question. Measure optimizations against
+the unoptimized implementation of the same supported semantics; retain semantic
+differences explicitly rather than attributing them to a faster representation.</p>
+<p>Choose after this comparison. Record which properties become general language
+mechanisms, which remain resource/provider policy, which Core encoding has the
+required evidence, and which source defaults reduce friction without ambiguity.
+A successful case need not imply one global discipline for every resource.</p>
+<p>Retain coherent designs and reproducible counterexamples as evidence. Replace
+or discard candidate machinery when the comparison justifies it. A successful
+language change still needs a proposal, implementation, tests and matching
+surface/Core specification updates; converged non-language architecture needs
+a decision. This property map establishes neither adoption nor a merge gate.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Where should usage permissions and uniqueness facts live in checked types,
+parameter contracts, captures and Core, and what can inference recover?</li>
+<li>Which resources expose successor values to library authors, and which can
+keep them internal to elaboration without weakening independent checking?</li>
+<li>Can one mutable surface serve both linear and unique candidates without
+ambiguity about copying, transfer, borrowing or disposal?</li>
+<li>How should unlimited-use contracts be expressed for values, access, arguments
+and captures while preserving independent discard and alias restrictions?</li>
+<li>Which contents support plain assignment, and when must the surface return or
+explicitly dispose of the previous value?</li>
+<li>How is the current state recovered for owned abandonment without duplicating
+or losing the authority threaded through the body?</li>
+<li>What minimum loan representation handles closures and effect capture without
+requiring broader borrowing machinery immediately?</li>
+<li>Which common proof interfaces cover both linear succession and uniqueness,
+and which obligations remain specific to one candidate or lifetime regime?</li>
+<li>Which optimization gains require these contracts, and which can current
+shared-resource analysis already establish at lower implementation cost?</li>
+<li>Which memory and dependency facts should later process design reuse without
+treating copyability, uniqueness or local moves as transport permission?</li>
+<li>Which concrete cases justify quantitative use counts, finer borrow endpoints
+or field-level places beyond this qualitative map?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">← DN-0037: Ash-Authored Foreign-Library Interfaces</a><a rel="next" href="/ash/docs/design/dn-0039-files-and-filesystem-resources/">DN-0039: Files and Filesystem Resources →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

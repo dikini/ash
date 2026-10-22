@@ -1,0 +1,404 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0037: Ash-Authored Foreign-Library Interfaces · Ash</title><meta name="description" content="The selected build boundary is recorded separately in AD-0013. The retained CP-0022 transition records the semantic change; the product-branch specification contains the implemented profile. This informative note…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0037: Ash-Authored Foreign-Library Interfaces · Ash"><meta property="og:description" content="The selected build boundary is recorded separately in AD-0013. The retained CP-0022 transition records the semantic change; the product-branch specification contains the implemented profile. This informative note…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0037: Ash-Authored Foreign-Library Interfaces · Ash"><meta name="twitter:description" content="The selected build boundary is recorded separately in AD-0013. The retained CP-0022 transition records the semantic change; the product-branch specification contains the implemented profile. This informative note…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0037-ash-authored-foreign-library-interfaces.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0037: Ash-Authored Foreign-Library Interfaces","headline":"DN-0037: Ash-Authored Foreign-Library Interfaces","description":"The selected build boundary is recorded separately in AD-0013. The retained CP-0022 transition records the semantic change; the product-branch specification contains the implemented profile. This informative note…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/","@id":"https://dikini.github.io/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0037-ash-authored-foreign-library-interfaces.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0037-ash-authored-foreign-library-interfaces" data-pagefind-meta="title">DN-0037: Ash-Authored Foreign-Library Interfaces</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0037-ash-authored-foreign-library-interfaces.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0037</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>,
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025</a>,
+<a href="/ash/docs/design/dn-0042-native-interaction-and-efficient-data/">DN-0042</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a>,
+<a href="/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/">AD-0013</a>,
+<a href="https://github.com/dikini/ash-lang/blob/adddeffe5d135bd03bf5fc30051965e5da70ed24/docs/proposals/CP-0022-ash-authored-foreign-interfaces.md">CP-0022 transition history</a></li>
+</ul>
+<blockquote>
+<p>This design note records a separate foreign-library authoring program. It
+selects no new syntax and defines
+no current Ash semantics. It does not change DN-0036's experiment contracts,
+implementation plan or completion criteria. Later bounded work needs its own
+governing contract and the product workflow in the
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/project/artifacts.md">artifact guide</a>.</p>
+</blockquote>
+<p>The selected build boundary is recorded separately in AD-0013. The retained
+CP-0022 transition records the semantic change; the
+<a href="/ash/spec/static-semantics/#source-foreign-declarations">product-branch specification</a>
+contains the implemented profile. This informative note does not define current Ash.</p>
+<h2 id="agreed-ffi-ash-milestone">Agreed ffi-ash milestone</h2>
+<p><a href="https://github.com/dikini/ash-lang/milestone/1">The GitHub milestone</a> tracks the
+bounded product delivery, without a deadline. <a href="/ash/docs/design/dn-0042-native-interaction-and-efficient-data/">DN-0042</a>
+remains the broader motivation and relationship map. GitHub owns assignment,
+blockers, progress and PR status; this section records durable scope and order.</p>
+<p>Deliver Ash-authored foreign declarations and library policy, generated <strong>Rust</strong>
+native-call bridges, optional separate C/header verification, and a runnable
+executable containing checked Core and the existing evaluator. Target only
+<code>x86_64-unknown-linux-gnu</code>, with static archives and ordinary shared linkage.
+Libraries remain passive Ash source. Build whole programs; do not add a native
+Ash backend, separately compiled Ash libraries or a stable Ash/Core ABI.</p>
+<p>Port copying SQLite, native buffer and minimal arena lifecycle. Native buffer
+uses an explicit source-library migration and loses special compiler dispatch;
+cell stays unchanged. Minimal arena uses generic allocation/release primitives,
+not a new shim for the experimental Rust Arena backing. General borrowing and
+typed storage, files, serialization, numeric additions, SIMD, callbacks, async
+calls, dynamic loading and Lean proofs remain outside the milestone. Finite
+copying access and call-duration input borrows are required, bounded mechanisms.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Sequence</th>
+<th>Issue and bounded outcome</th>
+<th>Dependency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><a href="https://github.com/dikini/ash-lang/issues/1">#1: FFI semantic and architectural contract</a>: CP-0022 and AD-0013, precise semantics and reviewed authoring/build boundary.</td>
+<td>Review and acceptance before product implementation.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="https://github.com/dikini/ash-lang/issues/2">#2: Source contracts, Core and generic execution</a>: authenticated source admission, access, ownership, validation and evaluator.</td>
+<td>Accepted #1 contract.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="https://github.com/dikini/ash-lang/issues/3">#3: Program build and interface verification</a>: embedded Core, Rust bridges, static/shared linkage and separate C checks.</td>
+<td>#1; connected executable support from #2.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="https://github.com/dikini/ash-lang/issues/4">#4: Ash native-buffer library</a>: preserved behavior, explicit callers and removal of special dispatch.</td>
+<td>Verified common #2/#3 mechanisms.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="https://github.com/dikini/ash-lang/issues/5">#5: Ash arena lifecycle</a>: real acquisition, configuration, usage, refusal and release.</td>
+<td>Same common mechanisms; no typed storage prerequisite.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="https://github.com/dikini/ash-lang/issues/6">#6: Ash copying SQLite library</a>: source declarations, constants, protocol, conversions and lifecycle; realistic programs.</td>
+<td>#2/#3; complete after the contrasting library deliveries.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="https://github.com/dikini/ash-lang/issues/7">#7: Milestone closure</a>: integrated verification, specification, migration and build/run evidence.</td>
+<td>All complete issue outcomes verified on the retaining branch.</td>
+</tr>
+</tbody>
+</table>
+<p>Use <a href="/ash/docs/decisions/ad-0011-milestone-worktree-lifecycle/">AD-0011</a>: persistent
+<code>integration/ffi-ash</code> plus one active product checkpoint worktree. Main stays
+unchanged until the separate final integration gate. PRs target that branch;
+the final delivery PR targets Main. Preserve checkpoint histories with explicit
+merges. Milestone commits and intermediate merges are unsigned; the final
+merge into Main is signed, following the updated execution instruction.</p>
+<p>Issues #2–#6 delivered connected stages of the CP-0022 transition. Their
+implementation, library migrations, tests, specification, review and verification
+are retained in milestone history. Completed proposals, tasks and plans leave
+the current tree under the artifact policy. The existing <a href="https://github.com/dikini/ash-lang/issues/7#issuecomment-6234064548">closure handoff</a>
+supersedes TASK-0041 for final Main verification, acceptance and checkpoint
+coordination. The <a href="https://github.com/dikini/ash-lang/blob/7471200efb1bd90782fcad81be54b992fbd92982/docs/tasks/TASK-0041-ffi-ash-milestone-closure.md">exact task history</a>
+preserves its work and findings; supersession does not complete its outcome.
+Keep the active product checkout and compatible cache until their owners release
+them under AD-0011. Artifact retirement alone does not authorize worktree removal
+or Main integration.</p>
+<p>The original contract used TASK-0036 through TASK-0041 for its implementation
+issues. Their delivering commits and PRs retain completed work; the
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/tasks/README.md">task index</a> lists the work that remains active.
+Tasks link their governing proposal/decision and issue, and contain bounded work,
+dependencies, required verification and durable discoveries/deviations. Ordered
+steps go in the existing Work section; add a task-owned plan only when needed.
+Do not add a parallel daily-status document. Reciprocal issue/TASK/PR links carry
+the delivery chain; remove completed tasks/plans under the artifact policy and
+retain historical links through delivering commits and PRs.</p>
+<p>Open draft PRs when changes are reviewable. Incremental PRs reference issues
+without closing them. Close an issue explicitly only after its complete outcome
+is verified on the retaining branch and its delivering PRs, integration commit
+and verification receipt are recorded. Main semantics remain a separate gate.</p>
+<p>Reuse native lifecycle/copy/control observations and focused negative regressions.
+Use one Cargo job, connected checks during development and full architecture/
+workspace verification at integration. Exact source pins and commands make
+evidence reusable. The final Main PR includes implementation, normative updates,
+Ash libraries, caller migration and reproducible build/run instructions.</p>
+<h2 id="question">Question</h2>
+<p>What language, memory, host ABI and toolchain mechanisms let humans and AI
+agents author reusable foreign-library interfaces in Ash, starting from the
+foreign API and binary? Which facts can checking infer, which contracts must
+authors express, and how can common infrastructure replace per-library
+host-language manifests and adapters?</p>
+<h2 id="objective">Objective</h2>
+<p>For a declared supported foreign ABI profile, a library author should write
+Ash code to refer to an existing foreign library, implement its binding and
+provider policy, and link it during compilation. Native build requirements
+and configuration may be declarative inputs. The author should not need a
+hand-written Rust manifest, Rust adapter or C shim, or changes to the Ash
+compiler or interpreter for that library. Compiler-generated glue may be an
+implementation technique; it creates no extra safety authority.</p>
+<p>The capability must be sufficient for humans and AI agents to author reusable
+Ash modules bridging libraries supplied by the host operating system. They
+should be able to work from the foreign API, documented Ash interfaces and
+tooling, without inspecting or modifying compiler implementation details.</p>
+<p>The compiler and interpreter provide common foreign-call, representation,
+memory, ownership, initialization and linking infrastructure. Library-specific
+symbols, contracts, protocol, conversions and error policy belong to the Ash
+binding. Adding a library within the supported profile changes those sources
+and native build inputs, not compiler dispatch code.</p>
+<h2 id="context">Context</h2>
+<p>The <a href="/ash/spec/">current specification</a> defines passive source
+modules and the closed builtin cell and native-buffer resources. It provides
+no general FFI or foreign-representation guarantee. The
+<a href="/ash/spec/elaboration/#surface-erasure">elaboration contract</a> authenticates
+those builtin resources; ordinary declarations cannot manufacture their
+authority. The <a href="/ash/spec/dynamic-semantics/">dynamic semantics</a> give
+ordinary values evaluator-managed storage, without a source memory policy.</p>
+<p><a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a> governs
+the ongoing SQLite and scoped-arena experiments. Their Rust-authored foreign
+manifests, generated Ash declarations, identity-bound admission and native
+adapters supply bounded evidence about contracts and resource composition.
+The <a href="/ash/docs/design/provider-experiments/execution/#current-checkpoint">execution record</a>
+records the supported components and limitations. This machinery alone does
+not establish Ash-authored foreign declarations or general host ABI calls.</p>
+<p>The existing manifest could become an internal compiled representation; its
+present Rust authoring interface is not a required public library API for this
+program. Moving declarations into Ash and replacing hand-written adapters
+remain separate questions with separate evidence.</p>
+<p>The <a href="/ash/docs/design/foreign-authoring/dn-0036-readiness/">DN-0036 readiness review</a> records
+the verified Main capabilities, outstanding and worktree evidence, and the
+selected first authoring target: a copying SQLite binding on one host ABI.
+The selected execution direction generates Rust bridges and links a host using
+the existing evaluator; AD-0013 records that non-language boundary. The retained
+CP-0022 history records the source and operational transition. SQLite, native
+buffer and minimal arena provide the implemented profile's contrasting authoring
+and lifecycle evidence.
+Unfinished general borrowing and wider Arena work are not prerequisites.
+Native storage interfaces and region validity contracts remain distinct.</p>
+<p><a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> requires typed Core and
+independent validation; <a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a>
+provides the explicit evaluator boundary. A generic foreign-call path must
+preserve those obligations. <a href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025</a>
+explores packages and compiled artifacts without selecting a native executable
+or object-file backend.</p>
+<h2 id="constraints">Constraints</h2>
+<p>Reuse ordinary Ash types, effects, handlers, module contracts and resource
+mechanisms where their checked meanings suffice. Identify each proposed
+semantic extension and the corresponding surface and Core obligations.
+Preserve passive imports and exact defining identities across module checking.</p>
+<h3 id="abi-scope">ABI scope</h3>
+<p>The ABIs under consideration are host and foreign-library ABIs, for example
+the C/library ABI on Linux or FreeBSD for a specified architecture and native
+build configuration. Profiles identify the applicable calling conventions,
+symbol linkage, primitive widths, aggregate layouts and library requirements.
+These examples do not claim current support for both operating systems.</p>
+<p>An Ash ABI is outside this program's scope. Ash value representations and
+internal calls remain implementation details. Checked conversions marshal
+values to and from the host representations required by foreign calls; an
+ordinary Ash value need not have a C-compatible layout. The program does not
+design stable Ash binary layouts, an external Ash calling convention or binary
+compatibility between Ash modules or versions.</p>
+<p>Compiled output may retain foreign symbol and host ABI requirements. Retaining
+those facts or choosing an internal artifact format does not establish an Ash
+ABI.</p>
+<h3 id="minimum-c-authoring-case">Minimum C authoring case</h3>
+<p>Given the C header file or files and the compiled library binary, an author
+must be able to develop its Ash interface and compile/link to the library
+through the supported host ABI. Native inputs may include a static archive or
+shared library. Target selection, calling conventions, native configuration
+and link requirements must be expressible in Ash declarations or common
+declarative configuration where required.</p>
+<p>The walkthrough must not require the library's C source, a Rust manifest, a
+hand-written Rust adapter or a hand-written C shim. The author reads the
+supplied headers and declares the relevant signatures, types, layouts and
+constants in Ash. Common infrastructure resolves the declared symbols from
+the supplied native library and executes the resulting Ash binding.</p>
+<p>The Ash binding states ownership, retention, invalidation, initialization,
+failure and release assumptions that the headers do not determine. Missing
+behavioral facts remain explicit author obligations, rather than invented
+inference. Matching headers to a library and checking link requirements do not
+prove the foreign implementation obeys those contracts.</p>
+<h3 id="author-and-compiler-responsibilities">Author and compiler responsibilities</h3>
+<p>Authors understand the foreign language and API. They translate its interface
+and behavioral assumptions into Ash declarations, contracts and wrapper code.
+Ash understands those declarations and the selected host ABI; the compiler
+and interpreter do not need to parse or understand C or another foreign
+language. No header parser is a prerequisite for developing or using a binding.</p>
+<p>Inference operates on Ash types, bodies and declared foreign contracts. It
+derives their consequences without guessing facts from foreign syntax or
+symbol names. Host ABI support supplies calling and representation rules;
+foreign-language understanding remains with the author.</p>
+<p>An optional external tool may translate headers into candidate Ash declarations.
+Its output enters the same normal Ash checking path and creates no additional
+authority. This assistance is separate from required compiler infrastructure.</p>
+<h3 id="memory-and-execution-boundary">Memory and execution boundary</h3>
+<p>Use DN-0036's synchronous foreign-call and scoped-storage cases as initial
+evidence. Arena owners remain scoped and cannot be packaged or transported
+with their dependent values. Callbacks, asynchronous calls, process storage
+transfer, reference counting and tracing need separately bounded design work.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="follow-the-types-before-selecting-syntax">Follow the types before selecting syntax</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Role to specify</th>
+<th>Required relationship</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Foreign library requirement</td>
+<td>Native build input, target ABI, supported configuration and link requirement.</td>
+</tr>
+<tr>
+<td>Foreign symbol</td>
+<td>Defining library, symbol identity, calling convention and complete foreign signature.</td>
+</tr>
+<tr>
+<td>Foreign representation</td>
+<td>Width, signedness, alignment, aggregate layout, encoding and address requirements.</td>
+</tr>
+<tr>
+<td>Conversion or marshaling operation</td>
+<td>Ash and foreign input/output types, effects, failure outcomes and storage obligations.</td>
+</tr>
+<tr>
+<td>State and access contract</td>
+<td>Owned and borrowed identities, retained dependencies, validity interval and conflicting operations.</td>
+</tr>
+<tr>
+<td>Lifecycle contract</td>
+<td>Initialization, partial establishment, consumption, refusal and required completion order.</td>
+</tr>
+<tr>
+<td>Public binding contract</td>
+<td>Exact types/effects, dependency/control relationships and defining origins sufficient for independent client checking.</td>
+</tr>
+</tbody>
+</table>
+<p>Specify which roles are source declarations, ordinary Ash definitions,
+compiler-checked evidence, build configuration or foreign assumptions. Map
+each candidate form to those typed roles, elaboration and Core behavior before
+adding syntax. A matching name or constructor shape cannot create authority.</p>
+<p>Infer kinds, substitutions, operand positions and structural dependencies from
+checked Ash declarations and bodies where sufficient facts exist. Authors
+derive foreign signatures and layouts from their understanding of the API.
+Foreign retention, invalidation, consumption and failure behavior require
+explicit contracts or derivation from primitives whose contracts already
+state those properties. An ABI signature alone does not establish them.</p>
+<h3 id="program-and-dependencies">Program and dependencies</h3>
+<ol>
+<li><strong>Define a bounded host ABI profile.</strong> Select initial scalar, opaque
+handle, byte-buffer and output-parameter cases from SQLite and native
+allocation. Identify the operating system, architecture and native build
+configuration. State unsupported ABI shapes and targets. Account for host
+calling conventions, representations, initialization and failure before
+lowering.</li>
+<li><strong>Author checked foreign contracts in Ash.</strong> Reuse ordinary declarations
+where their meanings suffice. Design missing state, binding and ownership
+contracts by following their types. Derive the canonical registration
+representation from checked Ash source and compare it with the current
+manifest. Preserve authentication, imports, independent validation and exact
+origins.</li>
+<li><strong>Provide generic calls and conversions.</strong> Design the common compiler/Core
+and interpreter path for the supported ABI profile. Separate raw foreign
+signatures from safe Ash-facing operations. Any emitted glue must be checked
+against the same signature, representation and effect obligations. Retire
+per-library runtime dispatch implementations as this path becomes sufficient.</li>
+<li><strong>Connect memory and access.</strong> Use the arena and borrowing experiments to
+establish stable storage, typed layout, initialization, pointer validity,
+retained access, independent copying and completion. Identify the generic
+primitives needed to write conversion and lifecycle wrappers in Ash.
+Keep opaque addresses and completion authority within their checked roles.</li>
+<li><strong>Design compilation and linking.</strong> Specify how Ash declarations contribute
+native library and symbol requirements to compilation, how the toolchain
+resolves them for a target, and which facts survive in compiled output.
+Decide how the interpreter executes the same checked bindings through common
+infrastructure. Missing symbols, incompatible ABI/configuration and unsupported
+targets need causal diagnostics. Imports remain passive; initialization has
+an explicit execution and ownership contract. Coordinate artifact choices
+with <a href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025</a>, which does not
+yet select a native executable or object-file backend.</li>
+<li><strong>Rewrite and compare the bindings.</strong> Express the selected SQLite bridge
+and native allocation boundary in Ash using the generic mechanisms. Compare
+with the retained adapters on the same valid, rejection and failure cases.
+A walkthrough of a contrasting API tests transfer without requiring another
+complete library implementation in the initial experiment.</li>
+</ol>
+<p>Moving manifest declarations into Ash and eliminating hand-written adapters
+are distinct checkpoints. Neither supplies the other's evidence. The current
+bounded provider work continues to supply the source/type/Core/native evidence
+needed to design them; this program does not silently change P-1's admitted
+foreign-call mechanism.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<h3 id="evidence-for-the-authoring-objective">Evidence for the authoring objective</h3>
+<p>Use an unchanged Ash compiler and interpreter to build an Ash-authored binding
+against the selected native library, starting with its C headers and binary.
+Compile and link its declared symbols, check clients from its public contracts,
+and execute real calls with the required memory and completion behavior. No
+library-specific hand-written Rust/C glue or compiler modification may be
+necessary for this claim.</p>
+<p>Retain paired failures for wrong symbols, representations, conversions,
+ownership, retained access, initialization and completion. Check generic Core
+independently before and after transforms. Measure generated code, copying,
+storage and authoring effort. Optional external header tooling must not hide
+missing semantic contracts or become a prerequisite for hand-authored Ash
+bindings. The compiler/interpreter authoring test consumes the authored Ash
+interface and native library, without reading foreign-language declarations.</p>
+<p>An authoring walkthrough must demonstrate discovery of supported host ABI and
+library inputs; declaration of symbols, representations and semantic contracts;
+implementation of conversions, effects, handlers and lifecycle policy in Ash;
+independent client checking; compilation/linking; and real execution. Include
+a failed declaration or ownership case and its repair from the diagnostic.
+Record every step that still requires compiler knowledge or host-language code.
+An unexplained exception prevents the authoring-capability claim for that case.</p>
+<p>Human-readable documentation and diagnostics and machine-readable build,
+binding and diagnostic information should expose the same contracts. Tooling
+should distinguish inferred facts, explicit declarations and foreign
+assumptions, identify unsupported cases, and report native inputs and link
+failures reproducibly. Evaluate these interfaces with human and AI-assisted
+authoring workflows. Both use the same public Ash mechanisms and verification
+boundary.</p>
+<h3 id="outputs-and-adoption">Outputs and adoption</h3>
+<p>Produce the typed foreign-call model, candidate source/build forms, inference
+and explicit-contract boundary, operational semantics, target/linking design,
+worked bindings and tooling comparison. Record all remaining primitives and
+foreign assumptions in the adoption report and FFI blueprint.</p>
+<p>Language changes follow a change proposal; converged compiler, runtime and
+linking choices follow architectural decisions and authorized tasks. Product
+checkpoints retain implementation, tests and corresponding surface/Core
+specification changes together. Current Rust-based experimental evidence must
+remain labeled by its actual support until the Ash-only objective is proved.</p>
+<p>Any later prototype must name its question, supported ABI cases, comparison
+criteria and retention conditions before implementation. Retain successful
+typed mechanisms and reproducible counterexamples as design evidence. Replace
+or discard failed machinery when the comparison justifies it. Retention does
+not establish language truth or authorize integration into the product.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which host ABI profile is sufficient for the first binding, and which
+representations and calling conventions does it exclude?</li>
+<li>Which foreign declarations can reuse ordinary Ash forms, and which typed
+contracts need new source forms or Core rules?</li>
+<li>Which consequences can checking infer, and which foreign behavior must
+remain an explicit assumption in the public binding contract?</li>
+<li>Which memory and conversion primitives let authors implement initialization,
+retention, invalidation and release safely in Ash?</li>
+<li>How should compilation and the interpreter share checked symbol and ABI
+information, native build inputs and link diagnostics?</li>
+<li>Which documentation, diagnostics and external assistance make the workflow
+usable by humans and AI agents without compiler implementation knowledge?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#agreed-ffi-ash-milestone">Agreed ffi-ash milestone</a><a href="#question">Question</a><a href="#objective">Objective</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">← DN-0036: Foreign Library and Memory Provider Experiments</a><a rel="next" href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038: Resource Properties and Mutable Variable Usage →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

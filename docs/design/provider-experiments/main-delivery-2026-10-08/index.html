@@ -1,0 +1,285 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Main delivery evidence and disposition · Ash</title><meta name="description" content="Main merge f51f538455cb997e5e1f5db6eec8cf36d616c7d1 retains Common f56070ccb88d21ba833c5ca70106070318b9145a. Focused verification at this Main source passes 39 cases across six Cargo targets, with 0 failures and 0…"><meta name="robots" content="index, follow"><meta property="og:title" content="Main delivery evidence and disposition · Ash"><meta property="og:description" content="Main merge f51f538455cb997e5e1f5db6eec8cf36d616c7d1 retains Common f56070ccb88d21ba833c5ca70106070318b9145a. Focused verification at this Main source passes 39 cases across six Cargo targets, with 0 failures and 0…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Main delivery evidence and disposition · Ash"><meta name="twitter:description" content="Main merge f51f538455cb997e5e1f5db6eec8cf36d616c7d1 retains Common f56070ccb88d21ba833c5ca70106070318b9145a. Focused verification at this Main source passes 39 cases across six Cargo targets, with 0 failures and 0…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/provider-experiments/main-delivery-2026-10-08/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/provider-experiments/main-delivery-2026-10-08/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/README.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Main delivery evidence and disposition","headline":"Main delivery evidence and disposition","description":"Main merge f51f538455cb997e5e1f5db6eec8cf36d616c7d1 retains Common f56070ccb88d21ba833c5ca70106070318b9145a. Focused verification at this Main source passes 39 cases across six Cargo targets, with 0 failures and 0…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/provider-experiments/main-delivery-2026-10-08/","@id":"https://dikini.github.io/ash/docs/design/provider-experiments/main-delivery-2026-10-08/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/README.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="main-delivery-evidence-and-disposition" data-pagefind-meta="title">Main delivery evidence and disposition</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/README.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>Main merge <code>f51f538455cb997e5e1f5db6eec8cf36d616c7d1</code> retains Common <code>f56070ccb88d21ba833c5ca70106070318b9145a</code>. Focused verification at this Main source passes 39 cases across six Cargo targets, with 0 failures and 0 ignored cases. All five packaged SQLite hosts and the selected scalar Arena host pass their recorded source/native assertions. The <a href="/ash/docs/design/provider-experiments/main-delivery-2026-10-08/">main-delivery-2026-10-08 receipt</a> retains exact commands, raw logs, source pins, phase measurements and cleanup disposition. The full workspace gate belongs to Original <code>7a518e83230fec568978b269b1d69776ab6051c5</code>; its documentation descendant <code>f56070ccb88d21ba833c5ca70106070318b9145a</code> and this Main merge retain the executable source. Later result prose does not constitute another full gate. Broader TASK-0034 payload/graph-sharing/copying work and paused Lean/Core/proof work remain unfinished and excluded. This retains informative DN-0036 evidence without semantic or production adoption or a formal proof.</p>
+<h2 id="actual-phase-measurements">Actual phase measurements</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Program</th>
+<th>Phase</th>
+<th align="right">Used</th>
+<th align="right">Nominal</th>
+<th align="right">Deficit</th>
+<th align="right">Allowance</th>
+<th>Assessment</th>
+<th>Future optimization target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>scalar Arena</td>
+<td>SourceChecking</td>
+<td align="right">88793</td>
+<td align="right">1245184</td>
+<td align="right">0</td>
+<td align="right">124518</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>scalar Arena</td>
+<td>FinalElaboration</td>
+<td align="right">27096</td>
+<td align="right">393216</td>
+<td align="right">0</td>
+<td align="right">39321</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>scalar Arena</td>
+<td>IndependentCore</td>
+<td align="right">82277</td>
+<td align="right">1638400</td>
+<td align="right">0</td>
+<td align="right">163840</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>text-entry.ash</td>
+<td>SourceChecking</td>
+<td align="right">164084</td>
+<td align="right">1245184</td>
+<td align="right">0</td>
+<td align="right">124518</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>text-entry.ash</td>
+<td>FinalElaboration</td>
+<td align="right">60696</td>
+<td align="right">393216</td>
+<td align="right">0</td>
+<td align="right">39321</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>text-entry.ash</td>
+<td>IndependentCore</td>
+<td align="right">91011</td>
+<td align="right">1638400</td>
+<td align="right">0</td>
+<td align="right">163840</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>copying-entry.ash</td>
+<td>SourceChecking</td>
+<td align="right">1213287</td>
+<td align="right">1245184</td>
+<td align="right">0</td>
+<td align="right">124518</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>copying-entry.ash</td>
+<td>FinalElaboration</td>
+<td align="right">166073</td>
+<td align="right">393216</td>
+<td align="right">0</td>
+<td align="right">39321</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>copying-entry.ash</td>
+<td>IndependentCore</td>
+<td align="right">903995</td>
+<td align="right">1638400</td>
+<td align="right">0</td>
+<td align="right">163840</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>session-entry.ash</td>
+<td>SourceChecking</td>
+<td align="right">598589</td>
+<td align="right">1245184</td>
+<td align="right">0</td>
+<td align="right">124518</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>session-entry.ash</td>
+<td>FinalElaboration</td>
+<td align="right">377132</td>
+<td align="right">393216</td>
+<td align="right">0</td>
+<td align="right">39321</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>session-entry.ash</td>
+<td>IndependentCore</td>
+<td align="right">1609027</td>
+<td align="right">1638400</td>
+<td align="right">0</td>
+<td align="right">163840</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>control-resume.ash</td>
+<td>SourceChecking</td>
+<td align="right">203627</td>
+<td align="right">1245184</td>
+<td align="right">0</td>
+<td align="right">124518</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>control-resume.ash</td>
+<td>FinalElaboration</td>
+<td align="right">103926</td>
+<td align="right">393216</td>
+<td align="right">0</td>
+<td align="right">39321</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>control-resume.ash</td>
+<td>IndependentCore</td>
+<td align="right">289063</td>
+<td align="right">1638400</td>
+<td align="right">0</td>
+<td align="right">163840</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>control-discard.ash</td>
+<td>SourceChecking</td>
+<td align="right">263417</td>
+<td align="right">1245184</td>
+<td align="right">0</td>
+<td align="right">124518</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>control-discard.ash</td>
+<td>FinalElaboration</td>
+<td align="right">147288</td>
+<td align="right">393216</td>
+<td align="right">0</td>
+<td align="right">39321</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+<tr>
+<td>control-discard.ash</td>
+<td>IndependentCore</td>
+<td align="right">109243</td>
+<td align="right">1638400</td>
+<td align="right">0</td>
+<td align="right">163840</td>
+<td>WithinBudget</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>All eighteen completed phase measurements are WithinBudget with zero deficits; this receipt introduces no accepted deficit target. Charged work is not CPU or memory. WithinBudget is ideal; exact AcceptedDeficit &lt;=floor(nominal/10) is permitted only with a named phase optimization target. OutsideAllowance or incomplete evidence fails.</p>
+<h2 id="reproduce">Reproduce</h2>
+<p>Use any checkout containing this delivery and its pinned Rust toolchain. The optional retained cache directory may be selected through CARGO_TARGET_DIR per command; default reproduction uses the normal workspace target.</p>
+<pre tabindex="0"><code class="language-sh">CARGO_BUILD_JOBS=1 RUSTC_WRAPPER= cargo test --locked -p ash --test provider_sqlite_source --test provider_sqlite_copying --test provider_sqlite_sessions --test provider_sqlite_control --test provider_arena_source --test provider_arena_allocation -- --test-threads=1
+CARGO_BUILD_JOBS=1 RUSTC_WRAPPER= cargo run --locked -p ash-foreign-adapter --example arena_typed -- tests/fixtures/provider-experiments/arena-typed/allocation-entry.ash
+</code></pre>
+<p>The <a href="/ash/docs/design/provider-experiments/#reproducing-common-source-cases">package reproduction recipe</a> builds sqlite_session and runs text-entry.ash, copying-entry.ash, session-entry.ash, control-resume.ash and control-discard.ash against a fresh private copy/database. Full results and native assertions, rather than exit status alone, define the retained host evidence.</p>
+<h3 id="five-packaged-sqlite-programs">Five packaged SQLite programs</h3>
+<pre tabindex="0"><code class="language-sh">(
+    ash_repo=$(pwd -P)
+    CARGO_BUILD_JOBS=1 RUSTC_WRAPPER= cargo build --locked -p ash-foreign-adapter --example sqlite_session || exit
+    sqlite_example_dir=$(mktemp -d) || exit
+    cp "$ash_repo"/docs/design/provider-experiments/examples/sqlite-copying/*.ash "$sqlite_example_dir"/ || exit
+    printf 'Example directory: %s\n' "$sqlite_example_dir"
+    cd "$sqlite_example_dir" || exit
+    sqlite_example_status=0
+    for sqlite_entry in text-entry.ash copying-entry.ash session-entry.ash control-resume.ash control-discard.ash
+    do
+        "$ash_repo/target/debug/examples/sqlite_session" "$sqlite_example_dir/$sqlite_entry" || sqlite_example_status=1
+    done
+    exit "$sqlite_example_status"
+)
+</code></pre>
+<h2 id="aborted-preparation-boundary">Aborted preparation boundary</h2>
+<p>The first Main focused invocation was interrupted with exit -2 while preparing the path-reused cache. It supplies no successful test claim; its raw receipt/output are retained separately. Only the completed v2 invocation establishes the 39-case result. Its aborted build cache is separately retained at <code>.worktree/cache/aborted-main-build-before-cache-transfer-20261008</code>, inode 50213201; it is additional to the six planned original caches and supplies no passing evidence.</p>
+<h2 id="actual-cleanup-disposition">Actual cleanup disposition</h2>
+<p>Normal removal completed for the Original, Common, SQLite, calibration, Arena and Fusion checkouts after exact-tip Main ancestry, draft/archive/backup and cache identity checks. All branch and archive refs and 33 shared stashes are unchanged. Selected drafts now remain uncommitted in Main; conflicting originals and archived Fusion trials are retained under ignored .worktrees/consolidation-draft-retention-2026-10-08. All six non-Main caches were retained by same-device rename. Main target and all five protected paused Core/Lean/proof/external documentation-pin worktrees and caches are unchanged. The failed Fusion candidate remains archived and unmerged.</p>
+<p>Eight exact reviewed inaccessible OS service identities were exempted from fd inspection. Relevant build processes, children and all other accessible processes remained checked; Root and coordinated source writers held an exclusive stopped-engine lease. No OS services were stopped.</p>
+<p>The independent <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/final-exclusions-and-cache-audit.json">exclusions and cache audit</a> confirms the rejected Fusion and paused Core tips are not Main ancestors and preserves the Main target and aborted-cache identities.</p>
+<p>The independent <a href="/ash/docs/design/provider-experiments/main-delivery-2026-10-08/final-admission-evidence-audit/">admission audit</a> and <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/final-admission-evidence-audit.json">machine-readable review</a> corroborate the recorded evidence without rerunning a compiler or host. Original private source locations within these raw review artifacts are historical provenance. The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/aggregate-portable-map.json">aggregate portable map</a> resolves every aggregate source path to its single retained raw copy. The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/private-candidate-revision.json">candidate revision record</a> records these private preparation edits.</p>
+<h2 id="retained-evidence-hashes">Retained evidence hashes</h2>
+<ul>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/aborted-main-cache-preservation.json">aborted-main-cache-preservation.json</a>: SHA-256 <code>99d2b4d3db9449ae14a0c7be6ea5f1e36113a5b437a2545c2aae328e4d1e6d01</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/aggregate-portable-map.json">aggregate-portable-map.json</a>: SHA-256 <code>bbc9570a0e16d621468c2744be416c70b02009e5c78a32484404f6233ca4ceb3</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/aggregate.json">aggregate.json</a>: SHA-256 <code>806e6ad659a67acff44db17c0de8ea74defe85e1f938308255f0d714e475bfdb</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/arena/output.log">arena/output.log</a>: SHA-256 <code>bf4aa8d54e14ecd7c3c7371fc7dcc6183b98a77837990cd6fcfda0f6d4f65e83</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/arena/receipt.json">arena/receipt.json</a>: SHA-256 <code>7e7744e9547a66f4d8281139f4c2abd58602688035d9ad2721aa08a84ffd44ac</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/arena/validated-native-and-costs.json">arena/validated-native-and-costs.json</a>: SHA-256 <code>a03a396f434ee82a66d124b137ab58b0cedd11b3a159cc02e08f258bc28d8d03</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/cleanup-helper-receipt.json">cleanup-helper-receipt.json</a>: SHA-256 <code>0aa9557732c302d8519ef726f0d9e00be0b5be7f48c51598c792e9344666d32f</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/cleanup.json">cleanup.json</a>: SHA-256 <code>6e9cdf1e2cdf11a8b0e1f739ae8f3fb74fce59acdf6df89225124e1ca0712f33</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/check-main-arena-evidence.py">evidence/check-main-arena-evidence.py</a>: SHA-256 <code>338dcb1957c76c5cfbcb7b08f5c25681b5355d18170abcc722ef274d44f1ff46</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/check-main-sqlite-host.py">evidence/check-main-sqlite-host.py</a>: SHA-256 <code>abdffbc81030ff768dc013e02b740cd90e80c6384dbd3861c45f770d91c053bc</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/main-focused-check-aborted/output.log">evidence/main-focused-check-aborted/output.log</a>: SHA-256 <code>77e52e2e13baccf7a3117cca27dd899cfbc75397715dcaab55f55bec87719246</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/main-focused-check-aborted/receipt.json">evidence/main-focused-check-aborted/receipt.json</a>: SHA-256 <code>3640bf0cbd64e7391921206fa7a7e7d92c7bc932921403c3e7bb3c0e99250bec</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/main-merge-source-transfer.json">evidence/main-merge-source-transfer.json</a>: SHA-256 <code>56b1a059e00fb44fd015a1d824b0649eabb7b379653c4f635d6135f82ce637d5</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/main-sqlite-host-build/output.log">evidence/main-sqlite-host-build/output.log</a>: SHA-256 <code>86bbf50995d11a423c00af5fe1986046ee1404afb52e1c0092c977b397235f7d</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/main-sqlite-host-build/receipt.json">evidence/main-sqlite-host-build/receipt.json</a>: SHA-256 <code>e29715e2aa171844519d5e9ebdd0714b07580ebb0171aeb9683440031aac7f72</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/main-toolchain.json">evidence/main-toolchain.json</a>: SHA-256 <code>df677ff8d8257313f3fe2b9bb3b053261b0507ff66566bc0257e1eb958bef7b7</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/original-final-gate-v4/output.log">evidence/original-final-gate-v4/output.log</a>: SHA-256 <code>2628df65f92f1dfd19af19008cf59c779d40026f7cd5276dbd0d3753452edb1a</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/original-final-gate-v4/receipt.json">evidence/original-final-gate-v4/receipt.json</a>: SHA-256 <code>4ac92b014f137bea143946b5e07afcaf6a4570fb1d67a156285d5c1e52e5f5ad</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/original-final-gate-v4/summary.json">evidence/original-final-gate-v4/summary.json</a>: SHA-256 <code>6ed575b2126f6e68915a330883c5a6cba3f5340a39232204920406e2f9dc1e04</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/evidence/phase_report.py">evidence/phase_report.py</a>: SHA-256 <code>2d5e0e50072f2f72f370314f270d7470e070c3cacf6e058f3a417ad79d72f851</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/final-admission-evidence-audit.json">final-admission-evidence-audit.json</a>: SHA-256 <code>9751b0b522d4e4c6406188bccaa7e36ade8150f5a4071c7ac6cc100224abca77</code>.</li>
+<li><a href="/ash/docs/design/provider-experiments/main-delivery-2026-10-08/final-admission-evidence-audit/">final-admission-evidence-audit.md</a>: SHA-256 <code>c01ad4b0fa6aafe7cf3da6cf335121f4e394710eda3bc4caa9ed1ff0512f59e8</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/final-exclusions-and-cache-audit.json">final-exclusions-and-cache-audit.json</a>: SHA-256 <code>169e47ff85ccd61597ac87577933166df301f822b7d0d9ed86b3ae610075dc93</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/focused/output.log">focused/output.log</a>: SHA-256 <code>0ea70cb1eb54ffc634b024f6c07ad873ddeaf533383ee70172b3f34ecc832e21</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/focused/receipt.json">focused/receipt.json</a>: SHA-256 <code>95bcd9a4571e1da396e799cafc914bed0d11aeaf7a9d30e74fafd245773dc220</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/private-candidate-revision.json">private-candidate-revision.json</a>: SHA-256 <code>b10f8ff3e7cc5859b6bd3de4eca416372d5da3fcdcf4fde0add5385ffbddbb54</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/control-discard.ash.stderr">sqlite/control-discard.ash.stderr</a>: SHA-256 <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/control-discard.ash.stdout">sqlite/control-discard.ash.stdout</a>: SHA-256 <code>15ab6332b7cdae5f9b827777c3015e92abbc582eba4d5229299174fc015982b1</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/control-resume.ash.stderr">sqlite/control-resume.ash.stderr</a>: SHA-256 <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/control-resume.ash.stdout">sqlite/control-resume.ash.stdout</a>: SHA-256 <code>0decbe46b07127f4ee196a3f90503017b936ef04351e820c68ca6ac88847865d</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/copying-entry.ash.stderr">sqlite/copying-entry.ash.stderr</a>: SHA-256 <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/copying-entry.ash.stdout">sqlite/copying-entry.ash.stdout</a>: SHA-256 <code>d398cc600b4b1eb6ab06f5d46112ec902dfb2139f07411564da1643b63513232</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/pins.json">sqlite/pins.json</a>: SHA-256 <code>8299ef438eb38fa1b2438c8e319265e1f57a75bf72fcbc9d2482668228f92814</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/results.json">sqlite/results.json</a>: SHA-256 <code>cb2050c104912c9d4c44b188722e7ca6f525d595cc276e57a53896528bddd56f</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/session-entry.ash.stderr">sqlite/session-entry.ash.stderr</a>: SHA-256 <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/session-entry.ash.stdout">sqlite/session-entry.ash.stdout</a>: SHA-256 <code>74ad6961d0a446c4c13677cfb3724e41e81b300e6a76f3c5a8377541f0ae05be</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/text-entry.ash.stderr">sqlite/text-entry.ash.stderr</a>: SHA-256 <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/main-delivery-2026-10-08/sqlite/text-entry.ash.stdout">sqlite/text-entry.ash.stdout</a>: SHA-256 <code>0191907d715aec25edca943617865f207fb54e98ea36d47e94f19fe9c255455b</code>.</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#actual-phase-measurements">Actual phase measurements</a><a href="#reproduce">Reproduce</a><a href="#aborted-preparation-boundary">Aborted preparation boundary</a><a href="#actual-cleanup-disposition">Actual cleanup disposition</a><a href="#retained-evidence-hashes">Retained evidence hashes</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

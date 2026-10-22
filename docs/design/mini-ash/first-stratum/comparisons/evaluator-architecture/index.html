@@ -1,0 +1,241 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>First-stratum evaluator-architecture comparison · Ash</title><meta name="description" content="Does the first pure evaluator benefit enough from explicit first-order control and environment data to justify more machinery than a host-recursive evaluator?"><meta name="robots" content="index, follow"><meta property="og:title" content="First-stratum evaluator-architecture comparison · Ash"><meta property="og:description" content="Does the first pure evaluator benefit enough from explicit first-order control and environment data to justify more machinery than a host-recursive evaluator?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="First-stratum evaluator-architecture comparison · Ash"><meta name="twitter:description" content="Does the first pure evaluator benefit enough from explicit first-order control and environment data to justify more machinery than a host-recursive evaluator?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"First-stratum evaluator-architecture comparison","headline":"First-stratum evaluator-architecture comparison","description":"Does the first pure evaluator benefit enough from explicit first-order control and environment data to justify more machinery than a host-recursive evaluator?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture/","@id":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="first-stratum-evaluator-architecture-comparison" data-pagefind-meta="title">First-stratum evaluator-architecture comparison</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/evaluator-architecture.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>This comparison is informative evidence governed by
+<a href="/ash/docs/design/dn-0016-first-mini-ash-corpus/">DN-0016</a>. It does not accept an
+evaluator architecture or define current Ash semantics.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Does the first pure evaluator benefit enough from explicit first-order control
+and environment data to justify more machinery than a host-recursive evaluator?</p>
+<h2 id="scope-and-method">Scope and method</h2>
+<p>A disposable Rust probe implemented two evaluators over the same validated,
+typed, resolved expression data:</p>
+<ol>
+<li>a direct evaluator that recurses through Rust calls;</li>
+<li>a loop-driven machine with explicit control, Ash environments, values, and
+typed evaluation frames.</li>
+</ol>
+<p>Both candidates covered <code>V-001</code> through <code>V-008</code>, both <code>X-001</code> presentations,
+and both <code>X-003</code> grouping shapes. The cross-stratum cases existed only to test
+Boolean match, tuple evaluation, product destructuring, and nested curried
+application. The probe did not implement parsing, typechecking, effects,
+handlers, recursion, concurrency, or CPS.</p>
+<p>Each evaluator recorded expression-entry events. The tests compared final
+values and the complete event sequence for every case, then checked the
+specific left-to-right sequences required by the representative <code>V-001</code>,
+<code>V-008</code>, and <code>X-003</code> traces in <a href="/ash/docs/design/mini-ash/first-stratum/dynamics/">dynamics.md</a>.</p>
+<h2 id="shared-runtime-data">Shared runtime data</h2>
+<p>Both candidates represented a lexical function value as inspectable Ash data:</p>
+<pre tabindex="0"><code class="language-text">Closure {
+    binder
+    body
+    environment: [(BinderId, Value)]
+}
+</code></pre>
+<p>Application evaluated the function in the caller environment, then the
+argument in the caller environment, then evaluated the body in the captured
+environment extended by the parameter binding. Neither candidate used a Rust
+closure for Ash code, capture, or control.</p>
+<p>The probe used checked <code>i64</code> arithmetic and returned a structured host-overflow
+failure. That choice kept the experiment from inheriting debug-versus-release
+overflow behavior; it does not decide Ash's integer model, range, or overflow
+semantics.</p>
+<h2 id="direct-recursive-evaluator">Direct recursive evaluator</h2>
+<p>The direct candidate followed the typed expression structure. Its application
+case was conceptually:</p>
+<pre tabindex="0"><code class="language-text">closure = evaluate(function, caller_environment)
+argument = evaluate(argument, caller_environment)
+evaluate(closure.body, closure.environment + binding)
+</code></pre>
+<p>This form aligned closely with the prose meaning of lexical evaluation and was
+the smaller implementation. Excluding shared expression, corpus, and test
+code, the probe's direct-evaluator module occupied 155 lines.</p>
+<p>Its language control lived partly in Rust activation records. Instrumentation
+showed a 512-level nested addition reaching 513 host calls. A 2,000-level
+well-typed addition tree overflowed the test thread's Rust stack and aborted the
+process with <code>SIGABRT</code>; it could not return a structured evaluator failure.
+The exact failure depth depends on host and build details. That dependence is
+the finding: a source-program property reached an unreported host limit.</p>
+<p>Adding a checked recursion limit could replace the abort with a failure, but it
+would introduce a limit whose status and diagnostic would need separate design.
+Trampolining the evaluator would instead reconstruct explicit control similar
+to the machine candidate.</p>
+<h2 id="explicit-first-order-machine">Explicit first-order machine</h2>
+<p>The machine candidate used this control shape:</p>
+<pre tabindex="0"><code class="language-text">Machine {
+    control: Evaluate(term, environment) | Return(value)
+    frames: [Frame]
+}
+</code></pre>
+<p>Its frame family included the current evaluation contexts:</p>
+<pre tabindex="0"><code class="language-text">AddLeft(right, environment)
+AddRight(left_value)
+MultiplyLeft(right, environment)
+MultiplyRight(left_value)
+EqualLeft(right, environment)
+EqualRight(left_value)
+Let(binder, body, environment)
+ApplyFunction(argument, environment)
+ApplyArgument(binder, body, captured_environment)
+TupleLeft(right, environment)
+TupleRight(left_value)
+LetTuple(left_binder, right_binder, body, environment)
+MatchBool(true_body, false_body, environment)
+</code></pre>
+<p>Every loop transition either decomposed one expression, returned one value to
+the top frame, or completed evaluation. The frame variants made the
+function-before-argument and left-before-right rules inspectable without
+reconstructing them from Rust call order.</p>
+<p>The machine module occupied 319 probe lines, a little more than twice the direct
+module. Much of the difference was explicit frame declaration and return-path
+dispatch. On the 512-level case it used one Rust loop and 512 frames. It also
+completed the 2,000-level case that aborted the recursive candidate, again with
+one Rust loop and 2,000 explicit frames.</p>
+<p>These measurements compare control shape, not speed or production code size.
+The probe cloned simple vector environments and reference-counted terms for
+convenience. It did not measure allocation, sharing, or optimized environment
+representations.</p>
+<h2 id="corpus-comparison">Corpus comparison</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Pressure</th>
+<th>Direct recursive evaluator</th>
+<th>Explicit first-order machine</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>V-001</code> primitive order</td>
+<td>Rust call order follows the rule</td>
+<td><code>AddLeft</code> and multiplication frames expose the order</td>
+</tr>
+<tr>
+<td><code>V-002</code> presentation convergence</td>
+<td>Both elaborated terms return <code>42</code></td>
+<td>Both elaborated terms return <code>42</code></td>
+</tr>
+<tr>
+<td><code>V-003</code> shadowing</td>
+<td>Distinct binder identities and nested environments work</td>
+<td>Distinct binder identities and nested environments work</td>
+</tr>
+<tr>
+<td><code>V-004</code> lexical capture</td>
+<td>Inspectable closure environment works</td>
+<td>Inspectable closure environment works</td>
+</tr>
+<tr>
+<td><code>V-005</code> higher-order application</td>
+<td>Caller and captured environments remain distinct</td>
+<td><code>ApplyFunction</code> and <code>ApplyArgument</code> store the distinction</td>
+</tr>
+<tr>
+<td><code>V-008</code> nested application</td>
+<td>Correct sequence is visible only through instrumentation or call inspection</td>
+<td>Control and frame state expose the sequence directly</td>
+</tr>
+<tr>
+<td><code>X-001</code> Boolean match</td>
+<td>Direct branch after recursive scrutinee evaluation</td>
+<td><code>MatchBool</code> frame records the suspended arms and environment</td>
+</tr>
+<tr>
+<td><code>X-003</code> product order</td>
+<td>Recursive tuple calls evaluate left then right</td>
+<td>Two tuple frames record left-to-right progress</td>
+</tr>
+<tr>
+<td>Invalid runtime shape</td>
+<td>Structured errors are possible after validation</td>
+<td>Structured errors are possible after validation</td>
+</tr>
+<tr>
+<td>Deep typed input</td>
+<td>Host stack depth grows with expression depth and overflow aborted the probe</td>
+<td>Explicit frame storage grows while Rust loop depth stays constant</td>
+</tr>
+<tr>
+<td>Current implementation size</td>
+<td>Smaller</td>
+<td>About twice the evaluator-module lines in the probe</td>
+</tr>
+<tr>
+<td>Later control pressure</td>
+<td>Requires conversion or a separate runtime form</td>
+<td>Already represents ordinary evaluation contexts as data</td>
+</tr>
+</tbody>
+</table>
+<p>The event comparison proves agreement for the named cases, not general
+equivalence between the two algorithms. The small-step rules remain the
+semantic comparison source; neither evaluator becomes authoritative because it
+can execute them.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>The evidence favors an explicit first-order machine for the retained Mini-Ash
+evaluator. The current justification is host-stack independence and inspectable
+evaluation order, not future effects by reputation. The extra frame machinery
+directly represents evaluation contexts already required by the pure
+small-step rules.</p>
+<p>The machine's frames are internal evaluator control. This comparison does not
+place continuations in surface Ash or typed Core, make them capturable, or
+decide one-shot versus multi-shot handler continuations. Later effect work must
+still determine which machine state becomes an Ash continuation and how its
+kind is tracked.</p>
+<p>A direct recursive evaluator remains a useful disposable comparison oracle. A
+retained implementation should avoid maintaining two independent evaluators
+unless differential testing supplies enough value to justify duplicate rule
+implementations.</p>
+<h2 id="accepted-outcome">Accepted outcome</h2>
+<p><a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a> accepts
+these properties:</p>
+<ul>
+<li>the retained evaluator represents current evaluation contexts as explicit
+first-order frame data;</li>
+<li>lexical closures contain inspectable code and Ash environments;</li>
+<li>the evaluator runs through an explicit control loop rather than relying on
+Rust recursion for language evaluation depth;</li>
+<li>frame transitions follow the applicable small-step evaluation order;</li>
+<li>invalid typed input and runtime resource failures return structured failures
+rather than panic;</li>
+<li>evaluator tracing observes control transitions without becoming semantic
+authority.</li>
+</ul>
+<p>The decision does not accept effect or handler semantics, continuation
+multiplicity, CPS structure, concurrency, cancellation, integer behavior,
+resource limits, or a concrete environment-allocation strategy.</p>
+<h2 id="remaining-questions">Remaining questions</h2>
+<ul>
+<li>Should the machine hold recursive Core references, stable node identities, or
+another code identity?</li>
+<li>Which machine states and origins should an optional diagnostic trace expose?</li>
+<li>What runtime resource exhaustion can be reported portably without defining
+accidental language semantics?</li>
+<li>Can frame handlers compose by Core feature family without one monolithic
+transition function?</li>
+<li>Which later effect experiment first requires distinguishing ordinary
+evaluation frames from capturable continuation data?</li>
+</ul>
+<p>The parser and component-convergence comparisons can proceed without resolving
+these implementation questions.</p>
+<h2 id="retention-boundary">Retention boundary</h2>
+<p>The evaluator probe lived under ignored build output and is disposable. Its
+five tests, format check, and warning-denying Clippy check passed after the
+comparison. This document retains the candidate shapes, corpus agreement,
+module-size observations, stack-failure counterexample, and decision boundary;
+the probe is not product implementation or language authority.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#scope-and-method">Scope and method</a><a href="#shared-runtime-data">Shared runtime data</a><a href="#direct-recursive-evaluator">Direct recursive evaluator</a><a href="#explicit-first-order-machine">Explicit first-order machine</a><a href="#corpus-comparison">Corpus comparison</a><a href="#conclusion">Conclusion</a><a href="#accepted-outcome">Accepted outcome</a><a href="#remaining-questions">Remaining questions</a><a href="#retention-boundary">Retention boundary</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

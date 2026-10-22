@@ -1,0 +1,323 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0009: Effects, Handlers, and Continuations · Ash</title><meta name="description" content="What contracts would let a future Ash effect system describe typed interaction requirements, compose ordered interpretations, and expose continuation behavior precisely enough for resource-safe libraries and checked…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0009: Effects, Handlers, and Continuations · Ash"><meta property="og:description" content="What contracts would let a future Ash effect system describe typed interaction requirements, compose ordered interpretations, and expose continuation behavior precisely enough for resource-safe libraries and checked…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0009: Effects, Handlers, and Continuations · Ash"><meta name="twitter:description" content="What contracts would let a future Ash effect system describe typed interaction requirements, compose ordered interpretations, and expose continuation behavior precisely enough for resource-safe libraries and checked…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0009-effects-handlers-and-continuations/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0009-effects-handlers-and-continuations/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0009-effects-handlers-and-continuations.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0009: Effects, Handlers, and Continuations","headline":"DN-0009: Effects, Handlers, and Continuations","description":"What contracts would let a future Ash effect system describe typed interaction requirements, compose ordered interpretations, and expose continuation behavior precisely enough for resource-safe libraries and checked…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0009-effects-handlers-and-continuations/","@id":"https://dikini.github.io/ash/docs/design/dn-0009-effects-handlers-and-continuations/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0009-effects-handlers-and-continuations.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0009-effects-handlers-and-continuations" data-pagefind-meta="title">DN-0009: Effects, Handlers, and Continuations</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0009-effects-handlers-and-continuations.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0009</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0002-core-representation/">DN-0002: Core Representation</a>, <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010: Identities and Resource Lifetimes</a>, <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011: Modules, Providers, and Resolution</a>, <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012: Coeffects and Hooks</a>, <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013: Session and Resource Protocol Stress Tests</a>, <a href="/ash/docs/design/dn-0014-finite-kinds-and-promotion/">DN-0014: Finite Kinds and Promotion</a>, <a href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">DN-0017: Resource Management and Storage Policy</a>, <a href="/ash/docs/design/dn-0018-runtime-established-static-evidence/">DN-0018: Runtime-Established Static Evidence</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It explores possible future effect semantics; it does not define current Ash, accept an architecture, or authorize roadmap work. The syntax and type notation in this note are illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>What contracts would let a future Ash effect system describe typed interaction requirements, compose ordered interpretations, and expose continuation behavior precisely enough for resource-safe libraries and checked compiler transformations?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>Current Ash does not have the effect system described here. <a href="/ash/docs/design/dn-0002-core-representation/">DN-0002</a> treats effects and handlers only as architectural probes for a typed Core representation. This note carries that pressure forward without requiring effects in the initial language.</p>
+<p>The exploration separates five concerns that are easy to collapse:</p>
+<ul>
+<li>an effect names a typed interaction API;</li>
+<li>an effect row records interactions a computation still requires someone to interpret;</li>
+<li>a handler interprets, forwards, or transforms those requirements;</li>
+<li>a provider supplies an implementation or resource used by an interpretation;</li>
+<li>a continuation contract constrains what the handler may do with the rest of the computation.</li>
+</ul>
+<p>Protocols, access-control policy, transactions, processes, messaging, and streams are relevant consumers of these mechanisms. They are not defined here as built-in effect-system features.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="keep-apis-separate-from-protocols">Keep APIs separate from protocols</h3>
+<blockquote>
+<p>Suggested rule: An effect declaration describes a typed interaction API, while temporal protocols remain library abstractions unless evidence shows that the core type system cannot express them adequately.</p>
+</blockquote>
+<p>An API may contain operations such as:</p>
+<pre tabindex="0"><code class="language-ash">effect Database {
+    query : Query -&gt; Result
+    begin : () -&gt; Transaction
+    commit : Transaction -&gt; ()
+    rollback : Transaction -&gt; ()
+}
+</code></pre>
+<p>That declaration alone would not establish the protocol:</p>
+<pre tabindex="0"><code class="language-text">begin
+query*
+(commit | rollback)
+</code></pre>
+<p>Typestate, session types, state-indexed interfaces, or another library abstraction might express the ordering. Adding protocol rules to every effect would prematurely commit the core to one temporal model.</p>
+<h3 id="treat-rows-as-requirements-not-schedules">Treat rows as requirements, not schedules</h3>
+<blockquote>
+<p>Suggested rule: An effect row records outstanding interpretation requirements; its structural order does not determine handler or operation order.</p>
+</blockquote>
+<p>A candidate type could resemble:</p>
+<pre tabindex="0"><code class="language-ash">fn fetch(...) -&gt; T ! { Database&lt;db&gt;, Log | e }
+</code></pre>
+<p>If rows are structurally unordered, then:</p>
+<pre tabindex="0"><code class="language-text">{ Database&lt;db&gt;, Log | e }
+=
+{ Log, Database&lt;db&gt; | e }
+</code></pre>
+<p>This equality would say nothing about whether database and log operations commute. It also would not decide whether rows use set or multiset semantics. In particular, handling <code>Database&lt;db&gt;</code> must not accidentally discharge every effect with the same API shape.</p>
+<h3 id="keep-effects-handlers-and-providers-distinct">Keep effects, handlers, and providers distinct</h3>
+<blockquote>
+<p>Suggested rule: Effects define APIs, handlers define interpretation boundaries, and providers supply implementations or resources; shared compiler machinery must not erase these semantic distinctions.</p>
+</blockquote>
+<p>A direct interpretation might have this shape:</p>
+<pre tabindex="0"><code class="language-text">Database API
+     |
+     v
+Database handler
+     |
+     v
+Postgres provider
+</code></pre>
+<p>A transforming interpretation might instead expose one API while requiring lower layers:</p>
+<pre tabindex="0"><code class="language-text">Application
+    |
+    | Http
+    v
+Http handler
+    |
+    +-- Network
+    +-- Clock
+    +-- Entropy
+</code></pre>
+<p>A provider need not correspond to exactly one effect. One runtime may support several APIs, while a lower-level resource such as <code>Socket&lt;s&gt;</code> may be used by an HTTP handler without being an HTTP-specific provider.</p>
+<h3 id="order-handler-composition-by-default">Order handler composition by default</h3>
+<blockquote>
+<p>Suggested rule: Handler composition is ordered unless a checked fact establishes that a particular reordering preserves behavior.</p>
+</blockquote>
+<p>In general:</p>
+<pre tabindex="0"><code class="language-text">H3 ∘ H2 ∘ H1
+</code></pre>
+<p>does not imply:</p>
+<pre tabindex="0"><code class="language-text">H1 ∘ H2 = H2 ∘ H1
+</code></pre>
+<p>Rows can remain structurally unordered while handlers form an ordered interpretation stack. A future optimizer could use proven independence or commutativity, but neither property follows from row membership.</p>
+<h3 id="make-continuation-behavior-contractual">Make continuation behavior contractual</h3>
+<blockquote>
+<p>Suggested rule: Continuation multiplicity and escape behavior are semantic contracts, not hidden implementation choices.</p>
+</blockquote>
+<p>At least these modes merit comparison:</p>
+<ul>
+<li>one-shot: resume at most once;</li>
+<li>multi-shot: resume more than once;</li>
+<li>abortive: discard without resumption;</li>
+<li>suspensive or escaping: retain and resume after the immediate handler call.</li>
+</ul>
+<p>The eventual design may combine axes rather than encode four exclusive labels. It must still make enough information available to type-check libraries whose safety changes across those cases.</p>
+<p>Future continuation experiments should use a non-escaping one-shot handler as
+their primary case. The first case should resume once so that capture, handler
+boundaries, row transformation, and resumption can be studied without discard,
+escape, or duplication. The next case should complete the at-most-once contract
+by permitting discard and checking every captured cleanup obligation.</p>
+<p>Later cases should vary usage, escape, and interpretation separately. A
+suspensive one-shot continuation adds lifetime and storage obligations without
+adding duplication. A multi-shot continuation adds duplication and replay
+obligations without necessarily adding escape. Experiments should schedule
+these branches by their measured semantic and implementation complexity, then
+combine them only after each obligation is understood in isolation.</p>
+<p>A conservative candidate would make one-shot use the ordinary continuation
+contract and admit repeated resumption only when two independent obligations are
+met:</p>
+<ul>
+<li>duplicating the captured environment preserves every usage and authority rule;</li>
+<li>the installed interpretation gives the outstanding interactions a meaningful
+replay semantics.</li>
+</ul>
+<p>Pure computation with an unrestricted capture is one sufficient test case, not
+a complete definition of replay safety. An effect API alone cannot establish the
+second obligation because different handlers may interpret the same API by
+sharing state, cloning state, or rejecting replay.</p>
+<p>A finite continuation-mode kind could name one or more of these contracts, but
+the index would not enforce them by itself. Usage analysis must enforce
+duplication and discard restrictions; capture and lifetime checking must govern
+escape; and handler evidence may need to establish replayability. Operational
+semantics must still define capture, resume, discard, suspension, and
+duplication. The type system constrains which of those transitions a program may
+perform.</p>
+<h3 id="prefer-checked-relationships-over-dynamic-convention">Prefer checked relationships over dynamic convention</h3>
+<blockquote>
+<p>Suggested rule: Express effect compatibility, handler transformations, provider requirements, and continuation restrictions through Ash types and witnesses where practical; retain runtime machinery for facts learned only at runtime.</p>
+</blockquote>
+<p>This direction could share parameterization infrastructure with interfaces and <code>impl</code>: generic parameters, associated types, constraints, identity witnesses, dictionaries, and specialization. Handlers remain distinct because they also control continuations and publish the hooks explored in <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012</a>.</p>
+<h2 id="candidate-model">Candidate model</h2>
+<h3 id="effect-apis">Effect APIs</h3>
+<p>An effect declaration could introduce:</p>
+<ul>
+<li>an effect API identity;</li>
+<li>operation identities and their argument/result types;</li>
+<li>generic parameters and associated types;</li>
+<li>identity parameters distinguishing instances of the same API;</li>
+<li>public hook identities, if the API exposes them.</li>
+</ul>
+<p>The declaration would not choose an implementation, provider, temporal protocol, or policy.</p>
+<h3 id="effect-rows">Effect rows</h3>
+<p>Rows would describe which operations may escape a computation. A useful formalization must cover:</p>
+<ul>
+<li>closed and open rows;</li>
+<li>row unification;</li>
+<li>identity-bearing instances;</li>
+<li>multiplicity or an explicit reason to exclude it;</li>
+<li>subtraction when one handler discharges one requirement;</li>
+<li>forwarding of requirements a handler does not interpret;</li>
+<li>effects introduced by handler construction and execution;</li>
+<li>aliases or groupings without hiding identity distinctions.</li>
+</ul>
+<p>Row algebra and handler composition need separate judgments. Conflating them would make an unordered collection of requirements accidentally dictate ordered control flow.</p>
+<h3 id="identity-local-requirements">Identity-local requirements</h3>
+<p>A generative resource scope pressures the row model to distinguish a hidden
+implementation interaction from a requirement that remains outstanding at the
+scope boundary. A candidate may remove an identity-indexed requirement only
+when the responsible scope or handler has interpreted it and proves that the
+identity, its authority, and any suspended computation that retains them do not
+escape.</p>
+<p>This is semantic discharge, not display-only row hiding. It must not erase
+external I/O merely because an internal resource identity is fresh, and it must
+remain sound when a continuation suspends past the apparent lexical scope.</p>
+<h3 id="handler-boundaries">Handler boundaries</h3>
+<p>A handler is a boundary at which an operation may be discharged, forwarded, or translated:</p>
+<pre tabindex="0"><code class="language-text">outer computation
+      |
+      | performs E
+      v
+handler boundary
+      |
+      +-- consult provider
+      +-- publish typed hooks
+      +-- perform other effects
+      +-- resume, retain, duplicate, or discard continuation
+      v
+inner interpretation
+</code></pre>
+<p>A transformation type might be presented schematically as:</p>
+<pre tabindex="0"><code class="language-text">Handler : { Database&lt;db&gt; | r } -&gt; { Network, Filesystem | r }
+</code></pre>
+<p>This is not ordinary function syntax. It states the effect-row transformation that a future handler calculus must make precise. A caller can require only <code>Database&lt;db&gt;</code> even when its chosen interpretation requires <code>Network</code> and <code>Filesystem</code> below the boundary.</p>
+<p>Handlers might be ordinary first-class values, separately classified values, or elaborated dictionaries. The choice affects lifetime, inference, specialization, and whether handler construction itself can be effectful.</p>
+<h3 id="provider-relationships">Provider relationships</h3>
+<p>A provider relationship could be an ordinary typed constraint rather than a privileged one-provider/one-effect object. For example, a handler parameterized by identity <code>p</code> could require a resource or implementation associated with <code>p</code>. <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a> explores why replacing <code>p</code> with a fresh identity cannot silently retarget existing bindings; <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011</a> explores when such relationships are resolved.</p>
+<h3 id="continuation-contracts">Continuation contracts</h3>
+<p>The contract might live:</p>
+<ul>
+<li>on each operation;</li>
+<li>on an entire effect API;</li>
+<li>on the handler;</li>
+<li>in an inferred effect or usage property;</li>
+<li>across more than one of these layers, with explicit compatibility rules.</li>
+</ul>
+<p>Handler rules would need to say whether an implementation may strengthen or weaken the requested contract. For example, a handler that never resumes is compatible with some callers but may violate a caller that relies on completion. A handler that resumes twice is unsafe when the captured computation owns a linear resource.</p>
+<p>Transactions expose the pressure clearly. Around a one-shot continuation, a handler can plausibly:</p>
+<pre tabindex="0"><code class="language-text">begin
+run continuation
+commit or rollback
+</code></pre>
+<p>For a multi-shot continuation, at least three incompatible interpretations appear plausible:</p>
+<pre tabindex="0"><code class="language-text">clone transaction state
+one transaction per branch
+reject the composition
+</code></pre>
+<p>The core need not build transactions in, but it must publish enough continuation semantics for a transaction library to state which interpretation is sound.</p>
+<h2 id="interactions-and-failure-cases">Interactions and failure cases</h2>
+<h3 id="identities-and-resources">Identities and resources</h3>
+<p>Identity-bearing effects let two instances of one API remain distinct. Provider lifetime, captured resource identities, draining, and multi-shot duplication belong to <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a>. The handler calculus must expose enough continuation information for those rules to be enforced.</p>
+<h3 id="modules-and-dynamic-resolution">Modules and dynamic resolution</h3>
+<p>A module can contribute a handler anywhere in a transformation chain. For example:</p>
+<pre tabindex="0"><code class="language-text">Application
+    | Http
+    v
+Retry module
+    | Http
+    v
+Http-over-Network module
+    | Network
+    v
+runtime provider
+</code></pre>
+<p>The retry layer both consumes and provides <code>Http</code>. Treating every dynamically loaded module as a terminal provider would reject this composition. <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011</a> considers a common static and dynamic resolution model.</p>
+<h3 id="coeffects">Coeffects</h3>
+<p>Handlers determine where typed hooks occur and what continuation surrounds them. Coeffect subscribers may themselves perform effects or alter control flow. Their algebra and the question of whether hook chains are captured or re-resolved on continuation resumption are explored in <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012</a>.</p>
+<h3 id="library-mechanisms-and-policy">Library mechanisms and policy</h3>
+<p>Capabilities, roles, authorization, auditing, retry, caching, and protocol enforcement are candidate libraries built from handlers, identities, hooks, and ordinary types. Moving them to libraries does not remove core obligations: the core must make handler ordering and continuation behavior precise enough for those libraries to justify their guarantees.</p>
+<p>Processes, messages, channels, mailboxes, and streams may use effects, but they should not be equated with effect dispatch or hook chains before their independent semantics are understood.</p>
+<h3 id="reversal">Reversal</h3>
+<p>Not every effect has an inverse. Acquisition pairs such as open/close or register/deregister fit resource-lifetime machinery. Emissions such as sending a packet, charging a card, or writing to an uncontrolled system may need transactions, compensation, deferred emission, idempotency, or recovery. A handler calculus must not imply universal reversibility.</p>
+<h3 id="likely-implementation-sharing">Likely implementation sharing</h3>
+<p>Interfaces/<code>impl</code> and effects/handlers may share constraint solving, associated-type resolution, witness construction, dictionary passing, and monomorphization. Static handler chains may be specialized and inlined; dynamic chains may retain typed witnesses and cached dispatch. Such sharing is an implementation hypothesis, not evidence that interfaces and handlers have identical semantics.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<h3 id="minimal-row-and-handler-calculus">Minimal row and handler calculus</h3>
+<p>Define a small typed calculus with pure terms, identity-bearing effect operations, open rows, forwarding, and ordered handlers. Use it to compare candidate answers to these questions:</p>
+<ul>
+<li>Does handling <code>Database&lt;a&gt;</code> remove only that instance?</li>
+<li>Can a handler translate <code>{ Database&lt;a&gt; | r }</code> into <code>{ Network, Filesystem | r }</code> without leaking the lower requirements to the caller?</li>
+<li>Can nested handlers forward unknown row tails without losing identity information?</li>
+<li>Which facts are needed to justify specialization or handler reordering?</li>
+</ul>
+<p>Retain a model only if its typing and operational rules agree on these cases. Discard prototype syntax and implementation scaffolding after the comparison; only the resulting design evidence should survive.</p>
+<h3 id="continuation-stress-cases">Continuation stress cases</h3>
+<p>Grow the continuation corpus in this dependency order:</p>
+<ol>
+<li>a non-escaping continuation that is resumed exactly once;</li>
+<li>the full one-shot case, with either one resumption or checked discard;</li>
+<li>separate suspensive one-shot and multi-shot probes with unrestricted
+captures and a replayable interpretation, ordered by measured complexity
+rather than a fixed feature ranking;</li>
+<li>compositions that combine escape, repeated resumption, restricted captures,
+cleanup, and stateful interpretations.</li>
+</ol>
+<p>For each stage, record the small-step rules, static facts, Core representation,
+diagnostics, runtime obligations, and the implementation mechanisms that the
+case requires. Exercise the resulting continuation contracts with:</p>
+<ul>
+<li>a transaction that commits or rolls back;</li>
+<li>a linear resource captured by a possible multi-shot continuation;</li>
+<li>an abortive authorization or validation handler;</li>
+<li>a suspended computation whose provider begins draining;</li>
+<li>a handler that publishes pre- and post-operation hooks;</li>
+<li>a nondeterministic handler that resumes more than once.</li>
+</ul>
+<p>The matrix should separately vary capture duplicability and handler replay
+semantics. It should include an unrestricted capture under a non-replayable
+handler and a restricted capture under an otherwise replayable handler; neither
+case should gain multi-shot use from the other property alone.</p>
+<p>Compare rejection points, required type annotations, runtime checks, and whether cleanup can be proved to occur once.</p>
+<h3 id="representation-probes">Representation probes</h3>
+<p>Extend the <a href="/ash/docs/design/dn-0002-core-representation/">DN-0002</a> Core experiments with one operation, one ordered handler stack, forwarding, one effect transformation, and each continuation mode. Check that continuations remain explicit compiler data, transformations can traverse them, and Core remains typed after rewriting and Core/CPS conversion.</p>
+<h3 id="static-and-dynamic-equivalence">Static and dynamic equivalence</h3>
+<p>Resolve the same handler/provider graph once with all identities known and once with one package introduced at runtime. Compare resulting behavior and typing. Dynamic resolution may retain witnesses and indirection; it should not invent different composition semantics.</p>
+<h3 id="local-requirement-elimination">Local-requirement elimination</h3>
+<p>Compare a handled identity-local state operation, an unhandled external write,
+and a local operation captured by an escaping continuation. Record the inferred
+row at each boundary and the evidence used to remove a requirement. Reject a
+model that hides the external write or eliminates the local operation while a
+continuation can still resume it outside the scope.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What is the exact algebra of open, identity-bearing effect rows?</li>
+<li>Are rows sets, multisets, or another structure, and how are duplicate API shapes represented?</li>
+<li>What is the formal type of a handler, including ambient effects and effects introduced by construction?</li>
+<li>How do partial interpretation and forwarding compose?</li>
+<li>Are handlers first-class values, and if so, how are their identity and lifetime tracked?</li>
+<li>Where are continuation multiplicity, abortiveness, and escape behavior declared or inferred?</li>
+<li>May a handler strengthen or weaken a continuation contract, and under what subtyping or compatibility relation?</li>
+<li>Does a non-resuming handler need a distinct result type?</li>
+<li>Which resource properties constrain multi-shot resumption: linearity, ownership, borrowing, synchronization, or effect restrictions?</li>
+<li>Is one-shot use the conservative default, and which checked facts are
+sufficient to admit multi-shot use without making purity its definition?</li>
+<li>What exact non-escape and interpretation evidence permits an identity-local
+requirement to leave a public row?</li>
+<li>How do exceptions, cancellation, and ordinary failure interact with handler unwinding and continuation contracts?</li>
+<li>When can handler reordering or fusion be proved safe?</li>
+<li>How do nested handlers determine which public hook identities they publish?</li>
+<li>Can protocol libraries express useful session and typestate disciplines without privileged core support?</li>
+<li>Which propositions must eventually be statically established before a compiler transform may rely on handler independence or commutation?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-model">Candidate model</a><a href="#interactions-and-failure-cases">Interactions and failure cases</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">← DN-0008: Typed Core and Elaboration</a><a rel="next" href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010: Identities and Resource Lifetimes →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

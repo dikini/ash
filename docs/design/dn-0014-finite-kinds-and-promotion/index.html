@@ -1,0 +1,221 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0014: Finite Kinds and Promotion · Ash</title><meta name="description" content="If Ash develops an explicit kind representation with nominal atomic identities, can finite nominal static domains enter primarily through declaration elaboration and semantic policy, and can restricted promotion…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0014: Finite Kinds and Promotion · Ash"><meta property="og:description" content="If Ash develops an explicit kind representation with nominal atomic identities, can finite nominal static domains enter primarily through declaration elaboration and semantic policy, and can restricted promotion…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0014: Finite Kinds and Promotion · Ash"><meta name="twitter:description" content="If Ash develops an explicit kind representation with nominal atomic identities, can finite nominal static domains enter primarily through declaration elaboration and semantic policy, and can restricted promotion…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0014-finite-kinds-and-promotion/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0014-finite-kinds-and-promotion/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0014-finite-kinds-and-promotion.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0014: Finite Kinds and Promotion","headline":"DN-0014: Finite Kinds and Promotion","description":"If Ash develops an explicit kind representation with nominal atomic identities, can finite nominal static domains enter primarily through declaration elaboration and semantic policy, and can restricted promotion…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0014-finite-kinds-and-promotion/","@id":"https://dikini.github.io/ash/docs/design/dn-0014-finite-kinds-and-promotion/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0014-finite-kinds-and-promotion.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0014-finite-kinds-and-promotion" data-pagefind-meta="title">DN-0014: Finite Kinds and Promotion</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0014-finite-kinds-and-promotion.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0014</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0003-parser-architecture/">DN-0003: Parser Architecture</a>, <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006: Initial Type System</a>, <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008: Typed Core and Elaboration</a>, <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013: Session and Resource Protocol Stress Tests</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It does not define current Ash, accept user-defined kinds, or accept promotion. Its examples are illustrative and are not current Ash syntax or semantics.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>If Ash develops an explicit kind representation with nominal atomic identities, can finite nominal static domains enter primarily through declaration elaboration and semantic policy, and can restricted promotion remain optional elaboration rather than a new type-checking mechanism?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>State-indexed APIs can name states and modes directly in the static language. A protocol might use <code>Idle</code>, <code>Open</code>, and <code>Closed</code>; resource and continuation designs might use multiplicity or continuation modes. Modeling each alternative as an unrelated runtime type does not declare that they inhabit one closed static domain.</p>
+<p>This note explores two downstream hypotheses:</p>
+<ol>
+<li>A direct declaration can introduce a finite nominal static domain.</li>
+<li>A compatible runtime enumeration can optionally elaborate to the same static shape.</li>
+</ol>
+<p>These hypotheses depend on future type-system foundations that represent kinds as nominal atoms and arrows, conceptually <code>Atom(KindId) | Arrow(Kind, Kind)</code>, attach kinds to rigid and inference variables, and check type application by kind. In that model, <code>Type</code> can be one atomic kind rather than the only possible atom. Those foundations must be established elsewhere; this note does not treat an imported implementation assumption as current Ash truth.</p>
+<p>The intended benefit is narrow: static names for protocol states, resource states, multiplicity modes, and continuation modes. The note does not introduce a kind-of-kinds, dependent typing, or general datatype promotion.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="introduce-finite-domains-directly">Introduce finite domains directly</h3>
+<blockquote>
+<p>Suggested rule: A direct kind declaration introduces a fresh nominal atomic kind and a finite non-empty set of fresh nullary static constructors.</p>
+</blockquote>
+<p>Illustratively:</p>
+<pre tabindex="0"><code class="language-ash">kind TxState =
+    Idle
+    | Open
+    | Closed
+</code></pre>
+<p>would establish <code>Idle : TxState</code>, <code>Open : TxState</code>, and <code>Closed : TxState</code>. The smallest admissible shape is a finite non-empty nominal sum of nullary constructors. Singleton domains remain allowed. Empty domains require separate evidence.</p>
+<p>Initially excluded shapes include constructor payloads, parameters, recursion, and arbitrary static expressions in alternatives. Those shapes bring separate questions about parameterized kinds, higher-kinded constructors, normalization, static application, type-level recursion, kind polymorphism, and static pattern matching.</p>
+<h3 id="avoid-a-kind-of-kinds-requirement">Avoid a kind-of-kinds requirement</h3>
+<blockquote>
+<p>Suggested rule: Treat a declared domain as an atomic kind without requiring an object-language judgment such as <code>TxState : Kind</code>.</p>
+</blockquote>
+<p>Introducing a static domain does not by itself justify a first-class universe of kinds. An implementation may allocate a nominal kind identity and register its constructors without extending the surface language with another universe level.</p>
+<h3 id="keep-static-constructors-static">Keep static constructors static</h3>
+<blockquote>
+<p>Suggested rule: A constructor introduced by a direct kind declaration is a type-level term and need not have a corresponding runtime value.</p>
+</blockquote>
+<p><code>Open</code> may appear as an index where <code>TxState</code> is expected. A direct kind declaration should not manufacture runtime values merely to lift them back into the static language.</p>
+<h3 id="preserve-nominal-identity">Preserve nominal identity</h3>
+<blockquote>
+<p>Suggested rule: Independently declared finite kinds are distinct even when their alternatives have the same spellings or shapes.</p>
+</blockquote>
+<p>For example, <code>FileState</code> and <code>SocketState</code> remain different domains even if both declare <code>Open</code> and <code>Closed</code>. Static equality is constructor identity: the same constructor equals itself, and distinct constructors do not. Repeated source spellings are a name-resolution question, not evidence of shared semantic identity.</p>
+<h3 id="extend-quantification-explicitly">Extend quantification explicitly</h3>
+<blockquote>
+<p>Suggested rule: Allow variables to carry a user-defined kind without thereby adding abstraction over arbitrary kinds, and relax quantification policy only where a concrete use requires it.</p>
+</blockquote>
+<p>An inference variable of kind <code>TxState</code> may solve to <code>Open</code> but not to a type of kind <code>Type</code>; a rigid variable of kind <code>TxState</code> remains rigid. A type constructor may accept a <code>TxState</code> argument using the ordinary kind-application rule.</p>
+<p>Quantifying <code>S : TxState</code> is not the same capability as quantifying over <code>K</code> and then over <code>X : K</code>. User-defined kinds add static domains. Kind polymorphism abstracts over domains and remains a separate question.</p>
+<h3 id="make-direct-declaration-semantic-and-promotion-elaborative">Make direct declaration semantic and promotion elaborative</h3>
+<blockquote>
+<p>Suggested rule: Direct kind declaration is the semantic candidate; promotion may only derive a static domain that the direct declaration rules could already express.</p>
+</blockquote>
+<p>Illustratively:</p>
+<pre tabindex="0"><code class="language-ash">type TxState =
+    Idle
+    | Open
+    | Closed
+
+promote TxState
+</code></pre>
+<p>could derive the same usable static shape as the direct <code>kind</code> declaration. Initially, promotion is admissible only for a finite non-empty nominal sum whose constructors are all nullary. A parameterized or recursive datatype, a constructor with a payload, or an arbitrary runtime value is not promotable.</p>
+<p>This restriction preserves the invariant that promotion changes convenience, not static expressivity. It does not imply that every type becomes a kind, every value constructor is lifted, constructor payloads or recursion are lifted, or every runtime value gains a type-level representation.</p>
+<h3 id="keep-runtime-and-static-identity-distinguishable">Keep runtime and static identity distinguishable</h3>
+<blockquote>
+<p>Suggested rule: Promotion establishes correspondence between runtime and static alternatives without initially requiring reflection, reification, or one shared compiler identity.</p>
+</blockquote>
+<p>A promoted <code>Open</code> may denote a runtime constructor in term position and a related static constructor in a type position. Whether those are two identities linked by metadata or two roles of one declaration remains an experimental question. The choice must support clear name resolution and diagnostics before it supports hypothetical reflection.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="static-domain-declaration">Static-domain declaration</h3>
+<ul>
+<li>A dedicated <code>kind K = C1 | ... | Cn</code> declaration is the leading semantic candidate because it introduces exactly the intended static objects.</li>
+<li>An alternative surface form could avoid the word <code>kind</code>, but it must retain nominal identity, a closed finite inhabitant set, and static-only constructors.</li>
+<li>Encoding each state as an ordinary nominal type remains a baseline. It uses one declaration per state and does not declare a shared closed domain, so domain-membership constraints and related diagnostics must come from separate machinery.</li>
+</ul>
+<h3 id="promotion-request">Promotion request</h3>
+<ul>
+<li>A separate <code>promote T</code> declaration makes the elaboration step explicit.</li>
+<li>An annotation on the runtime type declaration keeps related declarations together.</li>
+<li>Omitting promotion initially keeps the semantic foundation smaller while direct kinds gather evidence.</li>
+</ul>
+<p>All three promotion choices must preserve the same admissibility rule and must not expand the type language.</p>
+<h3 id="names-and-qualification">Names and qualification</h3>
+<ul>
+<li>Contextual resolution may allow runtime and static constructors to share spelling in their respective term and type positions.</li>
+<li>Qualification such as <code>TxState.Open</code> may be available or required.</li>
+<li>Explicit promoted spelling such as <code>#Open</code> may make the level visible at the cost of extra syntax.</li>
+</ul>
+<p>A conservative declaration namespace can reject unrelated <code>type State</code> and <code>kind State</code> declarations while allowing an intentional promoted relationship to share its source name.</p>
+<h3 id="promotion-identity">Promotion identity</h3>
+<ul>
+<li>Runtime and static constructors may have distinct identities connected by promotion metadata.</li>
+<li>One declaration identity may support two roles selected by context.</li>
+</ul>
+<p>The first isolates runtime and static semantics; the second may simplify correspondence. Neither should be selected before namespace, diagnostic, and any real reflection requirements are tested.</p>
+<h2 id="interactions">Interactions</h2>
+<h3 id="type-checking">Type checking</h3>
+<p>The expected initial work is declaration elaboration, environment population, name resolution, and policy changes. If the prerequisite type representation exists, kind checking can accept another nominal atom, variables can retain their existing kind field, unification can preserve kinds, and type application can keep its ordinary kind-directed rule. The hypothesis fails if the basic feature requires higher-order unification, dependent checking, or type-level evaluation.</p>
+<p>Promotion can resolve and inspect a runtime declaration, check admissibility, derive the kind and static constructors, and record correspondence metadata during declaration elaboration. The ordinary kind checker should not need to know whether an atomic kind was written directly or derived.</p>
+<h3 id="static-reasoning">Static reasoning</h3>
+<p>A finite closed declaration gives complete inhabitant information and nominal equality without reduction. Future static exhaustiveness or pattern matching could use that information, but neither is required initially. Knowing <code>S : State</code> does not imply dependent elimination or arbitrary type computation over <code>S</code>; transition relations can instead use interfaces, associated types, or explicit evidence.</p>
+<h3 id="protocols-and-resources">Protocols and resources</h3>
+<p>Finite kinds can give a state-indexed API a named closed domain and can name resource, multiplicity, or continuation modes. They solve naming and indexing, not stale endpoint reuse, cleanup, duplication, or other usage-discipline problems. <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013</a> supplies those harder tests and must not be treated as justification for privileged session syntax.</p>
+<p>A continuation design should not assume that one finite domain captures every
+control property. Usage, escape, and handler replayability are independent
+enough to require separate indices, evidence, or intrinsic checking rules. A
+finite kind may let a continuation type state a mode such as one-shot, but the
+usage analysis must reject a second resumption and account for discard, while
+the operational semantics defines what resumption and discard do.</p>
+<p>The mechanism also must not decide whether multiplicity is an ordinary index or intrinsic type-system machinery. It only provides a finite domain when indexing is appropriate.</p>
+<h3 id="namespaces-and-diagnostics">Namespaces and diagnostics</h3>
+<p>The implementation must distinguish declaration-name collisions from the intentional relationship created by promotion. Diagnostics should identify the actual restriction—for example, a payload-bearing constructor that makes a type ineligible—rather than call the source declaration malformed in general.</p>
+<h3 id="feature-boundaries">Feature boundaries</h3>
+<p>The design keeps four jobs separate: direct declaration introduces a static domain; promotion derives that domain from compatible runtime data; kind checking validates its use; and relations or associated types describe transitions over it. In particular, user-defined kinds do not imply kind polymorphism, promotion does not imply dependent typing, and finite domains do not imply general type-level computation.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>A prototype, if needed, should be limited to the comparison matrix and measurements below and should compare direct declaration and promotion through one internal static representation. It is disposable and must not become product architecture without a later decision or semantic proposal and an authorized task.</p>
+<p>The evidence must include:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Success observation</th>
+<th>Failure observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direct finite kind</td>
+<td>A finite declaration allocates one nominal kind and the declared nullary static constructors.</td>
+<td>Constructors leak into runtime semantics or lack the declared kind.</td>
+</tr>
+<tr>
+<td>Kind-directed application</td>
+<td>A constructor of the expected finite kind is accepted as an index.</td>
+<td>A term of <code>Type</code> or another finite kind is accepted at the same position.</td>
+</tr>
+<tr>
+<td>Inference variable solving</td>
+<td>An inference variable solves only to a static term of its recorded kind.</td>
+<td>It solves across kind boundaries.</td>
+</tr>
+<tr>
+<td>Rigid variables</td>
+<td>A bound variable of the finite kind remains rigid under checking.</td>
+<td>Checking substitutes it as though it were an inference variable.</td>
+</tr>
+<tr>
+<td>Nominal distinction</td>
+<td>Structurally identical declarations remain non-interchangeable.</td>
+<td>Matching constructor spellings collapse independent domains.</td>
+</tr>
+<tr>
+<td>Promotion success</td>
+<td>A compatible enumeration produces the same usable static shape as its direct declaration.</td>
+<td>Promotion creates extra static expressivity or a divergent checker path.</td>
+</tr>
+<tr>
+<td>Promotion failure</td>
+<td>Payload, parameterized, recursive, empty, or otherwise inadmissible shapes receive precise diagnostics.</td>
+<td>General datatype lifting occurs implicitly or errors hide the violated restriction.</td>
+</tr>
+<tr>
+<td>Session-state example</td>
+<td>A small state-indexed API uses finite-kind constructors as indices and kind-checks without session-specific rules.</td>
+<td>The example needs privileged protocol handling merely to name or apply states.</td>
+</tr>
+<tr>
+<td>Namespace diagnostics</td>
+<td>Collisions and ambiguous shared spellings resolve predictably or produce actionable errors.</td>
+<td>Resolution silently chooses a level or unrelated declarations shadow one another unpredictably.</td>
+</tr>
+</tbody>
+</table>
+<p>The prototype should also measure whether direct and promoted declarations share elaboration output, how much checker code changes, where quantification policy is relaxed, and whether removing promotion leaves every static example expressible through direct declaration.</p>
+<p>Retain the prototype only as current design evidence if it demonstrates nominal isolation, kind-preserving solving and application, explicit quantification policy, one elaborated representation, and useful errors for every excluded shape. Discard it if prerequisite kind machinery is not established or if the experiment begins deciding general type-level computation.</p>
+<h2 id="non-goals">Non-goals</h2>
+<p>The initial candidate does not require:</p>
+<ul>
+<li>kind polymorphism or higher-rank kind polymorphism;</li>
+<li>parameterized user-defined kinds;</li>
+<li>payload-bearing kind constructors;</li>
+<li>recursive static data;</li>
+<li>general datatype or arbitrary-value promotion;</li>
+<li>type-level lambdas or pattern matching;</li>
+<li>dependent elimination or full dependent typing;</li>
+<li>singleton synthesis;</li>
+<li>automatic reflection or reification.</li>
+</ul>
+<p>Each is an independent design question that needs concrete pressure.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What declaration syntax should introduce a finite static domain?</li>
+<li>Should promotion use a separate declaration, an annotation on the type, or no initial surface feature?</li>
+<li>Should runtime and promoted static constructors share source spelling?</li>
+<li>Should qualification such as <code>State.Open</code> be available or required?</li>
+<li>May unrelated type and kind declarations share a declaration name?</li>
+<li>Are runtime and static constructors separate identities linked by metadata or two roles of one identity?</li>
+<li>Should finite kinds eventually permit zero inhabitants?</li>
+<li>Which concrete use would justify payload constructors, parameters, or recursion?</li>
+</ul>
+<p>The main compiler-facing hypothesis is that nominal finite kinds with nullary static constructors can give state-indexed designs named closed domains and kind-specific mismatch diagnostics while optional restricted promotion remains declaration elaboration. Whether those surface names and diagnostics make the APIs easier for people to understand is a separate human-factors hypothesis that compiler experiments cannot establish. The compiler-facing hypothesis survives only if the core notions of kind, type application, variables, and unification remain intact and the unresolved cost stays concentrated in declarations, namespaces, correspondence, and diagnostics.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-directions">Candidate directions</a><a href="#interactions">Interactions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#non-goals">Non-goals</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">← DN-0013: Session and Resource Protocol Stress Tests</a><a rel="next" href="/ash/docs/design/dn-0015-mini-ash-phase/">DN-0015: Mini-Ash Phase →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

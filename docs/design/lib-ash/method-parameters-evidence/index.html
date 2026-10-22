@@ -1,0 +1,597 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Method-Local Type-Parameter Evidence · Ash</title><meta name="description" content="This report records implementation evidence for the third bounded lib-ash increment: explicit fixed-kinded method-local type parameters and authenticated polymorphic method evidence. It is informative, not normative.…"><meta name="robots" content="index, follow"><meta property="og:title" content="Method-Local Type-Parameter Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for the third bounded lib-ash increment: explicit fixed-kinded method-local type parameters and authenticated polymorphic method evidence. It is informative, not normative.…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Method-Local Type-Parameter Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for the third bounded lib-ash increment: explicit fixed-kinded method-local type parameters and authenticated polymorphic method evidence. It is informative, not normative.…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/lib-ash/method-parameters-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/lib-ash/method-parameters-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/method-parameters-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Method-Local Type-Parameter Evidence","headline":"Method-Local Type-Parameter Evidence","description":"This report records implementation evidence for the third bounded lib-ash increment: explicit fixed-kinded method-local type parameters and authenticated polymorphic method evidence. It is informative, not normative.…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/lib-ash/method-parameters-evidence/","@id":"https://dikini.github.io/ash/docs/design/lib-ash/method-parameters-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/method-parameters-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="method-local-type-parameter-evidence" data-pagefind-meta="title">Method-Local Type-Parameter Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/lib-ash/method-parameters-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report records implementation evidence for the third bounded <code>lib-ash</code>
+increment: explicit fixed-kinded method-local type parameters and authenticated
+polymorphic method evidence. It is informative, not normative. The
+<a href="/ash/spec/">Ash specification</a> alone defines the current
+language. Git history retains the accepted proposal, implementation task, and
+execution plan after those transition-only artifacts leave the current tree.</p>
+<p>This report alone did not close the complete <code>lib-ash</code> milestone. At the third-
+increment checkpoint, multi-parameter interfaces, determination, associated
+outputs, defaults, the combined library corpus, and the final library
+simplification audit remained separate work. The later integrated relational
+increment closes the revised milestone without changing this report's evidence
+scope. This increment received no <code>lib-ash</code> tag.</p>
+<h2 id="scope-and-checkpoints">Scope and checkpoints</h2>
+<p>The transition starts from integrated explicit-kind checkpoint <code>e4fbc54</code>. Its
+principal unsigned boundaries are:</p>
+<ul>
+<li><code>ebe4c5d</code>, <code>9f90176</code>, and <code>d415111</code>, which accept the semantic transition,
+create its task and plan, and record the fixed 70-unit authorization;</li>
+<li><code>faeb689</code> through <code>2ae306f</code>, which retain syntax, projection, recovery,
+canonical resolved method binders, and exact front-end resources;</li>
+<li><code>a9d5812</code> through <code>23f35bd</code>, which retain method schemes, occurrence
+instantiation, rigid implementation checking, pending inference closure, and
+selection isolation;</li>
+<li><code>652f74c</code> through <code>61e3d77</code>, which retain body-free method schemes, import
+admission, atomic occurrence publication, linked authentication, and bounded
+validation;</li>
+<li><code>cf93de7</code> through <code>851c26c</code>, which retain authenticated Core evidence
+domains and adapters, exact source relationships, transformations, resource
+formulas, and independent validation;</li>
+<li><code>dab6e93</code> and <code>a6174ec</code>, which retain the complete product, diagnostics,
+migration, runtime trace, carrier inventory, small-stack lifecycle evidence,
+independent reviews, and the 1,531-test product boundary; and</li>
+<li><code>685b019</code>, which reserves the final specification, evidence, review, and
+transition-cleanup checkpoint at cumulative use 70/70;</li>
+<li><code>09e9dd8</code>, which reconciles the normative specification and creates the
+initial retained method-parameter evidence report;</li>
+<li><code>9304a04</code>, which corrects the specification boundaries for atomic module
+publication, inert retained runtime authority, and method-list lexical
+syntax;</li>
+<li><code>9ade2df</code>, which corrects the runtime-boundary wording for selected evidence
+flowing through existing function values and applications;</li>
+<li><code>33ce4b4</code>, which records ten added authorized units and reserves eight for
+the concrete-source prerequisite correction at cumulative use 78/80, with
+two units unreserved;</li>
+<li><code>8930564</code>, which corrects concrete-source prerequisite provenance and
+remeasures the directly affected validation resources; and</li>
+<li><code>72a91e3</code>, which retains the semantic/specification and
+implementation/Core/resource approval records for that correction; and</li>
+<li><code>689f64a</code>, which completes the principal checkpoint ledger and records the
+conditional transition-cleanup boundary; and</li>
+<li><code>c98edc2</code>, which retains the completed re-review, root verification, and
+documentation-gate evidence before transition cleanup.</li>
+</ul>
+<p>The third evidence, migration, lifecycle, and authority review found that the
+checkpoint ledger stopped at the reservation boundary and omitted these later
+commits. The third-review re-review approves the correction after <code>689f64a</code>
+resolved that sole Important finding. Fresh root and documentation verification
+pass, and <code>c98edc2</code> retains their results before transition cleanup. Commit
+identities are evidence boundaries, not independent language authority.</p>
+<h2 id="implemented-boundary">Implemented boundary</h2>
+<p>An interface method may bind one explicit, complete, ordered list of
+fixed-kinded local parameters:</p>
+<pre tabindex="0"><code class="language-ash">interface Functor&lt;F : Type -&gt; Type&gt; {
+    map&lt;A, B&gt; : (A -&gt; B, F&lt;A&gt;) -&gt; F&lt;B&gt;
+}
+</code></pre>
+<p>The interface parameter and method parameters scope over that signature. An
+omitted kind is <code>Type</code>; an absent list binds no method parameter. Source code
+does not acquire implicit method binders, method requirements, <code>forall</code>, or
+expression type arguments.</p>
+<p>Each occurrence instantiates the interface parameter followed by the method
+parameters. Only the interface argument creates an evidence obligation.
+Selection neither observes nor refines method arguments. A selection may be
+fixed before module inference closes, but its occurrence remains private
+pending state until all interface and method arguments are inference-free and
+the checked module publishes every occurrence atomically.</p>
+<p>An implementation substitutes its head argument for the interface parameter
+and checks each method once under two rigid sequences: implementation-head
+parameters followed by method parameters. It retains the partition as well as
+the combined order. A direct recursive occurrence reuses the method's rigid
+arguments and cannot gain polymorphic recursion. Method-local arguments do not
+enter an implementation head or prerequisite goal and cannot change candidate
+choice.</p>
+<h2 id="canonical-schemes-and-occurrence-authority">Canonical schemes and occurrence authority</h2>
+<p>The defining resolved method-binder record is the authority for identity,
+spelling, kind, source origin, owner, and order. Allocation follows module
+declaration order, interface parameter order, method declaration order, and
+written method-binder order. The checked registry retains:</p>
+<pre tabindex="0"><code class="language-text">MethodScheme = forall method_parameters. method_value_type
+</code></pre>
+<p>The interface parameter remains owned by the surrounding interface. The method
+scheme does not enter the ordinary term environment and is not a source value.
+Every occurrence retains its exact <code>MethodId</code>, interface argument, ordered
+method arguments, checked occurrence type, and selected evidence. Import
+aliases, targeted renames, facades, and dependency diamonds preserve the
+defining identities.</p>
+<p>The positive checking matrix covers optional and higher kinds, written order,
+completeness, two unrelated instantiations, inference closure, exact-current
+evidence, concrete evidence, generic heads and prerequisites, direct recursion,
+qualified and targeted imports, facades, diamonds, hidden and opaque carriers,
+and stable defining identity. The negative matrix keeps interface-goal
+ambiguity at <code>constraint.ambiguous</code>, method-argument ambiguity at
+<code>type.ambiguous</code>, and changed recursive instantiation at
+<code>type.polymorphic-recursion</code>.</p>
+<h2 id="summaries-and-linked-authentication">Summaries and linked authentication</h2>
+<p>A public checked interface fact and every body-free mirror retain ordered
+method-binder records and the method monotype separately. Summary construction
+retains hidden kind and identity closure. Import admission authenticates the
+complete binder set, order, owner, kinds, body scope, method identity, spelling,
+annotation span, and provenance before the dependent checks from that summary.</p>
+<p>After module inference closure, linked validation authenticates every frozen
+occurrence argument against its defining method scheme and fixed kind. It also
+checks the occurrence type, selected <code>MethodId</code>, selected <code>ImplMethodId</code>,
+implementation head substitution, prerequisite producers, combined
+head-versus-method binder partition, availability route, and source origin.
+Core synthesis receives only the capability produced by that complete check
+and does not select evidence again.</p>
+<p>One body-free checked method fact must retain the exact annotation subspan in
+addition to the complete declaration origin. Without it, an importer cannot
+reconstruct the source relation authenticated by an implementation method. The
+linked product retains this exact implementation provenance:</p>
+<ul>
+<li>primary <code>carrier.ash</code> range <code>81..130</code>;</li>
+<li>related carrier declaration <code>57..132</code> and method <code>81..130</code>;</li>
+<li>related <code>api.ash</code> method <code>42..76</code> and annotation <code>54..76</code>; and</li>
+<li>related carrier body <code>110..130</code>.</li>
+</ul>
+<p>Linked validation authenticates that complete cross-source relation. Core's
+accepted source-local provenance invariant receives the already-authenticated
+primary span at final implementation-method lowering; the full linked relation
+does not become an unauthenticated Core side table.</p>
+<h2 id="authenticated-core-evidence">Authenticated Core evidence</h2>
+<p>The existing Core type abstraction, type application, function, and
+application forms express the increment. A polymorphic method requirement
+becomes one generated evidence domain:</p>
+<pre tabindex="0"><code class="language-text">forall definition_parameters.
+    (forall method_parameters. substituted_method_value_type) -&gt;
+    ... -&gt;
+    source_value_type
+</code></pre>
+<p>A monomorphic method keeps its ordinary function evidence domain. At an
+abstract occurrence, Core type-applies the evidence binder to the retained
+method arguments before applying source arguments. Exact forwarding may pass
+that binder uninstantiated only to the same authenticated evidence domain.</p>
+<p>A concrete or exact-current polymorphic selection uses one unspecialized
+adapter:</p>
+<pre tabindex="0"><code class="language-text">type-abstract method_parameters.
+    type-apply implementation_method
+      &lt;implementation_head_arguments, method_parameters&gt;
+      prerequisite_evidence...
+</code></pre>
+<p>The adapter exposes exactly the selected method scheme. It does not copy or
+specialize the implementation body. Head arguments precede method arguments;
+prerequisites retain prerequisite and interface-method order. Repeated
+selections of one implementation at different evidence nodes or substitutions
+remain distinct adapters.</p>
+<p>Minimal immutable authentication facts relate every evidence position to its
+definition owner, requirement and method order, <code>MethodId</code>, interface argument,
+method scheme, and selected implementation source. Independent Core validation
+derives the expected scheme, validates every occurrence, forwarding use and
+adapter, and consumes every fact exactly once. Canonical method binders compare
+exactly. Only a generated adapter may use one bounded capture-free, order- and
+kind-preserving alpha-renaming. Monotype equality and unification remain exact.</p>
+<p>For a retained concrete implementation source, validation also compares its
+prerequisite rows lockstep with the selected implementation node's direct
+prerequisites, flattened in prerequisite declaration order and then each
+child's interface-method order. Both the selection node and <code>MethodId</code> must
+match, and both sequences must end together. Existing per-row producer,
+binder, Core application-chain, and recursive-source checks then validate the
+matched rows.</p>
+<p>Identity and literal-folding transformations preserve or rebuild the complete
+relationship, then pass fresh independent validation. Method schemes and
+authentication facts may remain as inert authority in the validated program,
+but the evaluator does not inspect them or derive runtime state from them. Core
+type operations erase through the existing dynamic rules before observation.
+No new Core node or evaluator state is present.</p>
+<h2 id="tampering-matrix">Tampering matrix</h2>
+<p>The retained private mutation suites reject each relationship independently:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Rejected mutations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resolved and checked method facts</td>
+<td>missing, duplicate, reordered, wrong-kind, wrong-owner, wrong-origin, wrong-spelling, or interface-parameter-colliding binders; unlisted, unused, free, or escaped binder bodies</td>
+</tr>
+<tr>
+<td>summaries and import admission</td>
+<td>missing, extra, duplicated, reordered, wrong-kind, wrong-owner, wrong-origin, or wrong-spelling body-free binders; forged annotation spans; a nested scheme in an ordinary global, constructor, implementation head, prerequisite, or source method body</td>
+</tr>
+<tr>
+<td>linked occurrences and implementations</td>
+<td>mismatched interface or method arguments, wrong checked occurrence type, wrong <code>MethodId</code> or <code>ImplMethodId</code>, wrong selection, wrong head substitution, reordered head and method binders, wrong prerequisite producer or order, and unavailable or forged route provenance</td>
+</tr>
+<tr>
+<td>Core authentication</td>
+<td>missing, duplicate, unconsumed, wrong-owner, wrong-position, wrong-order, wrong-kind, wrong-method, forged, or shared facts; nested schemes in ordinary value positions</td>
+</tr>
+<tr>
+<td>adapters and transforms</td>
+<td>capture, escape, shadowing, partial or reordered type application, wrong implementation binder, wrong head or method arguments, wrong prerequisites including a reachable sibling-node substitution or same-node method-order swap, mismatched scheme, malformed transformed relation, or renamed canonical method facts</td>
+</tr>
+</tbody>
+</table>
+<p>Positive evidence accepts one complete capture-free generated adapter-binder
+renaming. Original, identity-transformed, and literal-folded product programs
+all pass fresh independent validation and evaluate equally.</p>
+<h2 id="linked-product-and-runtime-observation">Linked product and runtime observation</h2>
+<p>The retained fixture in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/fixtures/method-parameters/linked-product"><code>tests/fixtures/method-parameters/linked-product</code></a>
+contains:</p>
+<ul>
+<li>a higher-kinded <code>Functor&lt;F&gt;</code> with <code>map&lt;A, B&gt;</code>;</li>
+<li>one separately checked <code>map_pair</code> constrained global using <code>Int</code> to <code>Bool</code>
+and <code>Bool</code> to <code>Int</code> instantiations;</li>
+<li>one public generic <code>Box&lt;A&gt;</code> implementation; and</li>
+<li>one entry that imports <code>map_pair</code>, <code>Box</code>, and <code>impl Functor</code> explicitly.</li>
+</ul>
+<p>The library and CLI both observe:</p>
+<pre tabindex="0"><code class="language-text">(Box(true), Box(42)) : (Box&lt;Bool&gt;, Box&lt;Int&gt;)
+</code></pre>
+<p>The retained files are named <code>interface.ash</code>, <code>implementation.ash</code>, and
+<code>entry.ash</code>. Executable trees stage the first two contents as <code>api.ash</code> and
+<code>carrier.ash</code> because <code>interface</code> is reserved in a module path.</p>
+<p>The exact product trace has maximum continuation depth three and these nine
+entry classes in order:</p>
+<pre tabindex="0"><code class="language-text">type-abstraction-erasure
+type-application-erasure
+variable-lookup
+apply
+type-application-erasure
+variable-lookup
+apply
+type-application-erasure
+variable-lookup
+</code></pre>
+<p>Polymorphic method evidence flows as ordinary function values and applications,
+but adds no new evaluator value class, environment-entry class, frame kind,
+lookup class, transition class, failure reason, runtime interface state,
+dictionary, registry, registration, or dispatch. The trace contains additional
+instances of existing erasure, lookup, and strict-application transitions, not
+a new transition rule.</p>
+<h2 id="diagnostics-migration-and-unavailable-routes">Diagnostics, migration, and unavailable routes</h2>
+<p>The diagnostic matrix retains exact typed reasons, primary and related spans,
+causal labels, and deterministic precedence through the library and CLI.
+Malformed binder syntax is parser-owned. Resolution owns duplicates, an
+interface-parameter collision, unused binders, and unlisted names in a present
+complete list. Kind checking owns invalid binder and method-type kinds.
+Interface checking retains <code>interface.method-parameter</code> for another free
+variable under an absent list or an omitted interface parameter, before
+<code>interface.method-not-function</code> after successful kind checking.</p>
+<p>The predecessor migration is explicit. This declaration remains invalid:</p>
+<pre tabindex="0"><code class="language-ash">interface Project&lt;I&gt; {
+    project : (I, A) -&gt; A
+}
+</code></pre>
+<p>Adding <code>project&lt;A&gt;</code> makes the previously rejected method valid. There is no
+compatibility grammar, implicit binder, inferred binder kind, or second compiler
+path.</p>
+<p>Direct negative evidence keeps all twelve unavailable higher-rank routes out
+of the language:</p>
+<ul>
+<li>source <code>forall</code> and explicit expression type application;</li>
+<li>polymorphic parameter and result annotations;</li>
+<li>polymorphic tuple and constructor fields;</li>
+<li>scheme storage, return, and passing to an ordinary parameter;</li>
+<li>implicit method binders and method-level requirements;</li>
+<li>and polymorphic recursive self-use.</li>
+</ul>
+<h2 id="exact-resources-and-lifecycle">Exact resources and lifecycle</h2>
+<p>All proportional work charges before allocation, traversal, or publication.
+Syntax work uses its syntax ledger. Binder records, method schemes, occurrence
+arguments, substitutions, adapters, and Core types use the owning type-work
+ledger. Summary, occurrence, selection, route, and linked-authentication work
+uses the graph-wide constraint ledger. Core construction and Core validation
+retain separate cumulative ledgers. No production limit changed.</p>
+<p>The syntax token-plus-event formula is exactly <code>66 + 14P</code> for <code>P</code> method
+parameters, retained at <code>P = 1, 2, 3, 512</code>. The source-derived owner manifest in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/method_parameter_resources.rs"><code>tests/method_parameter_resources.rs</code></a>
+contains 39 formulas attached to 27 unique probes. Its principal exact
+boundaries are:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Owner</th>
+<th>Exact constraint / type work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resolution binder validation</td>
+<td><code>13</code></td>
+</tr>
+<tr>
+<td>imported method-binder kind authentication</td>
+<td><code>4</code></td>
+</tr>
+<tr>
+<td>hidden interface import</td>
+<td><code>19 / 19</code></td>
+</tr>
+<tr>
+<td>summary private binder authority</td>
+<td><code>1 / 4</code></td>
+</tr>
+<tr>
+<td>selector scheme ingress</td>
+<td><code>20</code>; wide <code>7W + 11 / 3W + 5</code></td>
+</tr>
+<tr>
+<td>occurrence publication</td>
+<td><code>8 / 2</code></td>
+</tr>
+<tr>
+<td>selected rigidity</td>
+<td><code>25 / 3</code>; shifted removal <code>27 / 3</code></td>
+</tr>
+<tr>
+<td>conditional rigidity</td>
+<td><code>12 / 1</code>; wide <code>4W + 8 / 1</code></td>
+</tr>
+<tr>
+<td>method occurrence kind copies</td>
+<td><code>7 + 2K</code> type work</td>
+</tr>
+<tr>
+<td>Core evidence-scope carrier</td>
+<td><code>6</code> type work</td>
+</tr>
+<tr>
+<td>selected rigidity traversal</td>
+<td><code>3</code> type work</td>
+</tr>
+<tr>
+<td>general linked catalog</td>
+<td><code>107 / 74</code></td>
+</tr>
+<tr>
+<td>widened abstract-producer catalog</td>
+<td><code>89 / 32</code></td>
+</tr>
+<tr>
+<td>concrete adapter-source catalog</td>
+<td><code>141 / 36</code></td>
+</tr>
+<tr>
+<td>Core Builder constructor</td>
+<td><code>2E</code>, hence <code>4</code> for <code>E = 2</code></td>
+</tr>
+<tr>
+<td>one-anchor authentication and finish</td>
+<td><code>14</code></td>
+</tr>
+<tr>
+<td>concrete monomorphic validator</td>
+<td><code>633</code></td>
+</tr>
+<tr>
+<td>concrete source with two abstract-prerequisite methods</td>
+<td><code>1,092</code></td>
+</tr>
+<tr>
+<td>monomorphic adapter-edge validator</td>
+<td><code>746</code></td>
+</tr>
+<tr>
+<td>independent polymorphic validator</td>
+<td><code>2,339</code></td>
+</tr>
+<tr>
+<td>checked lowering worklist</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>identity or literal-fold transform</td>
+<td><code>686</code>, including a <code>4</code>-unit second Builder carrier</td>
+</tr>
+<tr>
+<td>rejected pending-zonk teardown</td>
+<td>depth <code>32,768</code></td>
+</tr>
+</tbody>
+</table>
+<p>Every exact boundary retains success, one-short atomic failure, and two fresh
+exact retries where the owner supports retry. Catalog formulas separately
+charge selected method width, domains, adapters, producer lookups,
+prerequisites, and checked traversal capacity. A generic implementation probe
+also proves that a discarded six-unit head-scope buffer is not charged.</p>
+<p>The wide concrete-source boundary is exactly
+<code>1,084 + Q*W + R + D*W = 1,084 + 2*2 + 2 + 1*2 = 1,092</code>. The final two terms
+charge one visit to each of the <code>R = 2</code> retained rows and one visit to each of
+the <code>W = 2</code> methods under the <code>D = 1</code> direct selected prerequisite. The
+zero-prerequisite 633-unit validator, 2,339-unit independent polymorphic
+validator, and 686-unit identity and literal-fold transform boundaries do not
+change.</p>
+<p>Deep accepted and rejected method types at depth 96 and wide accepted and
+rejected methods at width 128 traverse the public pipeline and dispose on a
+256 KiB thread stack. A width-64 adapter program, both transformed programs,
+and a prebuilt rejected adapter-bearing Core program freshly validate or reject
+and dispose on the same stack. A depth-32,768 pending zonk failure disposes
+iteratively there. Public width 1,024 succeeds; width 5,000 fails twice at the
+unchanged typing constraint budget, and a fresh width-1,024 retry succeeds.</p>
+<p>The complete public adapter pipeline cannot be constructed on a 256 KiB stack
+even at width two because of a width-independent construction frame. The
+small-stack lifecycle claim therefore consumes prebuilt accepted and rejected
+adapter states. It covers teardown, not construction on that stack, and does
+not justify a production-limit change.</p>
+<h2 id="production-and-maintenance-sites">Production and maintenance sites</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Principal production owners</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>syntax, events, projection, and recovery</td>
+<td><code>src/parser/grammar.rs</code>, <code>src/parser/project.rs</code>, <code>src/parser/mod.rs</code>, <code>src/surface.rs</code></td>
+</tr>
+<tr>
+<td>binder identity, scope, summaries, and import admission</td>
+<td><code>src/resolve.rs</code>, <code>src/resolved.rs</code></td>
+</tr>
+<tr>
+<td>kinding, schemes, inference, rigidity, selection, and occurrence publication</td>
+<td><code>src/kind.rs</code>, <code>src/elaborate.rs</code>, <code>src/evidence.rs</code>, <code>src/interface.rs</code>, <code>src/types.rs</code></td>
+</tr>
+<tr>
+<td>linking and complete authentication</td>
+<td><code>src/evidence_validation.rs</code>, <code>src/driver.rs</code></td>
+</tr>
+<tr>
+<td>Core evidence facts, construction, validation, and transforms</td>
+<td><code>src/core/dialect.rs</code>, <code>src/core/type_ops.rs</code>, <code>src/core/validate.rs</code>, <code>src/core/transform.rs</code>, <code>src/elaborate.rs</code></td>
+</tr>
+</tbody>
+</table>
+<p>Primary maintenance targets are <code>interfaces_syntax</code>, <code>parser</code>, <code>resolution</code>,
+<code>kinds</code>, <code>polymorphism</code>, <code>interfaces</code>, <code>implementations</code>, <code>interface_modules</code>,
+<code>interface_validation</code>, <code>evidence_validation</code>, <code>core_validation</code>,
+<code>architecture</code>, <code>diagnostics</code>, <code>source_diagnostics</code>, <code>corpus</code>,
+<code>interface_resources</code>, <code>method_parameter_resources</code>, <code>module_cli</code>, and
+<code>spec_examples</code>.</p>
+<p>The increment changes no evaluator source, adds no Core node, and changes no
+production resource limit.</p>
+<h2 id="review-and-verification-status">Review and verification status</h2>
+<p>Checkpoint 6 received two independent reviews. Semantic review approved binder
+authority, linked provenance authentication, adapters, product behavior,
+transforms, diagnostics, exclusions, and runtime erasure with no findings.
+Quality and resource review first rejected an incomplete formula manifest, a
+one-way carrier inventory, and insufficient rejected-lifecycle evidence. The
+same implementation pass added complete formulas, bidirectional inventories,
+prebuilt rejected-Core disposal, pending-zonk disposal, and the two omitted
+hidden-import and discarded-buffer probes. Re-review approved the corrected
+boundary with no findings.</p>
+<p>Fresh Checkpoint 6 verification passes 711 library tests, 62 Core-validation
+tests, 34 interface tests, 41 polymorphism tests, 23 architecture tests, and a
+combined 240-test focus. The locked workspace/all-target/all-feature inventory
+contains 1,531 passing tests. Formatting, locked checking, strict Clippy with
+warnings denied, <code>cargo xtask verify</code> including warning-denied rustdoc,
+Markdown lint, all relative-link targets in 84 Markdown files, and diff hygiene
+pass at <code>a6174ec</code>.</p>
+<p>Checkpoint 7 begins with 57 predecessor executable specification tests. Its
+four documentation REDs prove the missing normative manifest, complete linked
+overview, exact CLI observation, and predecessor-to-explicit migration while
+all product execution succeeds. The reconciled specification passes all 61
+examples. Its first semantic/specification review found three local
+reconciliation defects: the formal module result was not connected to frozen
+occurrence definitions, dynamic prose overstated physical erasure instead of
+evaluator non-inspection, and the lexical angle-bracket inventory omitted
+method lists. The correction connects atomic checked-module and summary
+publication, states the inert retained-authority boundary, and updates the
+lexical inventory and executable manifest. Final semantic re-review,
+implementation/Core/resource review, evidence/migration/lifecycle/authority
+review, and the complete inventory are recorded here before transition cleanup.</p>
+<p>A later corrective review found one independent-Core implementation defect.
+The concrete-source catalog already retained prerequisite selection nodes and
+methods in the exact order fixed by linked selection, but validation checked
+only reachable-node membership for each copied row. Before production changed,
+the focused wide-<code>Leaf</code> RED coordinated the catalog rows and same-typed Core
+applications. The exact command, under its temporary first test name, was
+<code>cargo test --locked --lib core::validate::tests::concrete_source_prerequisite_method_order_is_authenticated_after_every_rebuild -- --exact --nocapture</code>; it failed at rebuild zero because validation admitted
+the mutation, with zero passed, one failed, and 711 filtered tests.</p>
+<p>The correction adds an allocation-free lockstep comparison against the direct
+selected prerequisite and method sequence. The retained method-order test and
+a distinct same-typed sibling-selection-node test reject in original,
+identity-rebuilt, and literal-folded Core. Removing only the selection-node
+comparison makes the sibling test fail at rebuild zero, proving that the test
+does not rely on the method comparison. Fresh corrective verification passes
+713 library tests, 62 Core-validation tests, 23 architecture tests, four
+method-parameter resource tests, and the focused 633, 1,092, 2,339, and 686
+one-short and fresh-retry probes. Workspace/all-target/all-feature checking,
+strict Clippy with warnings denied, formatting, Markdown lint, and diff hygiene
+also pass. No specification, selection rule, persistent Core carrier,
+evaluator behavior, or production resource limit changes. The correction uses
+its reserved eight units at cumulative use 78/80; two units remain unreserved.
+The subsequent reviews and complete root verification close this implementation
+handoff without expanding its semantic or resource boundary.</p>
+<p>The focused GREEN commands are <code>cargo test --locked --lib core::validate::tests::concrete_source_prerequisites_match_direct_selection_nodes_after_every_rebuild -- --exact --nocapture</code> and <code>cargo test --locked --lib core::validate::tests::concrete_source_prerequisites_match_selected_method_order_after_every_rebuild -- --exact --nocapture</code>. The 713/62/23/4 counts come from <code>cargo test --locked --lib</code>, <code>cargo test --locked --test core_validation</code>, <code>cargo test --locked --test architecture</code>, and <code>cargo test --locked --test method_parameter_resources</code> respectively.</p>
+<p>Independent semantic and specification compliance review approves
+<code>33ce4b4..8930564</code> with no findings. Existing specification and accepted
+CP-0010 authority fully determine this local validator correction, so it adds
+no language rule. Fresh review verification passes both concrete-source
+prerequisite regressions, 713 library tests, 62 Core-validation tests, and four
+method-parameter resource tests. Formatting and diff hygiene also pass.</p>
+<p>The original stop-condition reviewer approves the implementation, Core, and
+resource re-review of <code>33ce4b4..8930564</code> with no Critical, Important, or Minor
+findings. Exact selection-node and method lockstep comparison with cardinality
+exhaustion closes the gap while preserving every downstream producer, binder,
+Core application-chain, and recursive-source check. The same-typed sibling-node
+substitution and same-node method-order swap remain meaningful in original,
+identity-rebuilt, and literal-folded Core. The exact 633, 1,092, 2,339, and 686
+boundaries retain one-short rejection and fresh retries. Fresh review
+verification passes 713 library, 62 Core-validation, 23 architecture, and four
+method-parameter resource tests, plus workspace/all-target/all-feature
+checking, strict Clippy, formatting, changed-document Markdown lint, diff
+hygiene, and clean status. The reviewer finds no semantic,
+Core-representation, or production-limit stop condition.</p>
+<p>The third evidence, migration, lifecycle, and authority review reports one
+Important local evidence/lifecycle finding and no Critical or Minor finding:
+the principal checkpoint ledger omitted the specification, wording,
+correction, resource, and review commits after <code>685b019</code>. It finds no semantic,
+Core-representation, production-limit, migration, or stack-lifecycle stop
+condition. Its checks pass both concrete-source prerequisite regressions, 713
+library tests, 62 Core-validation tests, four method-parameter resource tests,
+all 61 specification examples, predecessor migration and all twelve excluded
+higher-rank routes, Markdown lint, every relative link in 85 Markdown files,
+and the budget and integration audit.</p>
+<p>The third lifecycle re-review approves the corrected ledger at <code>689f64a</code> with
+no remaining finding. The sole Important finding from the first review is
+resolved; the re-review finds no semantic, Core-representation,
+production-limit, migration, or stack-lifecycle stop condition.</p>
+<p>Fresh root verification passes <code>cargo fmt --all -- --check</code>, <code>cargo check --locked --workspace --all-targets --all-features</code>, and <code>cargo clippy --locked --workspace --all-targets --all-features -- -D warnings</code>, each with exit status
+zero. <code>cargo test --locked --workspace --all-targets --all-features</code> passes all
+1,537 listed tests with exit status zero. <code>cargo xtask verify</code> also exits zero,
+including its documentation checks. <code>git diff --check</code> passes, the reviewed
+tree is clean, and <code>git diff --exit-code 9ade2df..HEAD -- src/eval spec</code> is
+empty. The increment therefore changes neither the evaluator nor the normative
+specification after the accepted specification boundary.</p>
+<p>An independent documentation gate at <code>689f64a</code> checks 85 Markdown files: lint
+passes and all 731 current relative links resolve. Simulated transition cleanup
+checks 82 retained Markdown files and all 696 retained links, with no retained
+link to a removed artifact.</p>
+<p>The review approves transition cleanup after the ledger correction,
+third-review re-review, full root verification, retained-evidence commit, and
+clean-tree gate. All five gates are complete. The transition-only proposal,
+task, and execution plan have left the current tree; their index entries now
+record that no accepted proposal awaits implementation and no implementation
+task is active. Git history retains those artifacts and their authority during
+the transition. This report remains informative and does not take over task or
+language authority.</p>
+<p>Post-cleanup Markdown lint passes across 82 retained Markdown files, and all
+696 retained relative links resolve. <code>cargo xtask verify</code> passes again,
+including all 1,537 tests and documentation generation. Independent lifecycle
+review approves the actual cleanup with no finding: it matches the authorized
+set, changes no semantic authority, leaves no stale link, and makes no
+integration or full-milestone claim for that checkpoint.</p>
+<p>Cumulative reserved use remains 78/80, with two units unreserved. This retained
+evidence does not claim integration or completion of the full <code>lib-ash</code>
+milestone for its checkpoint; later retained evidence supplies those facts.</p>
+<h2 id="intentional-exclusions-and-remaining-pressure">Intentional exclusions and remaining pressure</h2>
+<p>This increment does not add implicit method binders, method-local kind
+inference, kind polymorphism, type lambdas, higher-order unification,
+impredicative instantiation, source <code>forall</code>, expression type arguments,
+polymorphic annotations or ordinary values, method requirements, polymorphic
+recursion, multi-parameter interfaces, determination, associated outputs,
+defaults, overrides, specialization, negative implementations, fallback
+selection, new implementation import forms, packages, persistent artifacts,
+separate object linking, dynamic loading, runtime registries, or a public
+authentication representation.</p>
+<p>Later work may consume canonical method schemes, authenticated summaries,
+occurrence arguments, and generated adapter evidence. It requires separate
+semantic authority and cannot reinterpret this report as language truth. At
+this checkpoint, the complete <code>lib-ash</code> milestone remained open and untagged;
+the later integrated relational increment closes the revised milestone without
+claiming a tag.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#scope-and-checkpoints">Scope and checkpoints</a><a href="#implemented-boundary">Implemented boundary</a><a href="#canonical-schemes-and-occurrence-authority">Canonical schemes and occurrence authority</a><a href="#summaries-and-linked-authentication">Summaries and linked authentication</a><a href="#authenticated-core-evidence">Authenticated Core evidence</a><a href="#tampering-matrix">Tampering matrix</a><a href="#linked-product-and-runtime-observation">Linked product and runtime observation</a><a href="#diagnostics-migration-and-unavailable-routes">Diagnostics, migration, and unavailable routes</a><a href="#exact-resources-and-lifecycle">Exact resources and lifecycle</a><a href="#production-and-maintenance-sites">Production and maintenance sites</a><a href="#review-and-verification-status">Review and verification status</a><a href="#intentional-exclusions-and-remaining-pressure">Intentional exclusions and remaining pressure</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

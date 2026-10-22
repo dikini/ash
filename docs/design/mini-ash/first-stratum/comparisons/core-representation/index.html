@@ -1,0 +1,348 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>First-stratum Core-representation comparison · Ash</title><meta name="description" content="Which representation shape keeps the first pure Core typed, inspectable, validatable, and transformable while leaving a concrete seam for later effect operations and explicit continuations?"><meta name="robots" content="index, follow"><meta property="og:title" content="First-stratum Core-representation comparison · Ash"><meta property="og:description" content="Which representation shape keeps the first pure Core typed, inspectable, validatable, and transformable while leaving a concrete seam for later effect operations and explicit continuations?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="First-stratum Core-representation comparison · Ash"><meta name="twitter:description" content="Which representation shape keeps the first pure Core typed, inspectable, validatable, and transformable while leaving a concrete seam for later effect operations and explicit continuations?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/core-representation/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/core-representation/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/core-representation.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"First-stratum Core-representation comparison","headline":"First-stratum Core-representation comparison","description":"Which representation shape keeps the first pure Core typed, inspectable, validatable, and transformable while leaving a concrete seam for later effect operations and explicit continuations?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/core-representation/","@id":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/comparisons/core-representation/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/core-representation.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="first-stratum-core-representation-comparison" data-pagefind-meta="title">First-stratum Core-representation comparison</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/comparisons/core-representation.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>This comparison is informative evidence governed by
+<a href="/ash/docs/design/dn-0016-first-mini-ash-corpus/">DN-0016</a>. It does not accept a
+Core architecture or define current Ash semantics.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Which representation shape keeps the first pure Core typed, inspectable,
+validatable, and transformable while leaving a concrete seam for later effect
+operations and explicit continuations?</p>
+<h2 id="scope-and-method">Scope and method</h2>
+<p>The comparison combines a disposable Rust probe with written pressure from the
+whole first-stratum corpus. The probe represented the lexical capture in
+<code>V-004</code>, evaluated before and after a typed simplification, preserved causal
+origins for generated nodes, and rejected <code>I-001</code> through <code>I-004</code>. A separate
+operation-family probe checked that a future request could carry explicit
+first-order continuation data without putting an effect operation in the pure
+instance.</p>
+<p>The written comparison covers the remaining cases where the consequence is
+already visible from the type shape: primitive fragments in <code>V-001</code>, <code>V-006</code>,
+and <code>V-007</code>; presentation-independent functions in <code>V-002</code> and <code>V-008</code>;
+higher-order application in <code>V-005</code>; structured match in <code>X-001</code>; and the
+curried-versus-product distinction in <code>X-003</code>. It does not prototype effects,
+handlers, CPS, or a product runtime.</p>
+<p>The probe compared:</p>
+<ol>
+<li>feature-local node structures joined by a typed sum and recursive term;</li>
+<li>arena-owned nodes with stable node identities and feature-local payloads;</li>
+<li>a value/computation boundary parameterized by an operation family, with an
+empty operation family for pure Core.</li>
+</ol>
+<h2 id="representation-shapes">Representation shapes</h2>
+<p>All candidates attached the same binder identity, monotype, and origin data to
+semantic nodes. The reduced probe used <code>Int</code>, <code>Bool</code>, and an undifferentiated
+function type because its purpose was representation mechanics, not the
+first-stratum typechecker. A retained Core must use the full structural types
+required by <a href="/ash/docs/design/mini-ash/first-stratum/typing/">typing.md</a>.</p>
+<h3 id="recursive-typed-sum">Recursive typed sum</h3>
+<p>The probe gave each feature its own payload type and joined those payloads at a
+dialect boundary:</p>
+<pre tabindex="0"><code class="language-rust">enum Sum&lt;L, R&gt; {
+    Left(L),
+    Right(R),
+}
+
+struct Term {
+    ty: Type,
+    origin: Origin,
+    layer: Box&lt;Layer&gt;,
+}
+
+type Layer = Sum&lt;
+    Literal,
+    Sum&lt;Variable, Sum&lt;Add, Sum&lt;Let, Sum&lt;Lambda, Apply&gt;&gt;&gt;&gt;,
+&gt;;
+
+struct Literal(i64);
+struct Variable(BinderId);
+struct Add(Term, Term);
+struct Let {
+    binder: BinderId,
+    initializer: Term,
+    body: Term,
+}
+struct Lambda {
+    binder: BinderId,
+    body: Term,
+}
+struct Apply(Term, Term);
+</code></pre>
+<p>This shape gives each feature a local payload and keeps the selected dialect
+closed enough for exhaustive validation. The concrete nested sum made
+construction and matching noisy. A generic fold or generated injection layer
+could move that plumbing out of consumers, but the probe did not establish
+that such machinery is worth its cost for the first dialect.</p>
+<h3 id="arena-storage">Arena storage</h3>
+<p>The arena probe replaced recursive ownership with stable identities:</p>
+<pre tabindex="0"><code class="language-rust">struct NodeId(u32);
+
+struct ArenaTerm {
+    nodes: Vec&lt;Node&gt;,
+    root: NodeId,
+}
+
+struct Node {
+    ty: Type,
+    origin: Origin,
+    kind: NodeKind,
+}
+
+enum NodeKind {
+    Int(i64),
+    Variable(BinderId),
+    Add(NodeId, NodeId),
+    Let {
+        binder: BinderId,
+        initializer: NodeId,
+        body: NodeId,
+    },
+    Lambda {
+        binder: BinderId,
+        body: NodeId,
+    },
+    Apply(NodeId, NodeId),
+}
+</code></pre>
+<p>The arena made identity, shared storage, and iterative ownership direct. It did
+not by itself compose features. Static dispatch still required one closed
+<code>NodeKind</code>; replacing that tag with a registry and erased payloads would weaken
+exhaustive matching and complicate validation, transformation, and
+serialization. Arena ownership is therefore a storage decision that can sit
+beneath either semantic organization, not a competing answer to semantic
+composition.</p>
+<h3 id="operation-parameterized-computation">Operation-parameterized computation</h3>
+<p>The Freer-like probe separated pure structure from future requests and made a
+pure dialect uninhabited on the operation side:</p>
+<pre tabindex="0"><code class="language-rust">use std::marker::PhantomData;
+
+enum Computation&lt;O&gt; {
+    Pure(Annotated&lt;O&gt;),
+    Impure(Request&lt;O&gt;),
+}
+
+struct Annotated&lt;O&gt; {
+    ty: Type,
+    origin: Origin,
+    form: PureForm&lt;O&gt;,
+}
+
+enum PureForm&lt;O&gt; {
+    Int(i64),
+    Variable(BinderId),
+    Add(Box&lt;Computation&lt;O&gt;&gt;, Box&lt;Computation&lt;O&gt;&gt;),
+    Let {
+        binder: BinderId,
+        initializer: Box&lt;Computation&lt;O&gt;&gt;,
+        body: Box&lt;Computation&lt;O&gt;&gt;,
+    },
+    Lambda {
+        binder: BinderId,
+        body: Box&lt;Computation&lt;O&gt;&gt;,
+    },
+    Apply(Box&lt;Computation&lt;O&gt;&gt;, Box&lt;Computation&lt;O&gt;&gt;),
+}
+
+struct Request&lt;O&gt; {
+    operation: O,
+    continuation: Continuation&lt;O&gt;,
+}
+
+enum Continuation&lt;O&gt; {
+    Return(PhantomData&lt;O&gt;),
+    Bind {
+        binder: BinderId,
+        next: Box&lt;Computation&lt;O&gt;&gt;,
+    },
+}
+
+enum NoOperation {}
+</code></pre>
+<p><code>Computation&lt;NoOperation&gt;</code> cannot contain a request through safe construction.
+A future operation family can instantiate the same boundary, and the probe's
+request contained a binder and next computation rather than a Rust closure.
+This result supports an operation seam. It does not make <code>PureForm</code> itself
+feature-composable: adding a pure language construct to that enum still changes
+every exhaustive consumer.</p>
+<h2 id="probe-evidence">Probe evidence</h2>
+<p>All three candidates used inspectable closure values containing a binder, code
+identity or body, and an Ash environment. None represented lexical capture or
+continuation state with a Rust closure.</p>
+<p>The probe produced these host-specific measurements for the same ten-node
+<code>V-004</code>-shaped term:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate</th>
+<th align="right">Root bytes</th>
+<th align="right">Recorded nodes</th>
+<th align="right">Recursive or arena allocations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recursive typed sum</td>
+<td align="right">24</td>
+<td align="right">10</td>
+<td align="right">10</td>
+</tr>
+<tr>
+<td>Arena storage</td>
+<td align="right">32</td>
+<td align="right">10</td>
+<td align="right">1 backing vector</td>
+</tr>
+<tr>
+<td>Operation-parameterized computation</td>
+<td align="right">40</td>
+<td align="right">10</td>
+<td align="right">9 child boxes</td>
+</tr>
+</tbody>
+</table>
+<p>These measurements expose ownership shape; they are not performance results.
+Rust layout, full structural types, provenance tables, match nodes, and
+allocation strategy can change them.</p>
+<p>The typed simplification removed <code>0 + expression</code>, assigned the replacement a
+generated origin causally linked to the removed node, revalidated the result,
+and preserved evaluation. Recursive candidates rebuilt the path to a changed
+node. The arena appended changed nodes and reused stable identities for
+unchanged subtrees. All candidates needed an explicit validator even where
+constructors prevented common mistakes, because transformations and future
+deserialization can still produce malformed structure.</p>
+<h2 id="corpus-and-change-locality-comparison">Corpus and change-locality comparison</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Pressure</th>
+<th>Recursive typed sum</th>
+<th>Arena storage</th>
+<th>Operation-parameterized computation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add a primitive feature from <code>V-001</code>, <code>V-006</code>, or <code>V-007</code></td>
+<td>Add one payload and include it in the dialect sum; generic consumers need a new feature case</td>
+<td>Add payload storage and a dispatch case, unless using type erasure</td>
+<td>Add a <code>PureForm</code> case; unrelated exhaustive consumers change</td>
+</tr>
+<tr>
+<td>Preserve the two <code>V-002</code> presentations</td>
+<td>Common semantic function payload can retain distinct origins</td>
+<td>Common function node can retain distinct origins</td>
+<td>Common pure function form can retain distinct origins</td>
+</tr>
+<tr>
+<td>Capture in <code>V-004</code></td>
+<td>Inspectable closure environment worked</td>
+<td>Inspectable closure environment worked; IDs keep code references small</td>
+<td>Inspectable closure environment worked without using the operation seam</td>
+</tr>
+<tr>
+<td>Higher-order and nested application in <code>V-005</code> and <code>V-008</code></td>
+<td>Recursive application and function payloads compose directly</td>
+<td>Stable IDs avoid recursive ownership but require arena access</td>
+<td>Pure applications remain direct rather than encoded as operations</td>
+</tr>
+<tr>
+<td>Add structured match for <code>X-001</code></td>
+<td>Add a match fragment and extend the selected dialect</td>
+<td>Add match payload and dispatch</td>
+<td>Add a pure form unless combined with feature fragments</td>
+</tr>
+<tr>
+<td>Preserve the types in <code>X-003</code></td>
+<td>Structural function and product types belong in common annotations</td>
+<td>Same; arena identity does not decide grouping</td>
+<td>Same; the operation family does not decide grouping</td>
+</tr>
+<tr>
+<td>Add a future effect family</td>
+<td>Requires an operation fragment or a separate computation layer</td>
+<td>Storage can hold it, but does not define its typed interface</td>
+<td>Change the operation-family parameter; pure feature consumers need not change</td>
+</tr>
+<tr>
+<td>Introduce future CPS regions</td>
+<td>Needs an explicit fragment and validation contract</td>
+<td>Stable IDs can reference regions but do not define their contract</td>
+<td>The computation boundary gives a natural seam, but no Core/CPS relation was tested</td>
+</tr>
+</tbody>
+</table>
+<p>No candidate makes every extension invisible. Exhaustive reasoning requires a
+closed selected dialect somewhere. The useful property is that adding one
+effect family does not require changing the representation of ordinary pure
+features, while a dialect boundary still states exactly which features a Core
+dialect permits.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>The evidence favors a layered hypothesis rather than one winning candidate:</p>
+<ul>
+<li>compose typed semantic features at an explicit dialect boundary;</li>
+<li>distinguish values and computations, with an empty operation family for the
+first pure Core and a parameterized request seam for later effects;</li>
+<li>keep future continuation data first-order and inspectable;</li>
+<li>choose recursive or arena ownership separately, based on transformation,
+sharing, stable-identity, and diagnostic evidence.</li>
+</ul>
+<p>The first retained implementation should not add <code>Impure</code>, handlers, effect
+operations, or CPS nodes merely to demonstrate the seam. It may use a smaller
+dialect-local encoding if that encoding preserves the boundary and can be
+lowered or replaced without changing language semantics.</p>
+<p>This conclusion does not yet select a concrete Rust library pattern. In
+particular, it does not establish that handwritten nested sums, generated
+injections, trait objects, or arena IDs should appear in product Core.</p>
+<h2 id="accepted-outcome">Accepted outcome</h2>
+<p><a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> accepts these
+properties:</p>
+<ul>
+<li>every retained Core dialect declares a closed set of permitted typed feature
+families;</li>
+<li>pure Mini-Ash does not depend on an inhabited effect-operation family;</li>
+<li>a future operation-family boundary does not require effect variants in every
+pure feature;</li>
+<li>closures and future continuations are inspectable Ash compiler data rather
+than host closures;</li>
+<li>Core validation checks types, binder scope, dialect membership, and
+provenance after construction and transformation;</li>
+<li>ownership and storage remain replaceable implementation choices unless
+evidence makes stable node identity part of a stage contract.</li>
+</ul>
+<p>The decision does not choose effect semantics, continuation multiplicity,
+handler behavior, CPS reconstruction, concrete arena allocation, or the first
+user-visible semantic increment.</p>
+<h2 id="remaining-questions">Remaining questions</h2>
+<ul>
+<li>Does the resolver, typechecker, and elaborator benefit enough from stable node
+identities to justify arena storage before transformation work begins?</li>
+<li>What is the smallest Rust mechanism that composes feature-local rules while
+retaining exhaustive validation for one selected dialect?</li>
+<li>Should source provenance live on every semantic node or in a side table keyed
+by stable identity?</li>
+<li>Which typed evidence remains on nodes, and which facts should a validator
+recompute after transformations?</li>
+<li>Where should a later opaque CPS region meet the computation boundary?</li>
+</ul>
+<p>The next component comparisons can answer the first four questions without
+adding future effects. The last remains downstream pressure.</p>
+<h2 id="retention-boundary">Retention boundary</h2>
+<p>The Rust probe lived under ignored build output and is disposable. Its tests,
+format check, and Clippy check passed. This document retains the representation
+shapes, measurements, observed change locality, and unresolved questions; the
+probe is not product Core or language authority.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#scope-and-method">Scope and method</a><a href="#representation-shapes">Representation shapes</a><a href="#probe-evidence">Probe evidence</a><a href="#corpus-and-change-locality-comparison">Corpus and change-locality comparison</a><a href="#conclusion">Conclusion</a><a href="#accepted-outcome">Accepted outcome</a><a href="#remaining-questions">Remaining questions</a><a href="#retention-boundary">Retention boundary</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

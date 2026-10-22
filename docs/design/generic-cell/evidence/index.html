@@ -1,0 +1,1473 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Generic cell checkpoint evidence · Ash</title><meta name="description" content="This record maps the accepted generic cell transition to product tests. The current specification defines Ash; this record supplies evidence and no additional permission. The original 2026-10-19 local checkpoint was…"><meta name="robots" content="index, follow"><meta property="og:title" content="Generic cell checkpoint evidence · Ash"><meta property="og:description" content="This record maps the accepted generic cell transition to product tests. The current specification defines Ash; this record supplies evidence and no additional permission. The original 2026-10-19 local checkpoint was…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Generic cell checkpoint evidence · Ash"><meta name="twitter:description" content="This record maps the accepted generic cell transition to product tests. The current specification defines Ash; this record supplies evidence and no additional permission. The original 2026-10-19 local checkpoint was…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/generic-cell/evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/generic-cell/evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/generic-cell/evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Generic cell checkpoint evidence","headline":"Generic cell checkpoint evidence","description":"This record maps the accepted generic cell transition to product tests. The current specification defines Ash; this record supplies evidence and no additional permission. The original 2026-10-19 local checkpoint was…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/generic-cell/evidence/","@id":"https://dikini.github.io/ash/docs/design/generic-cell/evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/generic-cell/evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="generic-cell-checkpoint-evidence" data-pagefind-meta="title">Generic cell checkpoint evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/generic-cell/evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This record maps the accepted generic cell transition to product tests.
+The <a href="/ash/spec/">current specification</a>
+defines Ash; this record supplies evidence and no additional permission.
+The original 2026-10-19 local checkpoint was verified at
+<code>7e80df3e66a6d3074b86f29b7582cadb6696a563</code>: all seven default stages
+executed freshly, with zero reused stages. The 140 parent test harnesses report
+4,112 passes, zero failures and one optional native calibration study ignored.
+The then-recorded default-feature native pair embeds runtime fingerprint
+<code>6270711a6b9492367ecff76a0b1612a1b21f475b44282d9618eabbd08598fcf9</code>.
+The final receipt below supersedes earlier component-only readiness.
+The checkpoint is integrated into local <code>main</code>; the 2026-10-20 receipt below
+records the fresh integration gate and retained result. Earlier checkpoint,
+acceptance and cleanup observations remain scoped to their recorded commits.
+The transition artifacts were retired after checkpoint acceptance.</p>
+<p>The sections from “Observation boundaries” through “Retained cleanup readback
+and local closure” record the 2026-10-19 checkpoint. Their Main authorization,
+retention and default-feature native statements describe that earlier boundary.
+The later local Main receipt follows those historical observations.</p>
+<h2 id="observation-boundaries">Observation boundaries</h2>
+<p>The retained TASK-0046 dependency component was accepted at code <code>3f72e9c</code>.
+TASK-0047's runtime component was observed at <code>8d5b3c1</code>, with the independent
+architecture inventory repair at <code>ac72d18</code> and receipt head <code>9cfd39a9</code>.
+Their task records retain exact commands, input records, log hashes and bounded
+transfers. TASK-0048 changes test bodies in compiler source files, so those
+historical runs do not imply identical compiler fingerprints or a fresh gate.
+The frozen TASK-0048 receipt below binds these observations to exact inputs.</p>
+<p>The public runtime fixtures use <code>compile_path</code>, independent linked Core
+admission and actual execution. <code>generic_runtime_observation</code> checks the value,
+write count, unique acquired keys and exactly one matching release per key.
+The generic dependency-negative fixtures require source/compiled parity,
+<code>Typing</code>, <code>type.resource-escape</code>, actual causal expressions and acquisition/
+capture/call labels. Ordinary restriction fixtures assert their own public
+phase and reason. Deliberately corrupted Core is never executed after rejection.</p>
+<h2 id="positive-cases">Positive cases</h2>
+<p>Runtime names below are in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/resource_scope_runtime.rs">resource_scope_runtime.rs</a>.</p>
+<h3 id="cell-p01">CELL-P01</h3>
+<p><code>generic_cell_p01_fixed_payload_shapes_share_aliases</code>: Int replacement 42,
+Bool true, tuple (42, true), nominal projection 42.
+<code>generic_cell_p01_initializer_runs_once_before_body_publication</code>: (42, 1),
+initializer once.</p>
+<h3 id="cell-p02">CELL-P02</h3>
+<p><code>generic_cell_p02_snapshots_and_p03_outer_access_have_actual_values</code>: (41, 42)
+and escaped snapshot 41.</p>
+<h3 id="cell-p03">CELL-P03</h3>
+<p>Same test: recovered enclosing access returns 7 after inner completion.</p>
+<h3 id="cell-p04">CELL-P04</h3>
+<p><code>generic_cell_p04_p05_p13_imported_snapshots_and_recursive_owners_execute</code>:
+direct/imported earlier independent snapshot escapes and returns 7. Later
+dependent-read negatives remain N06.</p>
+<h3 id="cell-p05">CELL-P05</h3>
+<p>Same test: direct/imported same-site recursion returns 9, two distinct live
+keys, one release per acquisition.</p>
+<h3 id="cell-p06">CELL-P06</h3>
+<p><code>generic_cell_p06_local_imported_facade_and_same_owner_branch_agree</code>: both
+branch choices through local/imported/facade routes return 42 with one slot
+and one write. Generic distinct-owner branch refusal is separately ordinary
+typing.</p>
+<h3 id="cell-p07">CELL-P07</h3>
+<p><code>generic_cell_p07_exact_handler_interception_and_forwarding_execute</code>:
+overridden read 99, intercepted write leaves 41, forwarded write yields 42
+once; nonforwarded self-capturing function replacement leaves independent 7
+with zero builtin writes.</p>
+<h3 id="cell-p08">CELL-P08</h3>
+<p><code>generic_cell_p08_actual_local_reply_and_independent_escape_execute</code>:
+dependent local reply 42, independent escaping reply 7.</p>
+<h3 id="cell-p09">CELL-P09</h3>
+<p><code>generic_cell_p09_independent_and_enclosing_payload_crossings_execute</code>:
+permitted independent/enclosing crossings return 42/7.</p>
+<h3 id="cell-p10">CELL-P10</h3>
+<p><code>generic_cell_p10_cyclic_immutable_payload_keeps_finite_prefix</code>: finite prefix
+2. Owning machine test also checks repeated reads preserve the same Location
+and constant shallow-copy cost for 8,192 shared cyclic nodes.</p>
+<h3 id="cell-p11">CELL-P11</h3>
+<p><code>generic_cell_p11_repeated_monomorphic_reads_and_legacy_nesting_execute</code>:
+repeated fixed-function results and mixed legacy/generic behavior return 42.
+Indexed effectful function payload companion invokes its saved outer owner and
+returns 7.</p>
+<h3 id="cell-p12">CELL-P12</h3>
+<p><code>generic_cell_p12_other_handler_mutation_survives_original_write_interception</code>:
+Tick's separate mutation yields 99, one builtin write; intercepted 42 is not
+published.</p>
+<h3 id="cell-p13">CELL-P13</h3>
+<p><code>generic_cell_p04_p05_p13_imported_snapshots_and_recursive_owners_execute</code>:
+escaping independent handler snapshot 7.
+<code>generic_cell_p13_reply_and_later_stored_function_have_distinct_actual_values</code>:
+(7, 42), one actual mutation. N12 checks the later dependent read cannot
+escape.</p>
+<h2 id="negative-cases">Negative cases</h2>
+<p>Unless stated otherwise, names are in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/resource_scope_typing.rs">resource_scope_typing.rs</a>.</p>
+<h3 id="cell-n01">CELL-N01</h3>
+<p><code>cell_n01_generic_ordinary_errors_precede_dependency_admission</code>: wrong
+initializer/type and write use Typing <code>type.mismatch</code> / <code>type.argument</code>; arity
+and row-as-Type use Resolution <code>resolve.type-kind</code>; higher-kinded payload uses
+Kind <code>kind.argument</code>.</p>
+<h3 id="cell-n02">CELL-N02</h3>
+<p><code>cell_n02_access_wrappers_and_live_reader_results_cannot_leave_their_owner</code>,
+<code>cell_n02_hidden_access_closures_and_n05_unsafe_payload_joins_reject</code>,
+imported evidence/opaque-wrapper companions: source ResourceEscape for
+direct/wrapped access and identity-free hidden captures; independent snapshots
+admit.</p>
+<h3 id="cell-n03">CELL-N03</h3>
+<p><code>cell_n03_self_retention_and_n04_younger_cycle_reject_at_write</code>:
+self-capturing replacement fails at first invalid retention; later clearing
+cannot repair it. P07's intercepted/discarded replacement admits.</p>
+<h3 id="cell-n04">CELL-N04</h3>
+<p>Same test plus
+<code>cell_n04_wrappers_and_selected_fields_keep_only_actual_payload_dependencies</code>:
+genuine A-to-B-to-A cycle, with and without later clearing; opaque selected
+fields and imported capture factory retain the hidden dependency. Independent
+projection companions admit.</p>
+<h3 id="cell-n05">CELL-N05</h3>
+<p><code>cell_n05_every_possible_target_must_admit_the_replacement</code>,
+<code>cell_n05_resumed_stack_does_not_extend_an_older_slots_birth_enclosure</code>,
+unsafe payload joins: younger dependency fails without requiring a cycle;
+every possible target/alternative is checked.</p>
+<h3 id="cell-n06">CELL-N06</h3>
+<p><code>cell_p08_actual_handler_reply_dependencies_pair_with_n06_escape</code> and P04
+snapshot/later-read pairs: dependent actual reply or current contents cannot
+escape; earlier independent reply/snapshot can.</p>
+<h3 id="cell-n07">CELL-N07</h3>
+<p><code>cell_n07_outer_write_interceptor_rejects_crossing_but_inner_interceptor_discards</code>:
+outer exact write interceptor cannot receive B-dependent payload across B;
+inner interceptor can discard it.
+<code>cell_n02_n07_imported_evidence_dependencies_survive_wrappers_and_crossings</code>
+and indexed metadata-only tests preserve ordinary per-owner crossing.</p>
+<h3 id="cell-n08">CELL-N08</h3>
+<p><code>cell_n08_generic_initializer_and_payload_precede_fresh_binders</code>: fresh c/R
+unavailable in initializer/T, Resolution unknown-name/type. Preceding nominal
+R and term c companion passes public compile, independent Core and execution
+42.</p>
+<h3 id="cell-n09">CELL-N09</h3>
+<p><code>cell_n09_generic_calls_need_exact_evidence_and_counterfeit_family_cannot_acquire</code>:
+missing exact evidence and counterfeit family refuse.
+<code>cell_n09_generic_provider_is_sealed_through_direct_and_facade_imports</code> in
+resource_scope_modules covers impl/with, direct/facade, public Resolution
+<code>resolve.sealed-provider</code>.</p>
+<h3 id="cell-n10">CELL-N10</h3>
+<p><code>cell_n10_generic_read_is_monomorphic_before_admission</code>: Typing
+<code>type.argument</code> for incompatible uses.
+<code>cell_n10_nested_schemes_are_not_source_payload_types</code>:
+direct/tuple/higher-rank T attempts fail public syntax <code>parse.expected-form</code>;
+independent Core nested-Forall controls remain separate.</p>
+<h3 id="cell-n11">CELL-N11</h3>
+<p><code>cell_n11_native_state_and_continuation_payloads_keep_ordinary_restrictions</code>,
+wrapped-continuation companion, and generic declared-view test in
+copying_sqlite_source: direct/tuple/nominal State/view use source Typing
+<code>type.argument</code> with existing controlled-state restriction; continuation
+capture uses <code>effect.resume-capture</code>. Same-library Int/<code>Wrapped&lt;Int&gt;</code>
+view-fixture companions execute 42.</p>
+<h3 id="cell-n12">CELL-N12</h3>
+<p><code>cell_p13_reply_snapshot_and_n12_later_builtin_read_keep_distinct_dependencies</code>:
+later builtin read retains A and fails at A's close; independent handler reply
+escapes and returns 7.</p>
+<h2 id="control-validation-and-failure-cases">Control, validation and failure cases</h2>
+<h3 id="cell-c01">CELL-C01</h3>
+<p><code>generic_cell_c01_capture_resume_moves_the_latest_function_root</code>: (41, 42),
+one acquisition, two writes, one release. Machine full-request controls
+distinguish complete T/family, two live same-T donor keys, stale/fresh keys
+and actual foreign-arena Request provenance before access/mutation. No
+external Value transport or global nonce is claimed.</p>
+<h3 id="cell-c02">CELL-C02</h3>
+<p><code>generic_cell_c02_owned_discard_keeps_both_cells_live_for_dependent_cleanup</code>:
+cleanup reads enclosing cell before inner release, once. Initializer-discard
+companion preserves earlier side effect 1 and publishes no new cell. Outside
+completion and running cleanup have distinct source unsafe-discard controls;
+actual independent Core running-completion mutation returns Unsafe/Cleanup.</p>
+<h3 id="cell-c03">CELL-C03</h3>
+<p>Original/copied/identity/folded/restored Core re-enters independent admission.
+Imported snapshot/recursive/handler image values are 7/9/7; stateful P12/P13
+transformed values are 99/(7,42). Full ordered R,T handle/request/provider
+mutations and origin/operation/row controls reject ordinarily. Possible-target
+and hidden-capture changes retain ordinary arrow/provider/row validity and
+fail ResourceEscape; safe-target companions return 42. Body-free summary
+coherence and linked-body reconstruction are separate controls.</p>
+<h3 id="cell-c04">CELL-C04</h3>
+<p>Source module publication, recursive summaries, Core
+construction/validation/restoration and runtime acquisition/write have
+measured exact/one-short/two-fresh retry ledgers. Refusal publishes no
+permission/root or replacement. Strict operand-effect witness preserves side
+12 and target 41 on refusal, versus full (42,12); earlier operand effects are
+not rolled back.</p>
+<h3 id="cell-c05">CELL-C05</h3>
+<p>Capacity counts active and captured owners; fresh keys remain distinct after
+release. Shared 8,192-node cyclic roots retain Location without deep read
+copies. Admitted origin depth 130 and sole environment depth 32,000 cover
+normal/replacement/internal failure and actual owned capture/discard at
+unchanged 64 KiB, with live/captured accounting and exactly one release.
+Common control-walker depth tests remain separate.</p>
+<h3 id="cell-c06">CELL-C06</h3>
+<p><code>generic_cell_c06_stored_native_access_reads_after_quarantine_but_cannot_restore_use</code>
+in source_resource_execution uses real generated native hosts. Stored access
+read before/after quarantine and C close are permitted; later Owner.borrow
+refuses before entry. Permitted result Completed(42, RetainedError(())) ends
+parent byte99; denied host exits1/internal control state and byte0. Both
+traces acquire parent64/child4, retain child4, release child4 then parent64
+exactly once. Compiler/native/linker/artifact pins accompany final frozen
+observation. Legacy/ffi State/data/crossing/retention/blocked
+teardown/destruction suites remain mandatory at TASK49's fresh full gate.</p>
+<h2 id="independent-authority-witnesses">Independent authority witnesses</h2>
+<p><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/validate.rs">Core validation tests</a> distinguish ordinary
+metadata validity from dependency proof. In
+<code>generic_cell_full_payload_and_ordered_owner_vectors_are_authenticated</code>,
+changed-T and swapped-R/T handle vectors return <code>NodeType</code>; changed-T and
+swapped-R/T Request vectors return <code>EffectRow</code>; the corresponding selected
+provider vectors return <code>NodeType</code>. The original Request is explicitly the
+canonical generic Ops family. Its owned argument is fixed at position zero;
+there is no writable owned-position field to corrupt.
+<code>cell_core_rejects_detached_brand_provider_and_source_authority</code> and
+<code>cell_core_rejects_a_request_with_the_wrong_operation_fact</code> now run for both
+legacy and generic families. Existing row and ordinary-fact mutations remain
+separate from hidden stored-value dependencies.</p>
+<p><code>generic_cell_possible_target_owners_rebuild_after_transforms</code> changes only an
+identity-free closure's hidden scalar binding to the actual A access, updating
+that immediate binder type. A Bool parameter chooses safe B first and A second;
+main calls both alternatives. Actual Core reconstruction rejects ResourceEscape
+when A is possible. The otherwise identical B/B companion admits and executes
+42. This is not rejection of a mismatched operation/provider/arrow/row.
+<code>generic_cell_linked_hidden_retention_is_reconstructed_after_transforms</code> and
+<code>generic_cell_core_rebuilds_escape_crossing_and_later_read_dependencies</code> cover
+hidden self-retention, crossing and later-read dependencies after transforms.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/capture.rs">capture unit</a>
+<code>generic_cell_body_free_write_summary_authenticates_contents_graph_and_return</code>
+starts from an actual checked public <code>put&lt;R,T&gt;</code> export, retaining a stored-value
+graph and the indexed type of its authentic Cell.write call. Its unchanged
+binder/scheme/origin/capture fact compares equal. Erased/replaced graph or
+erased
+returned-target relationships compare unequal. This comparison is duplicate
+import-route coherence, not a second Core admission API.
+The reachable <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/resolve/module_tests.rs">resolver control</a>
+<code>generic_cell_duplicate_import_routes_reject_erased_contents_capture_fact</code>
+uses both direct and facade routes to that same binder. Genuine routes admit;
+erasing only facade capture rejects Resolution/InternalState with the alternate
+global checked-fact mismatch. Linked actual-Core hidden-body refusal remains a
+separate proof and never trusts a forged body-free summary.</p>
+<p><code>generic_cell_stateful_handler_results_survive_actual_core_transforms</code> executes
+original, copied identity and folded inputs at P07 read99/intercept41/forward42,
+P12 Tick99 and P13 (7,42). Tick uses real literal arithmetic 90+9; its folded
+program must contain fewer Primitive nodes before independent admission and
+execution.
+<code>generic_cell_exact_handler_owner_ports_survive_independent_core_transforms</code>
+executes imported distinct/equal owner routing and discarded replacement cases
+at 7.
+<code>generic_cell_imported_flow_images_rebuild_with_exact_short_and_retry_work</code>
+restores snapshot7, recursion9, handler7, intercepted function7, scalar99/41/42,
+Tick99 and reply mutation(7,42). Tick's image is encoded from independently
+revalidated optimized Core. Images reconstruct proofs after original inputs
+have been dropped.</p>
+<p>N10 additionally retains the universal independent Core control
+<code>rejects_nested_forall_as_an_outer_instantiation_argument</code> in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/core_validation.rs">core_validation.rs</a>; this is the shared
+rank-1 boundary, not a claim that source syntax can denote a nested scheme.
+N11's additional concrete names are
+<code>cell_n11_wrapped_continuations_keep_the_ordinary_capture_refusal</code> and
+<code>generic_cell_n11_declared_views_cannot_be_payloads_or_hidden_in_wrappers</code>.
+The latter resides in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/copying_sqlite_source.rs">copying_sqlite_source.rs</a> and checks
+valid same-library Int and nominal-wrapped Int companions before all three
+prohibited-view shapes.</p>
+<p>The owning C01 malformed-request test is
+<code>generic_cell_requests_reject_wrong_type_live_donor_stale_and_family</code>.
+C05's sole deep root is checked by
+<code>generic_cell_admitted_function_origin_and_deep_environment_dispose_on_small_stack</code>:
+its 32,000-deep environment head has strong count one before acquisition;
+capture moves the root and live/captured accounting remains one. Actual owned
+discard returns live/captured to zero, preserves next key one, and observes
+Acquired/Discard/Released/ClauseReturned in that order. The original 64 KiB
+stack and admitted origin bound 130 are unchanged.</p>
+<h2 id="exact-work-boundaries">Exact work boundaries</h2>
+<p>These probes measure each boundary on fresh state, refuse with one fewer unit,
+and perform two fresh sufficient retries. Costs are measured by the owning
+ledger rather than borrowed from a different phase. The frozen library receipt
+executes the assertions; its shown output retains the reported costs.</p>
+<ul>
+<li>Source inference: <code>generic_cell_elaboration_work_has_exact_budgets_and_fresh_retry</code>
+uses the elaborator's <code>TypeWorkBudget</code>; active acquisitions return to zero
+after success and refusal. <code>generic_cell_helper_publication_refusal_keeps_evidence_empty_and_retries_exactly</code>
+separately checks no partial lexical evidence escapes refusal.</li>
+<li>Checked module and recursive summary publication:
+<code>generic_cell_imported_flow_publication_is_exact_and_retryable</code> measures
+<code>check_module_with_budget</code> for imported snapshot, recursion and handler
+fixtures. One-short returns no checked module; both fresh exact runs consume
+the measured allowance. Constraint/usefulness ledgers retain their existing
+defaults and are not claimed as separate exact measurements.</li>
+<li>Core construction:
+<code>generic_cell_core_builder_reconstruction_is_exact_and_fresh_retryable</code>
+uses the existing transform builder ledger, separately from elaboration.
+Identity/fold reconstruction measure 331 units on the checked Bool fixture;
+330 remaining units return <code>Build(TypeWorkExceeded)</code> and no output. Two fresh
+sufficient reconstructions independently revalidate and execute 42.</li>
+<li>Independent Core validation:
+<code>generic_cell_core_dependency_work_is_exact_and_retryable</code> and
+<code>generic_cell_imported_snapshot_recursive_and_handler_core_work_is_retryable</code>
+measure the complete validation counter, including dependency proof, for
+original/identity/folded inputs. One-short reports <code>ValidationReason::Resource</code>;
+exact fresh runs admit. The direct recursive public probe retains its
+unchanged 256,335-unit allowance and observes 244,447 units used.</li>
+<li>Image restoration:
+<code>generic_cell_imported_flow_images_rebuild_with_exact_short_and_retry_work</code>
+measures one <code>TypeWorkBudget</code> across decode, expected-native-fact admission
+and independently checked Core restoration. One-short publishes no restored
+program; exact fresh retries rebuild it. Snapshot/recursion/handler and
+stateful interceptor/Tick/reply-mutation fixtures execute their named values.</li>
+<li>Runtime acquisition:
+<code>generic_cell_acquisition_work_refusal_is_atomic_and_retryable</code> measures
+instantiation work and tests every shorter prefix. Acquisition work refusal
+preserves root/frame publication, live count, next key and trace; exact fresh
+runs publish one owner.</li>
+<li>Runtime replacement:
+<code>generic_cell_write_preflight_is_atomic_paid_and_retryable</code> measures Access
+work, including integer magnitude copying and request/result trace retention,
+tests every shorter prefix and retries exactly twice. Refusal preserves old
+root/key/counts/trace. <code>generic_cell_write_refusal_retains_prior_strict_operand_effects</code>
+separately measures the real machine path: full work 194 returns (42,12),
+allowance 137 refuses final Access after two earlier writes, leaving side12
+and target41 with no target Request/result publication.</li>
+</ul>
+<p>Internal teardown failure after a completed replacement remains distinct:
+<code>generic_cell_replaced_function_root_reports_internal_disposal_failure_after_commit</code>
+checks Teardown/EnvironmentDisposal and incomplete execution after publication.
+It is not evidence of preparation rollback or a new source cleanup guarantee.</p>
+<h2 id="variant-traceability">Variant traceability</h2>
+<p>The generic opaque-wrapper and selected-evidence witnesses for N02/N07 are
+<code>cell_n02_n07_imported_evidence_dependencies_survive_wrappers_and_crossings</code>;
+its imported pack/unpack and Read/invoke routes pair independent old snapshots
+with hidden owner captures. Direct wrapper/live-reader variants are named
+<code>cell_n02_access_wrappers_and_live_reader_results_cannot_leave_their_owner</code>.
+N06's imported P04 later-read companion is
+<code>cell_p04_imported_read_helper_preserves_two_call_snapshots</code>; its direct pair is
+<code>cell_p04_snapshot_stays_independent_after_dependent_replacement</code>.
+N07's indexed-only carrier witness is
+<code>cell_n07_indexed_operation_metadata_alone_crosses_with_its_owner</code>.
+P06's ordinary rigid-owner boundary is
+<code>cell_p06_distinct_rigid_owners_do_not_unify_at_an_ordinary_branch</code>: different
+owners fail Typing/type.mismatch while same-owner aliases admit. N09's missing
+exact evidence fails Typing/constraint.unsatisfied; counterfeit family fails
+Resolution/resolve.unknown-type.</p>
+<p>C02's initializer capture/discard observation is
+<code>generic_cell_c02_initializer_discard_never_publishes_the_unacquired_owner</code>.
+Its outside-pending-resume unsafe completion and ordinary owned discard are
+separated in <code>generic_cell_completion_keeps_structural_discard_obligations</code>.
+Running cleanup has its own source control,
+<code>generic_cell_running_cleanup_cannot_be_abandoned_by_an_outer_handler</code>, with
+source Typing/effect.discard-unsafe and causal discard labels. The independent
+Core capture-authority control is
+<code>generic_cell_actual_core_rejects_discard_of_running_cleanup</code>: it checks the
+actual mutated completion operation and refuses Unsafe/Cleanup. It does not
+claim complete altered-arena validation or execute an orphaned malformed graph.</p>
+<p>C05's captured capacity and fresh-key control is
+<code>generic_cell_captured_capacity_preserves_latest_root_and_fresh_reuse</code>.
+Repeated large/shared cyclic reads are named
+<code>generic_cell_repeated_large_cyclic_reads_share_the_exact_heap_root</code>.
+Deep function-root modes and common deep captured-control walker tests are
+separate observations. Adding the discard mode initially inflated the shared
+test closure and overflowed mode-zero acquisition before discard on 64 KiB;
+a test-only helper extraction removed that caller-frame aggregation. The final
+probe performs fresh acquisition, capture and owned discard at the same stack
+limit, without warming paths, cloning the deep root or changing production
+runtime behavior.</p>
+<h2 id="historical-task-0048-focused-receipt">Historical TASK-0048 focused receipt</h2>
+<p>The retaining code/test pin is unsigned
+<code>b785e5605569492103a64ffb9e2a3b5de64ded88</code>, tree
+<code>70577492c6ed4297a40a2451f7e18639d0386ac4</code>.
+Its 1,769 path/mode/content records have canonical SHA-256
+<code>0136ae86db4d585bec0023defebe3d893eb3b7048b20b50aca92c5bc99201b85</code>;
+the saved manifest file SHA-256 is
+<code>f0adaee2028949a9c699fe6e64845e75c20dfe94e0b011bddf50e9baa267bfe9</code>.
+All source, tests, fixtures, manifest/lockfile and configuration stayed fixed
+during their applicable checks. Rust/Cargo 1.97.1, rustfmt 1.9.0 and Clippy
+0.1.97 were reconfirmed with their executable/configuration hashes. All commands
+used <code>CARGO_BUILD_JOBS=1 RUSTC_WRAPPER=</code> and the existing target cache.</p>
+<p>The library/resource/view/architecture/rank-1 observations ran at initial
+unsigned candidate <code>b3445f51b6aafb6b3e7a866a438763104dd595f8</code>, tree
+<code>6c71acf7605281d03ae32e72b5bb36bad7bf79ad</code>, with 1,769 records SHA-256
+<code>518ead7bdc00be1ceb255495ff1a0dba63be92cbae5189c81beda7d8cfbb8905</code>.
+The only subsequent repair changed optional evidence-collector paths in
+<code>tests/source_resource_execution.rs</code>: generated Rust/images live under src,
+whereas Cargo inputs live at its parent and the build log has its own accessor.
+The failed collector run stopped before host execution; its failed receipt and
+partial artifacts remain separate and supply no C06 result. Exact comparison
+retains all 1,768 other records, including every production/compiler source,
+configuration, fixture and exercised input for those five unaffected targets.
+Those five receipts transfer within that scope only. Fresh fmt/strict Clippy
+used the complete repaired records before the administrative commit; fresh
+native and rustdoc observations ran at the retaining pin. No prior native
+observation transfers across the collector failure.</p>
+<p>Working manifests, receipts and raw logs remain outside the target cache in
+<code>/tmp/task0048-launch/frozen/</code>. The following command/result/input/log digest
+summary is durable here; it is focused evidence and not the complete workspace
+gate. Nested child-test summaries are not counted twice.</p>
+<h3 id="fmt">fmt</h3>
+<pre tabindex="0"><code class="language-sh">cargo fmt --check
+</code></pre>
+<p>Passed.
+Log SHA-256:
+<code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</p>
+<h3 id="clippy">clippy</h3>
+<pre tabindex="0"><code class="language-sh">cargo clippy -p ash --all-targets --all-features --locked -- -D warnings
+</code></pre>
+<p>Passed, warnings denied.
+Log SHA-256:
+<code>e95307c7c88b6e2caacdfcd9265dc9529c7d8693a8a9195654deb75b342f928f</code>.</p>
+<h3 id="lib">lib</h3>
+<pre tabindex="0"><code class="language-sh">cargo test --lib --locked -- --show-output
+</code></pre>
+<p>1,937 passed.
+Log SHA-256:
+<code>c0aec9f25203c06128b6fa5940cef903998adeb2a7536d662d21d22997ca4b0c</code>.</p>
+<h3 id="resource">resource</h3>
+<pre tabindex="0"><code class="language-sh">cargo test --test resource_scope_typing --test resource_scope_modules \
+    --test resource_scope_core --test resource_scope_runtime --test \
+    cleanup_abandonment --test cleanup_interactions --test \
+    cleanup_partial_acquisition --locked
+</code></pre>
+<p>173 passed: typing 105, modules 16, Core 2, runtime 32; cleanup 11 + 6 + 1.
+Log SHA-256:
+<code>a8ee06292022533d8ef28d46c1ed1b1eca821bf00766d64478de2302c13c3dfa</code>.</p>
+<h3 id="views">views</h3>
+<pre tabindex="0"><code class="language-sh">cargo test --test copying_sqlite_source --locked generic_cell_n11 -- \
+    --nocapture
+</code></pre>
+<p>One test passed, covering three prohibited-view shapes and two valid companions.
+Log SHA-256:
+<code>46dffc6926368098a1d488e898b45d76fd0a69b27e536b4717023822818e587b</code>.</p>
+<h3 id="architecture">architecture</h3>
+<pre tabindex="0"><code class="language-sh">cargo test --test architecture --locked
+</code></pre>
+<p>All 47 passed.
+Log SHA-256:
+<code>ca36e55e43a9345db58b86cb69fc71fa0f069c36710b654cd758175af7763877</code>.</p>
+<h3 id="rank1">rank1</h3>
+<pre tabindex="0"><code class="language-sh">cargo test --test core_validation --locked \
+    rejects_nested_forall_as_an_outer_instantiation_argument -- --exact
+</code></pre>
+<p>One shared Core rank-1 control passed.
+Log SHA-256:
+<code>a58c7f3549bca70be6da5fc0015d9e9649fc46c7d50061a3d3b90feff0595349</code>.</p>
+<h3 id="native">native</h3>
+<pre tabindex="0"><code class="language-sh">cargo test --test source_resource_execution --locked \
+    generic_cell_c06_stored_native_access_reads_after_quarantine_but_\
+cannot_restore_use \
+    -- --exact --nocapture
+</code></pre>
+<p>One paired test passed: two actual generated native hosts. Native evidence
+collection used <code>ASH_OWNER_EVIDENCE_DIR</code> set to
+<code>/tmp/task0048-launch/frozen/native-artifacts</code>.
+Log SHA-256:
+<code>c8e13cfe35c1580ccf668ad49f09896b33740c228ccc70c1b6fb03d75a37e689</code>.</p>
+<h3 id="rustdoc">rustdoc</h3>
+<pre tabindex="0"><code class="language-sh">cargo doc -p ash --no-deps --all-features --locked
+</code></pre>
+<p>Passed, warnings denied via RUSTDOCFLAGS="-D warnings".
+Log SHA-256:
+<code>97ae32712a1310a707d514947709536684a412a09645072f372de7bd3da626b7</code>.</p>
+<h2 id="historical-task-0048-native-binding">Historical TASK-0048 native binding</h2>
+<p>Both generated hosts embed runtime fingerprint
+<code>b8c62ad3ad13fab49c6cd4197f7d14d395eb0628f187e0bd8829bc57d58e1fce</code>.
+The operator parsed all 32 hexadecimal bytes from generated Rust and compared
+them with the recorded matching compiler identity. Each case retains and hashes
+14 inputs: serialized complete case preimage, entry/owner/native source, native
+object/archive, linked executable, generated Rust, image/expected facts, Cargo
+manifest/lockfile/toolchain and native build log. Four post-execution outputs
+(native trace, stdout, stderr and exact optional exit status) are independently
+hashed. The readback additionally records ELF linker metadata and actual dynamic
+library paths/hashes: 21 retained files per case. Its manifest SHA-256 is
+<code>a525773b3239dce15847f996211244737dd5092b9adf05ba3e766293d7d499f9</code>.</p>
+<p>Actual tools are GCC 15.2.0, GNU ar 2.46, Rust 1.97.1 and LLD 22.1.6, on
+x86_64 Linux 7.0.0-38 with glibc 2.43. The six C-tool/resolved frontend/linker
+hashes and two bundled Rust-linker hashes were checked against actual files;
+ELF comments independently identify GCC/Rust/LLD in both executables. Rust's
+nine executable/configuration pins match the preceding component receipts.
+The native compiler/link commands, generated Cargo inputs and library hashes
+are retained in the input manifests; no implicit current prebuilt binary is
+substituted for these generated hosts.</p>
+<p>Permitted stored-handle case:</p>
+<ul>
+<li>Complete case key: <code>dc1f33c3e4a855e278d49937874768d9dbd94e60ff3f73cc38cf7553f51d93ba</code>.</li>
+<li>Linked host SHA-256:
+<code>4c6d7c41ecd760ea18aed37d0736bee3796ba560ee33623fb1bbacbc9a7ef423</code>.</li>
+<li>Generated Rust SHA-256:
+<code>c2974e0fbe198bce87d236bc8635596f3c502c898f078b9a433fe5b730aa7b95</code>.</li>
+<li>Native trace SHA-256:
+<code>e0f3b1a06f22abab1345f01e4887bd4305696ddb400bb9a01558dbb60dec4097</code>.</li>
+</ul>
+<p>Denied provider/State-access case:</p>
+<ul>
+<li>Complete case key: <code>56f23e25e528ea04d70720dc1df24f5fd17118b555b8abd433d96e44ac0ad57d</code>.</li>
+<li>Linked host SHA-256:
+<code>693886bc9e610ed298d6d42adc2403da7c374327bafbd044897bf06bfa9e4015</code>.</li>
+<li>Generated Rust SHA-256:
+<code>07212db8956db643273c012a3b395ef1ec5270245443f750f031b7e4b8894240</code>.</li>
+<li>Native trace SHA-256:
+<code>5affeb71e2330f5fb7270df6086a581ac7fadff3a73aa6c30351273008c76905</code>.</li>
+</ul>
+<p>The permitted case returns <code>Completed(42, RetainedError(()))</code>, exits zero and
+ends with parent byte 99. The denied case reaches the second successful ordinary
+Cell.read and closes C, then attempts <code>Owner.borrow recovered</code>: existing
+provider/State authority rejects before native entry, exits one, emits the
+internal-control-state message and leaves parent byte zero. This observes
+provider/State access denial on the path toward native use; it does not claim a
+native borrow call occurred. Both actual C traces acquire parent64/child4,
+retain child4, release child4, then release parent64 exactly once. C's close
+neither consumes A nor removes B-to-A native protection. These are real native
+observations, separate from injected teardown failures.</p>
+<h2 id="historical-task-0048-review-and-remainder">Historical TASK-0048 review and remainder</h2>
+<p>Independent reviewer <code>/root/task0046_reviewer</code> cleared the complete code and
+technical evidence at the retaining pin, including actual raw log hashes,
+precise five-stage input transfer and native post-execution readback.
+Coordinator <code>/root</code> accepted TASK-0048 focused readiness on 2026-10-19.
+Developer/Cargo operator remains <code>/root/task0046_developer</code>, dispatched
+<code>gpt-6.1-sol</code>, <code>medium</code>. Receipt prose and explicit existing-scope
+specification wording receive manual
+Markdown/link/authority review and exact executed source/test/config retention
+checks. The static semantics now states the accepted rule explicitly: R is a
+logical owner, Cell lifetime is exactly its resource scope, and backing storage
+cannot extend live access/reader escape or defer required completion.</p>
+<p>The following complete checkpoint receipt supersedes this historical focused
+remainder. Earlier receipts remain bounded to their own declared inputs,
+commands and fingerprints. They do not imply byte equality with the final
+checkpoint. The final gate executes all preserved legacy/native targets.</p>
+<h2 id="fresh-complete-checkpoint-gate">Fresh complete checkpoint gate</h2>
+<p>The sole build operator ran the default complete gate without reuse or
+stage filters on frozen inputs. No product file changed during the run.</p>
+<pre tabindex="0"><code class="language-sh">CARGO_BUILD_JOBS=1 RUSTC_WRAPPER= \
+ASH_SQLITE_STATIC_ARCHIVE=/tmp/task0049-sqlite-prerequisite/libsqlite3.a \
+cargo xtask verify \
+    --input /home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/\
+bin/cargo \
+    --input /home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/\
+bin/clippy-driver \
+    --input /home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/\
+bin/rustc \
+    --input /home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/\
+bin/rustfmt \
+    --input /home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/\
+lib/rustlib/x86_64-unknown-linux-gnu/bin/gcc-ld/ld.lld \
+    --input /home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/\
+lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld \
+    --input /lib64/ld-linux-x86-64.so.2 \
+    --input /tmp/task0049-sqlite-prerequisite/libsqlite3.a \
+    --input /tmp/task0049-sqlite-prerequisite/sqlite-amalgamation-3460100.zip \
+    --input /tmp/task0049-sqlite-prerequisite/sqlite3.c \
+    --input /tmp/task0049-sqlite-prerequisite/sqlite3.h \
+    --input /tmp/task0049-sqlite-prerequisite/sqlite3.o \
+    --input /usr/bin/ar \
+    --input /usr/bin/cc \
+    --input /usr/bin/nm \
+    --input /usr/bin/readelf \
+    --input /usr/bin/x86_64-linux-gnu-ar \
+    --input /usr/bin/x86_64-linux-gnu-as \
+    --input /usr/bin/x86_64-linux-gnu-gcc-15 \
+    --input /usr/bin/x86_64-linux-gnu-ld.bfd \
+    --input /usr/bin/x86_64-linux-gnu-nm \
+    --input /usr/bin/x86_64-linux-gnu-readelf \
+    --input /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
+    --input /usr/lib/x86_64-linux-gnu/libc.so.6 \
+    --input /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 \
+    --input /usr/lib/x86_64-linux-gnu/libm.so.6 \
+    --input /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 \
+    --input /usr/lib/x86_64-linux-gnu/libsqlite3.so.0.8.6 \
+    --input /usr/libexec/gcc/x86_64-linux-gnu/15/cc1 \
+    --input /usr/libexec/gcc/x86_64-linux-gnu/15/collect2
+</code></pre>
+<ul>
+<li>Code/document input commit: <code>7e80df3e66a6d3074b86f29b7582cadb6696a563</code>.</li>
+<li>Tree: <code>dd26e7d5a2218cdf374c626af7759e558b8105ef</code>.</li>
+<li>Repository inventory (1,769 files) SHA-256: <code>d470d374f0540649718f04bef22ae85ed4bd0bb3f78a2e6a54a7ace24cef231b</code>.</li>
+<li>Operator receipt SHA-256: <code>2be060b3fb77cd959d4cfd07b3675927fd3375c3c7c3a327c652899c5c7a9501</code>.</li>
+<li>Complete stdout SHA-256: <code>854a405ea45e256339e72d6d93ebd83f863cb8ff8345199ea4fe8a7a19029b13</code>.</li>
+</ul>
+<p>The following stage commands ran freshly; each terminal status was zero.</p>
+<h3 id="complete-gate-format">Complete gate: format</h3>
+<pre tabindex="0"><code class="language-sh">cargo fmt --all --check
+</code></pre>
+<p>Elapsed seconds: <code>9.692987282</code>.
+Log SHA-256: <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.
+Stage receipt SHA-256:
+<code>093556a372577f74904633497ab66a664d9ba0270611db50cd90cd1b8552b2f2</code>.</p>
+<h3 id="complete-gate-metadata">Complete gate: metadata</h3>
+<pre tabindex="0"><code class="language-sh">cargo metadata --format-version 1 --locked --no-deps
+</code></pre>
+<p>Elapsed seconds: <code>0.016850596</code>.
+Log SHA-256: <code>6b5d88f0feb5de4b5f95039b3ffcf291c493b3d92b663658264b8cb2ac8c37a7</code>.
+Stage receipt SHA-256:
+<code>005d5bed7658e1791414bd06ed3bfd217fc265fc17ba00e6b57cb07bad8958e9</code>.</p>
+<h3 id="complete-gate-check">Complete gate: check</h3>
+<pre tabindex="0"><code class="language-sh">cargo check --workspace --all-targets --locked
+</code></pre>
+<p>Elapsed seconds: <code>0.31929546</code>.
+Log SHA-256: <code>d7dae192715495fa89ccbe279af3efb9792c1dae1768228e369035e68a1df673</code>.
+Stage receipt SHA-256:
+<code>ce7365f1796821a0117dfa6a9c7d84b811dca1e1f7b38fc055fb28f13c0feb9d</code>.</p>
+<h3 id="complete-gate-build">Complete gate: build</h3>
+<pre tabindex="0"><code class="language-sh">cargo build --workspace --lib --bins --examples --locked
+</code></pre>
+<p>Elapsed seconds: <code>0.129419723</code>.
+Log SHA-256: <code>4cf86278c1e6d659943a46a3d7e3da429ac15be90f0f17742e24ef85228e7d3e</code>.
+Stage receipt SHA-256:
+<code>6094585140cb82d2322223f397c33d2e286871bc7f42ab777867c631c2cdfa8c</code>.</p>
+<h3 id="complete-gate-clippy">Complete gate: clippy</h3>
+<pre tabindex="0"><code class="language-sh">cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+</code></pre>
+<p>Elapsed seconds: <code>0.360834044</code>.
+Log SHA-256: <code>d7dae192715495fa89ccbe279af3efb9792c1dae1768228e369035e68a1df673</code>.
+Stage receipt SHA-256:
+<code>0609cc04db6cb91eccf99bcdf936fda4acf5d5a5bed9abbf37df33feb3722f45</code>.</p>
+<h3 id="complete-gate-test">Complete gate: test</h3>
+<pre tabindex="0"><code class="language-sh">cargo test --workspace --all-targets --all-features --locked
+</code></pre>
+<p>Elapsed seconds: <code>888.624643464</code>.
+Log SHA-256: <code>1d5114e7f1019ab520bd170db1e5877d95828c3069c8ddd1237e1463186c71d4</code>.
+Stage receipt SHA-256:
+<code>f7aa97a8a25dc1bef7fe099e10e77ed78e23d89eb6816835829fe436c4d6333c</code>.</p>
+<h3 id="complete-gate-documentation">Complete gate: documentation</h3>
+<pre tabindex="0"><code class="language-sh">RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --locked
+</code></pre>
+<p>Elapsed seconds: <code>18.103189801</code>.
+Log SHA-256: <code>299e1b45676ebe450573328fac701b5c9ee2a996dcfb4eda0a852562a137d043</code>.
+Stage receipt SHA-256:
+<code>ffb24eb3e626388e421bccc8956892c81aaaa5c64464e8d0fae9eaacb69ec0d2</code>.</p>
+<h3 id="executed-suites">Executed suites</h3>
+<p>Parent harness totals exclude nested child-process summaries:</p>
+<p>{"failed": 0, "filtered_out": 0, "ignored": 1, "measured": 0, "passed": 4112}</p>
+<ul>
+<li><code>unittests src/lib.rs</code>:
+1939 passed; 0 ignored.</li>
+<li><code>unittests src/main.rs</code>:
+20 passed; 0 ignored.</li>
+<li><code>tests/architecture.rs</code>:
+47 passed; 0 ignored.</li>
+<li><code>tests/bindings.rs</code>:
+10 passed; 0 ignored.</li>
+<li><code>tests/bytes_strings.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/check_ffi.rs</code>:
+11 passed; 0 ignored.</li>
+<li><code>tests/cleanup_abandonment.rs</code>:
+11 passed; 0 ignored.</li>
+<li><code>tests/cleanup_interactions.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/cleanup_partial_acquisition.rs</code>:
+1 passed; 0 ignored.</li>
+<li><code>tests/cleanup_reporting.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/cleanup_syntax.rs</code>:
+7 passed; 0 ignored.</li>
+<li><code>tests/cleanup_typing.rs</code>:
+14 passed; 0 ignored.</li>
+<li><code>tests/cli.rs</code>:
+17 passed; 0 ignored.</li>
+<li><code>tests/cli_build.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/compiled_program.rs</code>:
+3 passed; 0 ignored.</li>
+<li><code>tests/compiler_work_reporting.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/copying_sqlite_source.rs</code>:
+29 passed; 0 ignored.</li>
+<li><code>tests/core_validation.rs</code>:
+67 passed; 0 ignored.</li>
+<li><code>tests/corpus.rs</code>:
+13 passed; 0 ignored.</li>
+<li><code>tests/data_and_adts.rs</code>:
+32 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_catalogues.rs</code>:
+3 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_input.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_json.rs</code>:
+1 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_options.rs</code>:
+7 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_precedence.rs</code>:
+13 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_presentation.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_rendering.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/diagnostic_reporting.rs</code>:
+3 passed; 0 ignored.</li>
+<li><code>tests/diagnostics.rs</code>:
+83 passed; 0 ignored.</li>
+<li><code>tests/effect_core.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/effect_diagnostics.rs</code>:
+23 passed; 0 ignored.</li>
+<li><code>tests/effect_modules.rs</code>:
+13 passed; 0 ignored.</li>
+<li><code>tests/effect_rows.rs</code>:
+13 passed; 0 ignored.</li>
+<li><code>tests/effect_runtime.rs</code>:
+27 passed; 0 ignored.</li>
+<li><code>tests/effect_typing.rs</code>:
+30 passed; 0 ignored.</li>
+<li><code>tests/effects_syntax.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/file_diagnostic_dispatch.rs</code>:
+7 passed; 0 ignored.</li>
+<li><code>tests/foreign_codec_failures.rs</code>:
+10 passed; 0 ignored.</li>
+<li><code>tests/foreign_common_module.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/foreign_module_admission.rs</code>:
+23 passed; 0 ignored.</li>
+<li><code>tests/foreign_native_program_preparation.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/foreign_source_admission.rs</code>:
+12 passed; 0 ignored.</li>
+<li><code>tests/foreign_source_contracts.rs</code>:
+11 passed; 0 ignored.</li>
+<li><code>tests/foreign_source_owner_admission.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/foreign_source_owner_contracts.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/foreign_source_syntax.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/functions.rs</code>:
+19 passed; 0 ignored.</li>
+<li><code>tests/hooks_core.rs</code>:
+12 passed; 0 ignored.</li>
+<li><code>tests/hooks_runtime.rs</code>:
+15 passed; 0 ignored.</li>
+<li><code>tests/hooks_syntax.rs</code>:
+7 passed; 0 ignored.</li>
+<li><code>tests/hooks_typing.rs</code>:
+25 passed; 0 ignored.</li>
+<li><code>tests/implementations.rs</code>:
+80 passed; 0 ignored.</li>
+<li><code>tests/integer.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/interface_corpus.rs</code>:
+11 passed; 0 ignored.</li>
+<li><code>tests/interface_diagnostics.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/interface_generic_summary.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/interface_identity_diamond.rs</code>:
+2 passed; 0 ignored.</li>
+<li><code>tests/interface_modules.rs</code>:
+24 passed; 0 ignored.</li>
+<li><code>tests/interface_resources.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/interface_selection.rs</code>:
+40 passed; 0 ignored.</li>
+<li><code>tests/interface_validation.rs</code>:
+2 passed; 0 ignored.</li>
+<li><code>tests/interfaces.rs</code>:
+44 passed; 0 ignored.</li>
+<li><code>tests/interfaces_syntax.rs</code>:
+30 passed; 0 ignored.</li>
+<li><code>tests/kind_modules.rs</code>:
+3 passed; 0 ignored.</li>
+<li><code>tests/kind_resources.rs</code>:
+1 passed; 0 ignored.</li>
+<li><code>tests/kinds.rs</code>:
+27 passed; 0 ignored.</li>
+<li><code>tests/kinds_syntax.rs</code>:
+15 passed; 0 ignored.</li>
+<li><code>tests/lexer.rs</code>:
+25 passed; 0 ignored.</li>
+<li><code>tests/library_imports.rs</code>:
+17 passed; 0 ignored.</li>
+<li><code>tests/local_newtypes.rs</code>:
+20 passed; 0 ignored.</li>
+<li><code>tests/local_newtypes_syntax.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/method_parameter_resources.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/modular_closure.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/module_cli.rs</code>:
+17 passed; 0 ignored.</li>
+<li><code>tests/module_elaboration.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/module_elaboration_nominals.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/module_entry.rs</code>:
+14 passed; 0 ignored.</li>
+<li><code>tests/module_loading.rs</code>:
+24 passed; 0 ignored.</li>
+<li><code>tests/module_newtypes.rs</code>:
+21 passed; 0 ignored.</li>
+<li><code>tests/module_resolution.rs</code>:
+11 passed; 0 ignored.</li>
+<li><code>tests/module_visibility.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/modules_syntax.rs</code>:
+20 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_core.rs</code>:
+3 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_imports.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_interactions.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_modules.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_runtime.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_source.rs</code>:
+13 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_syntax.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/native_buffer_typing.rs</code>:
+12 passed; 0 ignored.</li>
+<li><code>tests/newtype_resources.rs</code>:
+1 passed; 0 ignored.</li>
+<li><code>tests/packed_core.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/parser.rs</code>:
+50 passed; 0 ignored.</li>
+<li><code>tests/polymorphism.rs</code>:
+43 passed; 0 ignored.</li>
+<li><code>tests/primitive_vertical.rs</code>:
+12 passed; 0 ignored.</li>
+<li><code>tests/program_build.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/program_build_native.rs</code>:
+3 passed; 0 ignored.</li>
+<li><code>tests/provenance.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/provider_arena_allocation.rs</code>:
+7 passed; 0 ignored.</li>
+<li><code>tests/provider_arena_source.rs</code>:
+4 passed; 0 ignored.</li>
+<li><code>tests/provider_control_source.rs</code>:
+22 passed; 0 ignored.</li>
+<li><code>tests/provider_owner_rows.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/provider_retention_source.rs</code>:
+3 passed; 0 ignored.</li>
+<li><code>tests/provider_sqlite_control.rs</code>:
+2 passed; 0 ignored.</li>
+<li><code>tests/provider_sqlite_copying.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/provider_sqlite_sessions.rs</code>:
+8 passed; 0 ignored.</li>
+<li><code>tests/provider_sqlite_source.rs</code>:
+10 passed; 0 ignored.</li>
+<li><code>tests/recursion.rs</code>:
+10 passed; 0 ignored.</li>
+<li><code>tests/resolution.rs</code>:
+60 passed; 0 ignored.</li>
+<li><code>tests/resource_calibration_native.rs</code>:
+0 passed; 1 ignored.</li>
+<li><code>tests/resource_calibration_observer.rs</code>:
+2 passed; 0 ignored.</li>
+<li><code>tests/resource_provider_resolution.rs</code>:
+15 passed; 0 ignored.</li>
+<li><code>tests/resource_provider_syntax.rs</code>:
+9 passed; 0 ignored.</li>
+<li><code>tests/resource_scope_core.rs</code>:
+2 passed; 0 ignored.</li>
+<li><code>tests/resource_scope_modules.rs</code>:
+16 passed; 0 ignored.</li>
+<li><code>tests/resource_scope_runtime.rs</code>:
+32 passed; 0 ignored.</li>
+<li><code>tests/resource_scope_syntax.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/resource_scope_typing.rs</code>:
+105 passed; 0 ignored.</li>
+<li><code>tests/runtime_diagnostics.rs</code>:
+10 passed; 0 ignored.</li>
+<li><code>tests/scoped_evidence.rs</code>:
+2 passed; 0 ignored.</li>
+<li><code>tests/scoped_evidence_interactions.rs</code>:
+53 passed; 0 ignored.</li>
+<li><code>tests/scoped_evidence_syntax.rs</code>:
+6 passed; 0 ignored.</li>
+<li><code>tests/semantics.rs</code>:
+13 passed; 0 ignored.</li>
+<li><code>tests/source_arena_execution.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/source_diagnostics.rs</code>:
+10 passed; 0 ignored.</li>
+<li><code>tests/source_resource_acquired_only.rs</code>:
+5 passed; 0 ignored.</li>
+<li><code>tests/source_resource_execution.rs</code>:
+79 passed; 0 ignored.</li>
+<li><code>tests/source_resource_resolution.rs</code>:
+18 passed; 0 ignored.</li>
+<li><code>tests/source_resource_syntax.rs</code>:
+2 passed; 0 ignored.</li>
+<li><code>tests/spec_examples.rs</code>:
+79 passed; 0 ignored.</li>
+<li><code>tests/sqlite_library.rs</code>:
+35 passed; 0 ignored.</li>
+<li><code>tests/string_literals.rs</code>:
+7 passed; 0 ignored.</li>
+<li><code>unittests src/lib.rs</code>:
+49 passed; 0 ignored.</li>
+<li><code>tests/arena.rs</code>:
+10 passed; 0 ignored.</li>
+<li><code>tests/sqlite_text.rs</code>:
+11 passed; 0 ignored.</li>
+<li><code>unittests examples/arena.rs</code>:
+0 passed; 0 ignored.</li>
+<li><code>unittests examples/arena_typed.rs</code>:
+0 passed; 0 ignored.</li>
+<li><code>unittests examples/sqlite_session.rs</code>:
+0 passed; 0 ignored.</li>
+<li><code>unittests src/main.rs</code>:
+0 passed; 0 ignored.</li>
+<li><code>tests/verify.rs</code>:
+17 passed; 0 ignored.</li>
+</ul>
+<p>Raw working records remain outside the target cache under
+<code>/tmp/task0049-complete-with-sqlite/</code>. These digests and complete command/result
+summaries retain the checkpoint evidence independently of cache lifetime.</p>
+<p>Independent review and coordinator acceptance are recorded under
+Checkpoint acceptance and retained-input boundary.
+Executed source/test/config/fixture equality after receipt prose and cleanup
+is verified by the retained readbacks below.</p>
+<p>The 140 parent harnesses report 4,112 passes, zero failures and one ignored
+optional native calibration study. Nine child-process summaries are excluded
+from these counts. The ignored study is not a CP-0023 case. No test filter
+was requested. All 30 external byte/mode/link records and repository/tool
+records are equal before and after the gate. Every stage records canonical
+environment SHA-256:
+<code>0b1ff2ae01f528844f5e7087aa4aecd899607fc446024dcbac03285edb433b9f</code>.</p>
+<h2 id="current-native-quarantine-observation">Current native quarantine observation</h2>
+<p>Frozen code: <code>7e80df3e66a6d3074b86f29b7582cadb6696a563</code>.
+Both independently generated hosts embed runtime fingerprint
+<code>6270711a6b9492367ecff76a0b1612a1b21f475b44282d9618eabbd08598fcf9</code>.
+The positive host returns <code>Completed(42, RetainedError(()))</code>, status zero;
+the paired provider/State-access refusal reports inconsistent control state,
+status one, before native borrow entry. Their exact traces differ only in
+parent-final-byte 99 versus 0, with child release before parent release.
+The historical TASK-0048 b8 fingerprint below is a distinct earlier run.</p>
+<p>The complete post-execution native readback SHA-256 is
+<code>badefb0bf8c0f7688bf09fcb228146133c71096814572fd9170687ca959b1069</code>.
+Its two case preimages, keys and every retained file were independently
+verified, including input tools, embedded fingerprint and dynamic libraries.</p>
+<p>The static SQLite archive environment is consumed only by the SQLite workload
+helper and is excluded from compiler/runtime fingerprint configuration. The
+current C06 source, tools and its own native inputs remain unchanged across
+that prerequisite setup; the complete gate has a broader external/environment
+fingerprint. This collector command uses default features. The full workspace
+test stage uses all features and independently exercises C06; no generated
+binary equality is asserted across those feature configurations.</p>
+<p>The focused collector ran once with one build job and an empty Rust wrapper.
+<code>ASH_OWNER_EVIDENCE_DIR=/tmp/task0049-repaired/native-artifacts</code> retained
+the two actual hosts. Exact test selection:</p>
+<pre tabindex="0"><code class="language-sh">cargo test --test source_resource_execution --locked \
+    generic_cell_c06_stored_native_access_reads_after_quarantine_but_cannot_\
+restore_use \
+    -- --exact --nocapture
+</code></pre>
+<p>Native log SHA-256:
+<code>5fbcd1014cb0c5ca62ba2c04b7f115108281d25a84e00d632b466302b08f4a23</code>.
+Operator receipt SHA-256:
+<code>cc18918a6eabb8d748f9b59690fff90436b2b23a8cfd7590f8c8551b368ec33a</code>.</p>
+<h3 id="native-status-0">Native status 0</h3>
+<p>Case preimage/key SHA-256:
+<code>61f61b2def775c537c4f2912ab714845b950493754e6eb9aea122df19e860a5d</code>.</p>
+<ul>
+<li><code>Cargo.lock</code> SHA-256:
+<code>1095bf7bb381414fc9d23a876bb0ad88cef52d46525843c1df1e333c51470850</code>.</li>
+<li><code>Cargo.toml</code> SHA-256:
+<code>84bdf1f41873e4551ccad8c0f223de9657385e699c5b8aa0495652628189514b</code>.</li>
+<li><code>case-inputs.json</code> SHA-256:
+<code>61f61b2def775c537c4f2912ab714845b950493754e6eb9aea122df19e860a5d</code>.</li>
+<li><code>dynamic-libraries.txt</code> SHA-256:
+<code>11b46e4ef20b79ac8112c988c763ade2b35703948969307c68852bdbd7863400</code>.</li>
+<li><code>elf-linker-comment.txt</code> SHA-256:
+<code>e3c7ac576e038de4ad0b8204de2b388acb47be48db95cbd2e16c5155de77bebb</code>.</li>
+<li><code>entry.ash</code> SHA-256:
+<code>354bf3b61e252cca7b5868745e2cbf3a50d9c1e82660a7d318d54b38a21e9d14</code>.</li>
+<li><code>exit-code</code> SHA-256:
+<code>e67403f811c9e0307b56d6067ee62452c96101087926773b09f24f8f923fb7db</code>.</li>
+<li><code>expected-facts.bin</code> SHA-256:
+<code>7c5ab6e601d40c1d68e6656c4676527508823806e8acd2c84a693aa36ef82c6b</code>.</li>
+<li><code>generated.rs</code> SHA-256:
+<code>d092f0fd6414befe7984561b4264804d94303a73fdecf3a44422c86388fcb6cb</code>.</li>
+<li><code>inputs.json</code> SHA-256:
+<code>30c5c45cfc69114e41cedccf9f1886a20b9124f7de8d5f3f062754f58bd10039</code>.</li>
+<li><code>native-build.log</code> SHA-256:
+<code>4ac61bf23d7788c3486918565bee94709c4219cdb4f59c5e4cf1b597ee3f7b96</code>.</li>
+<li><code>native-trace</code> SHA-256:
+<code>e0f3b1a06f22abab1345f01e4887bd4305696ddb400bb9a01558dbb60dec4097</code>.</li>
+<li><code>native_library</code> SHA-256:
+<code>2e6941bfb030d03daa3467b3578a65f1eb5be761f3fa03d60a0f22a7e1ca62da</code>.</li>
+<li><code>native_owner.c</code> SHA-256:
+<code>f2517bde5d012ed946e3b4042f6b5e9ae9860469980b108a6ac06406c8e52a51</code>.</li>
+<li><code>native_owner.o</code> SHA-256:
+<code>086d76fd2a7b54c08281379fbc8d06a3d26baca550d90375fd7c8110dc8e32aa</code>.</li>
+<li><code>owner.ash</code> SHA-256:
+<code>542326baaba3391f26c5cdf0521e52c7a1699769cfb9c8b29f8ad54e94ecc4af</code>.</li>
+<li><code>program</code> SHA-256:
+<code>b23cdb57380f475348724081cf3391afaee86dd3246f9effca0cb23426dcb63e</code>.</li>
+<li><code>program-image.bin</code> SHA-256:
+<code>b9a38669c118e1da20084dd817fbd7159dab3607c363d28dfc34d686011bb5df</code>.</li>
+<li><code>rust-toolchain.toml</code> SHA-256:
+<code>cdb9bea833b62d4c26fbba417000b2929746d667ba25ad4eee40dfa61aa75a89</code>.</li>
+<li><code>stderr</code> SHA-256:
+<code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</li>
+<li><code>stdout</code> SHA-256:
+<code>73dca124c41d123ccd3e37f2f4c5820c0abb454fbcd2b8c6b3c5f9603e9962a8</code>.</li>
+</ul>
+<h3 id="native-status-1">Native status 1</h3>
+<p>Case preimage/key SHA-256:
+<code>88326c26ecb599bdb550e7a128d67c05a192ef554956d4cacc6fdbbd04a268d8</code>.</p>
+<ul>
+<li><code>Cargo.lock</code> SHA-256:
+<code>397f81dea463bbe72c8c59894091ab4ccd1051fa59b2a3c3657e71ba917e8c77</code>.</li>
+<li><code>Cargo.toml</code> SHA-256:
+<code>6a508ad9155fe00747c613088d74e3e74584522539e27bde5045255cec67388e</code>.</li>
+<li><code>case-inputs.json</code> SHA-256:
+<code>88326c26ecb599bdb550e7a128d67c05a192ef554956d4cacc6fdbbd04a268d8</code>.</li>
+<li><code>dynamic-libraries.txt</code> SHA-256:
+<code>d9c76fd57ba3c39a2fc9572d65e47b0ec5b6c7414a459782e5c9e6f2d923c79f</code>.</li>
+<li><code>elf-linker-comment.txt</code> SHA-256:
+<code>e3c7ac576e038de4ad0b8204de2b388acb47be48db95cbd2e16c5155de77bebb</code>.</li>
+<li><code>entry.ash</code> SHA-256:
+<code>1b4cf2a9cb40759052efc31cbfd13b508b465fdfbeafbdaf659bab24039ed920</code>.</li>
+<li><code>exit-code</code> SHA-256:
+<code>d6e36ebf7a67e41cba8650a93a22f4e1fe88e12cf4381d2b15ca5f6adacbdb62</code>.</li>
+<li><code>expected-facts.bin</code> SHA-256:
+<code>c75198c99240d831ccb13b67025761c128644f28352060d108573ec97eff8feb</code>.</li>
+<li><code>generated.rs</code> SHA-256:
+<code>64e52ca2d99e1a1164da0d762dd7523626213b60c6c5d07938d12497db924e56</code>.</li>
+<li><code>inputs.json</code> SHA-256:
+<code>ac336c5d97c6e0abaeda90b65f0800a8a51808128f17e859eefb5391d23fa340</code>.</li>
+<li><code>native-build.log</code> SHA-256:
+<code>f3a73f4afe421440025e4a95a62749327ea37749c9c44b405b05c2832959df1d</code>.</li>
+<li><code>native-trace</code> SHA-256:
+<code>5affeb71e2330f5fb7270df6086a581ac7fadff3a73aa6c30351273008c76905</code>.</li>
+<li><code>native_library</code> SHA-256:
+<code>1ee545410eb01bd34eafa3b69e340c47d9e64db3c4261557a5f120252c4f1d91</code>.</li>
+<li><code>native_owner.c</code> SHA-256:
+<code>f2517bde5d012ed946e3b4042f6b5e9ae9860469980b108a6ac06406c8e52a51</code>.</li>
+<li><code>native_owner.o</code> SHA-256:
+<code>fe3ed686aad963a248f7756a135cae7d5a4f24685a74555db1b545eb0a7bf99f</code>.</li>
+<li><code>owner.ash</code> SHA-256:
+<code>542326baaba3391f26c5cdf0521e52c7a1699769cfb9c8b29f8ad54e94ecc4af</code>.</li>
+<li><code>program</code> SHA-256:
+<code>395cb2e55de32690c71a9e80084539233810353a36d447f977ed3a85223bcc51</code>.</li>
+<li><code>program-image.bin</code> SHA-256:
+<code>4ad660df6f60ab693450ca0c8d436f1d7aa122daf8a0e1564f63211c515d349d</code>.</li>
+<li><code>rust-toolchain.toml</code> SHA-256:
+<code>cdb9bea833b62d4c26fbba417000b2929746d667ba25ad4eee40dfa61aa75a89</code>.</li>
+<li><code>stderr</code> SHA-256:
+<code>54be4403d05b844a8381816fade3a8cb1b68e97c4fae0ca0453255a8815aae1e</code>.</li>
+<li><code>stdout</code> SHA-256:
+<code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</li>
+</ul>
+<h2 id="complete-gate-repair-history">Complete-gate repair history</h2>
+<p>Three earlier complete-gate attempts failed and remain separate from the final
+checkpoint. None of these failed runs supplies a complete checkpoint pass.</p>
+<h3 id="initial-attempt">Initial attempt</h3>
+<p>Input commit: <code>e3cb981f27d15f84c866a352259e2285b2541bb4</code>.
+Terminal gate status: <code>1</code>; input/tool equality held.
+Complete stdout SHA-256:
+<code>eee194de50027bc3ada11c8f2262b0b4f503912b5d37fa8b7666c4722da12ffe</code>.
+Operator receipt SHA-256:
+<code>64e1e732773df9b74d1cfc985d025ce01f41554e8f117cb226b5f5b53d79bf09</code>.</p>
+<p>The SQLite native test helper unwrapped optional CARGO_TARGET_DIR before host
+preparation. Its target had 14 passes and 15 panics. Nine sites across three
+native integration-test files now preserve an override or use the existing
+repository target/ffi-native-hosts default.</p>
+<h3 id="cache-repaired-attempt">Cache-repaired attempt</h3>
+<p>Input commit: <code>9f35eaf310fb0dd5199cb9bea9d98404ade9aa25</code>.
+Terminal gate status: <code>1</code>; input/tool equality held.
+Complete stdout SHA-256:
+<code>e2258fa2c4ff694f36788fe3ce1784419cf171b73be58ff934d13c7f627de00d</code>.
+Operator receipt SHA-256:
+<code>441fbb6c19a4939a184ab21925e80d80ef966145f28000287b0b05df6880560e</code>.</p>
+<p>The unchanged 8,000-member recursion fixture exhausted source type work during
+generic identity discovery. The test-cache repair itself passed the complete
+affected native targets before this later failure.</p>
+<h3 id="discovery-diagnosis-and-repair">Discovery diagnosis and repair</h3>
+<p>The source scan began with 264,097 units used out of 327,680 and 48,009
+completed Core nodes. Further generic-type discovery exhausted the same
+ledger. After the source-only cost repair, the focused unchanged fixture
+reached a second refusal in independent Pure Core discovery at its unchanged
+983,040-unit limit. These are distinct phases, not one shared allowance.</p>
+<p>The retained implementation pays a base and every canonical identity-store
+entry before source discovery, including materialized, lexical and opaque
+abstract nominal kinds and canonical effects. Absent generic identities avoid
+the redundant full scan. Existing generic origins and capture-summary
+publication remain intact. Independent Pure Core recomputes its own census
+only after ordinary registry, row, binder, node, scope and anchor checks, and
+only for final Pure input without contextual/provider/external or separate
+abstract authority. Effect and contextual/provider discovery remain unchanged.
+No source safety bit is transferred to Core.</p>
+<p>The exact/one-short/two-fresh census test checks all four stores and defining
+identity rather than spelling. Raw missing-family Core still rejects NodeType.
+The original 8,000 members, 256 KiB stack and source/Core work limits are
+unchanged; the complete ten-test recursion target passes. Connected controls
+pass 47 generic unit probes, four contextual tests and 155 resource tests.
+Strict workspace Clippy, format and the complete 47-test architecture audit
+pass. The fresh seven-stage receipt supplies the final checkpoint result.</p>
+<h3 id="missing-static-sqlite-prerequisite">Missing static SQLite prerequisite</h3>
+<p>At unchanged <code>7e80df3e66a6d3074b86f29b7582cadb6696a563</code>, the third
+complete attempt passed the preceding targets and reached the SQLite library
+suite: 34 passed; the genuine static workload refused its missing mandatory
+<code>ASH_SQLITE_STATIC_ARCHIVE</code>. Documentation had prescribed this operator input;
+it was omitted from that attempt. No product or assertion repair was needed.
+The failed run is not relabelled as a complete checkpoint pass.</p>
+<p>Failed stdout SHA-256:
+<code>e61e9f26c601fe6fb8e2ceda64b690234ef7e7dcf45642b8156283a9d2afde96</code>.
+Failed operator receipt SHA-256:
+<code>43c8dc2b2f0fc7ca605cc1f8aa65973ab20173513e5dbab32115d87325e2736d</code>.</p>
+<p>The prescribed official SQLite 3.46.1 ZIP, C and header hashes were verified;
+the header equals the vendored header. The sources were copied read-only from
+a retained input bundle, then rebuilt with current <code>cc -O2 -fPIC -c</code> and
+<code>ar crs</code>, preserving default compile options. The genuine archive is
+1,397,878 bytes, SHA-256:
+<code>7c2b4dc4aa149543e60252b5fffcb62088398470a09885cebb5e3120459c0617</code>.</p>
+<p>Build receipt SHA-256:
+<code>b6065cff7ec1f9b87a87ac0e3184cb64b2d20c9edafb60f0b6a4947921665d52</code>.
+The actual all-feature static copying workload passed, checking eight
+implementation symbols in archive and executable, no SQLite DT_NEEDED, and
+the complete copying result. Its log SHA-256:
+<code>a44b870f802ab498e43655442a30a30a97b080fe9abaaccf4c8f7f338342109a</code>.</p>
+<p>The final retry declares the archive path in the environment and all archive,
+ZIP, C, header, object, selected C/Rust tools/linkers and shared SQLite/runtime
+library bytes as explicit inputs. This preserves the default complete seven
+stages; no reuse or filtered stage is requested. Source, tests, configuration
+and the current 627 native observation are unchanged.</p>
+<h2 id="checkpoint-tool-and-configuration-identities">Checkpoint tool and configuration identities</h2>
+<p>Rust/Cargo 1.97.1, rustfmt 1.9.0, Clippy 0.1.97, Linux x86_64,
+GCC 15.2.0 and the selected C/Rust linkers were checked at the frozen pin.
+Every command keeps <code>CARGO_BUILD_JOBS=1 RUSTC_WRAPPER=</code>. No resource,
+stack or capacity limit changes are part of the repairs.</p>
+<h3 id="tools-configjson">tools-config.json</h3>
+<p>Record SHA-256:
+<code>6eabfd0f0a4bd13a0f03eea9b35ac5c1cf1ab6ad3790bf1e3ff2c54bee92a662</code>.</p>
+<ul>
+<li><code>rustc executable</code>:
+<code>d3a664c970a9fd8361b64194861bebc1ae37b9054e5ee3400dc1c9e691797eea</code>.</li>
+<li><code>cargo executable</code>:
+<code>828980723df339d62434390e9fb8ef8831036583343ae2316b7ab5646b5c1953</code>.</li>
+<li><code>rustfmt executable</code>:
+<code>30de9e1efcd8f8fe7750e00d0c45ff8f4c480608ef1be5baf9ab6f1b4556e8f8</code>.</li>
+<li><code>clippy-driver executable</code>:
+<code>e8fa6ad666c353e4c9248fc67074cf160ff2a5dbd97debd20416b81d7f917373</code>.</li>
+<li><code>/home/dikini/.cargo/config.toml</code>:
+<code>13ed130670278614272c1fca1af627d4e427b8d306cd530a96f0d7555dbcd6a5</code>.</li>
+<li><code>.cargo/config.toml</code>:
+<code>2eb887744ac35113f513a449e09d637cf4ae0e08e8361bd7b3401e41e37051f9</code>.</li>
+</ul>
+<h3 id="native-tool-pinsjson">native-tool-pins.json</h3>
+<p>Record SHA-256:
+<code>0baaf3a5c89d8168f300ae3bd0d80b490887fdc47ab8aeedaa95c439eaf41445</code>.</p>
+<ul>
+<li><code>cc</code>:
+<code>b5f1b773a7c733738352000c92a077dc5852a1a2fc6d836b1e411be1e9ec5f88</code>.</li>
+<li><code>ar</code>:
+<code>531473816bf553e863df5aab14c8177c72b732cf80c51dcf0fa990a50125041c</code>.</li>
+<li><code>ld</code>:
+<code>97f48d93b8b076a92d2809ec29dcb17f0f37c8827358f832255e2ed22fef6075</code>.</li>
+<li><code>cc-selected-ld</code>:
+<code>97f48d93b8b076a92d2809ec29dcb17f0f37c8827358f832255e2ed22fef6075</code>.</li>
+<li><code>cc-selected-cc1</code>:
+<code>30510b346885152c4fce41d2b501751c95d3690b1c34eaa04ebb970e70eae620</code>.</li>
+<li><code>cc-selected-collect2</code>:
+<code>8ab5d946ba2c948e5ea5c91e25a104439302e0599a521785770d10690c565437</code>.</li>
+</ul>
+<h3 id="rust-linker-pinsjson">rust-linker-pins.json</h3>
+<p>Record SHA-256:
+<code>d89b8b4a1c7dca7eacacc80ec5867d9e20d230120427f580b1f6572701fe5bd2</code>.</p>
+<ul>
+<li><code>rust-lld</code>:
+<code>38a9f28404309892f9c9afe02fa4979a0d9e8bc866979cde09f5bb7ec17e5721</code>.</li>
+<li><code>gcc-ld/ld.lld</code>:
+<code>514ad5e5087dee69b173ab8a0bc0dfc717be3a2b2a47fcb4f36f50afe4d779c7</code>.</li>
+</ul>
+<h3 id="repository-configuration-inputs">Repository configuration inputs</h3>
+<ul>
+<li><code>Cargo.lock</code>:
+<code>26be4499e4330e8146d024cfbf6950f6e711edc5909c9a700ec0f2ed58749e08</code>.</li>
+<li><code>Cargo.toml</code>:
+<code>2d1a3d056418f5feb2e36d3ff99924e30f6a9136900b7aa2bb73ead902a1395c</code>.</li>
+<li><code>rust-toolchain.toml</code>:
+<code>cdb9bea833b62d4c26fbba417000b2929746d667ba25ad4eee40dfa61aa75a89</code>.</li>
+</ul>
+<h2 id="explicit-external-checkpoint-inputs">Explicit external checkpoint inputs</h2>
+<p>The complete gate declares all 30 paths below with <code>--input</code>, including the
+genuine static archive and source bundle, selected compiler/archive/symbol/ELF
+tools, compiler backends/linkers, shared SQLite and runtime libraries.
+The archive environment is
+<code>ASH_SQLITE_STATIC_ARCHIVE=/tmp/task0049-sqlite-prerequisite/libsqlite3.a</code>.
+All default seven stages run; <code>--input</code> adds byte identities, not stage filters.</p>
+<ul>
+<li><code>/home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/bin/cargo</code>:
+SHA-256 <code>828980723df339d62434390e9fb8ef8831036583343ae2316b7ab5646b5c1953</code>.</li>
+<li><code>/home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/bin/clippy-driver</code>:
+SHA-256 <code>e8fa6ad666c353e4c9248fc67074cf160ff2a5dbd97debd20416b81d7f917373</code>.</li>
+<li><code>/home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/bin/rustc</code>:
+SHA-256 <code>d3a664c970a9fd8361b64194861bebc1ae37b9054e5ee3400dc1c9e691797eea</code>.</li>
+<li><code>/home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/bin/rustfmt</code>:
+SHA-256 <code>30de9e1efcd8f8fe7750e00d0c45ff8f4c480608ef1be5baf9ab6f1b4556e8f8</code>.</li>
+<li><code>/home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/gcc-ld/ld.lld</code>:
+SHA-256 <code>514ad5e5087dee69b173ab8a0bc0dfc717be3a2b2a47fcb4f36f50afe4d779c7</code>.</li>
+<li><code>/home/dikini/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld</code>:
+SHA-256 <code>38a9f28404309892f9c9afe02fa4979a0d9e8bc866979cde09f5bb7ec17e5721</code>.</li>
+<li><code>/lib64/ld-linux-x86-64.so.2</code>:
+SHA-256 <code>bda779ea9e9ad234f60315477d7cfd0bdde861cd8ddd9df8cdaf62f18c4cec14</code>.</li>
+<li><code>/tmp/task0049-sqlite-prerequisite/libsqlite3.a</code>:
+SHA-256 <code>7c2b4dc4aa149543e60252b5fffcb62088398470a09885cebb5e3120459c0617</code>.</li>
+<li><code>/tmp/task0049-sqlite-prerequisite/sqlite-amalgamation-3460100.zip</code>:
+SHA-256 <code>77823cb110929c2bcb0f5d48e4833b5c59a8a6e40cdea3936b99e199dbbe5784</code>.</li>
+<li><code>/tmp/task0049-sqlite-prerequisite/sqlite3.c</code>:
+SHA-256 <code>6c35bc5f7f85eac9c49928bacbb02bb694b547aabf69197e058cca245ad80e83</code>.</li>
+<li><code>/tmp/task0049-sqlite-prerequisite/sqlite3.h</code>:
+SHA-256 <code>89b62c671c5964e137409ce034941b7b05a3af2c9875aba41f47f9483d0c2515</code>.</li>
+<li><code>/tmp/task0049-sqlite-prerequisite/sqlite3.o</code>:
+SHA-256 <code>ccd7e4bedda7aa4530b482098e56c8ac3d24cbd0368d5d98804523d2aea04cad</code>.</li>
+<li><code>/usr/bin/ar</code>:
+SHA-256 <code>531473816bf553e863df5aab14c8177c72b732cf80c51dcf0fa990a50125041c</code>.</li>
+<li><code>/usr/bin/cc</code>:
+SHA-256 <code>b5f1b773a7c733738352000c92a077dc5852a1a2fc6d836b1e411be1e9ec5f88</code>.</li>
+<li><code>/usr/bin/nm</code>:
+SHA-256 <code>f04262bf48192a7cbb78a17ca49ae03f8930b0372bd0115576f957b2e2a57a01</code>.</li>
+<li><code>/usr/bin/readelf</code>:
+SHA-256 <code>c857339616bbbfa5eba32733e22365048903fbaf6ed2126b897dd138bcb741fc</code>.</li>
+<li><code>/usr/bin/x86_64-linux-gnu-ar</code>:
+SHA-256 <code>531473816bf553e863df5aab14c8177c72b732cf80c51dcf0fa990a50125041c</code>.</li>
+<li><code>/usr/bin/x86_64-linux-gnu-as</code>:
+SHA-256 <code>4e5fcaa3cdc160173cb5cfe7aa35dc39d7aa1f06ba8d75b8d923bbae5473991b</code>.</li>
+<li><code>/usr/bin/x86_64-linux-gnu-gcc-15</code>:
+SHA-256 <code>b5f1b773a7c733738352000c92a077dc5852a1a2fc6d836b1e411be1e9ec5f88</code>.</li>
+<li><code>/usr/bin/x86_64-linux-gnu-ld.bfd</code>:
+SHA-256 <code>97f48d93b8b076a92d2809ec29dcb17f0f37c8827358f832255e2ed22fef6075</code>.</li>
+<li><code>/usr/bin/x86_64-linux-gnu-nm</code>:
+SHA-256 <code>f04262bf48192a7cbb78a17ca49ae03f8930b0372bd0115576f957b2e2a57a01</code>.</li>
+<li><code>/usr/bin/x86_64-linux-gnu-readelf</code>:
+SHA-256 <code>c857339616bbbfa5eba32733e22365048903fbaf6ed2126b897dd138bcb741fc</code>.</li>
+<li><code>/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</code>:
+SHA-256 <code>bda779ea9e9ad234f60315477d7cfd0bdde861cd8ddd9df8cdaf62f18c4cec14</code>.</li>
+<li><code>/usr/lib/x86_64-linux-gnu/libc.so.6</code>:
+SHA-256 <code>85e64f97e348786a8fb4d9f3d52fec289e2fb86bba20f0731dfe61990525e0f7</code>.</li>
+<li><code>/usr/lib/x86_64-linux-gnu/libgcc_s.so.1</code>:
+SHA-256 <code>9d339ecb409578d6a5d587e6c537a8f9589b8a13fefba30d167433a4b5758bee</code>.</li>
+<li><code>/usr/lib/x86_64-linux-gnu/libm.so.6</code>:
+SHA-256 <code>1c488db6f4fe8cecb72456bc018de000b7a9b539c2994864b0416b5e8371b3d8</code>.</li>
+<li><code>/usr/lib/x86_64-linux-gnu/libsqlite3.so.0</code>:
+SHA-256 <code>4633a4be13fdf05cb0f859e04fb06077a1fe30a90e405721a23873bd1f3d88a8</code>.</li>
+<li><code>/usr/lib/x86_64-linux-gnu/libsqlite3.so.0.8.6</code>:
+SHA-256 <code>4633a4be13fdf05cb0f859e04fb06077a1fe30a90e405721a23873bd1f3d88a8</code>.</li>
+<li><code>/usr/libexec/gcc/x86_64-linux-gnu/15/cc1</code>:
+SHA-256 <code>30510b346885152c4fce41d2b501751c95d3690b1c34eaa04ebb970e70eae620</code>.</li>
+<li><code>/usr/libexec/gcc/x86_64-linux-gnu/15/collect2</code>:
+SHA-256 <code>8ab5d946ba2c948e5ea5c91e25a104439302e0599a521785770d10690c565437</code>.</li>
+</ul>
+<p>External mode, byte-count, symlink and resolved-path records are retained
+with the operator receipt. Their before/after equality is required in addition
+to the repository and tool/configuration comparisons.</p>
+<h2 id="checkpoint-acceptance-and-retained-input-boundary">Checkpoint acceptance and retained-input boundary</h2>
+<p>Independent reviewer <code>/root/task0046_reviewer</code> cleared the full code and
+technical checkpoint at the tested pin. Coordinator <code>/root</code> accepted that
+checkpoint after independent review and its own raw receipt/input readback.
+Developer and sole Cargo operator is <code>/root/task0046_developer</code>,
+requested and dispatched as <code>gpt-6.1-sol</code> with <code>medium</code> reasoning effort.
+All 31 case sections above retain their complete positive, negative and
+compound observations. Original TASK-0045–0048 criteria close on the connected
+behavior and final gate; TASK-0049's product-checkpoint criteria close on the
+same receipt. Its artifact-cleanup criterion is fulfilled by the reviewed
+retirement and
+retained readback below. The conditional Main integration guard is
+untriggered; this record claims no Main gate or integration.</p>
+<p>The gate pins every file, including Markdown, at the exact tested commit.
+Later acceptance prose is not a literal gate pass at another all-file input
+fingerprint. Executed source, tests, configuration, fixtures and runtime
+fingerprint must remain equal to that tested inventory; manual Markdown,
+local-link and authority review covers the changed receipt prose. The
+acceptance-retention readback below precedes cleanup.
+No resource, stack, work or capacity limit was widened. Cell lifetime remains
+exactly its resource scope, with strict payload outlives ordering, cycle and
+payload-crossing rejection, and unchanged native retained-owner protections.
+DN-0054 remains byte-identical and separate. No remote publication, PR, Main
+integration or branch/worktree/cache retirement is part of this checkpoint.</p>
+<h2 id="local-acceptance-retention-and-transition-retirement">Local acceptance retention and transition retirement</h2>
+<p>The reviewed acceptance update was retained at unsigned local commit
+<code>97792795d9d53285844e4ff6f5a7a2a02bbfa366</code>, tree
+<code>d4429549ce3c4451b93bd288f05898b121243c95</code>, directly after the tested
+checkpoint. Its clean 1,769-file inventory SHA-256 is
+<code>6e802c91f0e65ad090b657692bedc73bc14061d563093d9db70e4c93755e4877</code>.
+Only the six reviewed receipt Markdown files changed; all 1,763 other files,
+including executed source, tests, configuration and fixtures, match the gate.
+There is no commit signature. Independent review and coordinator readback
+cover the retained acceptance, not a new code-gate invocation.</p>
+<p>The separate reviewed lifecycle delta removes exactly ten transition files:
+the accepted proposal, TASK-0045–0049 and four execution plans. It changes
+exactly five surviving documents: this evidence, the task/proposal/design
+indexes and DN-0053. DN-0053 remains informative and retained because the
+byte-identical DN-0054 links to it. No unrelated artifact, source, test,
+configuration, fixture, worktree or build cache is removed or changed.
+The retained retirement readback verified actual file absence, repaired local
+links, current specification authority and equality of every retained executed
+input. This fulfills TASK-0049's lifecycle criterion. The conditional Main
+guard remains untriggered.
+Main integration has not occurred.</p>
+<h3 id="local-transition-history">Local transition history</h3>
+<p>The proposal, original complete criteria, acceptance marks, historical roles
+and execution plans remain in the local acceptance object. These commits have
+not been pushed; remote publication is not implied. Retrieve all ten exact
+artifacts with the following verified local Git commands:</p>
+<pre tabindex="0"><code class="language-sh">checkpoint=97792795d9d53285844e4ff6f5a7a2a02bbfa366
+artifact=docs/proposals/CP-0023-scoped-generic-cells.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/TASK-0045-generic-cell-api-and-acquisition.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/TASK-0046-generic-cell-contents-and-dependencies.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/TASK-0047-generic-cell-execution-and-completion.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/TASK-0048-generic-cell-integrated-verification.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/TASK-0049-close-generic-cell-checkpoint.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/task-0045-execution-plan.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/task-0046-execution-plan.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/task-0047-execution-plan.md
+git show "$checkpoint:$artifact"
+artifact=docs/tasks/task-0048-execution-plan.md
+git show "$checkpoint:$artifact"
+</code></pre>
+<p>Current language rules are in the specification; this evidence supplies no
+additional semantics or permission. The checkpoint preserves Cell's exact
+resource-scope lifetime, strict payload ordering, resource-cycle rejection,
+ordinary payload-crossing and all native retained-owner protections. DN-0054
+SHA-256 remains
+<code>c7a596a9fbd84029adfd5333af02594e1a82eea30c548947be362f722cd1e342</code>.
+No push, PR, Main integration or branch/worktree/cache retirement is included.</p>
+<h2 id="retained-cleanup-readback-and-local-closure">Retained cleanup readback and local closure</h2>
+<p>The actual lifecycle delta was retained unsigned at local commit
+<code>9807f6d45326a4fde08a422037c186596f3d781a</code>, tree
+<code>91f47ce7039c322128ed42460c4e4e94d120e824</code>, directly after the acceptance
+commit. The retained tree is clean and contains no commit signature. All ten
+retired paths are absent, rather than empty files. Exactly the five reviewed
+surviving Markdown documents changed. The 1,759 retained mode/content records
+have SHA-256:
+<code>cbbe9a25a13a7887d3bd33989f4c8d37b1867e25842c93a5688078c606cfceac</code>.</p>
+<p>All 1,754 other retained records match the tested <code>7e80df3e</code> inventory,
+including executed source, tests, configuration and fixtures. The current
+runtime fingerprint remains <code>6270711a</code> as fully identified above. Manual
+readback verified 125 relative file/anchor targets across the five surviving
+documents and no stale retired-artifact links in surviving documentation,
+specification or agent Markdown. All ten local historical retrieval commands
+resolve to their exact acceptance objects. The 31 distinct primary case
+sections remain. DN-0053 is retained; DN-0054 has its unchanged hash above.</p>
+<p>Independent reviewer <code>/root/task0046_reviewer</code> and coordinator <code>/root</code> cleared
+the actual retained cleanup before this final evidence-only closure update.
+This fulfills the last applicable TASK-0049 lifecycle criterion and closes the
+local TASK-0045–0049 checkpoint, including TASK-0046's original compound
+acceptance. Main integration remains unauthorized and unperformed; its
+conditional guard is untriggered. No push, PR, branch/worktree/cache retirement
+or separate DN-0054 work is claimed.</p>
+<p>The fresh complete code gate remains bound to <code>7e80df3e</code>, not a later
+all-file documentation fingerprint. This final update changes only the
+evidence Markdown and receives manual authority/link review plus retained
+executed-input equality readback. The raw gate, native and prerequisite
+records remain outside the build cache; this document retains their complete
+command/result/input/tool/log digests and local historical locators.</p>
+<h2 id="local-main-integration--2026-10-20">Local Main integration — 2026-10-20</h2>
+<p>The human authorized local Main integration. The unsigned explicit merge
+<code>849fa6f408ebbfea9a3973bc841e1f693142a788</code> has parents
+<code>67ba281d4e93dbfad65e5fd1e6a34c3dfb132686</code> (refreshed <code>origin/main</code>) and
+<code>9756383d176f23ae325f36cd4d614f8c16994be2</code> (<code>codex/generic-cells</code>). Its tree
+<code>bf1aad4980c5bd8cf620991198906222d4258cdd</code> exactly matches the checkpoint.
+The fresh default seven-stage gate ran on that frozen candidate with one Cargo
+job, no reused or filtered stages, the genuine SQLite 3.46.1 static archive
+and all 30 explicit external inputs. All seven stages passed freshly. The 140
+parent harnesses report 4,112 passes, zero failures, one optional calibration
+study ignored and zero filtered tests. Nine nested harness summaries are
+excluded from that total.</p>
+<p>The retained records are outside the build cache at
+<code>.worktrees/generic-cell-main-integration-evidence-20261020/</code>.
+<code>launch.json</code> retains the complete command and explicit observer environment
+overrides;
+<code>before.json</code> and <code>after.json</code> retain the equal all-file input inventories.
+The gate summary, seven stage receipts/logs and operator receipt have these
+digests:</p>
+<ul>
+<li><code>gate/latest.json</code>: <code>baee4686a4d58d54f8fdd00d98869834fa45499ae3d3582e4a53b3f7c242ab44</code>.</li>
+<li><code>operator-receipt.json</code>: <code>765fce6576f237828647e8edcd813e04b8f4c2436ab793f611abcdeceb0e0393</code>.</li>
+</ul>
+<p>Format stage receipt SHA-256:
+<code>58b9b05eab5a933a40bc3bf2810625d9c90608bf5dc5d10856f9d201e65015b1</code>.
+Log SHA-256:
+<code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>.</p>
+<p>Metadata stage receipt SHA-256:
+<code>c575e783f4b11b61df02d5f03e4c96c6876a2743fc735222de49427e9ca9e717</code>.
+Log SHA-256:
+<code>6b5d88f0feb5de4b5f95039b3ffcf291c493b3d92b663658264b8cb2ac8c37a7</code>.</p>
+<p>Check stage receipt SHA-256:
+<code>13c6db79ee023e124f9a94bbc7f0056448efd0eb7708e48b38c27e7fc1f0a931</code>.
+Log SHA-256:
+<code>a51aede1546a3145e51e3669479e1b1cf857d5205d2584b82c62441074ab8217</code>.</p>
+<p>Build stage receipt SHA-256:
+<code>4cdbd5e7c1e7ab0a9552cce2bc85b58d31e625d0bdff830f6d23d8edfebd69a1</code>.
+Log SHA-256:
+<code>d3fa026151c4b518e159c46bba7cf6aabab416d03f0bd6a58bf81de358febb7e</code>.</p>
+<p>Clippy stage receipt SHA-256:
+<code>895294ccc29a929b5847960c723b0586838d120a72bf6482f8387de1f085e958</code>.
+Log SHA-256:
+<code>81a5c30fc6cf1957f02eed17e6920af99e48fbdb76c34a0b6bffb92140bada30</code>.</p>
+<p>Test stage receipt SHA-256:
+<code>2233e032da5c57bd07c0c006673b291cb760df0b913c996a45d37569f979f81f</code>.
+Log SHA-256:
+<code>be5401df5ef9745b6aa1cc6c85c241644052f10af3461cc61a2442e06e3478c9</code>.</p>
+<p>Documentation stage receipt SHA-256:
+<code>e9c3bd45b2c7570b0433aacb62f1823211d89cf48076c156b56e8eb97f12d3ad</code>.
+Log SHA-256:
+<code>dfbfa746f13222f26c1fdc2a354b245dd12d553da64877be1d0754a873ee3bb8</code>.</p>
+<p>Repository files, configuration, tools, runner, canonical environment and all
+external byte/count/mode/symlink/resolved-path records match before and after
+the run. The observer environment explicitly includes <code>ASH_OWNER_EVIDENCE_DIR</code>;
+this is fresh evidence. The earlier checkpoint run used a different observer
+environment.</p>
+<p>The fresh C06 native pair embeds runtime fingerprint
+<code>1726d5f5b691a5d5ec0dc8a2e435e907fa43412284ebae7ff4e7a035cdc704e2</code>
+for the all-feature, resource-calibration-matched compiler/runtime configuration.
+The permitted host returns <code>Completed(42, RetainedError(()))</code> with parent final
+byte 99; the denied later borrow exits 1 before native entry with parent byte
+0. Both acquire parent64/child4, retain child4 and release child4 then parent64
+exactly once. <code>native-readback.json</code> SHA-256 is
+<code>30d089c7acdb76341d3d4e14d673a3f17e32648eb29edf39f8094ee871612f42</code>.
+It records identities for all 19 retained files per host, case-preimages,
+native compile/link
+commands and actual resolved-library pins. Companion <code>.comment</code>, ELF
+program-header/dynamic and symbol logs retain compiler, interpreter and linkage
+observations. The earlier default-feature native receipts remain historical;
+missing old temporary artifacts supply no current equality proof.</p>
+<p>The genuine archive SHA-256 remains
+<code>7c2b4dc4aa149543e60252b5fffcb62088398470a09885cebb5e3120459c0617</code>.
+The retained ZIP, C, header and object match the earlier five byte pins; all
+selected C/Rust tools, linkers and shared-library bytes match the 30-input
+inventory. Fresh symbol and ELF readback accompanies the prerequisite record.
+The old temporary build receipt was unavailable and is not claimed recovered.</p>
+<p>Independent reviewer <code>/root/merge_reviewer</code> cleared the frozen candidate and
+raw gate/native evidence; coordinator <code>/root</code> accepted those results before
+authorizing ref movement. The atomic ref transaction preserved the old local
+Main tip <code>3e6326390cb182b211328682df9591d5c0311fc3</code> at
+<code>archive/planning/main-before-generic-cells-20261020</code> and moved local <code>main</code>
+to <code>849fa6f408ebbfea9a3973bc841e1f693142a788</code>. Its six unique planning
+commits were not merged into product history. <code>main-retention.json</code> SHA-256 is
+<code>883bf981bf10249f0138c138047c03d1c1b352507156ab68a10bd30ee37bd0a3</code>.
+The clean retained tree, merge parents and absence of a commit signature were
+read back. The existing product checkout switched to Main at the same tree;
+the unrelated planning checkout's branch, HEAD, dirty-file bytes and status
+remain equal. The checkpoint branch remains at <code>9756383d</code>, and the delivery
+branch remains at <code>849fa6f4</code>. <code>origin/main</code> at the final pre-merge fetch was
+<code>67ba281d</code>. No push, PR, branch/worktree/cache retirement or DN-0054 work is
+included. DN-0054 remains byte-identical at SHA-256
+<code>c7a596a9fbd84029adfd5333af02594e1a82eea30c548947be362f722cd1e342</code>.</p>
+<p>This acceptance update changes only five Markdown documents. Its manual
+writing, link and authority review and retained executed-input equality
+readback cover the prose delta; the full gate remains bound to the merge tree.
+The current specification owns the integrated language rules. This record
+closes the formerly conditional Main integration obligation while preserving
+the historical checkpoint boundaries and all resource-scope lifetime, strict
+payload ordering, resource-cycle, payload-crossing and native-owner protections.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#observation-boundaries">Observation boundaries</a><a href="#positive-cases">Positive cases</a><a href="#negative-cases">Negative cases</a><a href="#control-validation-and-failure-cases">Control, validation and failure cases</a><a href="#independent-authority-witnesses">Independent authority witnesses</a><a href="#exact-work-boundaries">Exact work boundaries</a><a href="#variant-traceability">Variant traceability</a><a href="#historical-task-0048-focused-receipt">Historical TASK-0048 focused receipt</a><a href="#historical-task-0048-native-binding">Historical TASK-0048 native binding</a><a href="#historical-task-0048-review-and-remainder">Historical TASK-0048 review and remainder</a><a href="#fresh-complete-checkpoint-gate">Fresh complete checkpoint gate</a><a href="#current-native-quarantine-observation">Current native quarantine observation</a><a href="#complete-gate-repair-history">Complete-gate repair history</a><a href="#checkpoint-tool-and-configuration-identities">Checkpoint tool and configuration identities</a><a href="#explicit-external-checkpoint-inputs">Explicit external checkpoint inputs</a><a href="#checkpoint-acceptance-and-retained-input-boundary">Checkpoint acceptance and retained-input boundary</a><a href="#local-acceptance-retention-and-transition-retirement">Local acceptance retention and transition retirement</a><a href="#retained-cleanup-readback-and-local-closure">Retained cleanup readback and local closure</a><a href="#local-main-integration--2026-10-20">Local Main integration — 2026-10-20</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

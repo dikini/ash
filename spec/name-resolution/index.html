@@ -1,0 +1,863 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Name Resolution · Ash</title><meta name="description" content="Name resolution gives each module, nominal type, constructor, interface, method, anonymous implementation, requirement, type parameter, and term binder an identity and connects every occurrence to exactly one such…"><meta name="robots" content="index, follow"><meta property="og:title" content="Name Resolution · Ash"><meta property="og:description" content="Name resolution gives each module, nominal type, constructor, interface, method, anonymous implementation, requirement, type parameter, and term binder an identity and connects every occurrence to exactly one such…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Name Resolution · Ash"><meta name="twitter:description" content="Name resolution gives each module, nominal type, constructor, interface, method, anonymous implementation, requirement, type parameter, and term binder an identity and connects every occurrence to exactly one such…"><meta property="og:url" content="https://dikini.github.io/ash/spec/name-resolution/"><link rel="canonical" href="https://dikini.github.io/ash/spec/name-resolution/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/name-resolution.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Name Resolution","headline":"Name Resolution","description":"Name resolution gives each module, nominal type, constructor, interface, method, anonymous implementation, requirement, type parameter, and term binder an identity and connects every occurrence to exactly one such…","inLanguage":"en","url":"https://dikini.github.io/ash/spec/name-resolution/","@id":"https://dikini.github.io/ash/spec/name-resolution/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/name-resolution.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Specification</p><h1 id="name-resolution" data-pagefind-meta="title">Name Resolution</h1><p class="spec-source">Development specification · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/name-resolution.md">ash-lang <code>7949b6d</code></a></p></header><nav class="spec-chapters" aria-label="Specification chapters"><a href="/ash/spec/">Overview</a><a href="/ash/spec/lexical-structure/">Lexical Structure</a><a href="/ash/spec/syntax/">Syntax</a><a href="/ash/spec/name-resolution/" aria-current="page">Name Resolution</a><a href="/ash/spec/static-semantics/">Static Semantics</a><a href="/ash/spec/elaboration/">Elaboration</a><a href="/ash/spec/dynamic-semantics/">Dynamic Semantics</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>Name resolution gives each module, nominal type, constructor, interface,
+method, anonymous implementation, requirement, type parameter, and term binder
+an identity and connects every occurrence to exactly one such identity. Later
+phases use identity, not source spelling or import route, to distinguish
+declarations.</p>
+<h2 id="module-paths-and-identity">Module paths and identity</h2>
+<p>The source path passed to an Ash tool is the entry module. Its containing
+directory is the implicit root for that module and its relative imports. A
+relative module path starts in the importing source's directory. Its segments
+name child directories and a final <code>.ash</code> file. Thus <code>import math as Math</code>
+resolves <code>./math.ash</code>, while <code>import helpers.math as Math</code> resolves
+<code>./helpers/math.ash</code>.</p>
+<p>An ordinary absolute path starts at a configured named module root. For example,
+<code>import @std.collections.list as List</code> resolves <code>collections/list.ash</code> beneath
+the configured <code>std</code> root. A module reached through a named root retains that
+root as an owner for its relative descendants.</p>
+<p>The loader canonicalizes roots and imported targets. A target must remain
+inside its owning root. Each canonical source is admitted once and receives one
+identity that remains stable and unique within that compilation. Different
+aliases, relative and absolute routes, symbolic-link routes, or overlapping
+named roots to the same canonical source do not create another module identity.</p>
+<p>A canonical source reached through more than one root retains every owning
+root. Each of its relative descendants must remain inside every retained root,
+regardless of the order in which routes to that source are discovered.</p>
+<p>The complete dependency graph must be acyclic. A module may use only the
+dependencies named by its own imports. Checked modules are ordered with every
+dependency before its dependents. Dependency order and import source order
+select the first reported failure deterministically.</p>
+<h3 id="compiler-owned-cell-module">Compiler-owned cell module</h3>
+<p><code>@builtin.cell</code> denotes one compiler-owned module, without a configured root
+or filesystem source. <code>builtin</code> is a reserved root name: configuring it as a
+filesystem root fails with <code>invocation.reserved-root</code> before filesystem
+inspection. The modules specified beneath that root are <code>@builtin.cell</code>,
+<code>@builtin.generic_cell</code>, <code>@builtin.bytes</code>, <code>@builtin.string</code> and
+<code>@builtin.foreign</code>. Unknown paths, including
+<code>@builtin.cell.extra</code>, fail
+with <code>module.unknown-builtin</code>.</p>
+<p>The module exports exactly <code>Handle</code>, <code>Provider</code>, <code>Ops</code>, <code>read</code> and <code>write</code>.
+Complete imports, targeted imports, renaming and public re-exports preserve
+their defining identities. Direct and facade routes reach the same module;
+a facade creates no additional provider authority. An ordinary file named
+<code>cell.ash</code> or copied API declarations have no compiler-owned origin.</p>
+<p>The separate compiler-owned <code>@builtin.generic_cell</code> module exports exactly
+<code>Cell</code>, <code>Provider</code>, <code>Ops</code>, <code>read</code> and <code>write</code>. <code>Cell&lt;R,T&gt;</code> has kind
+<code>Type -&gt; Type -&gt; Type</code>; both interface and effect retain two kind-<code>Type</code>
+arguments. Its hidden constructor and sealed provider follow the same
+origin checks as the integer API. Imports, selective renaming and facade
+reexports preserve all defining identities and arguments.</p>
+<p>Named acquisition recognizes the canonical <code>Cell</code> family through those paths,
+including a facade with no direct builtin import. It requires exactly two
+arguments. Position zero is a fresh unqualified identity binder; <code>T</code> and the
+initializer resolve in the preceding scope. A preceding same-spelled type or
+term still resolves there. The new identity and value binder scope over the
+body only. An ordinary same-spelled type supplies no acquisition authority.
+The <a href="/ash/spec/static-semantics/#generic-cell-foundation">dependency admission rules</a>
+apply after ordinary checking; imported names alone supply no contents proof.</p>
+<p>A module containing a <code>resource cell</code> expression must directly import <code>@builtin.cell</code>.
+Either a complete or targeted import satisfies this requirement, independently
+of which public names the targeted import selects. Importing only a facade
+does not; resolution reports <code>resolve.resource-builtin-required</code>. Helpers that
+do not acquire a resource may use the ordinary re-exported API.</p>
+<p><code>Handle</code> has no source-accessible constructor or pattern. Source <code>impl</code> and
+local <code>with</code> declarations cannot introduce the exact builtin <code>Provider</code>
+relation. Acquisition introduces its authenticated lexical evidence; ordinary
+name resolution or copied signatures cannot grant that authority.</p>
+<h3 id="ordinary-native-buffer-library">Ordinary native-buffer library</h3>
+<p><code>libraries/native_buffer.ash</code> is an ordinary passive source module. A configured
+root may expose it as <code>@ffi.native_buffer</code>; the root name and file basename grant
+no compiler authority. Imports, renaming and public re-exports preserve its
+original resource family, sealed provider and ordinary result identities.
+<code>resource Buffer.Buffer&lt;R&gt; b = length { body }</code> resolves that declared family
+through the imported alias. A facade may re-export the original declaration;
+no direct builtin import is required. Copied API names or equal function shapes
+do not supply the original resource header or provider.</p>
+<p>The former <code>@builtin.native_buffer</code> path is unknown. The lowercase
+<code>resource native_buffer</code> designator is no longer a builtin resource form.</p>
+<h3 id="independent-byte-and-string-modules">Independent byte and string modules</h3>
+<p><code>String</code> and <code>Bytes</code> are primitive value types. <code>String</code> contains validated UTF-8;
+<code>Bytes</code> contains independent immutable bytes. Neither is a foreign address,
+view or State token. They have no source constructor or byte-array literal.
+Ordinary string literals use the shared quoted-string syntax.</p>
+<p><code>@builtin.bytes</code> and <code>@builtin.string</code> are passive canonical modules. Imports,
+aliases and re-exports preserve their original builtin function and result
+identities. Same-spelled client functions do not select builtin execution.
+Their ordinary functions have empty effect rows:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Module</th>
+<th>Function</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@builtin.bytes</code></td>
+<td><code>empty : Unit -&gt; Bytes</code></td>
+<td>Empty independent bytes.</td>
+</tr>
+<tr>
+<td><code>@builtin.bytes</code></td>
+<td><code>length : Bytes -&gt; Int</code></td>
+<td>Byte length.</td>
+</tr>
+<tr>
+<td><code>@builtin.bytes</code></td>
+<td><code>equal : (Bytes, Bytes) -&gt; Bool</code></td>
+<td>Byte-for-byte equality.</td>
+</tr>
+<tr>
+<td><code>@builtin.bytes</code></td>
+<td><code>append_byte : (Bytes, Int) -&gt; AppendResult</code></td>
+<td><code>BytesAppended(Bytes)</code> or <code>InvalidByte</code>.</td>
+</tr>
+<tr>
+<td><code>@builtin.bytes</code></td>
+<td><code>at : (Bytes, Int) -&gt; ReadResult</code></td>
+<td><code>ByteAt(Int)</code> or <code>InvalidIndex</code>.</td>
+</tr>
+<tr>
+<td><code>@builtin.string</code></td>
+<td><code>to_utf8 : String -&gt; Bytes</code></td>
+<td>Independent UTF-8 bytes.</td>
+</tr>
+<tr>
+<td><code>@builtin.string</code></td>
+<td><code>from_utf8 : Bytes -&gt; DecodeResult</code></td>
+<td><code>Decoded(String)</code> or <code>InvalidUtf8</code>.</td>
+</tr>
+<tr>
+<td><code>@builtin.string</code></td>
+<td><code>byte_length : String -&gt; Int</code></td>
+<td>UTF-8 byte length.</td>
+</tr>
+<tr>
+<td><code>@builtin.string</code></td>
+<td><code>equal : (String, String) -&gt; Bool</code></td>
+<td>Exact UTF-8 value equality.</td>
+</tr>
+</tbody>
+</table>
+<p>The result types are ordinary transparent ADTs in their defining builtin module.
+<code>append_byte</code> accepts only integers in <code>[0, 255]</code>. <code>at</code> copies an integer in that
+range; negative, unrepresentable or out-of-range indices return <code>InvalidIndex</code>,
+and every index into empty bytes is invalid. Invalid UTF-8 returns <code>InvalidUtf8</code>
+without replacement decoding. Lookup, traversal and complete result storage
+are paid before publication; work/storage exhaustion is terminal. These APIs
+grant no native call, State, ownership or access permission.</p>
+<h3 id="compiler-owned-foreign-result-module">Compiler-owned foreign result module</h3>
+<p><code>@builtin.foreign</code> is admitted once per compilation graph and has no runtime
+initialization. Its public <code>ConversionError</code> is an opaque ordinary nominal
+type with no source-accessible constructors. Its other public declarations
+are ordinary transparent data types with one kind-<code>Type</code> parameter each:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Type</th>
+<th>Constructors</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Call&lt;T&gt;</code></td>
+<td><code>Returned(T)</code> and <code>ConversionFailed(ConversionError)</code></td>
+</tr>
+<tr>
+<td><code>Output&lt;T&gt;</code></td>
+<td><code>Unreadable</code> and <code>Readable(T)</code></td>
+</tr>
+<tr>
+<td><code>Nullable&lt;T&gt;</code></td>
+<td><code>Null</code> and <code>NonNull(T)</code></td>
+</tr>
+<tr>
+<td><code>Disposition&lt;T&gt;</code></td>
+<td><code>Consumed(T)</code>, <code>Retained(T)</code> and <code>BlockedDependent</code></td>
+</tr>
+</tbody>
+</table>
+<p>Complete and targeted imports, aliases and re-exports preserve those nominal
+and constructor identities. Ordinary same-spelled declarations do not supply
+the canonical native result codec. Constructing an ordinary result grants no
+native interpreter, ownership or access permission.</p>
+<p><code>Extent&lt;V&gt;</code> is a separate opaque builtin type with no accessible constructor.
+Its exact descriptor-witnessed view parameter and runtime origin are checked by
+the <a href="/ash/spec/static-semantics/#source-foreign-declarations">copy primitives</a>; its
+ordinary spelling or a compatible type cannot create extent evidence.</p>
+<h3 id="source-foreign-library-identities">Source foreign-library identities</h3>
+<p>A foreign library introduces a defining native-library identity without a
+nested source namespace. Each admitted symbol introduces a module-owned native
+effect with one <code>call</code> operation. Symbols share the ordinary effect spelling
+namespace and inherit the library's publication mode. Foreign representations
+occupy an ABI namespace and introduce no ordinary Ash type. An owner member
+introduces a constructor-free nominal state family in the ordinary type
+namespace. Its original ordered formal records, explicit owned position,
+representation and teardown reference remain associated with the defining
+library. Libraries in one module require disjoint member spellings.</p>
+<p>Imports and re-exports preserve the original effect, operation, library and
+contract identities. Summaries retain descriptors only with selected or
+signature-referenced effect facts. A private native effect referenced by a
+public signature remains a hidden checking fact; it does not become an
+exported source spelling. Display aliases do not replace defining provenance
+or result-codec authority.</p>
+<h3 id="source-resource-families">Source resource families</h3>
+<p>A source resource declaration introduces a family in the type namespace. Its
+identity is distinct from every instance identity and from a foreign owner
+state family. The complete written parameter vector scopes over the header,
+acquire and finish clauses, and handler clauses. <code>owned</code> must select one of
+those parameters with kind <code>Type</code>; its position need not be first. The single
+parameter introduced by <code>result ... for &lt;Answer&gt;</code> scopes over that result type
+only. Lifecycle and handler patterns retain their ordinary binding behavior.</p>
+<p>Public imports and targeted re-exports retain the original family identity,
+complete parameter vector and body-free header, including all exact native
+interpretations and defining provenance. A display alias cannot change the
+owned position, argument tags or native symbol identity. Source resource code
+travels as the original checked defining code through compiler preparation;
+an export summary neither contains that code nor grants execution permission.
+Private header dependencies retain checking identity without becoming public
+source names.</p>
+<p>The current publication checkpoint requires a provider interface declared
+beside a public source resource to be public. Its shared-interface closure can
+retain imported hidden interface facts, but cannot yet retain a same-module
+private provider interface. This is an implementation limitation, not a new
+visibility rule for resource declarations.</p>
+<h2 id="imports-and-namespaces">Imports and namespaces</h2>
+<p>A complete import binds the dependency's public namespaces under its uppercase
+alias. It does not copy declarations or change their identities. Public globals,
+nominal types, resource families, interfaces, effects, methods, operations, and constructors are
+available through qualified occurrences such as <code>List.map</code>, <code>List.Option</code>,
+<code>List.Equal</code>, <code>List.State</code>, <code>List.State.get</code>, <code>List.equal</code>, and <code>List.Some</code>. A
+qualified occurrence must use an alias bound by an import in the same module. A
+complete import is private and selects no implementation facts.</p>
+<p>Hook and registration targets use these same effect names and defining
+identities, including through renaming and public re-export. There is no
+separate hook namespace or compiler-owned hook module. Importing a hook API or
+transformer makes it available but installs no registration.</p>
+<p>A targeted name item binds only the selected public spelling as an unqualified
+name. An <code>as</code> clause changes the local spelling without changing the imported
+identity. One name item considers the term namespace, the shared
+nominal-type/interface/effect name namespace, and the constructor namespace. If
+a public nominal type, interface, or effect and a constructor share the selected
+uppercase spelling, the item imports both exported declarations; constraint,
+type, effect, expression, and pattern syntax still distinguish their uses. A
+public method may be targeted independently of its interface, and an interface
+may be targeted without importing any method spelling. A rename changes the
+local spelling in every namespace selected by that item.</p>
+<p>A targeted implementation item has the form <code>impl Interface</code>. Resolution uses
+the uppercase spelling in the dependency's public interface namespace and
+selects every public implementation fact for that exact <code>InterfaceId</code> from the
+dependency summary's public implementation closure. The item binds no source
+name and cannot be renamed. A qualified import and a targeted name item select
+no implementation facts. Conversely, an implementation item does not bind the
+interface or any method spelling.</p>
+<p>Every import establishes one direct dependency regardless of which channel it
+selects. A private targeted import makes its selected names and implementation
+facts available only in the importing module. A public import must be targeted.
+It creates the same local bindings and implementation availability, then stages
+each selected name under its local spelling and each selected implementation
+fact for the module's checked public summary. Re-exporting a name preserves its
+original global binder, nominal, constructor, interface, effect, method, or
+operation identity. Re-exporting an implementation preserves its original
+<code>ImplId</code>, checked head,
+prerequisites, method identities, and defining method binders. A facade creates
+no forwarding declaration or implementation.</p>
+<p>The module-level term namespace contains global functions, interface methods,
+and constructors. Interface and effect spellings occupy the nominal-type name
+namespace, although neither denotes an ordinary value type. Operations remain
+inside their owning effect and do not enter the module-level term namespace.
+Module aliases occupy a distinct syntactic role but may not share their
+file-wide spelling with another alias, targeted binding, or local module
+declaration. Imported
+globals, methods, and constructors may not conflict in the expression
+namespace, and imported nominal types, interfaces, and effects may not conflict
+in their shared uppercase namespace. A second import or later module
+declaration never
+silently shadows an imported file-wide binding. Block-local binders retain
+their ordinary lexical shadowing behavior.</p>
+<p>A repeated module alias is rejected with
+<code>resolve.duplicate-module-alias</code>. A targeted binding or other imported
+file-wide binding that conflicts as described above is rejected with
+<code>resolve.import-conflict</code>.</p>
+<p>Selecting a private spelling or a spelling that the dependency does not export
+is rejected with <code>resolve.unavailable-export</code>. Attempting to select or use a
+constructor withheld by opacity is rejected with
+<code>resolve.opaque-constructor</code>. An implementation item whose spelling is absent,
+private, or names a public non-interface declaration is rejected with the
+corresponding unavailable-export or interface-kind reason. The failed item does
+not bind the interface spelling.</p>
+<p>One stable implementation identity reached through several selected routes is
+retained once. Each retained imported or re-exported fact carries an
+authorization route whose first hop is the current module's exact import edge
+and whose suffix is the dependency summary's authorization for that fact. A
+local implementation has an empty route. A nonempty route preserves every
+summary edge back to the defining module; it does not change declaration
+ownership.</p>
+<p>For one identity, the shortest route wins. Equal-length routes use dependency
+order, then import source order, then selector source order. These ranks choose
+the current winner but do not enter a public authorization route. If the ranks
+are equal, the lexicographic sequence of graph-local <code>(from ModuleId, to ModuleId, import byte range)</code> hop keys breaks the tie. <code>ModuleId</code> participates
+only inside that final graph-local hop key; it does not replace dependency,
+import, or selector rank. Process-global source allocation and hash-map
+iteration do not choose a route.</p>
+<p>Effective availability and public authorization choose routes independently.
+Any explicit implementation item may supply the effective winner. Only a
+public item may supply the public winner, so a shorter private route cannot
+authorize a re-export. An empty public authorization denotes a public local
+implementation. A private local implementation never enters the public
+implementation closure.</p>
+<p>Resolution uses each already checked dependency's immutable export summary.
+The summary supplies public local and re-exported names under their selected
+spellings, checked constrained rank-1 schemes with kinded binders, accessible
+constructor and effect-operation facts, the public implementation closure with
+authorization routes, and hidden kind, identity, interface-shape, or
+effect-signature facts required to close those public facts. The compiler
+produces this source-body-free summary only after
+checking the complete module; Ash source does not declare it. It contains no
+dependency source body, implementation source body, forwarding declaration,
+or mutable dependency scope. Importing a scheme does not infer or generalize
+it again.
+Exported function values also retain compiler-inferred control summaries for
+capture checking. These summaries describe possible calls, requests and handler
+control; they do not import dependency source bodies. Admission authenticates
+their defining function identity and retained type and effect identities.</p>
+<p>Summary admission authenticates every retained type-variable identity against
+one defining kinded binder record and derives each nominal constructor kind
+from its ordered parameter records before the dependency facts enter local
+resolution. Resolution preserves those identities and kinds. Qualification,
+targeted renaming, opacity, re-export, and another path through a dependency
+diamond cannot recompute a kind or replace a defining record with a local one.
+For each public method scheme, admission also authenticates the complete
+method-parameter set, written order, method owner, kinds, body scope, identity,
+and provenance. A dependent checks from that body-free fact without importing
+the interface or implementation body.</p>
+<p>For each public effect, admission authenticates its defining module, ordered
+parameters, <code>EffectId</code>, ordered operation signatures, and <code>OperationId</code> values.
+A dependent preserves those facts without importing an effect body or creating
+a local identity.</p>
+<p>A public constrained global, public implementation, or re-exported fact may
+refer to declarations defined by an earlier module. The summary retains the
+foreign interface's checked ordered parameter records, optional determinant
+positions, and method shape, plus any nominal or constructor identities needed
+to authenticate and type those public facts.
+This hidden closure creates no source binding, cannot be qualified or targeted
+through the summary, and does not export a hidden spelling or constructor.
+Privacy and opacity therefore remain properties of source access even when a
+public scheme or implementation route carries the hidden identity.</p>
+<p>For a <code>newtype</code>, that authenticated closure also retains the declaration kind,
+owner, ordered parameter identities and kinds, sole same-spelled constructor,
+canonical representation and provenance, and constructor access. A transparent
+projection exposes the constructor and representation facts needed for source
+wrapping and matching. An opaque projection exposes the nominal identity and
+parameters but withholds the constructor and representation. A private
+declaration exposes no name. The hidden canonical fact remains available to
+linking for all three modes, but it creates no source name, constructor access,
+coercion, or interface evidence. Alias and diamond routes must agree on the
+same defining fact.</p>
+<p>The following three sibling modules demonstrate a targeted public name
+re-export. <code>arithmetic.ash</code> defines the original binder:</p>
+<pre tabindex="0"><code class="language-ash">pub answer : Unit -&gt; Int
+answer () = 42
+</code></pre>
+<p><code>facade.ash</code> re-exports it under a new public spelling:</p>
+<pre tabindex="0"><code class="language-ash">pub import arithmetic (answer as facade_answer)
+</code></pre>
+<p>The entry selects that spelling without creating a facade definition:</p>
+<pre tabindex="0"><code class="language-ash">import facade (facade_answer)
+
+main : Unit -&gt; Int
+main () = facade_answer(())
+</code></pre>
+<p>The program observes <code>42 : Int</code>, and <code>facade_answer</code> resolves to the binder
+defined by <code>arithmetic.ash</code>.</p>
+<p>Name selection alone does not admit evidence. In this entry, both <code>Equal</code> and
+<code>equal</code> resolve, but the method obligation is <code>constraint.unsatisfied</code> because
+the import contains no <code>impl Equal</code> item:</p>
+<pre tabindex="0"><code class="language-ash">import equality (Equal, equal)
+
+main : Unit -&gt; Bool
+main () = equal(1, 1)
+</code></pre>
+<p>The sibling <code>equality.ash</code> does publish an implementation:</p>
+<pre tabindex="0"><code class="language-ash">pub interface Equal&lt;A&gt; {
+    equal : (A, A) -&gt; Bool
+}
+
+pub impl Equal&lt;Int&gt; {
+    equal (left, right) = left == right
+}
+</code></pre>
+<p>The missing selector, not the implementation declaration, owns the absence
+from the entry's effective environment. Adding <code>impl Equal</code> to the targeted
+list makes that fact available without changing the two name bindings.</p>
+<p>Imports are installed in source order. Nominal types, interfaces, effects,
+implementations, and globals share one interleaved local declaration order.
+Resolution allocates declaration identities before resolving bodies, and
+allocates local type-variable identities in that declaration order as
+described below.</p>
+<h2 id="interface-implementation-and-requirement-identities">Interface, implementation, and requirement identities</h2>
+<p>Resolution allocates stable identities from canonical defining ownership and
+declaration order:</p>
+<ul>
+<li>an <code>InterfaceId</code> combines the defining <code>ModuleId</code> with the interface
+declaration;</li>
+<li>a <code>MethodId</code> combines its <code>InterfaceId</code> with method declaration order;</li>
+<li>an <code>EffectId</code> combines the defining <code>ModuleId</code> with effect declaration order;</li>
+<li>an <code>OperationId</code> combines its <code>EffectId</code> with operation declaration order;</li>
+<li>an <code>ImplId</code> combines the defining <code>ModuleId</code> with the anonymous
+implementation declaration;</li>
+<li>an <code>ImplMethodId</code> combines its <code>ImplId</code> with the implemented <code>MethodId</code>;</li>
+<li>a <code>RequirementId</code> combines its owning global <code>BinderId</code> or <code>ImplId</code> with
+requirement declaration order;</li>
+<li>a <code>LexicalEvidenceId</code> combines the defining <code>ModuleId</code> with the local
+evidence declaration's source order; and</li>
+<li>each implementation method receives a hidden <code>BinderId</code> qualified by its
+defining module.</li>
+</ul>
+<p>Aliases, targeted renames, imports, and re-exports preserve <code>EffectId</code> and
+<code>OperationId</code>. An effect instance is the exact pair of one <code>EffectId</code> and its
+ordered type arguments; equal source spellings or separately declared effects
+do not make instances equal. Effect visibility is whole-API visibility: a
+public effect exposes all of its operation signatures, while a private effect
+exposes none. An operation cannot be imported or renamed independently of its
+owner.</p>
+<p>Aliases, targeted renames, and alternate routes never participate in these
+identities. Every interface, method, effect, operation, implementation,
+implementation method, requirement, and hidden implementation-method binder is
+allocated before a global or implementation-method body is resolved. An
+implementation method head resolves its spelling to the interface's <code>MethodId</code>;
+it does not introduce a lexical term binding. The hidden binder names the
+checked method body for later compiler phases, not for Ash source.</p>
+<p>An interface application is valid in a constraint, implementation head, or
+local evidence header.
+It retains the complete ordered argument vector. Arity and positional kinds are
+checked later; resolution does not discard a dependent argument.
+Using an interface as an ordinary value type is <code>resolve.type-kind</code>. Naming a
+nominal type, type parameter, or other non-interface declaration where an
+interface is required is <code>resolve.interface-kind</code>.</p>
+<p>A local interface conflicts with another interface, a nominal type, or a
+file-wide module alias of the same spelling. A local method conflicts with a
+global, another method, or a targeted term binding of the same spelling,
+including a constructor renamed to lowercase. Interface names do not conflict
+with lowercase terms or constructors in their distinct syntactic namespaces.
+These conflicts use <code>resolve.duplicate-type</code>, <code>resolve.duplicate-global</code>, or
+<code>resolve.import-conflict</code> according to the declarations involved.</p>
+<p>A local effect conflicts with a nominal type, interface, effect, targeted
+uppercase binding, or module alias of the same spelling. Two operations in one
+effect cannot share a spelling. Operations do not conflict with module-level
+lowercase terms because operation references resolve through their owning
+effect.</p>
+<h2 id="type-binder-identity-and-scope">Type binder identity and scope</h2>
+<p>The defining resolved binder record owns the spelling, source origin, and
+canonical kind of each <code>TypeVariableId</code>. A type occurrence retains that
+identity instead of copying an independently authoritative kind. Resolution
+allocates source-origin type-variable identities from one module-wide sequence
+in declaration source order, then in binder encounter order within each
+declaration. Interleaving a nominal type, interface, effect, implementation, or
+global
+therefore does not regroup its binders by declaration family. Free type-name
+candidates later rejected by the interface method or implementation
+prerequisite rules retain the same encounter order, but their allocation does
+not make them valid binders.</p>
+<p>A local <code>newtype</code> allocates its written type parameters in the same
+module-wide sequence when resolution reaches the declaration. These parameters
+scope only over its representation and retain their declared order and kinds.
+The nominal itself is a rigid declaration identity, not a type-variable binder.</p>
+<p>A resource acquisition allocates its identity binder in the same module-wide
+type-variable sequence after resolving its initializer. The binder has kind
+<code>Type</code> and scopes over the resource body only. It is distinct from enclosing
+type parameters and other acquisition binders, regardless of spelling.</p>
+<p>Nominal and ordinary effect parameters use their written set and order and may be
+phantom. Effect parameters scope over all operation signatures in their
+declaration and cannot have kind <code>EffectRow</code>. An interface has a nonempty
+ordered written parameter vector. A kind annotation fixes its binder's kind;
+an omitted annotation fixes it at <code>Type</code>.</p>
+<p>Native symbol and source resource parameters retain their complete written
+Type/Row vector, including parameters with no ABI operand. An owner state
+family retains its own ordered <code>Type</code>/<code>EffectRow</code> parameters and their original
+binding coordinates. Its explicit owned selector names a <code>Type</code> formal; inherited
+Rows remain Rows. These distinct inventories are not
+collapsed into a Type-only vector for source effect identity.</p>
+<p>For an interface declaration, binder encounter order starts with the interface
+parameters in written order, then visits methods in declaration order and each
+method's explicit parameters in written order. The interface parameters and
+one method's local parameters scope over that method signature only. The
+optional determination edge resolves only parameter names from that same interface declaration.
+Its names do not introduce binders. An implementation equation does not inherit
+the interface or method-parameter spellings from the interface it implements.</p>
+<p>A local evidence method likewise does not inherit those spellings. Each
+supplied method receives independent contextual rigid parameters in its
+interface method's declared order and kinds. Their identities belong to that
+supplied method, including when methods of the same interface nest. They do
+not enter its body's source type namespace; an enclosing type name keeps its
+meaning. The local evidence header introduces no type parameters.</p>
+<p>An explicit global parameter list is an ordered bijection with the free type
+variables of the global's value type and requirements. The written order is
+the outer scheme order and scopes over the complete header, patterns, and body.
+An explicit implementation parameter list is an ordered bijection with the
+free variables across its complete head argument vector. Its written order is
+the implementation head-parameter order and scopes over the head,
+prerequisites, and method bodies. Every prerequisite variable must belong to
+that complete head set; a variable
+that is unlisted and occurs only in a prerequisite remains
+<code>impl.prerequisite-variable</code>. Listing such a variable does not add it to the
+head's free-variable set and instead makes that explicit binder unused.</p>
+<p>A row tail resolves only to a global parameter or eligible generalized-local
+parameter of kind <code>EffectRow</code>. Explicit global parameters state that kind;
+omitted global parameters follow the existing first-occurrence policy across
+the complete computation type and requirements. A row-tail occurrence does not
+resolve as an ordinary value type, nominal argument, interface argument, or
+pattern type.</p>
+<p>An absent method parameter list binds no method-local parameter.
+A present method parameter list is an ordered bijection with the method type's
+free variables other than the interface parameters. Its binders must be
+distinct from every interface parameter and one another, every listed binder
+must occur in the method type, and written order becomes method-scheme order.</p>
+<p>A duplicate explicit binder, including a method binder that repeats an
+interface parameter, is <code>resolve.duplicate-type-parameter</code>; a listed binder
+absent from the global's value type and requirements, the implementation head,
+or its method type is <code>resolve.unused-type-parameter</code>; and an unlisted free
+header or method name under an explicit list is <code>resolve.unknown-type</code>. With an
+absent method list, another free type variable remains
+<code>interface.method-parameter</code>. Requirement determination is a later static rule;
+resolution retains requirement-only variables admitted by a total interface
+edge.</p>
+<p>When a global omits its parameter list, first occurrences in its value type
+come first, followed by first occurrences found only in its requirements. When
+an implementation omits its list, first occurrences across its complete head
+argument vector become its parameters. A method list is never implicit. Every
+omitted declaration kind annotation and every binder introduced by an omitted
+implementation binder list is fixed to <code>Type</code>. An omitted global list
+discovers ordinary free type variables and effect-row-tail variables in their
+shared first-occurrence order. A name occurring only in ordinary type positions
+has kind <code>Type</code>; one occurring only as an effect-row tail has kind <code>EffectRow</code>;
+using the same name in both roles is invalid. Ash does not infer a function
+kind from use. This is the current phase-dependent language constraint, not a
+commitment against a later bounded declaration-local inference rule.</p>
+<p>The executable test <code>resolution_binder_policies_are_executable_and_ordered</code>
+checks written order, first-occurrence order, omitted kinds, phantom nominal
+parameters, and both global presentations:</p>
+<pre tabindex="0"><code class="language-ash">type Phantom&lt;Unused, A&gt; = Phantom(A)
+type Pair&lt;Left, Right&gt; = Pair(Left, Right)
+
+interface Witness&lt;Value&gt; {
+    witness : Value -&gt; Bool
+}
+
+ordered&lt;B, A&gt; : A -&gt; B -&gt; A
+ordered left right = left
+
+fn operational&lt;D, C&gt;(left : C, right : D) -&gt; C {
+    left
+}
+
+legacy : Y -&gt; X -&gt; Y
+legacy left right = left
+
+impl&lt;F, E&gt; Witness&lt;Pair&lt;E, F&gt;&gt; {
+    witness value = true
+}
+
+impl Witness&lt;(S, R)&gt; {
+    witness value = true
+}
+
+main : Unit -&gt; Int
+main () = 42
+</code></pre>
+<h2 id="type-and-constructor-scope">Type and constructor scope</h2>
+<p>All module-level nominal data and <code>newtype</code> declarations in one module are mutually visible,
+including in their own and earlier constructor payloads or representations.
+Resolution allocates each nominal identity in cross-declaration source order
+before resolving any payload or representation type. Two module-level nominal
+declarations cannot share a spelling.</p>
+<p>A module-level <code>newtype</code> receives the same module-owned nominal and constructor identity forms
+as ordinary data. It has exactly one constructor under its owner. Resolution
+requires that constructor's spelling to equal the nominal spelling; a mismatch
+is <code>resolve.newtype-constructor-name</code> at the constructor spelling. Imports,
+renames, re-exports, and facade diamonds preserve both defining identities.
+Equal spellings or equal representations from separate declarations do not
+make their identities equal.</p>
+<p>Every constructor receives a stable identity under its owning nominal type.
+Module-level constructors form one module-wide term namespace and must have distinct
+spellings across those declarations. Constructor names do not conflict
+with ordinary lowercase term names unless an import rename gives them the same
+spelling. A type occurrence must name a local or imported nominal type, an
+in-scope type parameter, or one of <code>Int</code>, <code>Bool</code>, and <code>Unit</code>. An uppercase term
+or pattern occurrence must name an accessible local or imported constructor.</p>
+<p>A parameterized nominal declaration makes its distinct kinded parameters
+visible throughout that declaration's constructor payloads or representation
+and nowhere else. A declaration cannot repeat a parameter spelling. A
+parameter shadows a same-spelled unqualified nominal type inside its
+declaration.</p>
+<p>The source tree retains a named type application with its argument vector and
+spans. Resolution admits a nominal constructor or in-scope type parameter as
+the head, then folds the arguments left into repeated unary applications. For
+example, <code>F&lt;A, B&gt;</code> resolves as
+<code>Application(Application(F, A), B)</code>, with one provenance step and argument span
+per fold. A bare nominal constructor or type parameter remains its resolved
+identity; resolution does not require saturation and does not reject a
+parameter merely because it occurs in function position. <a href="/ash/spec/static-semantics/">Static
+semantics</a> derives the kind of the bare, partial, or
+saturated result and owns any application-kind failure.</p>
+<p>A block <code>newtype</code> instead receives
+one stable, module-qualified lexical nominal identity per source declaration.
+Lexical and module ownership are distinct. Equal names, parameter lists, or
+representations do not equate declarations. Repeated execution of a block,
+function, generalized binding, or recursive member reuses that declaration's
+identity; it does not allocate a runtime identity. The constructor keeps the
+same owner-and-ordinal relationship and same-spelling requirement as a module
+<code>newtype</code>. Lexical facts are not module declarations or importable names.</p>
+<h2 id="public-private-and-opaque-declarations">Public, private, and opaque declarations</h2>
+<p>Declaration visibility affects access from other modules, not scope inside the
+defining module. The three ordinary-data visibility modes are:</p>
+<ul>
+<li><code>type</code> exports neither the nominal name nor any constructor;</li>
+<li><code>pub opaque type</code> exports the nominal name, identity, arity, and parameters,
+but no constructor; and</li>
+<li><code>pub type</code> exports the nominal name and its complete constructor set.</li>
+</ul>
+<p>All three modes leave the type name and constructors available inside the
+defining module. Individual constructors cannot have separate visibility.</p>
+<p>The corresponding <code>newtype</code> modes are:</p>
+<ul>
+<li><code>newtype</code> exports neither the nominal name nor its constructor;</li>
+<li><code>pub opaque newtype</code> exports the nominal name, identity, arity, and
+parameters but withholds the constructor; and</li>
+<li><code>pub newtype</code> exports the nominal name and its sole constructor.</li>
+</ul>
+<p>All three leave the constructor available in the defining module. Its
+visibility is not independent of the declaration.</p>
+<p>An <code>interface</code> declaration without <code>pub</code> is private. Its interface spelling and
+method spellings remain local to the defining module. <code>pub interface</code> exports
+the interface identity, ordered parameter records, optional determinant
+positions, ordered methods, ordered method-parameter records, checked method
+signatures, and their spellings as one declaration unit. A method cannot have visibility
+separate from its interface. Public implementation facts are anonymous: <code>impl</code>
+keeps the fact local, while <code>pub impl</code> places the checked fact in its module's
+public implementation closure without creating an exported source name. A
+dependent obtains that fact only through an explicit implementation item. A
+targeted public implementation item may authorize later dependents to select
+the same fact transitively.</p>
+<p>A public opaque nominal can appear by name in an importing module's annotations
+and global signatures. Its constructors cannot occur there as values or
+patterns, whether targeted or qualified. Importers may define new functions
+over the named type and obtain values from exported operations without
+inspecting its data or newtype representation.</p>
+<p>A public transparent data type makes its constructors available as values and
+patterns. A public transparent <code>newtype</code> likewise makes its sole constructor
+available for explicit wrapping and matching. Constructor identities and
+payload or representation types remain those of the defining module. Renaming
+or reaching the same declaration through another route preserves those
+identities. Equal spellings or representations from different declarations do
+not make their nominal or constructor identities equal.</p>
+<p>A public global scheme may contain a private nominal identity from its defining
+module. The identity remains the same wherever it occurs in that module's
+public schemes, but importers receive neither its source type name nor any
+constructor. An importer may infer a local binding for such a value and pass it
+among imported functions whose schemes contain the same identity. It cannot
+name the hidden type in an annotation or write a new module-level global
+signature that requires that name. A diagnostic may display an occurrence as
+<code>Carrier.&lt;private Hidden&gt;</code> to distinguish identities; this display does not add
+a resolvable name.</p>
+<h3 id="interfaces-over-hidden-and-opaque-carriers">Interfaces over hidden and opaque carriers</h3>
+<p>Interface method access does not make a hidden carrier nameable. In this
+sibling-file program, <code>carrier.ash</code> publishes an interface and an implementation
+whose head retains its private nominal identity:</p>
+<pre tabindex="0"><code class="language-ash">type Hidden = Hidden(Int)
+
+pub interface Transform&lt;A&gt; {
+    transform : A -&gt; A
+}
+
+pub impl Transform&lt;Hidden&gt; {
+    transform value = value
+}
+
+pub make : Int -&gt; Hidden
+make value = Hidden(value)
+
+pub read : Hidden -&gt; Int
+read (Hidden value) = value
+</code></pre>
+<p>A complete import in <code>main.ash</code> exposes <code>Carrier.transform</code>; the separate
+implementation item selects the public fact. The result of <code>Carrier.make</code>
+carries the same hidden nominal identity used by that fact, even though the
+importer has no spelling for it:</p>
+<pre tabindex="0"><code class="language-ash">import carrier as Carrier
+import carrier (impl Transform)
+
+main : Unit -&gt; Int
+main () = Carrier.read(Carrier.transform(Carrier.make(42)))
+</code></pre>
+<p>This program observes <code>42 : Int</code>. The importer cannot write <code>Hidden</code> in an
+annotation, select it from <code>Carrier</code>, or use its constructor. The public
+implementation exports no source name.</p>
+<p>Opacity withholds constructors while retaining a public nominal name. The
+defining <code>token.ash</code> module may use its own constructor in an implementation
+body:</p>
+<pre tabindex="0"><code class="language-ash">pub opaque type Token = Token(Int)
+
+pub interface Equal&lt;A&gt; {
+    equal : (A, A) -&gt; Bool
+}
+
+pub impl Equal&lt;Token&gt; {
+    equal (Token(left), Token(right)) = left == right
+}
+
+pub make : Int -&gt; Token
+make value = Token(value)
+</code></pre>
+<p>Its sibling <code>main.ash</code> can name <code>Token.Token</code>, call the public method, and
+select the public implementation fact without gaining constructor access:</p>
+<pre tabindex="0"><code class="language-ash">import token as Token
+import token (impl Equal)
+
+main : Unit -&gt; Bool
+main () = Token.equal(Token.make(42), Token.make(42))
+</code></pre>
+<p>This program observes <code>true : Bool</code>. The importer cannot construct or pattern
+match <code>Token.Token</code>; the implementation body remains in the defining module.</p>
+<h2 id="global-scope">Global scope</h2>
+<p>All global function names declared in one module form a simultaneous scope.
+Each global body can refer to itself, an earlier global, or a later global in
+the same module. Imported globals enter only through the qualified or targeted
+bindings created by their imports; an import cycle cannot create a
+cross-module recursive group.</p>
+<p>Local implementation-method bodies join the same simultaneous module group as
+ordinary globals. A source method occurrence resolves to its interface
+<code>MethodId</code>, not to a particular implementation body's hidden binder. The hidden
+binder preserves the body's stable identity for later phases without adding a
+source-visible name.</p>
+<p>Each global uses either the complete explicit parameter list or the omitted
+list's first-occurrence rule defined in <a href="#type-binder-identity-and-scope">Type binder identity and
+scope</a>. Its type parameters do not enter
+another global signature. Thus <code>identity : A -&gt; A</code> declares one rank-1
+kind-<code>Type</code> parameter without adding source type-parameter punctuation to the
+function name, while <code>identity&lt;A&gt; : A -&gt; A</code> states the same binder explicitly.</p>
+<p>Two local globals cannot have the same name. In an equational definition, the
+name in the global signature must equal the name at every equation head.</p>
+<h2 id="local-scope">Local scope</h2>
+<p>A block resolves its bindings from left to right. A local initializer uses the
+scope before its binder, so the binding is nonrecursive. The binder is visible
+in later bindings and in the block result. A local may shadow an earlier local,
+global, or targeted import. The stable identities keep the definitions
+distinct.</p>
+<p>A local <code>newtype</code> installs its nominal name and constructor together for the
+following declarations and block result.
+The representation sees the preceding lexical type scope and its own parameters.
+It may use an enclosing type parameter or preceding nominal. It cannot refer to
+itself or a later local declaration. If it shadows an earlier nominal, the
+earlier identity remains the meaning of that spelling in its representation.
+Later local declarations may shadow earlier local or module nominal and
+constructor bindings. Both preceding name bindings are restored when the block ends.</p>
+<p>A local <code>newtype</code> cannot be a member of a <code>let rec</code> group. A following recursive
+term group may use its nominal name and constructor. Local nominal declarations
+do not form recursive groups.</p>
+<p>A resource initializer resolves in the preceding term and type scopes. The
+acquisition's identity and handle binders then enter scope together for its
+body block and may shadow earlier names. Neither binder is visible in its own
+initializer or after the resource expression. Closing the body restores the
+preceding scopes. The handle is an ordinary term binder, not a release owner.
+For a source family, resolution checks the complete written argument vector
+against the retained header and identifies the fresh binder at the explicit
+owned position. Every other Type or Row actual resolves in the preceding type
+scope. The fresh identity cannot occur in those actuals or in its initializer.</p>
+<p>The target of <code>hook</code> or <code>register</code> resolves as an exact effect instance in the
+preceding type scope. A registration's transformer resolves in the preceding
+term and type scopes, before its body. Resolution retains the generated
+handler's compiler-owned identity and the lexical registration-owner relation;
+neither form introduces a source-visible term or type binder. Their body blocks retain
+the surrounding clause's resume scope. A transformer function is an ordinary
+function and cannot capture that clause's resume capability.</p>
+<p>A cleanup action resolves in the preceding term and type scopes, before its
+body block. Resolution retains its hidden callback binding and lexical cleanup
+owner relation; neither introduces a source-visible binder or namespace. The
+body retains the surrounding clause's resume scope. An action function remains
+an ordinary function and cannot capture the enclosing clause's resume capability.</p>
+<p>Each local <code>with</code> declaration receives its own <code>LexicalEvidenceId</code> and hidden
+method binders when resolution reaches it. It creates no source-visible term
+binding. Its method heads identify interface methods; method bodies resolve
+under the preceding term and type scopes. They may capture preceding ordinary
+values or recursive functions, but gain no self or sibling binding from the
+declaration. Checking admits the source only for the following block remainder.
+Local evidence identities and their methods are not exported or imported.</p>
+<p>A <code>let rec ... and ...</code> group allocates every member identity before resolving
+any initializer. Every initializer therefore sees all members, and all members
+remain visible in the following block remainder. A member may shadow an outer
+binder, but two members of one group cannot have the same spelling.</p>
+<p>A function parameter is visible only in its body and may shadow an outer
+binder. Parentheses and other grouping syntax do not introduce a scope.</p>
+<p>Pattern binders enter scope together after the complete pattern resolves. A
+spelling cannot occur twice in one pattern. Match-arm binders are visible only
+in that arm body. Equation-pattern binders are visible only in their clause
+body. A local <code>let</code> pattern contributes its binders to the later block
+remainder, not to its initializer.</p>
+<p>Each handler clause receives one hidden <code>ResumeId</code> owned by that clause. The
+clause's operation pattern and resume capability scope only over its body;
+<code>resume</code> or <code>discard</code> outside such a scope is
+<code>effect.resume-outside-clause</code>. Both forms name that same hidden capability.
+A nested handler's handled expression remains in the outer clause scope.
+Each nested handler clause receives its own resume scope and cannot use the
+outer capability. Nested functions, recursive members, and supplied local
+evidence methods cannot capture a
+resume capability; static semantics owns the non-escape and exactly-once
+checks.</p>
+<p>Forward references exist only among globals declared in one module and members
+of one explicit local recursive group. An ordinary <code>let</code> does not see itself or
+a later local declaration.</p>
+<p>The executable test <code>resolution_global_recursive_scope_example_is_executable</code>
+checks mutual visibility across the two global presentations in a complete
+entry module:</p>
+<pre tabindex="0"><code class="language-ash">first : Unit -&gt; Int
+first ignored = second ()
+
+fn second(ignored : Unit) -&gt; Int {
+    let retain : Unit -&gt; Int = fn(value) {
+        first value
+    }
+    42
+}
+
+main : Unit -&gt; Int
+main () = first ()
+</code></pre>
+<h2 id="unresolved-names">Unresolved names</h2>
+<p>Every occurrence must resolve. The executable test
+<code>resolution_unknown_name_example_has_its_documented_reason</code> checks that this
+complete entry module is rejected with <code>resolve.unknown-name</code>:</p>
+<pre tabindex="0"><code class="language-ash">main : Unit -&gt; Int
+main () = missing 1
+</code></pre>
+<p>A diagnostic may suggest an in-scope name only when its spelling justifies that
+suggestion. Suggestions do not change resolution. Cross-module diagnostics
+retain the importing occurrence as their primary location. A cross-module type
+diagnostic also relates the exported declaration that supplied the imported
+type.</p>
+<p>Every resolved imported global or interface-method occurrence also retains the
+exact source import binding used by that occurrence: the complete import
+declaration or the targeted selector item, including a rename. This provenance
+lets a diagnostic relate the route the program actually wrote when several
+name routes reach one identity. It does not participate in semantic identity,
+implementation availability, or evidence selection.</p>
+<p>Selected implementation facts separately retain the chosen authorization
+route. Overlap and selected-prerequisite diagnostics use its import hops in
+order. The route authenticates availability and supplies causal labels; it does
+not become part of the implementation identity.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#module-paths-and-identity">Module paths and identity</a><a href="#imports-and-namespaces">Imports and namespaces</a><a href="#interface-implementation-and-requirement-identities">Interface, implementation, and requirement identities</a><a href="#type-binder-identity-and-scope">Type binder identity and scope</a><a href="#type-and-constructor-scope">Type and constructor scope</a><a href="#public-private-and-opaque-declarations">Public, private, and opaque declarations</a><a href="#global-scope">Global scope</a><a href="#local-scope">Local scope</a><a href="#unresolved-names">Unresolved names</a></nav><div class="aside-note"><p>These rules describe the source revision linked above.</p><a href="/ash/docs/tools/ash/">Read the ash tool guide ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent specification chapters"><a rel="prev" href="/ash/spec/syntax/">← Syntax</a><a rel="next" href="/ash/spec/static-semantics/">Static Semantics →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Passive Static Modules Integration Evidence · Ash</title><meta name="description" content="This report records implementation and comparison evidence for Modular Ash's passive-static-module increment. It does not define Ash semantics. The normative specification owns the current language. The retained…"><meta name="robots" content="index, follow"><meta property="og:title" content="Passive Static Modules Integration Evidence · Ash"><meta property="og:description" content="This report records implementation and comparison evidence for Modular Ash's passive-static-module increment. It does not define Ash semantics. The normative specification owns the current language. The retained…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Passive Static Modules Integration Evidence · Ash"><meta name="twitter:description" content="This report records implementation and comparison evidence for Modular Ash's passive-static-module increment. It does not define Ash semantics. The normative specification owns the current language. The retained…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/modular-ash/evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/modular-ash/evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Passive Static Modules Integration Evidence","headline":"Passive Static Modules Integration Evidence","description":"This report records implementation and comparison evidence for Modular Ash's passive-static-module increment. It does not define Ash semantics. The normative specification owns the current language. The retained…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/modular-ash/evidence/","@id":"https://dikini.github.io/ash/docs/design/modular-ash/evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="passive-static-modules-integration-evidence" data-pagefind-meta="title">Passive Static Modules Integration Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report records implementation and comparison evidence for Modular Ash's
+passive-static-module increment. It does not define Ash semantics. The
+<a href="/ash/spec/">normative specification</a> owns the current language.
+The retained <a href="/ash/docs/design/dn-0022-passive-static-modules/">module design note</a> and
+<a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">dialect-milestone note</a> explain the
+design pressure and future direction.</p>
+<h2 id="scope-and-environment">Scope and environment</h2>
+<p>The historical comparison baseline is the peeled <code>mini-ash</code> tag at
+<code>d62d3baeb2ae56dcac28fb5dbc3f9810ba5ec436</code>. The implemented and specified
+Modular Ash comparison checkpoint is unsigned commit <code>3b66040</code>. The principal
+retained checkpoints between them are:</p>
+<ul>
+<li><code>0bc17bd</code>, which replaces the file-result root with module syntax;</li>
+<li><code>a9f923d</code>, which loads canonical acyclic module graphs;</li>
+<li><code>d00fd10</code>, which introduces module-qualified identity and export-boundary
+resolution;</li>
+<li><code>be610c8</code>, which enforces private, opaque, transparent, and hidden-type
+access during checking;</li>
+<li><code>8b9e19f</code>, which links dependency-ordered groups into pure Core;</li>
+<li><code>1906c6a</code>, which enforces the entry contract and evaluates generated
+<code>main ()</code>;</li>
+<li><code>270adb6</code>, which migrates the retained corpus to declarations-only modules;</li>
+<li><code>b2e69bf</code>, which closes diagnostics and graph-wide resource evidence; and</li>
+<li><code>3b66040</code>, which replaces the normative specification and tool guide.</li>
+</ul>
+<p>The measurements used:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Property</th>
+<th>Observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Historical tag commit</td>
+<td><code>d62d3baeb2ae56dcac28fb5dbc3f9810ba5ec436</code></td>
+</tr>
+<tr>
+<td>Modular comparison checkpoint</td>
+<td><code>3b66040009b056ac577f3ad548297f78cf01c9a8</code></td>
+</tr>
+<tr>
+<td>Rust</td>
+<td><code>rustc 1.97.1 (8bab26f4f 2026-07-14)</code></td>
+</tr>
+<tr>
+<td>Cargo</td>
+<td><code>cargo 1.97.1 (c980f4866 2026-06-30)</code></td>
+</tr>
+<tr>
+<td>Host</td>
+<td>Linux <code>x86_64</code></td>
+</tr>
+</tbody>
+</table>
+<p>Intermediate commit signatures are mixed. The work remains isolated on
+<code>feature/modular-ash</code>; this report does not record a merge.</p>
+<h2 id="causal-semantic-model">Causal semantic model</h2>
+<p>The loader starts from one entry source and configured named roots. It resolves
+relative and absolute imports, canonicalizes every admitted source, assigns one
+compilation-local <code>ModuleId</code> to that source, and retains all roots that own it.
+Every relative descendant must remain within every retained owner. The loader
+admits one canonical source once, rejects cycles, and orders every dependency
+before its dependents.</p>
+<p>Resolution allocates term, nominal, constructor, and type-variable identities
+under the defining module identity. Complete imports bind public namespaces
+under an alias. Targeted imports bind selected public identities without
+changing them. Private declarations do not enter an importer scope. A public
+opaque nominal exports its name but not constructors. A public transparent
+nominal exports its complete constructor family. A private nominal identity may
+occur in public schemes without acquiring an exported source name.</p>
+<p>Each dependency publishes an immutable body-free export summary only after its
+complete body checks. A dependent resolves and checks from that summary rather
+than the dependency's private scope or body. Imported rank-1 schemes instantiate
+without re-inference or re-generalization. Hidden identities remain equal
+wherever compatible public schemes carry the same module-qualified identity.</p>
+<p>After all modules check, linking combines their defining registries and lowers
+each nonempty module's globals to one existing Core recursive group. Dependency
+groups surround dependent groups. The innermost body applies the entry module's
+local monomorphic <code>main : Unit -&gt; R</code> to unit, where <code>R</code> is closed. Independent
+validation authenticates the whole linked program and its module-to-source
+provenance relation before the existing evaluator runs it. Paths, imports,
+aliases, summaries, visibility, and opacity have no Core node or runtime value.</p>
+<h2 id="historical-milestone-comparison">Historical milestone comparison</h2>
+<p>The historical compiler was built outside the current source tree in a
+temporary detached worktree:</p>
+<pre tabindex="0"><code class="language-text">git worktree add --detach &lt;temporary-path&gt; mini-ash
+git -C &lt;temporary-path&gt; rev-parse HEAD
+cargo xtask verify
+</code></pre>
+<p>The resolved commit was
+<code>d62d3baeb2ae56dcac28fb5dbc3f9810ba5ec436</code>. Its documented <code>cargo xtask verify</code> boundary ran formatting, locked metadata and build checks, denied-warning
+Clippy, every unit and integration test, and denied-warning rustdoc. The command
+exited <code>0</code>: 514 tests passed across 22 binaries with zero failures, ignores,
+measured cases, or filters. The detached worktree remained clean.</p>
+<p>Six cases compare behavior intentionally unchanged by modules. Each Mini-Ash
+source uses its file result. Its Modular Ash counterpart retains the same
+declarations and expression under a local <code>main</code>. Every direct executable run
+exited <code>0</code>, wrote the displayed line to standard output, and wrote nothing to
+standard error.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Historical source</th>
+<th>Modular source</th>
+<th>Exact output in both</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Integer precedence</td>
+<td><code>tests/fixtures/first-stratum/valid/v001-precedence.ash</code> at the tag</td>
+<td>current fixture of the same name</td>
+<td><code>7 : Int\n</code></td>
+</tr>
+<tr>
+<td>Function application</td>
+<td>tagged <code>v002-operational.ash</code></td>
+<td>current <code>v002-operational.ash</code> with local <code>main</code></td>
+<td><code>42 : Int\n</code></td>
+</tr>
+<tr>
+<td>Global recursion</td>
+<td>tagged <code>recursion/valid/global-mutual.ash</code></td>
+<td>current fixture with local <code>main</code></td>
+<td><code>42 : Int\n</code></td>
+</tr>
+<tr>
+<td>Nominal data and higher-order construction</td>
+<td>tagged <code>HIGHER_ORDER_CONSTRUCTOR</code> executable-documentation source</td>
+<td>current <code>HIGHER_ORDER_CONSTRUCTOR_MODULE</code> source</td>
+<td><code>42 : Int\n</code></td>
+</tr>
+<tr>
+<td>Transparent tree patterns</td>
+<td>tagged <code>TREE_PRESENTATIONS</code> executable-documentation source</td>
+<td>current <code>TREE_PRESENTATIONS_MODULE</code> source</td>
+<td><code>4 : Int\n</code></td>
+</tr>
+<tr>
+<td>Rank-1 instantiation and local generalization</td>
+<td>tagged <code>RANK_ONE_POLYMORPHISM</code> executable-documentation source</td>
+<td>current <code>RANK_ONE_POLYMORPHISM_MODULE</code> source</td>
+<td><code>(Some(42), false) : (Option&lt;Int&gt;, Bool)\n</code></td>
+</tr>
+</tbody>
+</table>
+<p>The three historical generated sources were byte-for-byte copies of constants
+retained in the tagged <code>tests/spec_examples.rs</code>. Their SHA-256 values were
+<code>8d93f2660f39349d60ece25a3023d1f65dd597e9af89e477e01a772ad5a9be7a</code>,
+<code>53bb1d834344d1ec6b54066cfef7ba6777a8e622205f388062010c4a9f36b636</code>,
+and <code>20321342522a7b55b5fc87711f4fddb0516607367401ff298c7618ec6292c36b</code>
+in table order. The three tagged fixtures had SHA-256 values
+<code>3553c468c86fade22a00dab4c3970537a6d2e1588fa7514a01b860de9a151ba1</code>,
+<code>00d6c2e3a0eab46ab136994f7ab98be799f619b1d9af86f1a78bd9b3079ca0d4</code>,
+and <code>ccdd86ab54a12934a3f770d42dd9e720bd3eacbb0d29b84c424100f80850f881</code>.</p>
+<p>This comparison is bounded. It does not require current verification to build
+the tag, compare behavior changed by modules, preserve Mini-Ash source
+admission, or claim equivalence for every historical diagnostic or internal
+trace. Git retains the historical compiler; no historical source was copied
+into the current implementation.</p>
+<h2 id="changed-composition-points">Changed composition points</h2>
+<p>The diff from the peeled tag through <code>3b66040</code> contains 110 files, 15,445
+insertions, and 2,938 deletions. File-level classification gives:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Class</th>
+<th align="right">Files</th>
+<th align="right">Insertions</th>
+<th align="right">Deletions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Production</td>
+<td align="right">26</td>
+<td align="right">6,873</td>
+<td align="right">964</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td align="right">65</td>
+<td align="right">6,067</td>
+<td align="right">1,521</td>
+</tr>
+<tr>
+<td>Documentation and specification</td>
+<td align="right">19</td>
+<td align="right">2,505</td>
+<td align="right">453</td>
+</tr>
+</tbody>
+</table>
+<p><code>src/resolve/module_tests.rs</code> is classified as a test file because it is
+compiled only under <code>cfg(test)</code>. Inline unit tests in production files remain
+inside their production file's count. These counts locate the change and its
+evidence; they do not measure semantic or implementation complexity.</p>
+<p>The production change decomposes as follows:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th align="right">Files</th>
+<th align="right">Insertions</th>
+<th align="right">Deletions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lexer, parser, Surface, syntax budget</td>
+<td align="right">9</td>
+<td align="right">791</td>
+<td align="right">239</td>
+</tr>
+<tr>
+<td>Resolution and resolved types</td>
+<td align="right">3</td>
+<td align="right">2,660</td>
+<td align="right">216</td>
+</tr>
+<tr>
+<td>Elaboration and coverage</td>
+<td align="right">2</td>
+<td align="right">675</td>
+<td align="right">241</td>
+</tr>
+<tr>
+<td>Loader, driver, CLI, and diagnostics</td>
+<td align="right">5</td>
+<td align="right">1,969</td>
+<td align="right">178</td>
+</tr>
+<tr>
+<td>Core construction and validation</td>
+<td align="right">4</td>
+<td align="right">637</td>
+<td align="right">47</td>
+</tr>
+<tr>
+<td>Evaluator</td>
+<td align="right">2</td>
+<td align="right">135</td>
+<td align="right">37</td>
+</tr>
+<tr>
+<td>Library assembly</td>
+<td align="right">1</td>
+<td align="right">6</td>
+<td align="right">6</td>
+</tr>
+</tbody>
+</table>
+<p>Most module-specific work remains at the source, resolution, and graph-driver
+boundaries. Core changes qualify semantic identities and authenticate
+module-to-source provenance. Evaluator changes consume linked identities and
+resource results but add no module dispatch.</p>
+<p>A stable maintenance search is:</p>
+<pre tabindex="0"><code class="language-text">rg -l '\b(SurfaceModule|SurfaceImport|SurfaceQualifiedName|SurfaceTypeVisibility|DependencyExports|ExportSummary|ImportedFacts|ResolvedModule|CheckedModule|ResolvedModuleProgram|ModuleId|link_modules|synthesize_module_program|validate_modules)\b' src
+</code></pre>
+<p>The individual symbols occur in two to eight production files. In particular,
+<code>DependencyExports</code> occurs at the driver, resolver, and resolver-test boundary;
+<code>ExportSummary</code> occurs at resolution, checking, and resolved-data boundaries;
+and linking and synthesis each have one driver caller and one elaboration owner.</p>
+<h2 id="core-inventory-and-erasure">Core inventory and erasure</h2>
+<p>The retained pure Core families are:</p>
+<ul>
+<li><code>PureExprKind</code>: <code>Value</code>, <code>Variable</code>, and <code>Computation</code>;</li>
+<li><code>PureValue</code>: <code>Integer</code>, <code>Boolean</code>, <code>Unit</code>, <code>Function</code>, and <code>Constructor</code>;</li>
+<li><code>PureComputation</code>: <code>Bind</code>, <code>RecursiveBind</code>, <code>Apply</code>, <code>Primitive</code>, <code>Tuple</code>,
+<code>Match</code>, <code>TypeAbstraction</code>, and <code>TypeApplication</code>.</li>
+</ul>
+<p>The inventory extracted from <code>src/core/dialect.rs</code> is byte-identical at the
+Mini-Ash tag and <code>3b66040</code>. The runtime <code>Value</code> inventory is also byte-identical:
+integer, Boolean, unit, function, constructor function, location, and data.
+The comparison used:</p>
+<pre tabindex="0"><code class="language-text">diff -u \
+  &lt;(git show d62d3bae:src/core/dialect.rs | sed -n \
+    -e '/pub enum PureExprKind {/,/^}/p' \
+    -e '/pub enum PureValue {/,/^}/p' \
+    -e '/pub enum PureComputation {/,/^}/p') \
+  &lt;(sed -n \
+    -e '/pub enum PureExprKind {/,/^}/p' \
+    -e '/pub enum PureValue {/,/^}/p' \
+    -e '/pub enum PureComputation {/,/^}/p' src/core/dialect.rs)
+</code></pre>
+<p>The command produced no diff. Searches found zero module node variants in the
+Core dialect and zero module-surface or access-policy terms in evaluator
+dispatch. The evaluator's public entry remains
+<code>evaluate(&amp;ValidatedProgram) -&gt; Result&lt;Evaluation, RuntimeFailure&gt;</code>.</p>
+<p>Module linking therefore reuses <code>RecursiveBind</code> and <code>Apply</code>. The new Core-facing
+fact is the static relation from each <code>ModuleId</code> to its admitted <code>SourceId</code>,
+which validation checks together with qualified binder, nominal, constructor,
+and type-variable identities. That relation is provenance, not runtime module
+behavior.</p>
+<h2 id="requirement-evidence">Requirement evidence</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Obligation</th>
+<th>Retained evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Module tokens, import grammar, modifiers, qualification, projection, and recovery</td>
+<td><code>tests/lexer.rs</code>, <code>tests/modules_syntax.rs</code>, parser unit tests, and <code>tests/parser.rs</code></td>
+</tr>
+<tr>
+<td>Sibling, nested, named-root, qualified, targeted, and renamed imports</td>
+<td>module-loading and resolver module tests plus executable examples in <code>tests/spec_examples.rs</code></td>
+</tr>
+<tr>
+<td>Canonical duplicate admission and one diamond identity</td>
+<td>diamond, overlapping-root, alternate-route, and resolver-identity tests in <code>tests/module_loading.rs</code> and <code>src/resolve/module_tests.rs</code></td>
+</tr>
+<tr>
+<td>Unknown roots, missing files, path escape, direct and indirect cycles, malformed roots, aliases, unavailable exports, and binding conflicts</td>
+<td><code>tests/module_loading.rs</code>, <code>tests/module_cli.rs</code>, <code>tests/module_resolution.rs</code>, and resolver module tests</td>
+</tr>
+<tr>
+<td>Private, opaque, transparent, smart-constructor, hidden-carrier, mismatch, and coverage behavior</td>
+<td><code>tests/module_visibility.rs</code>, resolver module tests, <code>tests/module_elaboration_nominals.rs</code>, and executable specification examples</td>
+</tr>
+<tr>
+<td>Cross-module rank-1 instantiation without inference escape or re-generalization</td>
+<td><code>tests/module_elaboration.rs::imported_polymorphic_scheme_instantiates_at_unrelated_types_without_re_generalizing</code></td>
+</tr>
+<tr>
+<td>Body-free immutable dependency summaries</td>
+<td>synthetic dependency-summary resolver tests, <code>failed_module_body_never_publishes_an_export_summary</code>, and the resolved-data API boundary</td>
+</tr>
+<tr>
+<td>Exact entry contract and observation</td>
+<td><code>tests/module_entry.rs</code>, <code>tests/module_cli.rs</code>, and <code>tests/spec_examples.rs</code></td>
+</tr>
+<tr>
+<td>Qualified binders, combined registries, multi-source provenance, transforms, validation, and evaluation</td>
+<td>module resolution/elaboration tests, modular Core validator tests, cross-source diagnostics, and linked transform/revalidation cases</td>
+</tr>
+<tr>
+<td>Graph-wide source, edge, path, owner-fact, syntax, coverage, type, Core, and validation resources</td>
+<td>exact graph-budget units, public path/deep-chain tests, shared syntax/type/coverage and repeated summary-metadata tests, and direct Core/validation boundary suites</td>
+</tr>
+<tr>
+<td>Explicit worklists and small-stack destruction</td>
+<td>deep dependency chain, parser projection, type traversal, Core disposal, validation, cyclic data, and evaluator tests</td>
+</tr>
+<tr>
+<td>Specification, tools, reasons, links, and authority</td>
+<td>the normative replacement at <code>3b66040</code>, executable document manifest, diagnostic tests, Markdown lint, and manual review</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>entry.main-open-result</code> reason is a defensive driver boundary. A
+successfully checked source scheme is closed: every source type parameter is
+bound by its outer <code>forall</code>, and a polymorphic <code>main</code> fails before its domain or
+result is admitted. A source-level open-result fixture would contradict that
+checker invariant. The direct
+<code>driver::tests::entry_result_closure_walks_every_nested_type</code> test retains the
+closure predicate without manufacturing invalid checked source evidence.</p>
+<p>Expensive source and edge maxima are not duplicated as end-to-end fixtures.
+Exact unit-accounting tests prove those two graph boundaries, while public
+loader tests cover path budgets, repeated canonical edges, deterministic
+failure selection, and deep graph stack safety. Syntax, type, coverage, Core,
+and validation limits additionally have graph-wide witnesses.</p>
+<h2 id="facts-retained-and-released">Facts retained and released</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Facts retained</th>
+<th>Facts released</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loading to resolution</td>
+<td>canonical module and source identities, projected module, dependency identities and order, import provenance</td>
+<td>filesystem traversal state and unused path spellings</td>
+</tr>
+<tr>
+<td>Resolution to checking</td>
+<td>module-qualified declarations, local bodies, imported body-free facts, defining registry, export candidate</td>
+<td>aliases as semantic identity, unavailable private scopes, mutable resolution state</td>
+</tr>
+<tr>
+<td>Checking to dependents</td>
+<td>closed public schemes, public nominal and constructor facts, hidden identities, access facts, provenance</td>
+<td>dependency bodies and private name environments</td>
+</tr>
+<tr>
+<td>Checked graph to linking</td>
+<td>full defining registries and bodies, summaries, module/source relation, dependency order</td>
+<td>import selection syntax and access checks already authenticated</td>
+</tr>
+<tr>
+<td>Linking to Core validation</td>
+<td>qualified semantic identities, combined registry, source provenance, dependency-ordered recursive groups, generated entry application</td>
+<td>module paths, aliases, summaries, visibility, and opacity</td>
+</tr>
+<tr>
+<td>Validation to evaluation</td>
+<td>one authenticated pure program</td>
+<td>validator indexes and all remaining module-policy facts</td>
+</tr>
+</tbody>
+</table>
+<p>At the passive-module checkpoint, <code>ResolvedModuleProgram.entry</code> and the
+<code>module</code> field of each <code>ResolvedModuleGroup</code> had no current reader after
+construction. Interface-era linking and linked evidence validation now consume
+the entry identity to authenticate the selected entry's exact module closure
+and consume group module identities to authenticate group ownership, local and
+imported implementation routes, binders, and declarations. Both fields are
+therefore retained facts, not current cleanup candidates.</p>
+<h2 id="diagnostics-resources-and-ownership">Diagnostics, resources, and ownership</h2>
+<p>Module loading retains stable reason families for unknown roots, missing files,
+path escape, import cycles, and graph resources. Resolution distinguishes
+duplicate aliases, unavailable exports, import conflicts, and opaque
+constructors. Entry checking distinguishes missing, polymorphic, wrong-domain,
+and defensive open-result failures. Cross-module diagnostics retain the
+importing occurrence as their primary cause. Cross-module type diagnostics
+also retain the exported declaration that supplied the imported type.
+Diagnostic-only nominal spellings preserve declaration visibility separately
+from importer nameability, so an unselected public type is not described as a
+private declaration.</p>
+<p>One cumulative syntax budget spans every admitted source. Loading charges
+source, edge, path-segment, and retained owner-fact limits before keeping their
+proportional graph state. Resolution charges imported namespace and nominal
+metadata to its graph-wide type budget. Checking retains a separate graph-wide
+type budget and one graph-wide coverage budget, including irrefutability
+checks. Core construction and independent validation apply their cumulative
+limits to the whole linked program. Pending loader work counts only active
+traversal ownership, not every edge ever visited. Deep loading, validation,
+evaluation, rendering, and destruction use explicit work stacks at their
+admitted boundaries.</p>
+<p>Canonical sources, module graphs, Core arenas, and heaps own identity domains.
+Alternate paths do not create semantic duplicates. Core handles and runtime
+locations remain numeric rather than Rust ownership cycles. Linking all loaded
+definitions preserves one ordinary lexical environment chain; it does not add
+module initialization or dynamic lifetime management.</p>
+<h2 id="transferable-findings">Transferable findings</h2>
+<ul>
+<li>A module needs one stable identity for its canonical source, independent of
+alias, root, and route. Overlapping roots add access constraints rather than
+route-specific identities.</li>
+<li>Export summaries must carry hidden nominal identity without carrying private
+source nameability. This lets public APIs compose smart-constructor-style
+carriers without exposing representation.</li>
+<li>Opaque and hidden are distinct access states. Opaque types support new
+downstream global interfaces; hidden carriers support only inferred local
+composition through compatible public schemes.</li>
+<li>A body-free summary is a checked dependency boundary, not a source module
+signature. Interfaces and <code>impl</code> can build on it only through a separate
+semantic proposal.</li>
+<li>Module structure can erase after resolution and checking authenticate every
+reference. Byte-identical Core and runtime value inventories demonstrate that
+static modularity does not require a module Core node.</li>
+<li>Resource accounting must span the whole admitted graph. Resetting syntax,
+type, or coverage work at each module, or retaining owner relations without
+a cumulative charge, would make the bound route- and partition-dependent.</li>
+<li>Entry-result closure is guaranteed by the checked rank-1 scheme invariant;
+the driver guard is defensive rather than a source-reachable rejection.</li>
+<li>Retained design notes need explicit retrospective status after their proposal
+lands. A historical note that keeps saying current Ash is Mini-Ash would
+cross the repository's authority boundary even when its original analysis is
+useful.</li>
+</ul>
+<h2 id="downstream-pressure-and-exclusions">Downstream pressure and exclusions</h2>
+<p>At this passive-module checkpoint, the next planned increment was <a href="/ash/docs/design/dn-0023-interfaces-and-implementations/">interface
+and <code>impl</code> design</a> against real
+module boundaries. Ash interfaces are Rust-trait- or Haskell-type-class-like
+typed relationships, not module signatures. DN-0023 later selected method-only
+interfaces, scoped coherence, implicit source evidence, and explicit flattened
+Core evidence. That increment is now implemented and specified; associated
+types and specialization remain later pressure. It did not reinterpret
+compiler-generated export summaries as source declarations.</p>
+<p>The passive-module increment documented here intentionally excludes individual
+constructor exports, import re-exports, parent traversal, module cycles,
+cross-module recursive groups,
+package manifests or acquisition, persistent compiled modules, separate object
+linking, initialization, runtime module values, dynamic loading, providers,
+registration, effects, dead-code elimination, a core-versus-library migration,
+interfaces, <code>impl</code>, and a selectable current-tree Mini-Ash dialect.</p>
+<p>The historical comparison excludes changed source-root admission and does not
+constrain later core-versus-library refactoring to keep Mini-Ash syntax runnable
+in the evolving compiler.</p>
+<h2 id="verification-checkpoint">Verification checkpoint</h2>
+<p>The historical <code>cargo xtask verify</code> passed at the peeled <code>mini-ash</code> tag. The
+Modular Ash comparison checkpoint also passed <code>cargo xtask verify</code>, including
+formatting, metadata, build, denied-warning Clippy, every unit and integration
+test, and denied-warning rustdoc. After this report and its exact syntax cases
+were added, <code>cargo fmt --check</code>, <code>cargo check --locked --all-targets</code>,
+<code>cargo test --locked --all-targets</code>, and <code>cargo xtask verify</code> all passed again.
+Artifact completion additionally checks Markdown, relative links, authority
+boundaries, the complete accepted evidence inventory, and the absence of
+interfaces, module signatures, parent traversal, runtime modules, and a
+current-tree Mini-Ash compatibility path.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#scope-and-environment">Scope and environment</a><a href="#causal-semantic-model">Causal semantic model</a><a href="#historical-milestone-comparison">Historical milestone comparison</a><a href="#changed-composition-points">Changed composition points</a><a href="#core-inventory-and-erasure">Core inventory and erasure</a><a href="#requirement-evidence">Requirement evidence</a><a href="#facts-retained-and-released">Facts retained and released</a><a href="#diagnostics-resources-and-ownership">Diagnostics, resources, and ownership</a><a href="#transferable-findings">Transferable findings</a><a href="#downstream-pressure-and-exclusions">Downstream pressure and exclusions</a><a href="#verification-checkpoint">Verification checkpoint</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

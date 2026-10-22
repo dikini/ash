@@ -1,0 +1,314 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0010: Identities and Resource Lifetimes · Ash</title><meta name="description" content="Can one typed identity model connect static equality, runtime resolution, resource ownership, staged removal, and captured continuations without requiring a monolithic runtime context or general dependent typing?"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0010: Identities and Resource Lifetimes · Ash"><meta property="og:description" content="Can one typed identity model connect static equality, runtime resolution, resource ownership, staged removal, and captured continuations without requiring a monolithic runtime context or general dependent typing?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0010: Identities and Resource Lifetimes · Ash"><meta name="twitter:description" content="Can one typed identity model connect static equality, runtime resolution, resource ownership, staged removal, and captured continuations without requiring a monolithic runtime context or general dependent typing?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0010-identities-and-resource-lifetimes/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0010-identities-and-resource-lifetimes/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0010-identities-and-resource-lifetimes.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0010: Identities and Resource Lifetimes","headline":"DN-0010: Identities and Resource Lifetimes","description":"Can one typed identity model connect static equality, runtime resolution, resource ownership, staged removal, and captured continuations without requiring a monolithic runtime context or general dependent typing?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0010-identities-and-resource-lifetimes/","@id":"https://dikini.github.io/ash/docs/design/dn-0010-identities-and-resource-lifetimes/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0010-identities-and-resource-lifetimes.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0010-identities-and-resource-lifetimes" data-pagefind-meta="title">DN-0010: Identities and Resource Lifetimes</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0010-identities-and-resource-lifetimes.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0010</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009: Effects, Handlers, and Continuations</a>, <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011: Modules, Providers, and Resolution</a>, <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012: Coeffects and Hooks</a>, <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013: Session and Resource Protocol Stress Tests</a>, <a href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">DN-0017: Resource Management and Storage Policy</a>, <a href="/ash/docs/design/dn-0018-runtime-established-static-evidence/">DN-0018: Runtime-Established Static Evidence</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It explores possible future identity and lifetime semantics; it does not define current Ash, accept an architecture, or authorize roadmap work. The syntax and type notation in this note are illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can one typed identity model connect static equality, runtime resolution, resource ownership, staged removal, and captured continuations without requiring a monolithic runtime context or general dependent typing?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>Several possible future facilities need to say that values and runtime relationships refer to the same entity:</p>
+<ul>
+<li>two parts of a handler/provider binding;</li>
+<li>a provider and resources it creates;</li>
+<li>a hook and its registrations;</li>
+<li>a dynamically loaded module and exported objects;</li>
+<li>a continuation and the resources or code it retains.</li>
+</ul>
+<p>This note explores identity as the common substrate. It does not define all effects as identity changes: reads, writes, sends, queries, logging, and other operations may create or remove no identity. Nor does every identity automatically become a security capability. Policy remains a possible library interpretation of typed relationships.</p>
+<p>The source exploration was influenced by reversible acquisitions and delayed provider withdrawal. The candidate Ash model applies those lifecycle insights to independently represented identities and relationships instead of treating the runtime as one replaceable context.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="connect-static-and-runtime-identity">Connect static and runtime identity</h3>
+<blockquote>
+<p>Suggested rule: An identity has type-level meaning and a runtime representation that supports equality and resolution while preserving its identity through opaque or existential packaging.</p>
+</blockquote>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">type-level identity a
+        ^
+        |
+runtime witness for a
+</code></pre>
+<p>An effect instance might therefore use <code>Database&lt;a&gt;</code> rather than a string key. A handler and provider parameterized by <code>a</code> can be known to agree, while a provider parameterized by fresh <code>b</code> does not match merely because it implements the same named API.</p>
+<h3 id="keep-identity-state-usage-and-authority-distinct">Keep identity, state, usage, and authority distinct</h3>
+<blockquote>
+<p>Suggested rule: A resource type may relate an identity to state and authority,
+but those indices do not by themselves determine whether a value may be
+duplicated or discarded.</p>
+</blockquote>
+<p>Illustrative types such as <code>File&lt;f, Open&gt;</code> and <code>View&lt;a, Shared, T&gt;</code> answer
+different questions: which resource, which protocol state, and which access
+authority. Usage discipline answers whether the value carrying those facts may
+be copied or abandoned. <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013</a>
+owns that usage question; <a href="/ash/docs/design/dn-0014-finite-kinds-and-promotion/">DN-0014</a>
+explores only one way to name finite states.</p>
+<p>Keeping the axes distinct avoids treating a promoted state as proof of unique
+ownership or treating every fresh identity as a security capability. A later
+design may derive restrictions from their combination, but it must state the
+derivation explicitly.</p>
+<h3 id="use-one-identity-concept-across-introduction-stages">Use one identity concept across introduction stages</h3>
+<blockquote>
+<p>Suggested rule: Treat compile-time, link-time, load-time, and run-time introduction as stages at which an identity becomes known, not as distinct semantic kinds of identity, until a counterexample requires a distinction.</p>
+</blockquote>
+<p>What changes by stage is the available evidence, naming scope, lifetime, and whether a witness can be erased. The identity's equality meaning need not change.</p>
+<h3 id="model-runtime-structure-as-local-typed-relationships">Model runtime structure as local typed relationships</h3>
+<blockquote>
+<p>Suggested rule: Describe runtime structure in terms of identities and typed relationships, without requiring one universal registry, state object, lock, or synchronization domain.</p>
+</blockquote>
+<p>A semantic graph may include edges such as:</p>
+<pre tabindex="0"><code class="language-text">implements
+handles
+owns
+borrows
+depends-on
+subscribes-to
+</code></pre>
+<p>This graph is a reasoning model. An implementation can keep independent resources in separate data structures with separate synchronization.</p>
+<h3 id="separate-ownership-from-provenance">Separate ownership from provenance</h3>
+<blockquote>
+<p>Suggested rule: The code or module that defines a constructor does not thereby own every resource later created through that constructor; acquisition establishes ownership and dependency explicitly.</p>
+</blockquote>
+<p>If module <code>M</code> defines <code>makeConnection</code> and another scope calls it to create <code>Connection&lt;c&gt;</code>, <code>M</code> is the code provenance of the implementation. The owner could be an application, request, process, resource scope, or another subsystem. Module code may nevertheless need to remain loaded while the connection's operations or destructor depend on it.</p>
+<h3 id="separate-withdrawal-from-destruction">Separate withdrawal from destruction</h3>
+<blockquote>
+<p>Suggested rule: Make an identity unavailable for new resolution before destroying it when existing dependents need time to unwind.</p>
+</blockquote>
+<p>A candidate lifecycle is:</p>
+<pre tabindex="0"><code class="language-text">available
+    |
+    v
+withdrawn from new resolution
+    |
+    v
+draining existing dependents
+    |
+    v
+removed
+</code></pre>
+<p>The exact mechanism may involve leases, ownership, borrowing, reference edges, explicit drain protocols, or a combination. The semantic distinction matters even if the first runtime uses a simpler mechanism.</p>
+<h3 id="preserve-stable-bindings">Preserve stable bindings</h3>
+<blockquote>
+<p>Suggested rule: Replacing an available provider changes candidates for new bindings; it does not silently retarget existing bindings to a fresh identity.</p>
+</blockquote>
+<p>For:</p>
+<pre tabindex="0"><code class="language-text">Database&lt;a&gt; replaced by Database&lt;b&gt;
+</code></pre>
+<p>the identities remain unequal:</p>
+<pre tabindex="0"><code class="language-text">a != b
+</code></pre>
+<p>Existing consumers bound to <code>a</code> could finish, migrate explicitly, fail and reconstruct, or follow library-defined recovery. Transparent mutation underneath an ongoing computation would erase the provider identity guarantee.</p>
+<h3 id="distinguish-acquisition-cleanup-from-universal-reversal">Distinguish acquisition cleanup from universal reversal</h3>
+<blockquote>
+<p>Suggested rule: Use identity lifetime to model acquisitions with cleanup, but do not claim that every effect has an inverse.</p>
+</blockquote>
+<p>These pairs naturally create and remove resources:</p>
+<pre tabindex="0"><code class="language-text">open / close
+register / deregister
+allocate / free
+spawn / terminate
+</code></pre>
+<p>These emissions generally do not have an inverse supplied by the core:</p>
+<pre tabindex="0"><code class="language-text">send packet
+charge card
+print output
+write to an uncontrolled service
+</code></pre>
+<p>Transactions, compensation, deferred emission, idempotency, or recovery may address particular cases.</p>
+<h2 id="candidate-model">Candidate model</h2>
+<h3 id="identity-witnesses-and-packages">Identity witnesses and packages</h3>
+<p>A difficult dynamic association could be packaged schematically as:</p>
+<pre tabindex="0"><code class="language-text">exists a.
+{
+    identity : Identity&lt;a&gt;,
+    provider : Provider&lt;a&gt;,
+    handler  : Handler&lt;a&gt;
+}
+</code></pre>
+<p>Outside code cannot name <code>a</code>, but opening the package preserves the equality shared by its members. The working hypothesis is that parametric polymorphism, associated types, opaque or existential types, and identity witnesses cover the important cases without allowing arbitrary runtime values in types.</p>
+<h3 id="scoped-identity-candidates">Scoped identity candidates</h3>
+<p>Existential packaging expresses that some identity exists. A higher-rank scope
+could instead express that a fresh identity cannot appear in the result:</p>
+<pre tabindex="0"><code class="language-text">with_region : (forall r. Region&lt;r&gt; -&gt; A) -&gt; A
+</code></pre>
+<p>This notation is illustrative and higher-rank polymorphism is not part of the
+initial type-system candidate. The comparison matters because an existential
+can return a hidden owned resource, while a rank-delimited identity can reject a
+borrow or arena reference that escapes its scope. A dedicated lifetime language
+is another candidate if ordinary quantification cannot express useful cases or
+diagnose failures clearly.</p>
+<p>The hypothesis must be tested. If it fails, the failure should identify the missing relationship before Ash considers stronger type machinery.</p>
+<h3 id="identity-layers">Identity layers</h3>
+<p>One representation might support several semantic roles:</p>
+<pre tabindex="0"><code class="language-text">effect API identity
+operation identity
+hook identity
+
+handler instance identity
+provider identity
+resource identity
+module instance identity
+registration identity
+</code></pre>
+<p>Uniform machinery does not imply that the roles are interchangeable. A provider may create many connections; a module instance may export several handlers; a registration may depend on a hook and capture a connection. The model needs typed edges rather than accidental identity equality between these layers.</p>
+<h3 id="creation">Creation</h3>
+<p>Many operations can introduce a fresh identity:</p>
+<pre tabindex="0"><code class="language-text">load module
+open connection
+spawn process
+create provider
+install handler
+allocate resource
+create subscription
+</code></pre>
+<p>Their common structural result is:</p>
+<pre tabindex="0"><code class="language-text">operation
+    |
+    v
+Create(a)
+    |
+    v
+new values and relationships involving a
+</code></pre>
+<p>The type system must explain how fresh <code>a</code> enters a scope. The runtime must represent <code>a</code> long enough to compare, resolve, retain, and remove it.</p>
+<h3 id="removal-and-draining">Removal and draining</h3>
+<p>For a provider <code>p</code>, staged removal might perform:</p>
+<pre tabindex="0"><code class="language-text">1. reject new bindings to p
+2. notify or invalidate dependent relationships
+3. allow existing dependents to unwind
+4. release references or leases
+5. remove p
+6. release resources owned by p
+</code></pre>
+<p>Sequential acquisition often produces LIFO cleanup:</p>
+<pre tabindex="0"><code class="language-text">create a
+create b
+create c
+
+remove c
+remove b
+remove a
+</code></pre>
+<p>Dependency edges can require a more general order. Cycles, transfer, shared ownership, and partial failure make this an open lifetime problem rather than a requirement to implement a stack.</p>
+<h3 id="ownership-references-and-code-reachability">Ownership, references, and code reachability</h3>
+<p>The candidate graph needs to distinguish at least:</p>
+<ul>
+<li>ownership, which determines responsibility for cleanup;</li>
+<li>dependency, which prevents removal while another object needs the identity;</li>
+<li>borrowing or leases, if temporary access does not transfer ownership;</li>
+<li>provenance, which records which code implements operations or destruction.</li>
+</ul>
+<p>These distinctions are especially important for module unloading. A module cannot be reclaimed while a live handler, callback, destructor, or suspended continuation still needs its code. <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011</a> develops the unloading sequence.</p>
+<h2 id="interactions-and-failure-cases">Interactions and failure cases</h2>
+<h3 id="continuations-retain-a-world">Continuations retain a world</h3>
+<p>An escaping continuation may capture:</p>
+<pre tabindex="0"><code class="language-text">Provider&lt;a&gt;
+Handler&lt;b&gt;
+Resource&lt;c&gt;
+</code></pre>
+<p>If one identity begins removal before resumption, plausible semantics include:</p>
+<ul>
+<li>the continuation retains it and delays removal;</li>
+<li>resumption fails because the capture was weak;</li>
+<li>the continuation migrates or rebinds explicitly;</li>
+<li>different identity roles use different capture modes.</li>
+</ul>
+<p>Implicitly resolving a new provider at resumption would violate stable binding unless the program explicitly requested rebinding.</p>
+<p><a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009</a> asks where continuation escape and multiplicity appear in the type system. This note asks what those contracts require of ownership and removal.</p>
+<h3 id="multi-shot-duplication">Multi-shot duplication</h3>
+<p>If a continuation captures <code>Resource&lt;a&gt;</code> and resumes twice, both branches might share <code>a</code>, clone some state, or be rejected. The answer depends on the resource:</p>
+<ul>
+<li>immutable data may be shareable;</li>
+<li>mutable state may require synchronization;</li>
+<li>a linear resource may forbid duplication;</li>
+<li>transactional state may require one transaction per branch or no multi-shot use.</li>
+</ul>
+<p>Continuation multiplicity therefore may need to interact with linearity, borrowing, ownership, and effect constraints. It cannot safely remain a lowering detail.</p>
+<h3 id="registrations">Registrations</h3>
+<p>A hook registration is itself an acquired identity and may depend on a hook, provider, handler, and values captured by its subscriber. Removal of any dependency may require deregistration, invalidation, draining, or rejection of later calls. <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012</a> covers publication and composition; the same general lifetime machinery should cover the registration.</p>
+<h3 id="provider-replacement">Provider replacement</h3>
+<p>A failure case arises when resolution caches by API name or implementation type instead of identity. A replacement that looks structurally identical could then change the behavior of an existing computation without an explicit transition. Tests must bind by witness and demonstrate that only new resolution selects the replacement.</p>
+<h3 id="modules">Modules</h3>
+<p>Loading can introduce existential identities, but module provenance must not become a universal owner edge. Unloading needs to withdraw module-provided bindings, prevent new module-originated objects, drain live objects that require module code, and only then reclaim the module. A global "remove module and all things reached from it" operation would destroy resources owned elsewhere.</p>
+<h3 id="security-capabilities">Security capabilities</h3>
+<p>Creating <code>Connection&lt;a&gt;</code> may make operations involving <code>a</code> available, but it does not by itself decide who may exercise them. An authorization handler can interpret identity relationships as capabilities. The core identity model should support that library without assigning one security meaning to every identity.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<h3 id="existential-resolution-prototype">Existential-resolution prototype</h3>
+<p>Build a disposable type-model prototype that packages a fresh provider, opens it through a known interface, resolves a matching handler, and rejects a handler for a different hidden identity. Compare:</p>
+<ul>
+<li>existential packaging plus witnesses;</li>
+<li>associated-type equality evidence;</li>
+<li>a more dependent store encoding used only as a control.</li>
+</ul>
+<p>Retain the simpler approach only if it can express the equality relationships without unsafe casts or name-based lookup. Discard the prototype code after recording the expressiveness and diagnostic results.</p>
+<h3 id="lifecycle-state-machine">Lifecycle state machine</h3>
+<p>Specify a small transition system for creation, availability, withdrawal, draining, and removal. Test:</p>
+<ul>
+<li>new resolution after withdrawal;</li>
+<li>existing use during draining;</li>
+<li>nested LIFO acquisition;</li>
+<li>non-stack dependency ordering;</li>
+<li>ownership transfer;</li>
+<li>shared dependents;</li>
+<li>a dependency cycle;</li>
+<li>failure during cleanup.</li>
+</ul>
+<p>The comparison criteria are deterministic permitted transitions, no use after final removal, and an explanation of who may advance each state.</p>
+<h3 id="stable-replacement-test">Stable replacement test</h3>
+<p>Resolve one consumer to <code>Database&lt;a&gt;</code>, introduce <code>Database&lt;b&gt;</code>, withdraw <code>a</code>, and verify:</p>
+<ul>
+<li>the existing consumer does not silently rebind;</li>
+<li>a new consumer may select <code>b</code>;</li>
+<li><code>a</code> remains usable or fails according to its declared drain policy;</li>
+<li>final removal waits for or invalidates every retained dependency according to explicit rules.</li>
+</ul>
+<h3 id="captured-continuation-matrix">Captured-continuation matrix</h3>
+<p>Cross continuation modes with immutable, synchronized mutable, linear, transactional, handler, registration, and module-code identities. Record whether each combination shares, retains, clones, rejects, or requires a runtime check. A useful type design should make common safe cases concise and unsafe cases visible.</p>
+<h3 id="runtime-representation-probe">Runtime representation probe</h3>
+<p>Compare candidate runtime witnesses for equality, hashing, compact storage, and lifetime tracking. Verify that statically proven equalities can erase checks while dynamically introduced witnesses survive opaque packaging. This experiment selects representation evidence, not language semantics.</p>
+<h3 id="scope-and-transfer-cases">Scope and transfer cases</h3>
+<p>Compare existential ownership return, rank-delimited borrowing, explicit
+ownership transfer, and an attempted scope escape. Include a suspended
+continuation that retains the identity. A useful candidate accepts transfer
+without changing identity, rejects a borrow that outlives its scope, and does
+not use lexical scope alone to reclaim a resource retained by a continuation.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What constitutes identity equality statically and dynamically?</li>
+<li>How is a fresh identity introduced into the type environment and delimited in scope?</li>
+<li>Can all identity roles share one witness representation without becoming interchangeable in types?</li>
+<li>Which identities are compile-time constants, which require runtime storage, and when may witnesses be erased?</li>
+<li>Are existential packages and associated types sufficient for dynamic handler/provider resolution?</li>
+<li>What does removal mean to code that still holds a value parameterized by the identity?</li>
+<li>Which relations are ownership, dependency, borrowing, leasing, or provenance, and which affect liveness?</li>
+<li>Can ownership transfer, and how is it checked?</li>
+<li>Are existential packages sufficient for owned resource creation while
+higher-rank quantification or another mechanism is needed for non-escaping
+scopes?</li>
+<li>Which state and authority indices are ordinary type parameters, and which
+usage restrictions must be intrinsic or derived?</li>
+<li>How are shared ownership and dependency cycles collected or broken?</li>
+<li>Who initiates and completes draining, and how are failures or cancellation handled?</li>
+<li>Can a weakly captured identity make continuation resumption fallible in a typed way?</li>
+<li>When may a suspended continuation keep provider or module code alive indefinitely?</li>
+<li>How do multi-shot continuations interact with linear and transaction-scoped resources?</li>
+<li>What migration protocol, if any, can replace a captured provider identity safely?</li>
+<li>How are resource destructors represented when the code implementing them belongs to an unloadable module?</li>
+<li>Which acquisitions require strict LIFO cleanup, and which require dependency-driven order?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-model">Candidate model</a><a href="#interactions-and-failure-cases">Interactions and failure cases</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">← DN-0009: Effects, Handlers, and Continuations</a><a rel="next" href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011: Modules, Providers, and Resolution →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

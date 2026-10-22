@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-resuming-tree-traversal.html" rel="next">
+<link href="./cases-protecting-dictionary-invariant.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Guaranteeing logarithmic retrieval · Ash</title><meta name="description" content="The dictionary from the preceding case hides its constructors, but insertion can still build a long chain. Insert the associations (3, 30), (2, 20), and (1, 10) into an empty dictionary. Ordered insertion puts 2…"><meta name="robots" content="index, follow"><meta property="og:title" content="Guaranteeing logarithmic retrieval · Ash"><meta property="og:description" content="The dictionary from the preceding case hides its constructors, but insertion can still build a long chain. Insert the associations (3, 30), (2, 20), and (1, 10) into an empty dictionary. Ordered insertion puts 2…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Guaranteeing logarithmic retrieval · Ash"><meta name="twitter:description" content="The dictionary from the preceding case hides its constructors, but insertion can still build a long chain. Insert the associations (3, 30), (2, 20), and (1, 10) into an empty dictionary. Ordered insertion puts 2…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-guaranteeing-logarithmic-retrieval.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-guaranteeing-logarithmic-retrieval.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Guaranteeing logarithmic retrieval","headline":"Guaranteeing logarithmic retrieval","description":"The dictionary from the preceding case hides its constructors, but insertion can still build a long chain. Insert the associations (3, 30), (2, 20), and (1, 10) into an empty dictionary. Ordered insertion puts 2…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-guaranteeing-logarithmic-retrieval.html","@id":"https://dikini.github.io/ash/study/latest/cases-guaranteeing-logarithmic-retrieval.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/guaranteeing-logarithmic-retrieval/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating slimcontent quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-guaranteeing-logarithmic-retrieval.html"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#describe-the-colored-data" id="toc-describe-the-colored-data" class="nav-link active" data-scroll-target="#describe-the-colored-data">Describe the colored data</a></li>
+  <li><a href="#state-the-operations-we-need" id="toc-state-the-operations-we-need" class="nav-link" data-scroll-target="#state-the-operations-we-need">State the operations we need</a></li>
+  <li><a href="#repair-one-colored-path" id="toc-repair-one-colored-path" class="nav-link" data-scroll-target="#repair-one-colored-path">Repair one colored path</a>
+  <ul class="collapse">
+  <li><a href="#insert-into-the-recursive-data" id="toc-insert-into-the-recursive-data" class="nav-link" data-scroll-target="#insert-into-the-recursive-data">Insert into the recursive data</a></li>
+  <li><a href="#repair-the-returned-child" id="toc-repair-the-returned-child" class="nav-link" data-scroll-target="#repair-the-returned-child">Repair the returned child</a></li>
+  <li><a href="#construct-the-shared-repair-result" id="toc-construct-the-shared-repair-result" class="nav-link" data-scroll-target="#construct-the-shared-repair-result">Construct the shared repair result</a></li>
+  <li><a href="#restore-the-public-root-condition" id="toc-restore-the-public-root-condition" class="nav-link" data-scroll-target="#restore-the-public-root-condition">Restore the public root condition</a></li>
+  <li><a href="#assemble-and-run-the-example" id="toc-assemble-and-run-the-example" class="nav-link" data-scroll-target="#assemble-and-run-the-example">Assemble and run the example</a></li>
+  </ul></li>
+  <li><a href="#check-every-selected-insertion-prefix" id="toc-check-every-selected-insertion-prefix" class="nav-link" data-scroll-target="#check-every-selected-insertion-prefix">Check every selected insertion prefix</a>
+  <ul class="collapse">
+  <li><a href="#describe-the-input-and-observations" id="toc-describe-the-input-and-observations" class="nav-link" data-scroll-target="#describe-the-input-and-observations">Describe the input and observations</a></li>
+  <li><a href="#choose-the-operation-types" id="toc-choose-the-operation-types" class="nav-link" data-scroll-target="#choose-the-operation-types">Choose the operation types</a></li>
+  <li><a href="#assemble-a-scenario" id="toc-assemble-a-scenario" class="nav-link" data-scroll-target="#assemble-a-scenario">Assemble a scenario</a></li>
+  <li><a href="#record-the-next-prefix-and-continue" id="toc-record-the-next-prefix-and-continue" class="nav-link" data-scroll-target="#record-the-next-prefix-and-continue">Record the next prefix and continue</a></li>
+  <li><a href="#interpret-the-optional-lookup-results" id="toc-interpret-the-optional-lookup-results" class="nav-link" data-scroll-target="#interpret-the-optional-lookup-results">Interpret the optional lookup results</a></li>
+  <li><a href="#recheck-every-final-association" id="toc-recheck-every-final-association" class="nav-link" data-scroll-target="#recheck-every-final-association">Recheck every final association</a></li>
+  <li><a href="#assemble-the-inputs-and-read-the-result" id="toc-assemble-the-inputs-and-read-the-result" class="nav-link" data-scroll-target="#assemble-the-inputs-and-read-the-result">Assemble the inputs and read the result</a></li>
+  </ul></li>
+  <li><a href="#retain-build-replacement-and-older-values" id="toc-retain-build-replacement-and-older-values" class="nav-link" data-scroll-target="#retain-build-replacement-and-older-values">Retain build, replacement, and older values</a></li>
+  <li><a href="#derive-the-logarithmic-bound" id="toc-derive-the-logarithmic-bound" class="nav-link" data-scroll-target="#derive-the-logarithmic-bound">Derive the logarithmic bound</a></li>
+  <li><a href="#keep-the-premises-with-the-guarantee" id="toc-keep-the-premises-with-the-guarantee" class="nav-link" data-scroll-target="#keep-the-premises-with-the-guarantee">Keep the premises with the guarantee</a></li>
+  <li><a href="#practice-and-continue" id="toc-practice-and-continue" class="nav-link" data-scroll-target="#practice-and-continue">Practice and continue</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-guaranteeing-logarithmic-retrieval.html"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The dictionary from the preceding case hides its constructors, but insertion can still build a long chain. Insert the associations <code>(3, 30)</code>, <code>(2, 20)</code>, and <code>(1, 10)</code> into an empty dictionary. Ordered insertion puts <code>2</code> below the left branch of <code>3</code>, then <code>1</code> below the left branch of <code>2</code>. Looking up <code>1</code> visits all three nodes. Repeating that pattern gives height <code>h = n</code>: one ordered branch can contain every key.</p>
+<p>We want insertion to keep lookup paths short while retaining the same associations. For these three keys, <code>2</code> can be the root, with <code>1</code> and <code>3</code> as its children. Lookup still uses the key comparison from the preceding case. The change belongs in how insertion constructs the tree.</p>
+<p>A hidden color on each nonempty node will tell insertion when a local path needs repair. We will develop that data, state the operations it needs, then calculate their bodies using the three-association example. Insertion is <em>persistent</em>: it returns a new dictionary, leaving the earlier value available. A data structure is called <em>persistent</em> when every update returns a new version while earlier versions remain usable. The structure this case develops — a sorted tree whose nonempty nodes hide a color, kept short by local rearrangements after insertion — is the literature’s <em>red-black tree</em>.</p>
+<div style="page-break-after: always;"></div>
+<section id="describe-the-colored-data" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="describe-the-colored-data">Describe the colored data</h2>
+<p>The keys and values retain their meanings. A <code>Dictionary&lt;K, V&gt;</code> associates keys of type <code>K</code> with values of type <code>V</code>. Its recursive alternatives tell us whether there is an association at the current position. The following non-executable declaration excerpt adds a color to the representation:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>type Color =
+    Red
+    | Black
+
+pub opaque type Dictionary&lt;K, V&gt; =
+    Empty
+    | Node(Color, Dictionary&lt;K, V&gt;, K, V, Dictionary&lt;K, V&gt;)</code></pre>
+<p><code>Empty</code> has no association. <code>Node</code> contains a color, the left dictionary, a key, its associated value, and the right dictionary, in that order. <code>K</code> and <code>V</code> describe every association in that tree. We reuse <code>Natural</code>, <code>Option</code>, <code>Ordering</code>, and the <code>Order&lt;K&gt;</code> comparison from the preceding case. The new <code>Color</code> has exactly two alternatives, <code>Red</code> and <code>Black</code>.</p>
+<p>A color is useful only with rules for interpreting it. <code>Empty</code> counts as black.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> A black node adds one to the count on every path below it; a red node adds none. We call the common count, including the terminal <code>Empty</code>, the subtree’s <em>black-height</em>. It measures the black forms on a path, rather than all its nonempty nodes.</p>
+<div class="no-row-height column-margin column-container"><div id="fn1"><div id="fig-red-root-sketch" class="quarto-float quarto-figure quarto-figure-center anchored"><sup>1</sup>&#160;
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-red-root-sketch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="assets/fig-red-root-sketch.svg" class="img-fluid figure-img" style="width:100.0%" alt="A root circle with a red upper half and a yellow association half connects to two terminal Empty circles with black upper halves and white lower halves. Empty has no key/value association. Each path contains one black form; the red root contributes none.">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-red-root-sketch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&#160;51.1: A red root with two black Empty forms.
+</figcaption>
+</figure>
+</div>
+<p>Both paths contain one black form: their terminal <code>Empty</code>. A red root adds no black form. The yellow lower half identifies the root’s <code>(k, v)</code> association. White lower halves mark <code>Empty</code>, which has none.</p></div></div><p>A subtree is recursively consistent when three conditions hold:</p>
+<ol type="1">
+<li>It has the global ordering invariant from the preceding case. Every left descendant is <code>Less</code> than the current key, and every right descendant is <code>Greater</code>.</li>
+<li>A red node has no red child.</li>
+<li>Every path from the subtree root to <code>Empty</code> contains the same number of black forms.</li>
+</ol>
+<p>A recursively consistent subtree may have a red root. A completed public dictionary adds one more condition: its root is black, unless the dictionary is <code>Empty</code>. Separating that final condition lets red subtrees participate in insertion. In the three-key result, a black <code>2</code> with black children <code>1</code> and <code>3</code> meets all four conditions: every path counts the root, one black child, and its terminal <code>Empty</code>, giving black-height three. A black <code>3</code> with only a red left child <code>2</code> also has equal counts. The shorter right path counts <code>3</code> and <code>Empty</code>; each longer left path counts the same two black forms. Equal black-height therefore allows some difference in total path length. The rule against adjacent red nodes limits how much longer a path can become.</p>
+<p>The opaque declaration controls source access. Importers can name <code>Dictionary&lt;K, V&gt;</code>, but cannot name its constructors under Ash’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#public-private-and-opaque-declarations">public and opaque declaration rules</a>. The defining module can construct any of its forms, including invalid ones. Neither the nominal type nor <code>Order&lt;K&gt;</code> proves the representation laws. We must design the operations to preserve them.</p>
+</section>
+<section id="state-the-operations-we-need" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="state-the-operations-we-need">State the operations we need</h2>
+<p>Work out the function types before filling their bodies. In the following type calculations, <code>D</code> abbreviates <code>Dictionary&lt;K, V&gt;</code> in the explanation; it is not a new Ash type or a declaration in the program. The source signatures keep the full spelling.</p>
+<p>The public operation has the same job as before: insert a key and value into a valid dictionary. If the comparison is <code>Equal</code>, replace that association’s value; otherwise add the association. Return a valid dictionary with all other associations retained. We supply a key of type <code>K</code>, then a value of type <code>V</code>, then a dictionary of type <code>D</code>; the result must also have type <code>D</code>. Reading those inputs and the result in order gives <code>K -&gt; V -&gt; D -&gt; D</code>. Comparison needs <code>Order&lt;K&gt;</code>, so the signature includes that requirement. The following source signature is a non-executable excerpt:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>pub insert : K -&gt; V -&gt; Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt; where Order&lt;K&gt;</code></pre>
+<p>Insertion still descends through one ordered branch. We need an internal operation that performs that descent while allowing a temporary red root or an edge between two red nodes. Its input is a recursively consistent subtree. Its result retains ordering and black-height, but may have a red-red edge directly below its red root. A black ancestor must repair that edge. The requirement on <code>Order&lt;K&gt;</code> supplies the comparison that selects the branch. Its job still takes a <code>K</code>, a <code>V</code>, and a <code>D</code> and returns a <code>D</code>, so <code>insert_colored</code> has the same function type as public insertion:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>insert_colored : K -&gt; V -&gt; Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt; where Order&lt;K&gt;</code></pre>
+<p>When recursion returns a child, the parent has its color, its two branches, and its own association available. Carry the left dictionary and the parent’s key and value together, leaving the color and right dictionary as separate inputs. This small private type gives that group a name:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>type RArg&lt;K, V&gt; = RArg(Dictionary&lt;K, V&gt;, K, V)</code></pre>
+<p><code>RArg</code> means repair argument. Its constructor takes a dictionary, a key, and that key’s value. The dictionary lies immediately before the association in key order. Each group therefore describes one part of the ordered arrangement: a subtree followed by an association. The type groups those values; it does not establish their ordering or black-height conditions.</p>
+<p>Rebuilding the parent now takes a <code>Color</code>, an <code>RArg&lt;K, V&gt;</code>, and a <code>D</code>, and returns a <code>D</code>. Those successive inputs calculate the signature of <code>restore</code>, which repairs a red-red edge beneath a black parent when it finds one:</p>
+<div id="wide-restore-signature" class="column-page-right">
+<!-- signature: src/dictionaries.ash#restore -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore : Color -&gt; RArg&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt;</code></pre>
+</div>
+<p>That repair rearranges three associations with four intervening subtrees; the rearrangement itself is the literature’s <em>rotation</em>. Three <code>RArg</code> values carry the first three subtrees and their following associations; one final <code>D</code> supplies the rightmost subtree. All four inputs produce one <code>D</code>. The different orientations will supply these same groups to one construction:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore_three : (
+    RArg&lt;K, V&gt; -&gt; RArg&lt;K, V&gt; -&gt; RArg&lt;K, V&gt; -&gt;
+    Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt;
+)</code></pre>
+<p>The arrows still describe <a href="./learn-using-more-than-one-input.html#supplying-two-inputs">successive calls</a>. A constructed <code>RArg</code> is one argument to a call, so it has grouping parentheses when passed to another function. Its fields have already been collected into one value, like the <a href="./learn-values-travel-together.html#receiving-one-pair">tuple inputs</a> from Learn.</p>
+<p>Finally, internal insertion may return a red root. <code>blacken_root</code> restores the public root condition without searching the tree or changing an association. It receives one whole dictionary and returns one whole dictionary, giving <code>D -&gt; D</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>blacken_root : Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt;</code></pre>
+<p>We can already check how these operations fit together. Once we supply <code>key : K</code> and <code>value : V</code>, <code>insert_colored key value</code> has remaining type <code>D -&gt; D</code>. Give it a dictionary and its result has type <code>D</code>. <code>blacken_root</code> accepts that result because its input type is also <code>D</code>. Its output is <code>D</code>, which is exactly what public insertion promises. We have calculated the connection between the two operations before choosing either body. Ash checks application inputs and results under its <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#functions-and-application">function and application typing rules</a>.</p>
+<p>These signatures describe the shapes of inputs and outputs. The purposes add requirements that the types do not express. Completed dictionaries and temporary insertion results have the same <code>Dictionary&lt;K, V&gt;</code> type; their stated conditions differ. In particular, <code>restore</code> is a local repair for candidates produced by insertion. It is not a general operation for correcting an arbitrary malformed tree.</p>
+</section>
+<section id="repair-one-colored-path" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="repair-one-colored-path">Repair one colored path</h2>
+<p>We have the function types and the conditions each operation must maintain. Now fill the public operation, follow its call into recursive insertion, and develop the smaller repair it needs. The three-association example will let us check each choice with a concrete tree.</p>
+<p>The following calculations are schematic source calculations, not runnable programs or tool output. Numerals stand for the corresponding <code>Natural</code> keys; values such as <code>10</code> remain integers.</p>
+<p>Begin with the public goal. The type calculation already tells us how the two operations connect: obtain the internal insertion result, then pass that whole dictionary to <code>blacken_root</code>. Assuming those operations do their stated jobs, this expression gives public insertion the required result:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>pub insert : K -&gt; V -&gt; Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt; where Order&lt;K&gt;
+insert key value dictionary = blacken_root (insert_colored key value dictionary)</code></pre>
+<p>The body names the two remaining jobs. We can develop each one from its promised input and result, starting with the insertion that produces the dictionary for <code>blacken_root</code>.</p>
+<section id="insert-into-the-recursive-data" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="insert-into-the-recursive-data">Insert into the recursive data</h3>
+<p><code>insert_colored</code> must give public insertion a dictionary with the new or replaced association. Its input is either <code>Empty</code> or <code>Node</code>, so those two alternatives supply its first cases. At <code>Empty</code>, a new association needs two empty children. The replaced <code>Empty</code> contributes one black form. A red node above two <code>Empty</code> children also contributes one on each path, leaving the count unchanged. A black node would make that count two on only the entered branch. This determines the new node’s red color and gives the first expected result:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>insert_colored 1 10 Empty
+=&gt; Node(Red, Empty, 1, 10, Empty)</code></pre>
+<p>At a <code>Node</code>, comparison gives three cases. In the compact node pattern below, <code>a</code> and <code>b</code> name the left and right dictionaries, while <code>k</code> and <code>v</code> name the stored key and value. The separate <code>key</code> and <code>value</code> name the association being inserted. For <code>Less</code>, recur on <code>a</code>. Its type is <code>D</code>, and <code>insert_colored key value a</code> returns <code>D</code>. Assume this smaller call inserts the association and preserves ordering and black-height, allowing a red-red edge directly below a red root.</p>
+<p>The returned dictionary belongs with the parent’s association in <code>RArg(insert_colored key value a, k, v)</code>. Pass that group to <code>restore</code> after <code>color</code>, then supply <code>b</code> as the right dictionary. At a black parent, <code>restore</code> can repair the returned child’s edge; at a red parent, it reconstructs the subtree for the enclosing ancestor. This calculates the combining expression in the <code>Less</code> arm. <code>Greater</code> keeps <code>RArg(a, k, v)</code> and supplies the recursively returned right dictionary. Each recursive input is a smaller child, so descent through a finite dictionary reaches <code>Empty</code> or an equal key, provided the comparisons return.</p>
+<p>On <code>Equal</code>, inserting <code>(2, 99)</code> over <code>(2, 20)</code> retains the stored key, children, and color, changing only the value. This supplies the middle arm without recursion or repair. The completed excerpt is:</p>
+<div id="wide-insert-colored-excerpt" class="column-page-right">
+<!-- excerpt: src/dictionaries.ash#insert_colored -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>insert_colored : K -&gt; V -&gt; Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt; where Order&lt;K&gt;
+insert_colored key value Empty = Node(Red, Empty, key, value, Empty)
+insert_colored key value Node(color, a, k, v, b) = match compare key k {
+    Less =&gt; restore color (RArg(insert_colored key value a, k, v)) b
+    Equal =&gt; Node(color, a, k, value, b)
+    Greater =&gt; restore color (RArg(a, k, v)) (insert_colored key value b)
+}</code></pre>
+</div>
+</section>
+<section id="repair-the-returned-child" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="repair-the-returned-child">Repair the returned child</h3>
+<p>Insertion asks <code>restore</code> to rebuild a parent with one child replaced by the recursive result. A black parent may receive a red child with a red child of its own. The two red nodes can follow left-left, left-right, right-left, or right-right branches. These are the function’s four repair cases. We will follow each equation separately, then add a fallback for candidates that need no local repair.</p>
+<p>Every case must retain the same three associations and four intervening subtrees. Short names let us compare the input pattern with the reconstruction: <code>a</code>, <code>b</code>, <code>c</code>, <code>d</code> are the subtrees from left to right; <code>k</code> means key and <code>v</code> means value. <code>(k1, v1)</code>, <code>(k2, v2)</code>, <code>(k3, v3)</code> are the associations in increasing key order. The indices indicate that order, rather than literal key values or insertion order:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>a, (k1, v1), b, (k2, v2), c, (k3, v3), d</code></pre>
+<p>Each case collects the first three subtree-and-association groups into <code>RArg</code> values and leaves <code>d</code> separate. The shared helper will place the middle association above black first and last nodes. For now, its promised result lets us calculate the calls that each case needs.</p>
+<p>The optional sketches show each candidate above its repaired result. The upper half of a circle records red or black. The lower colors track the ordered associations: yellow is <code>(k1, v1)</code>, blue is <code>(k2, v2)</code>, and violet is <code>(k3, v3)</code>. A white lower half marks <code>Empty</code>, which has no association.</p>
+<p>The triangles track whole dictionaries: green is <code>a</code>, orange is <code>b</code>, pink is <code>c</code>, and cyan is <code>d</code>. Each subtree stays unchanged while its attachment changes. After repair, <code>a</code> and <code>b</code> belong below the yellow association; <code>c</code> and <code>d</code> belong below violet. The same colors appear before and after, so you can trace the rewiring without reading names inside the diagram.</p>
+<div style="page-break-after: always;"></div>
+<p><strong>Left-left.</strong><a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a> Inserting <code>3, 2, 1</code> gives our running candidate: black <code>3</code> above red <code>2</code> above red <code>1</code>, following left branches. The black parent supplies the last association, <code>(k3, v3)</code>; its red child supplies the middle, <code>(k2, v2)</code>; and the red grandchild supplies the first, <code>(k1, v1)</code>. The remaining fields name <code>a</code>, <code>b</code>, <code>c</code>, and <code>d</code> in their ordered positions:</p>
+<div class="no-row-height column-margin column-container"><div id="fn2"><div id="fig-restore-left-left" class="quarto-float quarto-figure quarto-figure-center anchored"><sup>2</sup>&#160;
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-restore-left-left-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="assets/fig-restore-left-left.svg" class="img-fluid figure-img" style="width:100.0%" alt="Before above: black violet above a red blue left child and a red yellow left grandchild. After below: red blue above black yellow and black violet. The green, orange, pink, and cyan subtrees retain their left-to-right order.">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-restore-left-left-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&#160;51.2: Rewire the same pieces - left-left.
+</figcaption>
+</figure>
+</div>
+</div></div><pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore Black RArg(
+    Node(Red, Node(Red, a, k1, v1, b), k2, v2, c),
+    k3,
+    v3
+) d = (restore_three
+        (RArg(a, k1, v1))
+        (RArg(b, k2, v2))
+        (RArg(c, k3, v3))
+        d
+    )</code></pre>
+<p>The repeated groups on the right show what survives the pattern. In this example, all four subtrees are <code>Empty</code>. The bindings supply this schematic call to the helper:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore_three
+    (RArg(Empty, 1, 10))
+    (RArg(Empty, 2, 20))
+    (RArg(Empty, 3, 30))
+    Empty
+=&gt; red 2 above black 1 and black 3, with the same values</code></pre>
+<p><strong>Left-right.</strong><a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a> Inserting <code>3, 1, 2</code> still puts the last association at the black parent. Its red left child now supplies the first association. The child’s red right branch supplies the middle. The second pattern selects that changed position, then sends the same ordered groups to the helper:</p>
+<div class="no-row-height column-margin column-container"><div id="fn3"><div id="fig-restore-left-right" class="quarto-float quarto-figure quarto-figure-center anchored"><sup>3</sup>&#160;
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-restore-left-right-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="assets/fig-restore-left-right.svg" class="img-fluid figure-img" style="width:100.0%" alt="Before above: black violet above a red yellow left child, whose right child is red blue. After below: red blue above black yellow and black violet. The green, orange, pink, and cyan subtrees retain their left-to-right order.">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-restore-left-right-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&#160;51.3: Rewire the same pieces - left-right.
+</figcaption>
+</figure>
+</div>
+</div></div><pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore Black RArg(
+    Node(Red, a, k1, v1, Node(Red, b, k2, v2, c)),
+    k3,
+    v3
+) d = (restore_three
+        (RArg(a, k1, v1))
+        (RArg(b, k2, v2))
+        (RArg(c, k3, v3))
+        d
+    )</code></pre>
+<p>The destination remains red middle above black first and last. Only the fields from which we obtain the groups have changed.</p>
+<div style="page-break-after: always;"></div>
+<p><strong>Right-left.</strong><a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a> Inserting <code>1, 3, 2</code> puts the first association at the black parent and the last at its red right child. The child’s red left branch supplies the middle. The parent’s group already contains <code>a</code>, <code>k1</code>, and <code>v1</code>; the nested right pattern supplies the remaining pieces:</p>
+<div class="no-row-height column-margin column-container"><div id="fn4"><div id="fig-restore-right-left" class="quarto-float quarto-figure quarto-figure-center anchored"><sup>4</sup>&#160;
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-restore-right-left-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="assets/fig-restore-right-left.svg" class="img-fluid figure-img" style="width:100.0%" alt="Before above: black yellow above a red violet right child, whose left child is red blue. After below: red blue above black yellow and black violet. The green, orange, pink, and cyan subtrees retain their left-to-right order.">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-restore-right-left-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&#160;51.4: Rewire the same pieces - right-left.
+</figcaption>
+</figure>
+</div>
+</div></div><pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore Black RArg(a, k1, v1) Node(
+    Red,
+    Node(Red, b, k2, v2, c),
+    k3,
+    v3,
+    d
+) = (restore_three
+        (RArg(a, k1, v1))
+        (RArg(b, k2, v2))
+        (RArg(c, k3, v3))
+        d
+    )</code></pre>
+<p>Here <code>b</code> and <code>c</code> come from the middle node’s children. Their names retain the same ordered positions as in the preceding cases, so the reconstruction call is unchanged.</p>
+<p><strong>Right-right.</strong><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> Inserting <code>1, 2, 3</code> puts the first association at the black parent, the middle at its red right child, and the last at that child’s red right branch. This is the final orientation:</p>
+<div class="no-row-height column-margin column-container"><div id="fn5"><div id="fig-restore-right-right" class="quarto-float quarto-figure quarto-figure-center anchored"><sup>5</sup>&#160;
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-restore-right-right-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="assets/fig-restore-right-right.svg" class="img-fluid figure-img" style="width:100.0%" alt="Before above: black yellow above a red blue right child and a red violet right grandchild. After below: red blue above black yellow and black violet. The green, orange, pink, and cyan subtrees retain their left-to-right order.">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-restore-right-right-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&#160;51.5: Rewire the same pieces - right-right.
+</figcaption>
+</figure>
+</div>
+</div></div><pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore Black RArg(a, k1, v1) Node(
+    Red,
+    b,
+    k2,
+    v2,
+    Node(Red, c, k3, v3, d)
+) = (restore_three
+        (RArg(a, k1, v1))
+        (RArg(b, k2, v2))
+        (RArg(c, k3, v3))
+        d
+    )</code></pre>
+<p>The four equations differ in where they find the first, middle, and last associations. Each requests the same reconstruction after collecting them.</p>
+<p><strong>When no repair case matches.</strong> Inserting <code>2</code> below black <code>3</code> creates only one red child, so there is no red-red edge to repair. Reconstruct the node from the supplied fields. The same fallback also reconstructs a red parent; if its child is red, an enclosing black ancestor will handle that edge:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore color RArg(a, k, v) b = Node(color, a, k, v, b)</code></pre>
+<p>Ash tries these patterns in source order and selects the first matching equation once the arguments have arrived. The final equation handles every remaining color and subtree shape. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#patterns-matches-and-coverage">pattern and coverage rules</a> check that the equations cover the input type. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#tuples-constructors-and-matches">evaluation rules for matches and equations</a> explain which body executes. Neither check establishes the ordering or black-height premises used in the repair calculation.</p>
+</section>
+<section id="construct-the-shared-repair-result" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="construct-the-shared-repair-result">Construct the shared repair result</h3>
+<p><code>restore_three</code> receives three <code>RArg</code> values and the final subtree <code>d</code>. Unpack the groups to name <code>a</code>, <code>b</code>, <code>c</code>, their keys, and their values. The middle association separates the first two subtrees from the last two. Place the first association above <code>a</code> and <code>b</code>, and the last above <code>c</code> and <code>d</code>. Those two constructed dictionaries become the middle node’s children.</p>
+<p>Give the first and last nodes black colors to remove the red-red edge and allow red-rooted surrounding subtrees. Keep the middle root red to retain the black-height. For the running example, the four subtrees are <code>Empty</code> and the associations are <code>(1, 10)</code>, <code>(2, 20)</code>, and <code>(3, 30)</code>. The expected local result makes the construction concrete:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Node(
+    Red,
+    Node(Black, Empty, 1, 10, Empty),
+    2,
+    20,
+    Node(Black, Empty, 3, 30, Empty)
+)</code></pre>
+<p>This is the result of the local repair, before public insertion blackens its root. Each value stays with its key. The larger drawing shows the general arrangement. It uses the same shapes and colors as the case sketches, with the program’s names beside them:</p>
+<div id="repair-comparison" class="page-columns page-full">
+<div id="fig-tree-repair" class="quarto-float quarto-figure quarto-figure-center anchored page-columns page-full">
+<figure class="quarto-float quarto-float-fig figure page-columns page-full">
+<div aria-describedby="fig-tree-repair-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca" class="page-columns page-full">
+<img src="assets/source-daa9ea2c4b0cbd79-tree-repair.svg" class="img-fluid figure-img column-page-right" style="width:100.0%" alt="Left-left repair from left to right. Black violet (k3, v3) has red blue (k2, v2) on its left and subtree d on its right. Blue has red yellow (k1, v1) on its left and c on its right; yellow has a and b. After repair, red blue (k2, v2) has black yellow (k1, v1) and black violet (k3, v3) children. Yellow retains a and b; violet retains c and d. The upper halves show Red or Black, lower colors identify the associations, and the colored triangles retain subtrees a, b, c, and d. The labels use the program's names.">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-tree-repair-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&#160;51.6: Rewire the same pieces - left-left, with the program’s names.
+</figcaption>
+</figure>
+</div>
+</div>
+<div style="page-break-after: always;"></div>
+<p>The ordering tells us where each subtree belongs. <code>a</code> and <code>b</code> are the first node’s children; <code>c</code> and <code>d</code> are the last node’s children. The middle key separates the two constructed dictionaries. Each subtree must retain its inherited key bounds: <code>a</code> below <code>k1</code>, <code>b</code> between <code>k1</code> and <code>k2</code>, <code>c</code> between <code>k2</code> and <code>k3</code>, and <code>d</code> above <code>k3</code>. Their roots may be red; making the first and last nodes black also prevents a new red-red edge where those subtrees attach.</p>
+<p>In the following definition, the three repeated <code>let</code> patterns unpack the input groups; the final expression rebuilds their components in the arrangement we just calculated. The local names retain the legend: ordered subtrees <code>a</code>, <code>b</code>, <code>c</code>, <code>d</code> and associations <code>(k1, v1)</code>, <code>(k2, v2)</code>, <code>(k3, v3)</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore_three : (
+    RArg&lt;K, V&gt; -&gt; RArg&lt;K, V&gt; -&gt; RArg&lt;K, V&gt; -&gt;
+    Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt;
+)
+restore_three first second third d = {
+    let RArg(a, k1, v1) = first
+    let RArg(b, k2, v2) = second
+    let RArg(c, k3, v3) = third
+    Node(
+        Red,
+        Node(Black, a, k1, v1, b),
+        k2,
+        v2,
+        Node(Black, c, k3, v3, d)
+    )
+}</code></pre>
+<p>This definition is a non-executable excerpt from the complete companion module. Its three local patterns each bind their own input group under Ash’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#blocks">block and pattern rules</a>. It constructs three dictionary nodes and passes the four subtree values unchanged into them. It needs no comparison: its caller must supply the associations and subtrees in the required order.</p>
+<p>For the insertion candidates we will produce, the four surrounding subtrees are recursively consistent and have one common black-height. The candidate may contain the one red-red edge being repaired. If the common height is <code>q</code>, the former black grandparent contributes one, giving <code>q + 1</code> on every path. The result’s black children each contribute one and its red root contributes none, so every path still has <code>q + 1</code>. This calculation explains why the colors in the body preserve the count.</p>
+</section>
+<section id="restore-the-public-root-condition" class="level3">
+<h3 class="anchored" data-anchor-id="restore-the-public-root-condition">Restore the public root condition</h3>
+<p>Internal insertion has kept the associations ordered and the path counts equal, but our calculated root is red. <code>blacken_root</code> has three meaningful inputs: <code>Empty</code>, a black node, or a red node. The first two already meet the public root condition and should be returned unchanged. For a red node, retain its association and both children and change only its color:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>blacken_root : Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt;
+blacken_root dictionary = match dictionary {
+    Empty =&gt; Empty
+    Node(Black, ignored_left, ignored_key, ignored_value, ignored_right) =&gt; dictionary
+    Node(Red, left, key, value, right) =&gt; Node(Black, left, key, value, right)
+}</code></pre>
+<p>For our local result, that final case returns black <code>2</code> with black <code>1</code> and <code>3</code> beneath it. Every path gains the same one black form. Recoloring the root changes neither ordering nor key-value associations.</p>
+</section>
+<section id="assemble-and-run-the-example" class="level3">
+<h3 class="anchored" data-anchor-id="assemble-and-run-the-example">Assemble and run the example</h3>
+<p>Starting with <code>Empty</code>, inserting <code>(3, 30)</code> creates red <code>3</code>, then blackens it. Inserting <code>(2, 20)</code> leaves black <code>3</code> with a red left child because no repair pattern fits. Inserting <code>(1, 10)</code> now selects <code>Less</code> at both nodes. At <code>Empty</code>, the first equation returns red <code>1</code>. The pending reconstruction at <code>2</code> receives that result:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>restore Red (RArg(Node(Red, Empty, 1, 10, Empty), 2, 20)) Empty
+=&gt; Node(Red, Node(Red, Empty, 1, 10, Empty), 2, 20, Empty)</code></pre>
+<p>Its parent color is red, so none of the four repair equations fits; the fallback produces the temporary red-red edge. The next pending reconstruction, at black <code>3</code>, receives the candidate derived for the left-left repair. Its first pattern selects <code>restore_three</code>, which returns red <code>2</code> with black <code>1</code> and <code>3</code> as children.</p>
+<p>The nested recursive expression is evaluated before <code>restore</code> receives that child value, under Ash’s strict <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#application">application rules</a>. The calculation therefore descends through comparisons, then reconstructs from the returned child toward the root. A repair can return a red root beneath a red ancestor; the next black grandparent handles that edge. Starting from a valid black-rooted dictionary ensures that any such edge has a black grandparent before the internal result reaches the top.</p>
+<p>The final <code>blacken_root</code> call changes the returned red <code>2</code> to black. Predict that black root with black children <code>1</code> and <code>3</code>, and the original values <code>10</code>, <code>20</code>, and <code>30</code> still paired with their keys.</p>
+<p>The complete client below names the three <code>Natural</code> keys explicitly and uses only public operations. The <code>impl Order</code> import item supplies the public ordering implementation, as in the preceding case.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries (Dictionary, Natural, Zero, Next, empty, insert, impl Order)
+
+main : Unit -&gt; Dictionary&lt;Natural, Int&gt;
+main () = {
+    let one = Next(Zero)
+    let two = Next(one)
+    let three = Next(two)
+    let after_three = insert three 30 (empty ())
+    let after_two = insert two 20 after_three
+    insert one 10 after_two
+}</code></pre>
+<p>Run it from <code>content/cases</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash guaranteeing-logarithmic-retrieval/src/03-repair.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Node(Black, Node(Black, Empty, Next(Zero), 10, Empty), Next(Next(Zero)), 20, Node(Black, Empty, Next(Next(Next(Zero))), 30, Empty)) : Dictionary&lt;Natural, Int&gt;</code></pre>
+<p>The printed tree makes each predicted association and color visible. Opacity prevents the client from constructing or matching these nodes; the tool can still display the returned value. The result checks this particular calculation. It does not establish preservation for every dictionary.</p>
+<p>The <a href="https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/guaranteeing-logarithmic-retrieval/src/dictionaries.ash">complete dictionary module</a> also contains the ordering and balance checks used later in the chapter. <code>valid_between</code> checks inherited key bounds. A separate pass obtains each child’s black-height, rejects red-red edges and unequal counts, and a final check examines the root. Both passes bind both recursive child results before combining them. Ash’s strict <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#bindings">binding rules</a> mean that a completed validation enters both branches.</p>
+<p>The defining module’s private <code>main</code> constructs five trees to distinguish these checks. Predict one <code>true</code> followed by four <code>false</code> values:</p>
+<ul>
+<li>a valid one-node black tree;</li>
+<li>a deeper key beyond an inherited ordering bound;</li>
+<li>a red root whose recursive properties otherwise hold;</li>
+<li>a red parent with red children whose ordering and black-height hold; and</li>
+<li>two root paths with different black counts.</li>
+</ul>
+<p>Run the complete companion directly from <code>content/cases</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash guaranteeing-logarithmic-retrieval/src/dictionaries.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(true, false, false, false, false) : (Bool, Bool, Bool, Bool, Bool)</code></pre>
+<p>This observation distinguishes the selected malformed values from the valid one. The finite examples supplement the ordering and black-height calculations; they do not replace the argument about what repair preserves.</p>
+<p>This functional insertion strategy takes conceptual inspiration from the tradition evaluated in the <a href="https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/research/persistent-red-black-insertion.md">persistent red-black insertion record</a>. The Ash program, diagram, derivation, examples, and exercises here are original.</p>
+</section>
+</section>
+<section id="check-every-selected-insertion-prefix" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="check-every-selected-insertion-prefix">Check every selected insertion prefix</h2>
+<p>The repair calculation ended with a valid dictionary containing <code>(3, 30)</code>, <code>(2, 20)</code>, and <code>(1, 10)</code>. Could a final successful lookup hide a problem after an earlier insertion? Starting from the empty dictionary, we want observations after <code>3</code>, after <code>3, 2</code>, and after <code>3, 2, 1</code>. Each is an insertion prefix: an initial part of the same input sequence.</p>
+<p>After inserting <code>(1, 10)</code>, finding that association is only one part of the answer. The dictionary must also retain earlier associations, keep its ordering and color conditions, and return no value for a key we never inserted. We will calculate a client that records selected facts after each step, then checks every association in the final dictionary.</p>
+<section id="describe-the-input-and-observations" class="level3">
+<h3 class="anchored" data-anchor-id="describe-the-input-and-observations">Describe the input and observations</h3>
+<p>The input is a <code>List&lt;(Natural, Int)&gt;</code>: each element pairs a key with its expected value. For our three-step example, those pairs are <code>(3, 30)</code>, <code>(2, 20)</code>, and <code>(1, 10)</code>, in that order. We also choose <code>(3, 30)</code> as the first association to retain, and <code>0</code> as an absent key. These numbers stand for the <code>Natural</code> values whose constructor forms we used in the repair client.</p>
+<p>The report needs three new data types. <code>PrefixCheck</code> groups four Boolean observations about one dictionary, in this order:</p>
+<ol type="1">
+<li>Its ordering, root color, red-child colors, and black-height satisfy the invariant.</li>
+<li>Lookup of the key just inserted returns its expected value.</li>
+<li>Lookup of the first inserted key still returns its expected value.</li>
+<li>Lookup of the selected absent key returns <code>None</code>.</li>
+</ol>
+<p><code>Scenario</code> groups the empty dictionary’s invariant check, the list of those prefix checks, and a final list of association checks followed by the absence check. Keeping these observations separate lets us locate a failure in the run. A <code>true</code> invariant alone cannot tell us whether a value stayed with its key.</p>
+<p><code>PrefixRun</code> serves a different purpose inside the client. It returns the prefix checks together with the final dictionary, so another operation can examine that dictionary. The type keeps these two results together without exposing the dictionary’s hidden constructors.</p>
+<p>The client uses the familiar complete import for qualified public names and selects <code>Order</code> implementations separately:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>import dictionaries as Dictionaries
+import dictionaries (impl Order)</code></pre>
+<div style="page-break-after: always;"></div>
+<p>The three report declarations are non-executable excerpts from the <a href="https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/guaranteeing-logarithmic-retrieval/src/01-prefix-matrix.ash">complete client</a>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>type PrefixCheck =
+    PrefixCheck(Bool, Bool, Bool, Bool)
+
+type Scenario =
+    Scenario(Bool, Dictionaries.List&lt;PrefixCheck&gt;, Dictionaries.List&lt;Bool&gt;)
+
+type PrefixRun =
+    PrefixRun(
+        Dictionaries.List&lt;PrefixCheck&gt;,
+        Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt;
+    )</code></pre>
+<p><code>List</code> still has its ending form <code>End</code> and its <code>More</code> form containing one element and the rest. <code>Option</code> still distinguishes <code>None</code> from <code>Some</code>. What is new here is the purpose and order of the report fields, rather than another form of list or optional value. The Boolean types describe the shape of an observation; they do not establish that it will be <code>true</code>.</p>
+<p>For the selected runs, keys are distinct, the retained pair is the first input pair, and the absent key does not occur in the input. Those choices make the expected report meaningful. If a later entry replaced a value for the same key, checking the earlier value in the final dictionary would correctly return <code>false</code>. Replacement belongs to the next example.</p>
+</section>
+<section id="choose-the-operation-types" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="choose-the-operation-types">Choose the operation types</h3>
+<p>Start with the result we want. <code>scenario</code> consumes the entry list, the retained key and its expected value, and the absent key. It returns a <code>Scenario</code>:</p>
+<div id="wide-prefix-scenario-signature" class="column-page-right">
+<!-- signature: src/01-prefix-matrix.ash#scenario -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>scenario : Dictionaries.List&lt;(Dictionaries.Natural, Int)&gt; -&gt; Dictionaries.Natural -&gt; Int -&gt; Dictionaries.Natural -&gt; Scenario</code></pre>
+</div>
+<p>Its body must begin with an empty dictionary and somehow obtain both the intermediate observations and the final dictionary. Give that task to <code>prefix_run</code>. Its inputs are the same four pieces of scenario information, followed by the dictionary to continue from. Its result must be <code>PrefixRun</code>, not just a list of checks, because the caller still needs the final dictionary:</p>
+<div id="wide-prefix-prefix-run-signature" class="column-page-right">
+<!-- signature: src/01-prefix-matrix.ash#prefix_run -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>prefix_run : Dictionaries.List&lt;(Dictionaries.Natural, Int)&gt; -&gt; Dictionaries.Natural -&gt; Int -&gt; Dictionaries.Natural -&gt; Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; -&gt; PrefixRun</code></pre>
+</div>
+<p>Supplying the entries, retained pair, and absent key leaves a function from <code>Dictionary&lt;Natural, Int&gt;</code> to <code>PrefixRun</code>. In the recursive case we can supply the smaller remainder of the entries and the updated dictionary to that same operation. The type tells us what can connect; the calculation must determine what each check means and which dictionary to pass.</p>
+<p>Lookup returns an optional value. We need two short operations to turn that answer into a Boolean observation. <code>has_value</code> receives an expected <code>Int</code> and an <code>Option&lt;Int&gt;</code>; it must report whether the value was found and agrees:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>has_value : Int -&gt; Dictionaries.Option&lt;Int&gt; -&gt; Bool</code></pre>
+<p><code>is_none</code> receives an optional value and reports whether it is absent. It does not inspect the payload, so its signature can retain the type parameter <code>A</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>is_none : Dictionaries.Option&lt;A&gt; -&gt; Bool</code></pre>
+<p>Finally, <code>lookup_checks</code> consumes the complete entry list, the absent key, and one final dictionary. It returns a list of Boolean observations:</p>
+<div id="wide-prefix-lookup-checks-signature" class="column-page-right">
+<!-- signature: src/01-prefix-matrix.ash#lookup_checks -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>lookup_checks : Dictionaries.List&lt;(Dictionaries.Natural, Int)&gt; -&gt; Dictionaries.Natural -&gt; Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; -&gt; Dictionaries.List&lt;Bool&gt;</code></pre>
+</div>
+<p>We have now described every operation needed by <code>scenario</code>. Fill their bodies from the overall result toward the smaller tasks.</p>
+<div style="page-break-after: always;"></div>
+</section>
+<section id="assemble-a-scenario" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="assemble-a-scenario">Assemble a scenario</h3>
+<p>Create the empty dictionary with the concrete key and value types. Passing it to <code>prefix_run</code> produces a <code>PrefixRun</code>. Matching that result supplies <code>checks</code> and <code>final_dictionary</code> with the types required by the report. The empty invariant check is a <code>Bool</code>, <code>checks</code> is a <code>List&lt;PrefixCheck&gt;</code>, and applying <code>lookup_checks</code> to the original entries and final dictionary supplies the <code>List&lt;Bool&gt;</code>. Those are precisely <code>Scenario</code>’s three fields:</p>
+<div id="wide-prefix-scenario-excerpt" class="column-page-right">
+<!-- excerpt: src/01-prefix-matrix.ash#scenario -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>scenario : Dictionaries.List&lt;(Dictionaries.Natural, Int)&gt; -&gt; Dictionaries.Natural -&gt; Int -&gt; Dictionaries.Natural -&gt; Scenario
+scenario entries retained_key retained_value absent_key = {
+    let empty : Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; = Dictionaries.empty()
+    let run = prefix_run entries retained_key retained_value absent_key empty
+    match run {
+        PrefixRun(checks, final_dictionary) =&gt; Scenario(
+            Dictionaries.invariant_holds empty,
+            checks,
+            lookup_checks entries absent_key final_dictionary
+        )
+    }
+}</code></pre>
+</div>
+<p>The entry list has two uses. <code>prefix_run</code> consumes it to construct successive dictionaries. <code>lookup_checks</code> uses it as the associations to expect in the finished value. The final pass can therefore check all earlier associations, not just the first and the latest ones.</p>
+</section>
+<section id="record-the-next-prefix-and-continue" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="record-the-next-prefix-and-continue">Record the next prefix and continue</h3>
+<p><code>prefix_run</code> follows the entry list’s two forms. With <code>End</code>, there is no next insertion and no new prefix check. The required result is <code>PrefixRun(End, dictionary)</code>: retain the supplied dictionary and return an empty check list.</p>
+<p>With <code>More(entry, rest)</code>, split the entry into <code>key</code> and <code>value</code>. Inserting that pair into <code>dictionary</code> returns <code>next_dictionary</code> of the same dictionary type. All four observations must examine this returned value. Checking the old <code>dictionary</code> would answer questions about the preceding prefix.</p>
+<p>The four stated positions of <code>PrefixCheck</code> now determine the meanings of its Boolean expressions: validate <code>next_dictionary</code>, look up the new key and value, look up the retained key and value, then look up the absent key. The two small adapters already have the types needed to interpret those lookups.</p>
+<div style="page-break-after: always;"></div>
+<p>The remaining work has the same form as the original task, with the smaller list <code>rest</code>. Assume that calling <code>prefix_run</code> on that remainder and <code>next_dictionary</code> returns its checks in insertion order and the dictionary after all remaining entries. Match that result, place <code>current_check</code> before <code>later_checks</code>, and return the same <code>final_dictionary</code>. This determines the complete equations:</p>
+<div id="wide-prefix-prefix-run-excerpt" class="column-page-right">
+<!-- excerpt: src/01-prefix-matrix.ash#prefix_run -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>prefix_run : Dictionaries.List&lt;(Dictionaries.Natural, Int)&gt; -&gt; Dictionaries.Natural -&gt; Int -&gt; Dictionaries.Natural -&gt; Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; -&gt; PrefixRun
+prefix_run Dictionaries.End retained_key retained_value absent_key dictionary = PrefixRun(
+    Dictionaries.End,
+    dictionary
+)
+prefix_run Dictionaries.More(entry, rest) retained_key retained_value absent_key dictionary = match entry {
+    (key, value) =&gt; {
+        let next_dictionary = Dictionaries.insert key value dictionary
+        let current_check = PrefixCheck(
+            Dictionaries.invariant_holds next_dictionary,
+            has_value value (Dictionaries.lookup key next_dictionary),
+            has_value retained_value (Dictionaries.lookup retained_key next_dictionary),
+            is_none (Dictionaries.lookup absent_key next_dictionary)
+        )
+        let later_run = prefix_run rest retained_key retained_value absent_key next_dictionary
+        match later_run {
+            PrefixRun(later_checks, final_dictionary) =&gt; PrefixRun(
+                Dictionaries.More(current_check, later_checks),
+                final_dictionary
+            )
+        }
+    }
+}</code></pre>
+</div>
+<p>The base case supplies the promise for an empty remainder. The recursive case adds one observation to the front of the returned list, so the list order remains the insertion order. For a finite entry list, each call removes one <code>More</code>; the recursion reaches <code>End</code>, provided insertion and the checks return. The function records every Boolean result and continues even if one is <code>false</code>.</p>
+<p>Each invariant check visits the whole current dictionary. This observation client therefore does more work than its insertions alone. The logarithmic bound later in the chapter concerns the search path; validation has its own cost.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#global-scope">global scope rules</a> allow these bodies to call helpers defined later in the complete source. The <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#functions-and-application">function and application rules</a> check that the argument and result types fit. The list-order promise comes from the equations we just calculated.</p>
+</section>
+<section id="interpret-the-optional-lookup-results" class="level3">
+<h3 class="anchored" data-anchor-id="interpret-the-optional-lookup-results">Interpret the optional lookup results</h3>
+<p>For <code>has_value</code>, <code>None</code> cannot be the expected association. <code>Some(actual)</code> contains an <code>Int</code>, so compare it with <code>expected</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>has_value : Int -&gt; Dictionaries.Option&lt;Int&gt; -&gt; Bool
+has_value expected Dictionaries.None = false
+has_value expected Dictionaries.Some(actual) = expected == actual</code></pre>
+<p>For example, <code>has_value 30 (Some(30))</code> is <code>true</code>, while both <code>has_value 30 None</code> and <code>has_value 30 (Some(31))</code> are <code>false</code>. These are calculations from the two equations, rather than additional CLI observations.</p>
+<p>For <code>is_none</code>, the <code>None</code> case is the successful absence observation; any present payload makes it false:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>is_none : Dictionaries.Option&lt;A&gt; -&gt; Bool
+is_none Dictionaries.None = true
+is_none Dictionaries.Some(ignored_value) = false</code></pre>
+<p>The payload’s value and type do not affect that answer. These two small functions let the caller distinguish an absent association, a present wrong value, and the expected value.</p>
+</section>
+<section id="recheck-every-final-association" class="level3 page-columns page-full">
+<h3 class="anchored" data-anchor-id="recheck-every-final-association">Recheck every final association</h3>
+<p>The four prefix flags inspect the new association, one retained association, and an absent key. After inserting <code>1</code>, they do not separately inspect <code>2</code>. A final pass must therefore compare every input association against the final dictionary.</p>
+<p><code>lookup_checks</code> also follows the list’s two forms. With <code>More(entry, rest)</code>, look up this entry’s key in the same final dictionary, compare its value, and place that Boolean before the checks for <code>rest</code>. With <code>End</code>, all associations have been examined; return a one-element list containing the absent-key check. The result has one flag per entry followed by that final absence flag:</p>
+<div id="wide-prefix-lookup-checks-excerpt" class="column-page-right">
+<!-- excerpt: src/01-prefix-matrix.ash#lookup_checks -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>lookup_checks : Dictionaries.List&lt;(Dictionaries.Natural, Int)&gt; -&gt; Dictionaries.Natural -&gt; Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; -&gt; Dictionaries.List&lt;Bool&gt;
+lookup_checks Dictionaries.End absent_key dictionary = Dictionaries.More(
+    is_none (Dictionaries.lookup absent_key dictionary),
+    Dictionaries.End
+)
+lookup_checks Dictionaries.More(entry, rest) absent_key dictionary = match entry {
+    (key, value) =&gt; Dictionaries.More(
+        has_value value (Dictionaries.lookup key dictionary),
+        lookup_checks rest absent_key dictionary
+    )
+}</code></pre>
+</div>
+<p>For the running example, the list positions refer to <code>(3, 30)</code>, <code>(2, 20)</code>, <code>(1, 10)</code>, and absence of <code>0</code>. To see why the middle check matters, consider a dictionary containing only <code>(3, 30)</code> and <code>(1, 10)</code>. It can satisfy the invariant, contain the new <code>1</code> and retained <code>3</code>, and omit <code>0</code>, yet the check for <code>(2, 20)</code> must be <code>false</code>. This is a deliberately incomplete dictionary, not the result of our insertion run. It distinguishes what the final pass asks from what the four local flags ask.</p>
+</section>
+<section id="assemble-the-inputs-and-read-the-result" class="level3">
+<h3 class="anchored" data-anchor-id="assemble-the-inputs-and-read-the-result">Assemble the inputs and read the result</h3>
+<p>The complete client’s <code>main</code> returns six <code>Scenario</code> values:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>main : Unit -&gt; (Scenario, Scenario, Scenario, Scenario, Scenario, Scenario)</code></pre>
+<p>It begins by constructing the seven <code>Natural</code> keys. These lines are an excerpt from inside <code>main</code>, so their indentation is retained:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    let one = Dictionaries.Next(Dictionaries.Zero)
+    let two = Dictionaries.Next(one)
+    let three = Dictionaries.Next(two)
+    let four = Dictionaries.Next(three)
+    let five = Dictionaries.Next(four)
+    let six = Dictionaries.Next(five)
+    let seven = Dictionaries.Next(six)</code></pre>
+<p>The running input is the list whose first entry is <code>(three, 30)</code> and whose remainder contains <code>(two, 20)</code> and <code>(one, 10)</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    let left_left = Dictionaries.More(
+        (three, 30),
+        Dictionaries.More((two, 20), Dictionaries.More((one, 10), Dictionaries.End))
+    )</code></pre>
+<p>The complete source also constructs ascending and descending seven-key lists and the other three repair orientations. Its final tuple supplies each list, its first association, and <code>Zero</code> as the absent key:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    (
+        scenario ascending one 10 Dictionaries.Zero,
+        scenario descending seven 70 Dictionaries.Zero,
+        scenario left_left three 30 Dictionaries.Zero,
+        scenario left_right three 30 Dictionaries.Zero,
+        scenario right_left one 10 Dictionaries.Zero,
+        scenario right_right one 10 Dictionaries.Zero
+    )</code></pre>
+<p>Predict <code>true</code> for each empty check and all four flags after each insertion. The final list should also contain only <code>true</code>: every exact association remains available, and <code>Zero</code> remains absent. Run the complete client from <code>content/cases</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash guaranteeing-logarithmic-retrieval/src/01-prefix-matrix.ash</code></pre>
+<p>The command returns one tuple containing all six scenarios. Read the left-left scenario, the third tuple element, in smaller parts below. Each fence contains a field or list element of that same captured value; the surrounding tuple, <code>Scenario</code> constructor, and other fields are omitted. These are selected observations, not separate program outputs.</p>
+<p>Before any insertion, the scenario’s first field is the empty invariant check:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>true</code></pre>
+<p>After <code>(3, 30)</code>, its first prefix check is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>PrefixCheck(true, true, true, true)</code></pre>
+<p>Read the four positions as invariant, <code>(3, 30)</code>, retained <code>(3, 30)</code>, and absence of <code>0</code>. The second and third positions test the same association at this first step; their jobs differ once another entry is inserted.</p>
+<p>After <code>(2, 20)</code>, the next prefix check is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>PrefixCheck(true, true, true, true)</code></pre>
+<p>Now the second position checks <code>(2, 20)</code> and the third checks the earlier <code>(3, 30)</code>. The first and fourth positions continue to check the invariant and absence of <code>0</code> in this two-entry dictionary.</p>
+<p>After <code>(1, 10)</code>, the third prefix check is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>PrefixCheck(true, true, true, true)</code></pre>
+<p>The repair has preserved the invariant and the new and retained associations. The final pass then examines all three pairs in input order, followed by absence of <code>0</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>More(true, More(true, More(true, More(true, End))))</code></pre>
+<p>Each <code>More</code> supplies the next Boolean and the final <code>End</code> ends the list. The second flag checks the middle association <code>(2, 20)</code>, which the last prefix’s four local flags did not inspect separately.</p>
+<p>The same captured tuple gives the following counts. Each prefix check contains four <code>true</code> flags, and every final flag is <code>true</code>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Input order</th>
+<th style="text-align: left;">Empty</th>
+<th style="text-align: left;">Prefix checks</th>
+<th style="text-align: left;">Final flags</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Ascending <code>1</code> to <code>7</code></td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">7</td>
+<td style="text-align: left;">8</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Descending <code>7</code> to <code>1</code></td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">7</td>
+<td style="text-align: left;">8</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Left-left <code>3, 2, 1</code></td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">4</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Left-right <code>3, 1, 2</code></td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Right-left <code>1, 3, 2</code></td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">4</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Right-right <code>1, 2, 3</code></td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">4</td>
+</tr>
+</tbody>
+</table>
+<p>The seven-key scenarios create seven prefix observations and eight final flags: seven exact associations plus the absence. Each three-key scenario creates three prefix observations and four final flags. The matrix exercises the four named repair orientations and repeated repairs under ascending and descending input.</p>
+<p>These finite observations can expose a faulty repair. They do not establish preservation for every dictionary by enumeration. That general argument still depends on the source equations, representation conditions, and ordering premises. The client makes selected consequences of that argument observable at each insertion boundary.</p>
+</section>
+</section>
+<section id="retain-build-replacement-and-older-values" class="level2">
+<h2 class="anchored" data-anchor-id="retain-build-replacement-and-older-values">Retain build, replacement, and older values</h2>
+<p>Balancing changes the hidden shape, not the public dictionary operations. The next client first inserts <code>two</code> and <code>one</code>, retains that older dictionary, replaces <code>two</code> with <code>99</code>, and extends only the newer dictionary with <code>three</code>. It also builds the extended value independently from the input order <code>(two, 20)</code>, <code>(one, 10)</code>, <code>(two, 99)</code>, <code>(three, 30)</code>.</p>
+<p>Predict four valid dictionaries. Lookup of <code>two</code> should return <code>20</code> in the old value and <code>99</code> in both later constructions. Lookup of <code>three</code> should return <code>None</code> in the old value and <code>Some(30)</code> in the extended and built values. The structural part should show a black root with red children where those children are present.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries as Dictionaries
+import dictionaries (impl Order)
+
+main : Unit -&gt; (
+    (
+        Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt;,
+        Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt;,
+        Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt;,
+        Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt;
+    ),
+    (Bool, Bool, Bool, Bool),
+    (
+        Dictionaries.Option&lt;Int&gt;,
+        Dictionaries.Option&lt;Int&gt;,
+        Dictionaries.Option&lt;Int&gt;,
+        Dictionaries.Option&lt;Int&gt;,
+        Dictionaries.Option&lt;Int&gt;,
+        Dictionaries.Option&lt;Int&gt;
+    )
+)
+main () = {
+    let one = Dictionaries.Next(Dictionaries.Zero)
+    let two = Dictionaries.Next(one)
+    let three = Dictionaries.Next(two)
+    let empty : Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; = Dictionaries.empty()
+    let with_two = Dictionaries.insert two 20 empty
+    let older = Dictionaries.insert one 10 with_two
+    let replaced = Dictionaries.insert two 99 older
+    let extended = Dictionaries.insert three 30 replaced
+    let entries = Dictionaries.More(
+        (two, 20),
+        Dictionaries.More(
+            (one, 10),
+            Dictionaries.More(
+                (two, 99),
+                Dictionaries.More((three, 30), Dictionaries.End)
+            )
+        )
+    )
+    let built = Dictionaries.build entries
+    (
+        (older, replaced, extended, built),
+        (
+            Dictionaries.invariant_holds older,
+            Dictionaries.invariant_holds replaced,
+            Dictionaries.invariant_holds extended,
+            Dictionaries.invariant_holds built
+        ),
+        (
+            Dictionaries.lookup two older,
+            Dictionaries.lookup two replaced,
+            Dictionaries.lookup two built,
+            Dictionaries.lookup three older,
+            Dictionaries.lookup three extended,
+            Dictionaries.lookup three built
+        )
+    )
+}</code></pre>
+<p>Run the client:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash guaranteeing-logarithmic-retrieval/src/02-build-and-persistence.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>((Node(Black, Node(Red, Empty, Next(Zero), 10, Empty), Next(Next(Zero)), 20, Empty), Node(Black, Node(Red, Empty, Next(Zero), 10, Empty), Next(Next(Zero)), 99, Empty), Node(Black, Node(Red, Empty, Next(Zero), 10, Empty), Next(Next(Zero)), 99, Node(Red, Empty, Next(Next(Next(Zero))), 30, Empty)), Node(Black, Node(Red, Empty, Next(Zero), 10, Empty), Next(Next(Zero)), 99, Node(Red, Empty, Next(Next(Next(Zero))), 30, Empty))), (true, true, true, true), (Some(20), Some(99), Some(99), None, Some(30), Some(30))) : ((Dictionary&lt;Natural, Int&gt;, Dictionary&lt;Natural, Int&gt;, Dictionary&lt;Natural, Int&gt;, Dictionary&lt;Natural, Int&gt;), (Bool, Bool, Bool, Bool), (Option&lt;Int&gt;, Option&lt;Int&gt;, Option&lt;Int&gt;, Option&lt;Int&gt;, Option&lt;Int&gt;, Option&lt;Int&gt;))</code></pre>
+<p>The first two rendered dictionaries differ only at the value paired with <code>two</code>. The old one remains separately observable. The extended and built dictionaries have the same structure and associations because the finite build applies public insertion in input order.</p>
+<p><code>Red</code>, <code>Black</code>, <code>Node</code>, and <code>Empty</code> appear because Ash’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">observation rules</a> render nominal data structurally. That output does not export the private color type or either opaque dictionary constructor. It gives client source no new name to construct or match.</p>
+<div style="page-break-after: always;"></div>
+</section>
+<section id="derive-the-logarithmic-bound" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="derive-the-logarithmic-bound">Derive the logarithmic bound</h2>
+<p>Let <code>n</code> count nonempty <code>Node</code> forms. Let <code>h</code> be the largest number of <code>Node</code> forms on a path from the root to <code>Empty</code>. Let <code>q</code> be the equal number of black forms on such a path, including the terminal <code>Empty</code>.</p>
+
+<div class="no-row-height column-margin column-container"><div id="height-counting-cue">
+<p><em>Counting cue.</em> Count terminal <code>Empty</code> in <code>q</code>, but only <code>Node</code> forms in <code>n</code> and <code>h</code>.</p>
+</div></div><p>For a nonempty valid dictionary, each path contains <code>q - 1</code> black <code>Node</code> forms. The root is black, and two red nodes cannot be adjacent. At most one red node can therefore accompany each black node on a path:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>h &lt;= 2 * (q - 1)</code></pre>
+<p>Now let <code>N(q)</code> be the least number of nodes in any recursively consistent subtree whose paths contain <code>q</code> black forms. <code>N(1) = 0</code> because <code>Empty</code> has one black form and no <code>Node</code>. For <code>q &gt; 1</code>, a black root contributes one node, and both children have black-height <code>q - 1</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>N(q) &gt;= 1 + 2 * N(q - 1)</code></pre>
+<p>A red root contributes no black form, so each of its nonempty black children still has black-height <code>q</code>. Each black child contributes one node above two subtrees of black-height <code>q - 1</code>. The red-rooted case therefore contains at least <code>1 + 2 * (1 + 2 * N(q - 1))</code> nodes, which is larger than the black-rooted case. Induction gives at least:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>2^(q - 1) - 1</code></pre>
+<p>nonempty nodes. Rearranging the two bounds gives:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>q - 1 &lt;= log2(n + 1)
+h &lt;= 2 * log2(n + 1)</code></pre>
+<p>The empty dictionary has <code>n = h = 0</code> and is handled separately. These formulas are mathematical consequences of the representation conditions, not Ash numeric operations or timing measurements.</p>
+<p>If lookup or insertion enters <code>m</code> existing nodes, it initiates exactly one top-level key comparison at each node, so <code>m &lt;= h</code>. If comparison <code>i</code> causes <code>C(query, key_i)</code> selected method applications, exact comparison sub-work is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>sum from i = 1 to m of C(query, key_i)</code></pre>
+<p>Only when every term is at most <code>Cmax</code>, with <code>Cmax &gt;= 1</code>, may the combined comparison account be summarized as <code>O(log(n + 1) * Cmax)</code>. Lookup constructs no dictionary <code>Node</code> forms.</p>
+<p>For an absent insertion, let <code>r</code> be the number of entered levels whose <code>restore</code> call selects the three-node repair, and let <code>b</code> be <code>1</code> exactly when root blackening constructs a replacement root. The evaluated source <code>Node</code> applications are:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>m + 1 + 2r + b</code></pre>
+<p>Each entered level returns either one fallback <code>Node</code> or a repaired result with three <code>Node</code> forms. Counting one result form per level as the baseline gives two extra constructions for every repaired level, followed by one red leaf and at most one final root construction. Because <code>0 &lt;= r &lt;= m</code> and <code>0 &lt;= b &lt;= 1</code>, there are at most <code>3m + 2</code> applications. Insertion therefore constructs <code>O(log(n + 1))</code> source-level representation nodes.</p>
+<p>Equal replacement after entering <code>m</code> existing nodes constructs exactly <code>m</code> <code>Node</code> forms: one replacement at the equal key and one fallback reconstruction for each ancestor. It creates no red leaf, selects no repair, and returns the already-black root unchanged.</p>
+<p><code>invariant_holds</code> is separate work. For a finite <code>n</code>-node dictionary, its ordering pass visits every node once, and its balance pass visits every node once. The ordering pass initiates <code>B = 0</code> bound comparisons when <code>n &lt;= 1</code>; for <code>n &gt; 1</code>, <code>n - 1 &lt;= B &lt;= 2n - 2</code>. Its exact comparison-method work is <code>sum C_r</code>, or <code>O(n * Cmax)</code> only under the same explicit bound on every term. The balance pass performs a bounded number of named source operations per node, with at most one child-height equality and one <code>Int</code> increment. The separate root check is constant named source work. Thus validation uses linear named source work outside comparison-method sub-work, and its two full traversals are not part of the logarithmic lookup or insertion account. This account excludes the arbitrary-precision bit cost of the private <code>Int</code> equality and addition.</p>
+</section>
+<section id="keep-the-premises-with-the-guarantee" class="level2">
+<h2 class="anchored" data-anchor-id="keep-the-premises-with-the-guarantee">Keep the premises with the guarantee</h2>
+<p>The logarithmic argument fixes one <code>Order&lt;K&gt;</code> implementation whose required comparisons return and satisfy the premises already used for ordered trees: <code>Equal</code> is the chosen key equivalence, reversed strict comparisons reverse <code>Less</code> and <code>Greater</code>, strict order is transitive, and equivalent keys relate to every other key in the same way. The interface requirement supplies checked comparison evidence under Ash’s <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#interfaces-and-constrained-schemes">constrained-scheme rules</a>; it does not encode those laws.</p>
+<p>The return and height claims apply to finite valid dictionary spines produced from <code>empty</code> by completed public insertions and finite builds. A required comparison that does not return can prevent lookup, insertion, build, or ordering validation from returning. Code in the defining module can still construct an invalid value, a constructor-guarded cyclic spine, or a bad public operation. The static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#recursive-block-groups">recursive block-group rules</a> admit guarded recursive data; opacity and red-black checks do not turn finiteness into a type proposition.</p>
+<p>Whole-tree validation enters both branches in each pass. Lookup and insertion enter only the selected path, so an unentered cycle need not affect a completed call. A cyclic key can prevent comparison from returning. Lookup may return a cyclic value without traversing that payload, while final structural observation may later render its active-path revisit as <code>&lt;cycle&gt;</code>. A cyclic input list can prevent <code>build</code> from reaching <code>End</code>.</p>
+<p>At source level, reconstruction supplies unentered branches and the four surrounding repair subtrees unchanged to new <code>Node</code> applications. This is the only reuse claim. The equations establish no mutation, pointer identity, physical sharing, allocation count, heap layout, garbage-collection behavior, elapsed time, native-stack use, tail-call optimization, or compiler representation. It also establishes no arbitrary-precision integer bit-cost bound.</p>
+</section>
+<section id="practice-and-continue" class="level2">
+<h2 class="anchored" data-anchor-id="practice-and-continue">Practice and continue</h2>
+<ol type="1">
+<li>Insert keys <code>5</code>, <code>3</code>, and <code>4</code> into an empty dictionary. Predict which repair orientation runs and draw the resulting colors and key-value positions.</li>
+<li>Explain why inserting a later value for an equal key constructs no red leaf and selects no repair.</li>
+<li>For an absent insertion that enters <code>m</code> existing nodes, triggers <code>r</code> repairs, and reconstructs the root when <code>b = 1</code>, derive <code>m + 1 + 2r + b</code> from the source equations.</li>
+<li>Explain why changing a red root to black changes every root path’s black count equally.</li>
+<li>Starting from equal black-height and the rule against adjacent red nodes, derive the minimum-node recurrence and the final logarithmic height bound.</li>
+</ol>
+<p>Balanced lookup enters only one logarithmic path. An in-order traversal must eventually visit every association, but it need not produce them all at once. The next case asks how a traversal can pause and resume without laziness.</p>
+
+
+</section>
+
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-protecting-dictionary-invariant.html" class="pagination-link" aria-label="Protecting the dictionary invariant">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Protecting the dictionary invariant</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-resuming-tree-traversal.html" class="pagination-link" aria-label="Resuming tree traversal">
+        <span class="nav-page-text"><span class="chapter-title">Resuming tree traversal</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

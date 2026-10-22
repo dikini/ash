@@ -1,0 +1,315 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Core and Library Equality Evidence · Ash</title><meta name="description" content="This report records the initial core-versus-library audit for Modular Ash. It is informative, not normative. The Ash specification alone defines the current language and runtime behavior. A completed implementation…"><meta name="robots" content="index, follow"><meta property="og:title" content="Core and Library Equality Evidence · Ash"><meta property="og:description" content="This report records the initial core-versus-library audit for Modular Ash. It is informative, not normative. The Ash specification alone defines the current language and runtime behavior. A completed implementation…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Core and Library Equality Evidence · Ash"><meta name="twitter:description" content="This report records the initial core-versus-library audit for Modular Ash. It is informative, not normative. The Ash specification alone defines the current language and runtime behavior. A completed implementation…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/modular-ash/core-library-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/modular-ash/core-library-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/core-library-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Core and Library Equality Evidence","headline":"Core and Library Equality Evidence","description":"This report records the initial core-versus-library audit for Modular Ash. It is informative, not normative. The Ash specification alone defines the current language and runtime behavior. A completed implementation…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/modular-ash/core-library-evidence/","@id":"https://dikini.github.io/ash/docs/design/modular-ash/core-library-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/core-library-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="core-and-library-equality-evidence" data-pagefind-meta="title">Core and Library Equality Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/modular-ash/core-library-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report records the initial core-versus-library audit for Modular Ash. It
+is informative, not normative. The <a href="/ash/spec/">Ash specification</a>
+alone defines the current language and runtime behavior. A completed
+implementation task authorized this bounded audit but did not define semantics;
+Git history retains that temporary authorization artifact.</p>
+<h2 id="scope-and-representative">Scope and representative</h2>
+<p>The paired representative is integer equality. This choice keeps one admitted
+operation fixed while comparing two existing paths:</p>
+<ul>
+<li>source <code>41 == 41</code>, governed by the specification's
+<a href="/ash/spec/static-semantics/#primitive-operations">integer-only primitive rule</a>;</li>
+<li>explicit calls through a sibling <code>equality.ash</code> module that exports
+<code>Equal&lt;A&gt;</code>, <code>pub impl Equal&lt;Int&gt;</code>, its public <code>equal</code> method, and a
+constrained public <code>same</code> function.</li>
+</ul>
+<p>The library path uses current method-only interface evidence. It does not
+replace the operator, add an implicit import or prelude, or propose that
+equality become a library-defined language feature. Existing
+<a href="/ash/spec/static-semantics/#constraint-satisfaction-and-checked-evidence">constraint selection</a>,
+<a href="/ash/spec/elaboration/#interface-evidence-lowering">linked evidence validation and lowering</a>,
+and <a href="/ash/spec/dynamic-semantics/#generated-interface-evidence">generated-evidence execution</a>
+govern the observed path.</p>
+<p>The retained target is
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/modular_closure.rs"><code>tests/modular_closure.rs</code></a>. Before this
+increment, that file was absent, was not tracked by Git, and no matching test
+target or case existed under <code>tests/</code>.</p>
+<h2 id="source-admission-and-typing">Source admission and typing</h2>
+<p>The direct path is fixed language syntax. The lexer and parser admit <code>==</code> as a
+non-associative expression operator without a declaration or import. Resolution
+retains a dedicated equality expression, and the primitive typing judgment
+requires both operands to check as <code>Int</code> and synthesizes <code>Bool</code>. No interface
+selection can change that domain.</p>
+<p>The explicit library path is ordinary current Modular Ash source. The witness
+loads a sibling module through an explicit import. Resolution authenticates its
+public <code>Equal</code> interface, <code>equal</code> method, <code>Equal&lt;Int&gt;</code> implementation, and
+constrained <code>same</code> global. Checking validates the method shape, implementation
+ownership and membership, constrained scheme, and available implementation;
+each occurrence retains its selected evidence for linked authentication. The
+method call at <code>Int</code> and the <code>same</code> instantiation both synthesize <code>Bool</code> through
+those existing judgments.</p>
+<p>The comparison does not identify a shipped Ash library. The witness declares
+its <code>Equal&lt;A&gt;</code> capability in test source. Its <code>Equal&lt;Int&gt;</code> method body uses
+<code>left == right</code>, so integer equality remains implemented by the fixed intrinsic
+and <code>Primitive::Equal</code>; the interface supplies an explicit reusable capability
+boundary above that operation.</p>
+<h2 id="positive-witness">Positive witness</h2>
+<p>The shared <code>positive_witness</code> helper creates a temporary two-module tree with
+RAII cleanup. It manually loads the source graph, resolves and checks each
+dependency in order, links the checked modules, validates the linked interface
+evidence, synthesizes Core, and independently validates the whole Core program.
+That manual assembly retains the intermediate Core needed by the structural
+audit below.</p>
+<p><code>integer_equality_paths_complete_the_pipeline_with_one_observation</code> separately
+invokes the public <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/driver.rs"><code>run_path</code></a> pipeline on the same
+temporary entry path while the tree remains alive. This path owns entry-contract
+validation, graph-wide resource orchestration, Core validation, and evaluation;
+the manual assembly is not used as a substitute for that driver boundary.</p>
+<p>The entry module returns this structural tuple:</p>
+<pre tabindex="0"><code class="language-ash">(
+    41 == 41,
+    Equality.equal(41, 41),
+    Equality.same((41, 41))
+)
+</code></pre>
+<p>The public driver reports the exact structural type <code>(Bool, Bool, Bool)</code>, the
+same exact source-facing type display, and the exact value
+<code>(true, true, true)</code>. The separately assembled Core also passes independent
+whole-program validation before inspection. This is one shared result, not a
+claim that the three source paths have identical typing, diagnostic, or Core
+structure.</p>
+<h2 id="core-facts">Core facts</h2>
+<p><code>direct_and_library_equality_retain_distinct_core_paths</code> inspects the manually
+assembled, independently validated Core. It locates definitions by their
+resolved binder identities and module recursive-group membership. It uses
+source origins to distinguish the direct expression from the implementation
+method body. It does not depend on arena-wide node counts.</p>
+<p>The retained facts are:</p>
+<ul>
+<li>the direct entry expression <code>41 == 41</code> is a Core <code>Primitive::Equal</code> with that
+source expression as its primary origin;</li>
+<li>the <code>Equal&lt;Int&gt;</code> implementation method belongs to the dependency's ordinary
+recursive group, and its body contains the retained <code>Primitive::Equal</code> whose
+primary origin is <code>left == right</code>;</li>
+<li><code>Equality.equal(41, 41)</code> is an ordinary Core value application whose function
+is the selected implementation-method binder and whose argument is the
+source tuple;</li>
+<li><code>Equality.same((41, 41))</code> is an ordinary type application of the <code>same</code>
+binder at <code>Int</code>, followed by an evidence application of the same
+implementation-method binder and then the source tuple application; and</li>
+<li>neither explicit library call introduces an interface or dictionary Core
+node. The existing <a href="/ash/spec/elaboration/#interface-evidence-lowering">Core lowering rules</a>
+erase interface identities after linked evidence validation.</li>
+</ul>
+<p>These assertions describe the stable audited boundary: binder identity, group
+ownership, source origin, and the ordinary type/evidence/value application
+nesting required by the specification. They intentionally omit unrelated
+global node totals and incidental arena ordering.</p>
+<h2 id="evaluation-and-order-consequences">Evaluation and order consequences</h2>
+<p>The direct primitive evaluates its left operand and then its right operand
+before comparing the two integer values. The explicit <code>equal</code> call instead
+evaluates an ordinary implementation-method function and its tuple argument,
+enters the method's pattern match, and then reaches the same left-to-right
+integer primitive in the method body.</p>
+<p>The constrained <code>same</code> call has more static and dynamic structure. Its Core
+type application erases without a runtime value. Strict ordinary application
+then supplies the selected implementation method as evidence before it
+evaluates and supplies the source tuple. The method call inside <code>same</code> uses the
+ordinary evidence binder, recursive-group lookup, function application, pattern
+match, and finally the method body's <code>Primitive::Equal</code>.</p>
+<p>The three fixed calls produce the same Boolean result, but the report does not
+claim equal traces or equal cost. The library paths add ordinary lookup,
+closure, type-erasure, application, tuple, and match transitions. They add no
+runtime interface lookup, interface value, dictionary value, registry, Core
+node, or evaluator rule.</p>
+<h2 id="paired-negative-diagnostics">Paired negative diagnostics</h2>
+<p>The negative witnesses preserve a deliberate difference. They do not claim
+diagnostic equivalence.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Source</th>
+<th>Owning boundary</th>
+<th>Stable reason and cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>true == false</code></td>
+<td>Primitive operand typing</td>
+<td><code>type.operator-operand</code>; primary label on <code>true</code>, related label on <code>==</code>, expected <code>Int</code>, found <code>Bool</code></td>
+</tr>
+<tr>
+<td><code>Equality.equal(true, false)</code> with only <code>Equal&lt;Int&gt;</code> available</td>
+<td>Interface selection</td>
+<td><code>constraint.unsatisfied</code>; primary label on <code>Equality.equal</code>, then exact public method declaration, direct import, and interface-declaration causes</td>
+</tr>
+</tbody>
+</table>
+<p><code>direct_boolean_equality_keeps_the_operator_operand_diagnostic</code> checks the
+exact source spans and label messages for the operator-owned failure.
+<code>imported_boolean_method_keeps_the_unsatisfied_interface_diagnostic</code> checks the
+exact method occurrence, public declaration, import, and interface causes. It
+also proves that no related label overlaps the unrelated <code>pub impl Equal&lt;Int&gt;</code>
+declaration or body. The dependency contains no <code>Equal&lt;Bool&gt;</code> implementation,
+so the importer has no available candidate. This agrees with the
+specification's distinct
+<a href="/ash/spec/static-semantics/#failure-ownership-and-constraint-resources">failure ownership</a>
+rather than forcing the interface call to imitate the operator diagnostic.</p>
+<h2 id="maintenance-sites">Maintenance sites</h2>
+<p>This exact current search follows the direct equality representation from
+source admission through resolved traversal, Core, transformation, and
+evaluation:</p>
+<pre tabindex="0"><code class="language-text">rg -l '\b(EqualEqual|EqualityExpression|RepeatedEquality)\b|SurfaceExprKind::Equal|ResolvedExprKind::Equal|BinaryKind::Equal|^\s+Equal\((BinaryExpr|ResolvedBinaryExpr)\),|Primitive::Equal|Self::Equal =&gt;' src
+</code></pre>
+<p>Sorted, it returns these 15 production files:</p>
+<pre tabindex="0"><code class="language-text">src/core/primitive.rs
+src/core/transform.rs
+src/elaborate.rs
+src/eval/machine.rs
+src/evidence_audit.rs
+src/evidence_validation.rs
+src/lexer/mod.rs
+src/lexer/token.rs
+src/parser/expression.rs
+src/parser/grammar.rs
+src/parser/mod.rs
+src/parser/project.rs
+src/resolve.rs
+src/resolved.rs
+src/surface.rs
+</code></pre>
+<p>Some files carry the equality expression through an exhaustive traversal rather
+than define its behavior. The narrower closed-stage search</p>
+<pre tabindex="0"><code class="language-text">rg -l 'Primitive::Equal|Self::Equal =&gt;' src/core src/elaborate.rs src/eval
+</code></pre>
+<p>returns exactly <code>src/core/primitive.rs</code>, <code>src/core/transform.rs</code>,
+<code>src/elaborate.rs</code>, and <code>src/eval/machine.rs</code>. These are the equality-specific
+Core joins: variant and signature, construction and result typing, the explicit
+decision not to constant-fold equality, and evaluation. Generic primitive Core
+construction, validation, and traversal remain closed sites but require no
+equality-specific branch.</p>
+<p>The stable interface maintenance search remains:</p>
+<pre tabindex="0"><code class="language-text">rg -l '\b(InterfaceId|MethodId|ImplId|ImplMethodId|RequirementId|EvidenceSelection|ConstrainedScheme|validate_interface_evidence)\b' src
+</code></pre>
+<p>It returns exactly <code>src/driver.rs</code>, <code>src/elaborate.rs</code>, <code>src/evidence.rs</code>,
+<code>src/evidence_audit.rs</code>, <code>src/evidence_validation.rs</code>, <code>src/interface.rs</code>,
+<code>src/resolve.rs</code>, and <code>src/resolved.rs</code>. The witness's <code>Equal&lt;A&gt;</code> declaration,
+constrained function, and <code>Equal&lt;Int&gt;</code> implementation use those generic module
+and interface paths. Adding another implementation to an admitted Ash source
+graph requires no new Rust production site. This is a locality result for
+current source mechanisms, not a claim that Ash ships a prelude, packaged
+library, or reusable <code>equality.ash</code> artifact.</p>
+<h2 id="resources-ownership-and-lifetimes">Resources, ownership, and lifetimes</h2>
+<p>Both paths pay the existing source, type, Core-construction, Core-validation,
+and evaluation bounds. Direct equality contributes one fixed expression and
+one primitive Core node after its operands. The explicit library witness also
+pays for a second source and import edge, interface and implementation facts,
+constraint selection, checked occurrence evidence, linked authentication,
+ordinary evidence Core applications, recursive-group method ownership, and
+their evaluation transitions. The interface constraint-work budget spans
+summary admission, checking, linking, and validation; Core synthesis and
+independent validation keep their existing separate budgets. This comparison
+does not infer a general cost ratio from the fixed witness.</p>
+<p>The linked-interface registry is local to linked evidence validation. Successful
+validation returns the <code>ValidatedInterfaceProgram</code> capability with its checked
+source program, but does not retain the registry used by
+<code>validate_occurrences</code>. Compiler-exhaustive destructuring checks that the
+capability contains exactly one <code>ResolvedModuleProgram</code>. Core synthesis borrows
+the capability inside an explicitly typed driver block that also owns the
+display-registry clone, type-display computation, synthesis finish, and the
+eager capability drop. The drop records the last intentional wrapper use, while
+block exit is the ownership boundary before independent Core validation. Only
+the result <code>Type</code>, computed <code>String</code>, and <code>UnvalidatedProgram</code> cross it; checked
+bodies, structural evidence, implementation routes, remaining checked
+interface metadata, and the display clone do not. A driver witness records a
+weak registry reference during interface validation and observes exactly one
+strong owner, the unchecked Core program, when Core validation begins.</p>
+<p>The manual structural witness intentionally keeps its independently validated
+Core for inspection. A returned <code>Value::Data(ObservedValue)</code> already owns an
+<code>Arc</code> to the heap needed to render its structural or cyclic value. The public
+driver's <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/driver.rs"><code>Observation</code></a> separately retains the
+evaluation heap because a returned closure can capture an environment that
+contains raw heap locations. The direct
+<code>driver::tests::returned_closure_observation_retains_its_captured_structural_heap</code>
+test returns such a closure and checks that its observation retains the
+captured tuple's heap cell. <code>Observation._heap</code> is therefore not an unused
+cleanup candidate.</p>
+<h2 id="simplification-decisions-and-exclusions">Simplification decisions and exclusions</h2>
+<p>The audit accepts three bounded conclusions:</p>
+<ul>
+<li>retain direct integer equality and <code>Primitive::Equal</code>; the explicit
+<code>Equal&lt;Int&gt;</code> method needs that implementation;</li>
+<li>use existing passive modules and method-only interfaces when source chooses
+an explicit equality capability; adding the tested implementation needs no
+new compiler representation or production dispatch site; and</li>
+<li>release the validator-local linked registry after authentication and confine
+validated interface state to the typed Core-synthesis scope.</li>
+</ul>
+<p>The audit rejects operator rewriting, an implicit import or prelude, an
+interface-specific Core or runtime node, runtime lookup or registration,
+dictionary values, and specialization. It does not introduce <code>lib-ash</code> or
+<code>pack-ash</code> mechanisms, package or cache behavior, module signatures, reexports,
+or a shipped library.</p>
+<p>The stale-state review also rejects three proposed cleanups.
+<code>ResolvedModuleProgram.entry</code> and each <code>ResolvedModuleGroup</code> module identity now
+have interface-era readers for entry-closure and group-ownership
+authentication. <code>Observation</code> must separately retain the heap for raw locations
+captured by returned closures; returned structural <code>Value::Data</code> already owns
+its own heap. A lean consuming synthesis payload remains deferred: the explicit
+typed scope closes the proven long lifetime without adding another
+representation or API, while retaining the eager post-finish drop as the last
+documented wrapper use.</p>
+<h2 id="evidence-and-verification">Evidence and verification</h2>
+<p>The target was first run while absent. Cargo rejected the command with
+<code>no test target named modular_closure</code>, which establishes the pre-edit baseline.
+After the target was added, its four tests passed.</p>
+<p>The completed comparison retains the four paired tests and the architecture
+boundary test. This increment uses these focused verification commands:</p>
+<pre tabindex="0"><code class="language-text">cargo test --locked --lib driver::tests::independent_core_validation_starts_with_only_the_core_registry_owner -- --exact
+cargo test --locked --lib evidence_validation::tests::validated_interface_capability_has_exact_resolved_program_payload -- --exact
+cargo test --locked --test architecture synthesis_block_exit_releases_original_state_after_macro_shadow_drop -- --exact
+cargo fmt --check
+cargo test --locked --test modular_closure
+cargo test --locked --test architecture --test interfaces --test interface_modules --test interface_validation
+cargo test --locked --test interface_corpus --test module_elaboration
+cargo test --locked --lib
+cargo clippy --locked --all-targets -- -D warnings
+markdownlint --disable MD013 -- README.md spec docs
+git diff --check
+</code></pre>
+<p>In the prior cleanup workflow, the source-shape architecture test first failed
+with <code>retains registry: true, releases at boundary: false</code>, then passed after an
+explicit drop was added. That lexical guard is no longer current evidence. The
+production ownership witness introduced by the later maintenance review failed
+against the flat driver with two strong registry owners where one was expected,
+then passed after the typed synthesis scope removed the display clone before
+Core validation. The compiler shape witness and macro-shadow scope witness
+provide the complementary structural and mechanism evidence.</p>
+<p>At the original audit checkpoint, fresh runs passed 4 paired audit tests; 53
+architecture and interface tests; 19 interface-corpus and module-elaboration
+tests; and all 298 library tests. Formatting, denied-warning all-target Clippy,
+changed-document Markdown lint, and whitespace checks reported no findings.
+The three documented maintenance command/result sets returned the exact 15-file
+direct path, four equality-specific Core joins, and stable eight-file interface
+path recorded above.</p>
+<p>Manual review also checks every relative link in this report and confirms that
+semantic claims remain grounded in <code>spec/</code>.</p>
+<h2 id="result-and-remaining-boundary">Result and remaining boundary</h2>
+<p>The comparison is complete across admission, typing, diagnostics, Core,
+evaluation order, maintenance, resources, ownership, lifetimes, and bounded
+simplification. The production reconciliation changes only retention after the
+last consumer. It does not change source behavior, diagnostic ownership, Core
+shape or validity, evaluation, or observation rendering.</p>
+<p>The existing <a href="/ash/docs/design/modular-ash/evidence/">passive-module evidence</a> and
+<a href="/ash/docs/design/modular-ash/interfaces-evidence/">interface evidence</a> retain the broader module and
+interface boundaries. The <a href="/ash/docs/design/modular-ash/closure/">Modular Ash closure report</a> records the
+reviewed result across the paired audit and those retained boundaries.
+Lifecycle cleanup removed the temporary task and plan, and the annotated
+<code>modular-ash</code> tag retains the final verified closure commit.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#scope-and-representative">Scope and representative</a><a href="#source-admission-and-typing">Source admission and typing</a><a href="#positive-witness">Positive witness</a><a href="#core-facts">Core facts</a><a href="#evaluation-and-order-consequences">Evaluation and order consequences</a><a href="#paired-negative-diagnostics">Paired negative diagnostics</a><a href="#maintenance-sites">Maintenance sites</a><a href="#resources-ownership-and-lifetimes">Resources, ownership, and lifetimes</a><a href="#simplification-decisions-and-exclusions">Simplification decisions and exclusions</a><a href="#evidence-and-verification">Evidence and verification</a><a href="#result-and-remaining-boundary">Result and remaining boundary</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0024: Executable Learning and Evidence Stream · Ash</title><meta name="description" content="Can a separately maintained, version-pinned documentation stream teach Ash, reinterpret established programming works, exercise realistic applications, and provide useful design evidence without becoming language…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0024: Executable Learning and Evidence Stream · Ash"><meta property="og:description" content="Can a separately maintained, version-pinned documentation stream teach Ash, reinterpret established programming works, exercise realistic applications, and provide useful design evidence without becoming language…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0024: Executable Learning and Evidence Stream · Ash"><meta name="twitter:description" content="Can a separately maintained, version-pinned documentation stream teach Ash, reinterpret established programming works, exercise realistic applications, and provide useful design evidence without becoming language…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0024-executable-learning-and-evidence-stream.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0024: Executable Learning and Evidence Stream","headline":"DN-0024: Executable Learning and Evidence Stream","description":"Can a separately maintained, version-pinned documentation stream teach Ash, reinterpret established programming works, exercise realistic applications, and provide useful design evidence without becoming language…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/","@id":"https://dikini.github.io/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0024-executable-learning-and-evidence-stream.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0024-executable-learning-and-evidence-stream" data-pagefind-meta="title">DN-0024: Executable Learning and Evidence Stream</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0024-executable-learning-and-evidence-stream.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0024</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/decisions/ad-0002-documentation-system/">AD-0002: Documentation System</a>,
+<a href="/ash/docs/design/dn-0016-first-mini-ash-corpus/">DN-0016: First Mini-Ash Corpus Stratum</a>,
+<a href="/ash/docs/design/dn-0019-primitive-feature-composition/">DN-0019: Primitive Feature Composition</a>,
+<a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">DN-0020: Ash Dialect Milestones</a>,
+<a href="/ash/docs/design/dn-0022-passive-static-modules/">DN-0022: Passive Static Modules</a>,
+<a href="/ash/docs/design/dn-0023-interfaces-and-implementations/">DN-0023: Interfaces and Implementations</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It governs the initial experiment with a
+separate executable learning and evidence stream under the scope and
+retention conditions below. It does not define current Ash, accept a
+permanent repository architecture, or make tutorial material a second
+specification.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can a separately maintained, version-pinned documentation stream teach Ash,
+reinterpret established programming works, exercise realistic applications,
+and provide useful design evidence without becoming language authority or
+imposing backward-compatibility work on Ash?</p>
+<h2 id="context">Context</h2>
+<p>The <code>mini-ash</code> Git tag at commit <code>d62d3ba</code> retains the completed historical
+Mini-Ash milestone. The <a href="/ash/spec/">current specification</a> defines
+Modular Ash with passive source modules, a <code>main</code> entrypoint, and method-only
+interfaces and implementations. Current source keeps no Mini-Ash dialect
+selector merely to preserve earlier source programs.</p>
+<p>The completed passive-module and interface increments make a small, migratable
+pilot more useful than a large Mini-Ash translation effort. A first edition can
+target the historical tag, then exercise forward migration against current
+Modular Ash without requiring compiler compatibility or tutorial backports.</p>
+<p>Ash already uses executable examples in the specification and tool guide. The
+first Mini-Ash corpus also showed that a shared set of programs can pressure
+syntax, typing, diagnostics, Core representation, and evaluation together.
+That corpus was design and implementation evidence. It was not organized to
+teach programmers, adapt established algorithms, or explore complete
+applications.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/project/documentation.md">documentation policy</a> keeps explanatory
+language material subordinate to the specification and tool documentation
+subordinate to tested behavior. A larger learning stream must preserve that
+boundary while moving at a different cadence from the compiler repository.</p>
+<p>Established textbooks provide more than example syntax. They carry design
+methods, data-structure invariants, algorithm derivations, complexity
+arguments, and application techniques. Reinterpreting those ideas in Ash can
+teach the language and expose pressure for libraries, effects, state, resource
+handling, concurrency, and richer types. Blindly translating chapters would
+lose that purpose and create unnecessary copyright and maintenance risk.</p>
+<h2 id="constraints">Constraints</h2>
+<h3 id="keep-authority-one-way">Keep authority one-way</h3>
+<p>Published tutorials explain the Ash version they target. Their language claims
+derive from that version's specification. A tutorial, executable case, test,
+stress result, or external repository convention cannot create Ash semantics.</p>
+<p>When tutorial behavior and its source of truth disagree, classify the finding:</p>
+<ul>
+<li>correct tutorial mistakes against the specification;</li>
+<li>minimize implementation failures of specified behavior as Ash regressions;</li>
+<li>return unspecified semantic questions to design or proposal work;</li>
+<li>retain library, tooling, diagnostic, and performance pressure without
+presenting it as a language change.</li>
+</ul>
+<h3 id="treat-teaching-and-stress-as-the-same-work-viewed-differently">Treat teaching and stress as the same work viewed differently</h3>
+<p>The stream has three equal content families:</p>
+<ul>
+<li>tutorials that teach Ash and program design;</li>
+<li>structures, algorithms, and development techniques adapted from established
+work;</li>
+<li>realistic application cases such as deterministic automation, data
+transformation, interpreters, services, and web systems.</li>
+</ul>
+<p>Stress evidence crosses every family. A case should teach a coherent idea and
+state which language, implementation, diagnostic, library, or application
+boundary it exercises. The publication need not form one connected textbook,
+but prerequisites must make useful reading paths possible.</p>
+<h3 id="make-code-executable">Make code executable</h3>
+<p>Every displayed code block presented as runnable must be transcluded from a
+canonical source file or checked for exact agreement with it, regardless of
+language or content family. Test it with the applicable executor, compiler, or
+parser. A successful Ash example asserts its value, type, output, and exit
+status as applicable. An intentional Ash rejection asserts the stable reason
+and relevant source location on which its explanation depends. Scripts,
+configuration, and host-language harness code receive equivalent checks for
+the behavior the text presents.</p>
+<p>Execution alone is insufficient. Each substantive adapted unit must explain,
+as relevant, the problem, representation and invariants, construction or
+derivation, cost, and departures from its source material. The explanation
+should preserve the source's intellectual purpose while making the Ash-specific
+choices explicit. Elementary examples need only the explanation required for
+their learning outcome.</p>
+<p>Pseudocode, transcripts, possible future Ash, and incomplete fragments must be
+identified as non-executable and must not use a runnable language's code fence.
+Laboratory code may target an experimental compiler only when an immutable
+retained ref or source artifact keeps that target fetchable and the case records
+its build instructions. A commit name on a disposable branch is insufficient.
+The code must execute against that target and remain visibly separate from
+published tutorials.</p>
+<p>Application tests must be deterministic and hermetic. Checked-in fixtures,
+temporary directories, controlled clocks or randomness, and loopback services
+are appropriate as the language gains those capabilities. A live public
+service is not a documentation test dependency.</p>
+<h3 id="move-forward-without-maintaining-old-editions">Move forward without maintaining old editions</h3>
+<p>A published edition pins a named Ash milestone and the tag's exact commit. Old
+editions remain available through Git tags or immutable builds. New material,
+corrections, and migrations move forward; the experiment does not require
+backports or source compatibility with earlier Ash dialects.</p>
+<p>Every published view must display its Ash milestone and resolved commit without
+requiring a reader to inspect repository metadata.</p>
+<p>An upstream-main canary is a discovery channel, not the publication contract.
+A canary failure may reveal an intentional transition, a regression, or a
+documentation assumption. It must not silently retarget the published edition.</p>
+<h3 id="preserve-source-integrity">Preserve source integrity</h3>
+<p>Each adapted unit records its source, edition, intellectual contribution, and
+material actually used. Exposition and Ash code should be original by default.
+Do not copy prose, exercise statements, or solutions merely because a source is
+available online. Review the applicable license before adapting any protected
+expression or redistributing source material.</p>
+<h2 id="candidate-repository-directions">Candidate repository directions</h2>
+<h3 id="documentation-inside-ash-lang">Documentation inside <code>ash-lang</code></h3>
+<p>Keeping the complete stream in this repository would make compiler and tutorial
+changes atomic. It would also place a growing curriculum, its research records,
+application fixtures, and scheduled stress workloads in the compiler's routine
+development path. A worktree could isolate authors locally, but it would not
+separate repository history, dependencies, review load, or CI cost.</p>
+<h3 id="separate-version-pinned-repository">Separate version-pinned repository</h3>
+<p>A separate repository can record one published Ash target while probing newer
+targets independently. It can choose documentation tooling, accept a larger
+corpus, and run scheduled application workloads without burdening routine Ash
+verification. Its cost is explicit cross-repository coordination and a delay
+between an Ash transition and the next complete documentation edition.</p>
+<p>This is the leading direction for the initial experiment.</p>
+<h3 id="separate-repository-with-an-upstream-contract-subset">Separate repository with an upstream contract subset</h3>
+<p>The full stream could remain external while a curated subset becomes Ash
+regression evidence. This gives language changes early downstream coverage but
+adds ownership and duplication decisions. It should emerge only after the
+external corpus identifies durable obligations worth retaining upstream. The
+pilot must not create a second copy of every tutorial program in <code>ash-lang</code>.</p>
+<h2 id="leading-repository-model">Leading repository model</h2>
+<p>The initial documentation repository should contain these conceptual areas:</p>
+<pre tabindex="0"><code class="language-text">content/learn/          sequenced and focused Ash tutorials
+content/cases/          structures, algorithms, and techniques
+content/applications/   deterministic application slices
+lab/                    versioned pressure cases and design experiments
+research/sources/       source evaluations and adaptation records
+</code></pre>
+<p>This layout is a starting constraint, not an accepted choice of renderer,
+manifest format, test framework, or repository name. Prefer unit-local prose,
+programs, fixtures, and metadata so that one case can be understood and tested
+without reconstructing an unrelated global build convention.</p>
+<p>Each unit needs a stable case identity and should record:</p>
+<ul>
+<li>publication, laboratory, or migration state;</li>
+<li>exact Ash target;</li>
+<li>applicable specification sections or governing design note;</li>
+<li>learning prerequisites and outcomes;</li>
+<li>difficulty, Ash features, and stress dimensions exercised;</li>
+<li>source references and adaptation notes;</li>
+<li>commands and expected observations;</li>
+<li>known limitations and resulting evidence links.</li>
+</ul>
+<p>The repository should apply Ash's <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/project/writing.md">writing guide</a> to its
+prose. It may define additional editorial rules, but those rules cannot change
+the authority or status of Ash artifacts.</p>
+<h2 id="coverage-discipline">Coverage discipline</h2>
+<p>The repository should maintain a coverage view across learning prerequisites,
+difficulty, Ash features, programming techniques, structure and algorithm
+families, application domains, source traditions, positive and negative cases,
+and stress dimensions. Use that view to select work and expose omissions. It is
+not a language-conformance claim or a target to maximize feature counts in each
+example.</p>
+<p>Early units should combine accessible and demanding programs rather than
+finishing all elementary material before beginning advanced cases. A small
+teaching example may isolate one idea; a harder case should exercise several
+ideas whose interaction matters. Independent units are preferable when a
+forced chapter sequence adds no pedagogical value.</p>
+<h2 id="version-and-migration-workflow">Version and migration workflow</h2>
+<p>An immutable documentation source tag preserves each published edition; a
+rendered build publishes it. The documentation repository's <code>main</code> branch is
+the one active forward line. Do not maintain a branch for an older edition or
+merge new work backward. During a migration, the last edition remains
+published from its tag while <code>main</code> is visibly incomplete and targets the next
+exact Ash commit. Remove unmigrated units from the current tree, record them in
+the migration inventory, and restore them from the prior tag as they pass the
+new target. Publish a new tag only after the intended coverage is coherent.</p>
+<p>The published edition pins a milestone tag and its resolved commit. Every
+change to a published unit or shared renderer, harness, dependency, or build
+rule runs the complete executable documentation suite against that target.</p>
+<p>The repository also tests the complete published suite periodically against an
+exact <code>ash-lang</code> <code>main</code> commit. A smaller sentinel set may provide more frequent
+signal when its coverage is stated. These canaries report compatibility without
+changing the published pin. Laboratory cases may name other immutable
+experimental targets when an Ash design note governs the question, comparison
+criteria, and disposal condition.</p>
+<p>A repository-visible compatibility record should name the publication pin, the
+latest tested <code>ash-lang</code> <code>main</code> commit, the cases run, the result, and any open
+migration or evidence work. Classify a canary failure rather than leaving the
+record red without explanation. The canary may remain non-blocking for
+<code>ash-lang</code>; its purpose is to expose downstream pressure without coupling both
+repositories' routine verification.</p>
+<p>The pilot should detect an advanced <code>ash-lang</code> <code>main</code> at least daily and run the
+sentinel set against it. Run the complete published suite at least weekly and
+before selecting a forward migration target. Record a canary as stale when
+these intervals are missed; a stale result is not compatibility evidence.</p>
+<p>When an intentional Ash transition breaks the published corpus, classify the
+old-edition result as expected incompatibility and link the forward migration
+inventory. Pin the active forward line to an exact current commit and restore a
+green representative sentinel before expanding the migration. The published
+edition remains unchanged until the forward line is coherent and a new
+milestone is available.</p>
+<p>A forward migration follows these steps:</p>
+<ol>
+<li>preserve the current documentation source with an immutable tag and publish
+its rendered build;</li>
+<li>after the Ash transition is implemented and specified, move the active
+<code>main</code> line to an exact current target and mark it as a migration;</li>
+<li>include a unit in the next rendered edition only after all of its Ash code
+passes against the new target;</li>
+<li>track omitted units in a migration inventory rather than publishing broken
+examples;</li>
+<li>when the Ash milestone tag is available, verify the coherent forward line
+against its resolved commit, then publish the next edition; and</li>
+<li>stop maintaining the earlier edition.</li>
+</ol>
+<p>The migration need not preserve old syntax or explanations. It should preserve
+the pedagogical or algorithmic idea when that idea remains useful, and explain
+how the new Ash boundary changes its expression.</p>
+<h2 id="cooperative-evidence-flow">Cooperative evidence flow</h2>
+<h3 id="from-documentation-to-ash">From documentation to Ash</h3>
+<p>A documentation discovery begins in its complete problem context. An evidence
+candidate should identify the case and exact commits, the user-level task, its
+source tradition, executable observations, the blocked or costly boundary, and
+the significance of the finding beyond one example.</p>
+<p>If Ash adopts the finding, adapt the smallest distinguishing cases into the
+relevant design note and link the richer external case at an immutable commit.
+The Ash note owns the design question, alternatives, comparison criteria, and
+retention decision. The external case continues to own the pedagogical or
+application explanation.</p>
+<p>Do not send every documentation program upstream. A failure of current
+specified behavior may become a minimized regression test. When selected for
+upstream investigation, a capability gap enters a design note as pressure and
+establishes no obligation by itself. A non-language, tool, diagnostic, or
+resource case may test an obligation only after its governing decision, policy,
+or implemented contract accepts that obligation. After a semantic change
+becomes implemented specification truth, a representative documentation case
+may become a retained language test.</p>
+<p>One case may expose pressure; a new language mechanism normally needs several
+cases, contrary evidence, and an explanation of why existing semantics or a
+library cannot meet the need.</p>
+<h3 id="from-ash-to-documentation">From Ash to documentation</h3>
+<p>An Ash design note may request pressure from a class of problems. It should
+state the current boundary, candidate mechanisms, positive and negative cases,
+and the observations that would distinguish them. The documentation laboratory
+can then supply a small teaching case, an established structure or algorithm,
+a realistic application boundary, and a scaled stress case where each adds
+different evidence.</p>
+<p>Results return to the design note. A semantic direction still proceeds through
+a change proposal and an authorized task. Implementation, positive and
+negative tests, and specification changes land together before the feature
+becomes ordinary tutorial material.</p>
+<p>When a feature becomes current Ash, the forward documentation line interprets
+it through concrete programs. Experimental comparison prose does not
+automatically become a tutorial; rewrite it around the behavior Ash actually
+retained.</p>
+<h3 id="experimental-code-lifecycle">Experimental code lifecycle</h3>
+<p>Laboratory programs are evidence, not published Ash examples. Each experiment
+names its governing Ash design note, immutable executable target, and build
+instructions. If Ash disposes that target, remove the external laboratory case
+after retaining its observations unless the governing evidence package retains
+a fetchable source artifact. If Ash rejects the direction, retain the
+observations in the governing artifacts and remove obsolete laboratory code
+from the current documentation tree. If Ash implements the capability, adapt
+the case to current syntax and graduate it only after the specification is
+current.</p>
+<h3 id="stress-observation-lifecycle">Stress observation lifecycle</h3>
+<p>Correctness checks and stress measurements serve different purposes. A stress
+record should identify the program or generator, input size and seed when
+applicable, Ash target, compiler or runtime phase, semantic observation,
+termination or failure result, measured time, memory, or stack conditions,
+execution environment, and repetition method. Record only fields relevant to
+the question under test.</p>
+<p>Machine-specific measurements are evidence by default, not pass thresholds or
+language guarantees. A threshold becomes a required gate only when the
+specification, an accepted decision, or an implemented tool contract owns it.
+Keep small deterministic correctness cases in per-change verification and run
+larger measurements on a stated schedule so results remain repeatable and
+comparable across Ash targets.</p>
+<h2 id="research-program">Research program</h2>
+<p>Select sources by the contribution they make rather than by an attempt to port
+their tables of contents. Evaluate at least:</p>
+<ul>
+<li>pedagogical method and prerequisite structure;</li>
+<li>structures, algorithms, or techniques not already represented;</li>
+<li>executable examples, independent expected results, and complexity evidence;</li>
+<li>pressure on current and plausible future Ash capabilities;</li>
+<li>lasting problem content rather than framework-specific fashion;</li>
+<li>edition, access, attribution, and licensing constraints; and</li>
+<li>which material should deliberately remain outside the stream.</li>
+</ul>
+<p>The following sources seed the survey; selection remains part of the pilot.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Source</th>
+<th>Candidate contribution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://mitpress.mit.edu/9780262344128/how-to-design-programs/"><em>How to Design Programs</em>, second edition</a></td>
+<td>Systematic program-design recipes, examples, tests, structural recursion, abstraction, and pedagogical progression.</td>
+</tr>
+<tr>
+<td><a href="https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html"><em>Structure and Interpretation of Computer Programs</em>, second edition</a></td>
+<td>Procedural abstraction, data abstraction, interpreters, state, and changing models of computation.</td>
+</tr>
+<tr>
+<td><a href="https://www.cambridge.org/core/books/abs/purely-functional-data-structures/contents/9DA321DB54345B01758FE0107B9824E2"><em>Purely Functional Data Structures</em></a></td>
+<td>Persistence, strict and lazy representations, amortization, numerical representations, and bootstrapping.</td>
+</tr>
+<tr>
+<td><a href="https://www.cambridge.org/core/books/pearls-of-functional-algorithm-design/B0CF0AC5A205AF9491298684113B088F"><em>Pearls of Functional Algorithm Design</em></a></td>
+<td>Self-contained problems, equational derivation, functional pearls, and comparisons with direct specifications.</td>
+</tr>
+<tr>
+<td><a href="https://www.cambridge.org/core/books/algorithm-design-with-haskell/824BE0319E3762CE8BA5B1D91EEA3F52"><em>Algorithm Design with Haskell</em></a></td>
+<td>Divide and conquer, greedy methods, thinning, dynamic programming, exhaustive search, and correctness reasoning.</td>
+</tr>
+<tr>
+<td><a href="https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/"><em>Introduction to Algorithms</em>, fourth edition</a></td>
+<td>Broad classical coverage and an imperative comparison point when Ash gains state and mutation.</td>
+</tr>
+<tr>
+<td><a href="https://www.plai.org/"><em>Programming Languages: Application and Interpretation</em></a></td>
+<td>Interpreters as executable programs and pressure on representation, binding, state, and language implementation.</td>
+</tr>
+<tr>
+<td><a href="https://mitpress.mit.edu/9780262220699/concepts-techniques-and-models-of-computer-programming/"><em>Concepts, Techniques, and Models of Computer Programming</em></a></td>
+<td>A progression from declarative programming through explicit state, concurrency, and distributed models.</td>
+</tr>
+<tr>
+<td><a href="https://www.pearson.com/en-us/subject-catalog/p/practice-of-programming-the/P200000009026"><em>The Practice of Programming</em></a> and <a href="https://www.pearson.com/en-us/subject-catalog/p/unix-programming-environment-the/P200000000349"><em>The Unix Programming Environment</em></a></td>
+<td>Testing, debugging, notation, performance, portability, filters, and deterministic automation tasks.</td>
+</tr>
+<tr>
+<td><a href="https://pragprog.com/titles/swdddf/domain-modeling-made-functional/"><em>Domain Modeling Made Functional</em></a></td>
+<td>Typed domain models, workflows, validation, and application boundaries.</td>
+</tr>
+<tr>
+<td><a href="https://dataintensive.net/"><em>Designing Data-Intensive Applications</em></a></td>
+<td>Data pipelines, storage, streaming, reliability, and distributed-system pressure; use as a source of workloads and invariants rather than code to translate.</td>
+</tr>
+</tbody>
+</table>
+<p>The survey should also consider individual functional pearls and established
+works in parsing, databases, distributed systems, testing, and software design
+when they add a case that the initial books do not cover.</p>
+<h2 id="initial-experiment">Initial experiment</h2>
+<p>The pilot may create a separate documentation repository. Its first published
+target should be the <code>mini-ash</code> tag and exact commit. The initial corpus should
+remain small enough to migrate or discard.</p>
+<p>Candidate pilot coverage includes:</p>
+<ul>
+<li>a short learning path through functions, algebraic data, patterns,
+recursion, and rank-1 polymorphism;</li>
+<li>one persistent structure whose invariant and cost can be explained in
+the pinned Mini-Ash target;</li>
+<li>one algorithm or small interpreter that combines several features of that
+target;</li>
+<li>one deterministic application kernel over explicit input and output data;</li>
+<li>positive, negative, and scaled cases that exercise the compiler and
+evaluator; and</li>
+<li>at least one honest capability-gap record for an end-to-end boundary that
+the pinned target cannot express.</li>
+</ul>
+<p>Mini-Ash has no modules, strings, I/O, effects, mutation, networking, or general
+laziness. The pilot may model a pure transformation or planning kernel, but it
+must not describe that kernel as a complete ETL tool, automation runner, or web
+application. Those vertical cases join later editions when Ash can execute
+their environmental boundaries.</p>
+<h2 id="evidence-and-retention">Evidence and retention</h2>
+<p>The pilot should record:</p>
+<ul>
+<li>time required to add and explain one unit;</li>
+<li>time and failure classes involved in advancing the Ash pin;</li>
+<li>documentation build and test cost;</li>
+<li>whether readers can distinguish published and experimental behavior;</li>
+<li>coverage across pedagogy, target features, difficulty, and application
+domains;</li>
+<li>evidence candidates produced by the corpus;</li>
+<li>cases requested by Ash design work and the observations they return; and</li>
+<li>source-provenance and adaptation-review cost.</li>
+</ul>
+<p>Retain the separate-repository model through an architectural decision only if
+the pilot keeps published code executable, makes version status unambiguous,
+supports forward migration without backports, and produces transferable
+evidence at an acceptable coordination cost.</p>
+<p>If cross-repository lag obscures current behavior, experimental targets confuse
+readers, or maintenance cost dominates content and evidence work, archive the
+pilot repository after retaining its findings. Compare a monorepo stream or a
+smaller external corpus with a curated upstream subset before continuing.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What repository name, renderer, and executable-example harness best fit the
+pilot without constraining later application tests?</li>
+<li>How should the documentation repository expose incomplete forward migrations
+without presenting them as supported editions?</li>
+<li>Which stable case-identity and manifest format gives cross-repository links
+enough durability without adding a registry maintenance burden?</li>
+<li>What threshold should promote a documentation finding into an Ash design
+note or retained regression test?</li>
+<li>Which first application kernel provides realistic pressure while staying
+honest about Mini-Ash's pure single-file boundary?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-repository-directions">Candidate repository directions</a><a href="#leading-repository-model">Leading repository model</a><a href="#coverage-discipline">Coverage discipline</a><a href="#version-and-migration-workflow">Version and migration workflow</a><a href="#cooperative-evidence-flow">Cooperative evidence flow</a><a href="#research-program">Research program</a><a href="#initial-experiment">Initial experiment</a><a href="#evidence-and-retention">Evidence and retention</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0023-interfaces-and-implementations/">← DN-0023: Interfaces and Implementations</a><a rel="next" href="/ash/docs/design/dn-0025-library-and-package-milestones/">DN-0025: Library and Package Milestones →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

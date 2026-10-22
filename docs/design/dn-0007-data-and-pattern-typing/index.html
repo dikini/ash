@@ -1,0 +1,267 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0007: Data and Pattern Typing · Ash</title><meta name="description" content="Can tuples, records, and algebraic data types share a small set of product, nominality, and pattern-typing mechanisms while preserving the distinctions needed for visibility, irrefutable binding, and useful coverage…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0007: Data and Pattern Typing · Ash"><meta property="og:description" content="Can tuples, records, and algebraic data types share a small set of product, nominality, and pattern-typing mechanisms while preserving the distinctions needed for visibility, irrefutable binding, and useful coverage…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0007: Data and Pattern Typing · Ash"><meta name="twitter:description" content="Can tuples, records, and algebraic data types share a small set of product, nominality, and pattern-typing mechanisms while preserving the distinctions needed for visibility, irrefutable binding, and useful coverage…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0007-data-and-pattern-typing/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0007-data-and-pattern-typing/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0007-data-and-pattern-typing.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0007: Data and Pattern Typing","headline":"DN-0007: Data and Pattern Typing","description":"Can tuples, records, and algebraic data types share a small set of product, nominality, and pattern-typing mechanisms while preserving the distinctions needed for visibility, irrefutable binding, and useful coverage…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0007-data-and-pattern-typing/","@id":"https://dikini.github.io/ash/docs/design/dn-0007-data-and-pattern-typing/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0007-data-and-pattern-typing.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0007-data-and-pattern-typing" data-pagefind-meta="title">DN-0007: Data and Pattern Typing</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0007-data-and-pattern-typing.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0007</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0002-core-representation/">DN-0002: Core Representation</a>, <a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005: Surface Function Definitions</a>, <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006: Initial Type System</a>, <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008: Typed Core and Elaboration</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative and non-normative. It explores data and pattern-typing candidates; it does not define current Ash, accept syntax, or commit future abstraction or row features. All syntax is illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can tuples, records, and algebraic data types share a small set of product, nominality, and pattern-typing mechanisms while preserving the distinctions needed for visibility, irrefutable binding, and useful coverage analysis?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>The candidate type algebra in <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006</a> distinguishes tuple and record products from nominal type constructors. This note investigates the semantic consequences of that split:</p>
+<ul>
+<li>structural positional tuples and structural labelled records;</li>
+<li>nominal algebraic data types and ordinary constructor values;</li>
+<li>tuple-shaped and record-shaped constructor payloads;</li>
+<li>separate visibility for type identities and value constructors;</li>
+<li>type-directed pattern checking;</li>
+<li>irrefutability of binding patterns;</li>
+<li>shared coverage analysis for matches and function equations.</li>
+</ul>
+<p>The goal is to find a coherent initial model, not to define current Ash. Row polymorphism, named arguments, opaque modules, existential packages, generative identity, refinements, guards, contracts, and representation layout are downstream pressure or separate design questions.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="keep-tuples-and-records-semantically-distinct">Keep tuples and records semantically distinct</h3>
+<blockquote>
+<p>Suggested rule: Tuples are ordered structural positional products, while records are closed structural labelled products.</p>
+</blockquote>
+<p>Illustrative tuple shapes are:</p>
+<pre tabindex="0"><code class="language-text">()       empty tuple or unit candidate
+(A)      grouping candidate
+(A, B)   ordered tuple
+</code></pre>
+<p>A unary tuple need not exist without a concrete use. Tuple order is semantic.</p>
+<p>An illustrative record type is:</p>
+<pre tabindex="0"><code class="language-text">{
+    name : Text,
+    age  : Nat
+}
+</code></pre>
+<p>Compiler labels may be interned, but an ordinary label remains structural rather than a fresh identity. Independent resolved uses of <code>name</code> would refer to the same label.</p>
+<p>The design should distinguish source field order, type-equivalence order, and physical layout order even if an initial candidate temporarily makes them coincide. Keeping tuples and records distinct is conservative: later evidence can unify mechanisms more easily than it can recover semantic distinctions after they spread through equality, patterns, rows, and transforms.</p>
+<h3 id="keep-record-operations-closed-and-label-directed-initially">Keep record operations closed and label-directed initially</h3>
+<blockquote>
+<p>Suggested rule: Record construction rejects duplicate labels, projection uses one field-lookup rule, patterns select fields by label, and any initial update operation changes existing fields only.</p>
+</blockquote>
+<pre tabindex="0"><code class="language-ash">let user = {
+    name = "Ada",
+    age  = 42
+}
+
+user.name
+</code></pre>
+<p>A closed-record pattern may bind every field:</p>
+<pre tabindex="0"><code class="language-ash">let {name, age} = user
+</code></pre>
+<p>An explicit ignore-rest marker is one candidate for partial decomposition:</p>
+<pre tabindex="0"><code class="language-ash">match user {
+    {name, ..} =&gt; use(name)
+}
+</code></pre>
+<p>Here <code>..</code> would ignore known remaining fields. It would not introduce an open row or infer record extension. Record extension and removal should wait for evidence from row design rather than emerge accidentally through update syntax.</p>
+<p>Named function arguments, if explored, may reuse label infrastructure but would remain semantically distinct from record fields until a design establishes otherwise.</p>
+<h3 id="treat-adts-as-nominal-types-with-ordinary-constructor-values">Treat ADTs as nominal types with ordinary constructor values</h3>
+<blockquote>
+<p>Suggested rule: An algebraic data declaration introduces a nominal type identity, while each value constructor has an ordinary polymorphic value type.</p>
+</blockquote>
+<p>For illustrative syntax:</p>
+<pre tabindex="0"><code class="language-ash">type Option&lt;A&gt; =
+    None
+    | Some(A)
+</code></pre>
+<p>the type constructor and value constructors could have:</p>
+<pre tabindex="0"><code class="language-text">Option : Type -&gt; Type
+
+None : forall A. Option&lt;A&gt;
+Some : forall A. A -&gt; Option&lt;A&gt;
+</code></pre>
+<p><code>Some(42)</code> would use ordinary instantiation and application, and <code>Some</code> could be passed as a value when ordinary typing permits it.</p>
+<p>ADT-specific metadata would still record constructor identity, owner type, payload structure, visibility, coverage membership, and runtime representation. That metadata need not create a second application semantics.</p>
+<h3 id="build-constructor-payloads-from-ordinary-products">Build constructor payloads from ordinary products</h3>
+<blockquote>
+<p>Suggested rule: Constructor payload shape comes from tuple or record products; the enclosing declaration supplies nominal identity and multiple constructors supply sum structure.</p>
+</blockquote>
+<p>A positional constructor such as:</p>
+<pre tabindex="0"><code class="language-ash">Point(Float, Float)
+</code></pre>
+<p>could have a tuple payload and type:</p>
+<pre tabindex="0"><code class="language-text">(Float, Float) -&gt; Point
+</code></pre>
+<p>A labelled constructor such as:</p>
+<pre tabindex="0"><code class="language-ash">User {
+    name : Text,
+    age  : Nat
+}
+</code></pre>
+<p>could have a record payload and type:</p>
+<pre tabindex="0"><code class="language-text">{name : Text, age : Nat} -&gt; User
+</code></pre>
+<p>This separates two axes:</p>
+<pre tabindex="0"><code class="language-text">identity: structural | nominal
+shape:    tuple | record
+</code></pre>
+<p>A one-constructor ADT can therefore wrap an ordinary product to create a nominal product. The semantic payload model does not require the runtime to allocate a nested tuple or record object; representation and layout remain independent.</p>
+<h3 id="separate-type-visibility-from-construction-and-deconstruction-access">Separate type visibility from construction and deconstruction access</h3>
+<blockquote>
+<p>Suggested rule: The ability to name a nominal type, construct its values, and deconstruct or pattern-match its values are separate access decisions.</p>
+</blockquote>
+<p>A future abstraction boundary might expose:</p>
+<pre tabindex="0"><code class="language-text">User : Type
+create_user : {name : Text, age : Nat} -&gt; User
+name : User -&gt; Text
+</code></pre>
+<p>without exposing a <code>User</code> constructor. The initial representation should be able to describe that access distinction even if the surface module, opacity, or packaging mechanism is not yet chosen.</p>
+<p>This is a capability pressure, not a commitment to modules, opaque types, existentials, or generative identities in the first coherent language.</p>
+<h3 id="check-patterns-against-expected-types">Check patterns against expected types</h3>
+<blockquote>
+<p>Suggested rule: Pattern typing primarily checks a pattern against an expected type and returns the bindings introduced by that pattern.</p>
+</blockquote>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">check_pattern(pattern, expected_type) -&gt; PatternBindings
+</code></pre>
+<p>A tuple pattern follows the expected tuple structure. A record pattern resolves labels against the expected record. A constructor pattern resolves constructor identity, instantiates its polymorphism, reconciles the constructor result with the expected nominal type, and checks its payload.</p>
+<p>For example, checking <code>Some(x)</code> against <code>Option&lt;Int&gt;</code> would instantiate the constructor and determine <code>x : Int</code>. Pattern structure would not be inferred independently when the surrounding scrutinee already determines what is being decomposed.</p>
+<h3 id="require-binding-patterns-to-be-irrefutable">Require binding patterns to be irrefutable</h3>
+<blockquote>
+<p>Suggested rule: A pattern in an unconditional <code>let</code> binding is accepted only when its success is statically established for the expected type.</p>
+</blockquote>
+<p>Tuple and complete closed-record destructuring are natural irrefutable candidates when their expected types match. A constructor pattern such as:</p>
+<pre tabindex="0"><code class="language-ash">let Some(x) = result
+</code></pre>
+<p>is refutable for <code>Option&lt;A&gt;</code> and would be rejected under this rule rather than silently inserting runtime pattern failure.</p>
+<p>The check should be semantic:</p>
+<pre tabindex="0"><code class="language-text">pattern_irrefutability(pattern, expected_type)
+</code></pre>
+<p>rather than a blanket syntactic ban on constructor patterns. This leaves a seam for possible future static facts that prove a pattern irrefutable without requiring those facts now.</p>
+<h3 id="share-one-coverage-system-across-matches-and-equations">Share one coverage system across matches and equations</h3>
+<blockquote>
+<p>Suggested rule: Explicit matches and equational function definitions use the same typed pattern representation and coverage analysis.</p>
+</blockquote>
+<p>The coverage candidate should understand closed ADTs, wildcards and binders, nested constructors, tuples, and relevant record decomposition. It should reason recursively enough to recognize cases such as:</p>
+<pre tabindex="0"><code class="language-ash">match value {
+    None        =&gt; ...
+    Some(True)  =&gt; ...
+    Some(False) =&gt; ...
+}
+</code></pre>
+<p>as exhaustive when both <code>Option</code> and <code>Bool</code> have the assumed closed constructor sets.</p>
+<p>One surface policy could require every conditional to define a result for every input, reject <code>if</code> without <code>else</code>, and require a catchall unless typed coverage proves completeness. That is a candidate policy, not a current Ash rule.</p>
+<p>Guards are excluded from the initial coverage candidate. A conservative later rule could refuse to count guarded clauses toward guaranteed coverage, but guard-aware coverage should be designed with guards, refinements, contracts, and value-dependent evidence rather than assumed here.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="distinct-structural-tuple-and-record-forms">Distinct structural tuple and record forms</h3>
+<p>This is the main candidate. It makes positional order and labels explicit and lets later row evidence determine whether record equality or decomposition should change.</p>
+<h3 id="one-generalized-product-form">One generalized product form</h3>
+<p>A single labelled-or-positional product representation may reduce compiler cases. It risks making tuple order, record equality, partial patterns, named arguments, and future row operations appear equivalent before evidence supports that claim.</p>
+<h3 id="nominal-records-and-tuples-as-separate-primitive-families">Nominal records and tuples as separate primitive families</h3>
+<p>Dedicated nominal-record and nominal-tuple mechanisms could offer direct syntax and access control. They duplicate product typing, pattern, and representation machinery that a one-constructor ADT might supply orthogonally.</p>
+<h3 id="constructors-as-special-application-forms">Constructors as special application forms</h3>
+<p>Special constructor-call typing can expose targeted diagnostics and representation facts directly. Treating constructors as ordinary polymorphic values instead reuses instantiation and application, supports higher-order use, and confines ADT-specific work to identity, payload, patterns, coverage, visibility, and layout metadata.</p>
+<h3 id="order-sensitive-or-order-insensitive-record-equality">Order-sensitive or order-insensitive record equality</h3>
+<p>Preserving and comparing source order is a smaller first implementation. Canonicalizing labels gives the usual structural intuition that field order is irrelevant but requires a policy for diagnostics, duplicate detection, layout, and source reconstruction. The representation should not conflate this choice with physical order.</p>
+<h3 id="shallow-or-recursive-coverage-analysis">Shallow or recursive coverage analysis</h3>
+<p>Top-level constructor checking is simpler but rejects or requires catchalls for visibly complete nested matches. Recursive constructor-space analysis is more useful, though it must control complexity and produce understandable missing-case diagnostics.</p>
+<h3 id="runtime-failure-for-refutable-bindings">Runtime failure for refutable bindings</h3>
+<p>Allowing <code>let Some(x) = result</code> would be concise but introduces implicit failure semantics and makes binding behavior depend on runtime matching. Requiring explicit <code>match</code> keeps failure and alternatives visible. A future refinement-aware rule could revisit particular cases.</p>
+<h2 id="interactions-and-architectural-pressure">Interactions and architectural pressure</h2>
+<ul>
+<li>
+<p><a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006</a> supplies kinds, instantiation, nominal identity, products, equality, and expected-type checking. Record field order is an open equality question shared by both notes.</p>
+</li>
+<li>
+<p><a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005</a> relies on the same pattern typing and coverage for equation heads and explicit matches. Anonymous equation syntax must remain distinct from binding destructuring.</p>
+</li>
+<li>
+<p><a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008</a> explores retaining structured typed patterns before compiling them into decision forms. Coverage and irrefutability should not become accidental parser or lowering behavior.</p>
+</li>
+<li>
+<p><a href="/ash/docs/design/dn-0002-core-representation/">DN-0002</a> uses ADTs and matching as representation experiments. Data semantics should remain independent of any chosen runtime layout.</p>
+</li>
+<li>
+<p>Possible record rows pressure field equality, partial patterns, extension, and kinding. They do not show that record rows and effect rows share one semantic algebra.</p>
+</li>
+<li>
+<p>Possible opacity, existentials, and generative identities pressure the separation among type identity, representation, construction authority, and deconstruction authority. They do not require those features now.</p>
+</li>
+<li>
+<p>Whether and how later refinement or proposition facts become inputs to irrefutability and coverage remains an open interface question. The initial APIs do not assume such facts or invent a refinement system.</p>
+</li>
+<li>
+<p>Pattern coverage affects diagnostics, formatter behavior, generated code, and teaching. A syntactically concise rule that produces opaque missing-case reports may not be the best candidate.</p>
+</li>
+</ul>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>A data-and-pattern prototype should be limited to the cases and comparison observations listed below and should compare semantic candidates independently of final syntax or runtime layout. Prototype code is disposable unless later retained through an authorized task.</p>
+<p>Positive cases should cover:</p>
+<ul>
+<li>tuple and record construction, checking, projection, and destructuring;</li>
+<li>duplicate-label rejection and missing-field diagnostics;</li>
+<li>an explicit ignore-rest record pattern over a closed record;</li>
+<li>parameterized ADTs whose constructors instantiate as ordinary values;</li>
+<li>passing a constructor as a higher-order value;</li>
+<li>tuple-shaped and record-shaped one-constructor nominal wrappers;</li>
+<li>a visible nominal type with unavailable construction and deconstruction capabilities;</li>
+<li>irrefutable tuple and record <code>let</code> patterns;</li>
+<li>exhaustive top-level and nested constructor matches;</li>
+<li>equivalent coverage behavior for equations and explicit matches.</li>
+</ul>
+<p>Negative cases should cover:</p>
+<ul>
+<li>equating distinct nominal declarations with identical payloads;</li>
+<li>using a constructor from the wrong owner type;</li>
+<li>projecting an absent field;</li>
+<li>duplicate record fields;</li>
+<li>treating <code>..</code> as an inferred open row;</li>
+<li>a refutable constructor pattern in an unconditional binding;</li>
+<li>non-exhaustive nested matches and unreachable clauses;</li>
+<li>construction or deconstruction without the relevant access capability.</li>
+</ul>
+<p>Compare candidates on:</p>
+<ul>
+<li>whether one pattern checker handles tuples, records, and constructor payloads without losing form-specific diagnostics;</li>
+<li>whether coverage reports useful missing patterns and scales to nested closed types;</li>
+<li>whether source order, equality order, and layout order remain independently changeable;</li>
+<li>whether constructors really use ordinary instantiation and application outside patterns;</li>
+<li>whether access checks can distinguish naming a type from constructing or deconstructing it;</li>
+<li>whether structured patterns can be preserved and later compiled without changing evaluation.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Are tuples and records both needed in the first coherent language, or can one wait without hiding architectural risk?</li>
+<li>Is <code>()</code> a tuple, a distinguished unit value, or both by definition?</li>
+<li>Should unary tuples exist?</li>
+<li>Is record type equality initially sensitive to field order?</li>
+<li>What syntax makes ignore-rest distinct from row extension, spread, and update?</li>
+<li>Should record update exist initially, and if so, how does it prove that a field already exists?</li>
+<li>Are named arguments independent from records at both surface and semantic levels?</li>
+<li>Which constructor payload syntax maps most clearly to tuple and record products?</li>
+<li>What declaration metadata is required to resolve constructor ownership and visibility?</li>
+<li>Which abstraction mechanism will eventually express separate construction and deconstruction access?</li>
+<li>How should pattern typing report ambiguity when constructors share unqualified names?</li>
+<li>How deep should initial coverage analysis recurse, and how should it bound complexity?</li>
+<li>Should unreachable or redundant cases be errors, warnings, or tooling feedback?</li>
+<li>Are wildcard and <code>else</code> distinct catchall forms, and do they carry different binding or diagnostic behavior?</li>
+<li>What static facts, if any, can make a constructor pattern irrefutable without introducing hidden runtime failure?</li>
+</ul>
+<h2 id="retained-implementation-evidence">Retained implementation evidence</h2>
+<p>The accepted monomorphic subset now has a retained
+<a href="/ash/docs/design/mini-ash/data-and-patterns/evidence/">data-and-pattern integration report</a>.
+The report confirms transfer for structural tuples, nominal identity, ordinary
+constructor values, expected-type patterns, semantic irrefutability, and shared
+recursive coverage. It does not transfer this note's polymorphism, records,
+rows, access control, or abstraction candidates into current Ash.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-directions">Candidate directions</a><a href="#interactions-and-architectural-pressure">Interactions and architectural pressure</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a><a href="#retained-implementation-evidence">Retained implementation evidence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0006-initial-type-system/">← DN-0006: Initial Type System</a><a rel="next" href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008: Typed Core and Elaboration →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

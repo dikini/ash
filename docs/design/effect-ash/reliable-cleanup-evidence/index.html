@@ -1,0 +1,311 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Reliable cleanup evidence · Ash</title><meta name="description" content="This informative report records the verified reliable-cleanup implementation on checkpoint a23ff85. The milestone closure report records integration into main and final verification status. Syntax is retained at…"><meta name="robots" content="index, follow"><meta property="og:title" content="Reliable cleanup evidence · Ash"><meta property="og:description" content="This informative report records the verified reliable-cleanup implementation on checkpoint a23ff85. The milestone closure report records integration into main and final verification status. Syntax is retained at…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Reliable cleanup evidence · Ash"><meta name="twitter:description" content="This informative report records the verified reliable-cleanup implementation on checkpoint a23ff85. The milestone closure report records integration into main and final verification status. Syntax is retained at…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/effect-ash/reliable-cleanup-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/effect-ash/reliable-cleanup-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/reliable-cleanup-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Reliable cleanup evidence","headline":"Reliable cleanup evidence","description":"This informative report records the verified reliable-cleanup implementation on checkpoint a23ff85. The milestone closure report records integration into main and final verification status. Syntax is retained at…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/effect-ash/reliable-cleanup-evidence/","@id":"https://dikini.github.io/ash/docs/design/effect-ash/reliable-cleanup-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/reliable-cleanup-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="reliable-cleanup-evidence" data-pagefind-meta="title">Reliable cleanup evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/reliable-cleanup-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This informative report records the verified reliable-cleanup implementation on
+checkpoint <code>a23ff85</code>. The <a href="/ash/docs/design/effect-ash/milestone-closure-evidence/">milestone closure report</a>
+records integration into <code>main</code> and final verification status.
+Syntax is retained at <code>390708e</code>; typed normal completion at
+<code>1aabffe</code>. The complete owned-abandonment and reporting contract has passed
+product verification. The <a href="/ash/spec/">specification</a>
+records the implemented transition; this report does not define language rules.</p>
+<h2 id="retained-observations">Retained observations</h2>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/cleanup_syntax.rs">syntax tests</a> cover full action expressions,
+grouping, primary positions, malformed forms and reserved spelling. Exact
+admission is 64 nested bodies or 127 nested action initializers; the next depth
+rejects and fresh retries retain admission. Projection and disposal fit 256 KiB.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/cleanup_typing.rs">normal cleanup tests</a> retain these witnesses:</p>
+<ul>
+<li><code>initialization_once_inner_before_outer_and_saved_body_value</code> returns <code>42123</code>:
+initialization appends <code>1</code>, inner and outer actions append <code>2</code> and <code>3</code>, and the
+saved body value remains <code>42</code>.</li>
+<li>Contextual anonymous block/match results infer their latent effects. Mixed
+pure/effectful branches work in both orders; named callback rows remain
+invariant and unrelated function bodies do not enter the action accumulator.</li>
+<li>Capture/resume preserves armed and running owners. Safe action-local discard
+preserves completion; skipping a running action rejects.</li>
+<li>Normal reporting preserves the body value and emission order. Saved results
+and reported errors cannot export a cell dependency.</li>
+</ul>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/validate.rs">Core validation tests</a> check cleanup owner,
+callback and row forgery before and after both transforms, imported generic
+open-row factories, exact validation work with fresh retries, and same-typed
+callback substitution that changes stored resource dependencies.
+The later seven-test cleanup Core gate also passes linked same-typed callback
+substitution with distinct and coincident generic handler instances, forged
+discard effects, and exact/one-short/fresh capture-validation work. The mutation
+cases check original Core and both transforms; forged rows additionally fail
+direct capture reconstruction. These tests passed their first run and do not
+constitute a newly observed behavioral red-to-green correction.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/eval/machine.rs">runtime tests</a> check acquisition charges before
+publication, capacity reuse, action-start charges, failure before invocation,
+and deep normal completion/disposal. Actual evaluator-loop traces distinguish
+failure after a first cell write from failure after a completed inner action;
+neither replays that action nor starts the outer action during teardown.
+Successful observation rejects a remaining live cleanup owner.</p>
+<h3 id="abandonment-and-reporting">Abandonment and reporting</h3>
+<p>The abandonment increment passed 11 focused tests in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/cleanup_abandonment.rs">cleanup_abandonment.rs</a>, including the
+complete <code>72211</code> source, nested live captures, structural order and the
+body-local/enclosing removed-handler pair. It also admits a clause-local
+handler around discard reached through forward and recursive helpers.
+Additional witnesses cover one generic discard at two instantiations, imported
+versus local node identity, and opaque callback rejection after lexical row
+checking. These source tests do not establish independent linked-Core authority
+or complete abandonment acceptance.</p>
+<p>Eight <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/cleanup_reporting.rs">reporting tests</a> passed their first
+behavioral run on that increment. They cover an empty failure list, ignored
+failure values, one counted invocation without retry, distinct primary/error
+types, an explicit error sum, independent typed collectors surviving discard,
+abortive normal/drain reporting rejection and abandoned reported-cell escape.
+Initial block-layout, integer-pattern and unused-handler mistakes were test
+source corrections, not evidence of missing implementation behavior. The
+normal cleanup suite also passed all 14 tests after pending cleanup rows were
+excluded from premature local generalization.</p>
+<p>The retained focused gate passed 143 top-level tests plus one resource
+subprocess recheck: abandonment 11, partial acquisition one, reporting eight,
+normal cleanup 14, effect typing 23, hook typing 25 and resource scopes 61.
+The partial-acquisition witness returns <code>7123</code>: initializer prefix <code>1</code>, earlier
+action <code>2</code>, then clause continuation <code>3</code>, preserving result <code>7</code>. The unacquired
+action, later body and abandoned suffixes do not run. Nine predecessor fixtures
+were migrated without changing their source bodies; outside-owner negatives
+remain unchanged. This gate still reports unused completion-owner variants;
+it is not strict-lint or full predecessor acceptance.</p>
+<p>The exact documented CLI example also passes: exit zero, <code>72211 : Int</code> and a
+newline on standard output, empty standard error. The first test extraction
+omitted the source block's terminal newline; retaining that documented newline
+corrected the harness without changing the program or language.</p>
+<p>Separate interaction witnesses pass for overlapping activations of one recursive
+cleanup site (<code>21</code>) and mixed cell/registration/action closing order (<code>110</code>).
+The original combined recursive case exhausted capture-analysis work. It is
+reproducible by replacing the mixed-order witness's innermost <code>()</code> body with a
+match on <code>depth == 2</code>: the true arm returns <code>()</code> and the false arm calls
+<code>visit (depth + 1)</code>. Its intended trace is <code>231110</code>; that
+admission remains unproved. Splitting the independent acceptance witnesses did
+not raise a compiler limit or change the analyzer to admit that stress case.</p>
+<p>Focused closing-position tests also pass for captured cell overrides and hook
+interpreters, each paired with a body-local handler that is outside the action's
+closing context. Subscriber abandonment retains its prefix and cleanup, skips
+pending publication callbacks and suffixes, and removes registrations before a
+later publication. The corrected open-row test passes normal and discarded
+callbacks with explicit exclusions, while missing exclusions still reject.
+That correction retains same-tail lexical lacks during recomputation and opaque
+request matching; independent forall authority is unchanged.</p>
+<h3 id="measured-normal-completion-bounds">Measured normal-completion bounds</h3>
+<p>These are retained test boundaries, not promises about all programs:</p>
+<ul>
+<li>Acquisition charges <code>2 + environment.len()</code> before publishing a frame or
+increasing the live-owner count. One less rejects with both unchanged; exact
+allowance succeeds twice on fresh machines.</li>
+<li>Starting the action charges two work units. One rejects before scheduling
+the action; two succeeds. Running completion still occupies owner capacity.</li>
+<li>A capacity of one is reused for three successive acquire/complete cycles;
+a second simultaneous acquisition rejects without adding another frame.</li>
+<li>The fresh-process small-stack test checks 24 nested cleanup scopes on
+256 KiB: capacity 24 completes with <code>42</code>, while capacity 23 rejects and
+disposes without raising the stack bound.</li>
+<li>Core owner validation measures its actual charge, checks one less, and
+succeeds twice with the exact allowance. Contextual row joining checks
+every allowance below its measured requirement and two exact fresh retries.
+Neither test establishes a universal fixed compiler-work formula.</li>
+</ul>
+<p>The partial-effect tests measure runtime work at strict markers after a cell
+write has returned and after the inner action has returned. Each failure run
+visits the first marker once; only the latter case visits inner completion,
+and neither visits outer-action start. Repeating a fresh test execution checks
+determinism, not permission to retry an external release.</p>
+<h3 id="abandonment-bounds">Abandonment bounds</h3>
+<p>The focused runtime gate passes three new checks: exact/one-short/fresh
+preparation for a nested capture containing two cleanup owners; shared capacity
+across captured, armed and running states, reused across three cycles; and
+failure traces during an owned drain after a write and after reporting. The
+latter checks exact execution prefixes and prevents clause continuation or
+replay. Its second stopping point reaches the outer action's start marker, so
+it does not establish that the outer action was never entered.</p>
+<p>The fourth check, 24-owner successful and partial draining on 256 KiB, passed
+with its subprocess after two compiler stack corrections. Request operands now
+use the resolver's existing worklist. Handler bodies use the elaborator's
+existing worklist, whose small driver handles clause-checking reentry outside
+the large ordinary task frame. No depth or stack limit changed and no handler
+state machine was added. Stronger assertions that partial draining reaches the
+selected inner markers passed in the consolidated rerun; these focused passes do not close the
+complete resource obligation.</p>
+<h2 id="corrections-and-verification">Corrections and verification</h2>
+<p>An annotated replacement for the original anonymous factory witness was
+rejected during review. The original test now passes without that annotation.
+Semantic review then found the mixed anonymous-branch row defect; a scoped
+worklist accumulator joins those requirements without weakening named values.</p>
+<p>The retained 24-registration proof exceeded its unchanged 256 KiB stack bound
+when the elaboration dispatcher grew. Extracting completion work into helpers
+restored the bound; no new recursive evaluator or raised limit was introduced.
+A separate task tried during diagnosis was removed.</p>
+<p>Normal-completion semantic and Rust/resource reviews passed. Final focused
+regressions passed 1,496 top-level tests plus seven subprocess rechecks. The
+full architecture suite passed 32 tests, with a final exact manifest recheck.
+Strict all-target Clippy, formatting and whitespace checks passed. Parent's
+fresh library, cleanup and Effect Core check passed 1,173 top-level tests.
+These are checkpoint gates, not the final full-contract <code>cargo xtask verify</code>.</p>
+<p>The consolidated abandonment gate passed 34 top-level tests and two subprocess
+rechecks without warnings. This includes duplicate acquisition ownership,
+transaction rollback, cyclic row exact/fresh work, opaque exclusion identity,
+the strengthened partial-drain markers, retained lacks-forgery negatives and
+all six interaction tests. Independent high-reasoning semantic and Rust/resource
+reviews passed. Documentation review corrected an overbroad callback statement:
+closing suppresses pending callbacks from abandoned publications, not new
+publications performed by cleanup through surviving hooks.</p>
+<p>The first full verification passed format, build and strict Clippy, then stopped
+at eight predecessor library expectations: 1,159 passed and eight failed.
+Migration review distinguishes newly owned clause/resource closure from genuine
+outside, running and malformed cases. The migrated library gate now passes all
+1,167 tests without warnings, retaining outside-owner, running-completion and
+malformed-accounting negatives. The exact inventory scan identified 14 missing
+carrier fields and no stale fields; those entries have been added. The fresh
+full gate passed strict Clippy, the library and all 32 architecture checks,
+including the corrected inventory. It then stopped with a stack overflow in
+the predecessor data/ADT test binary. The unchanged 512 KiB nested-pattern test
+now passes after extracting recursive match resolution from the large ordinary
+resolver dispatcher. Work-item size did not grow; the extracted helper preserves
+the existing match order and scope rollback. No stack or depth limit has been
+raised. Wider regressions and a fresh full gate remain required.</p>
+<p>The subsequent predecessor sweep passed the full data/ADT suite, but stronger
+execution of the unchanged prefix-after fixture found a stale nested Resume row.
+The corrected source-only replay resets derived Resume caches after final type
+identity, reaches closure through existing charged equations, and performs a
+strict final sweep. Review caught and a failing test reproduced self-supported
+stale labels in the first cached-seed approach; that approach was replaced.
+The revised focused gate passed 75 top-level tests plus one subprocess, including
+multi-round exact/one-short/fresh rollback, delayed and genuinely missing handler
+members, stale-cache clearing, both transforms, open-row lacks, all migrated
+module/diagnostic cases and an exercised opaque guard. Independent bounded review
+passed: the least-seed finding is closed, provisional removal admits only missing
+members, and the final sweep remains strict. The fresh full gate remains
+required; none of these focused results closes acceptance alone.</p>
+<h2 id="final-product-verification">Final product verification</h2>
+<p>Fresh <code>CARGO_INCREMENTAL=0 cargo xtask verify</code> exited 0 on 2026-09-08:
+2,545 top-level tests across 77 test binaries and eight separately printed
+subprocess rechecks passed. This includes 1,169 library tests, ten CLI binary
+tests, 1,365 tests across 74 integration targets, and the xtask test.
+All 32 architecture tests, exact carrier inventory, formatting, build, strict
+Clippy and warnings-denied rustdoc passed without warnings or errors. The log is
+<code>/tmp/ash-cleanup-step3-full-verify-complete-20260908.log</code>; it is an execution
+record, not a portable source artifact. The retained tests are linked above.
+Independent semantic, Rust/resource and final bounded correction reviews passed.
+Markdown lint with MD013 disabled, whitespace, local-link and manual
+notation/authority checks passed. Local integration and lifecycle closure are
+recorded below.</p>
+<h2 id="acceptance-evidence">Acceptance evidence</h2>
+<p>The final full gate and independent reviews establish the following product
+obligations. Earlier focused observations above retain the correction history.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Obligation</th>
+<th>Retained coverage</th>
+<th>Product result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CLEAN-01</td>
+<td>Syntax, contextual rows, shape errors, imported generic open-row factory; semantic review</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-02</td>
+<td>Once-only initialization/invocation, saved value, dependency escape; separate recursive same-site and mixed cell/registration/action traces; semantic review</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-03</td>
+<td>Owned cell/registration, nested live capture, consumed-clause association and skipped pending-publication/suffix tests; migrated library pass</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-04</td>
+<td>Running-action negative, safe local discard, capture/resume; migrated outside/non-owning-association and running-completion negatives</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-05</td>
+<td>Normal order; A-before-later-B resumption/abandonment, nested capture and mixed-owner traces; semantic review</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-06</td>
+<td>Source/cell/hook closing-position pairs; imported generic callback substitution; explicit open-row exclusions and missing-exclusion negatives; independent authority review</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-07</td>
+<td>Normal saved result and ordered reports; exact documented CLI <code>72211</code>; eight reporting variants listed above</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-08</td>
+<td>Pre-acquisition and action-start preparation; normal and abandoned partial-effect/no-replay traces; abandoned later initializer closes prior owner</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-09</td>
+<td>Core forgery, duplicate acquisition, both transforms, callback dependency substitution; abandonment row forgery, generic coincidence and least row replay</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-10</td>
+<td>Normal/abandoned exact work and fresh retries; captured/running capacity and reuse; deep success/partial drain; multi-round replay rollback; retained stack bounds</td>
+<td>Passed</td>
+</tr>
+<tr>
+<td>CLEAN-11</td>
+<td>Full predecessor corpus, strict Clippy, 32 architecture tests, exact cleanup CLI, specification/tools and notation/authority/link review</td>
+<td>Passed</td>
+</tr>
+</tbody>
+</table>
+<p>The retained tests and independent reviews cover recursively owned abandonment,
+structural draining, effectful discard rows and per-action surviving interpreter
+checks. They retain outside-owner and running-drain negatives, distinguish
+structural order from acquisition time, and cover generic/imported handler
+coincidence. Product acceptance and local integration are verified.</p>
+<h2 id="local-integration-and-lifecycle-closure">Local integration and lifecycle closure</h2>
+<p>Unsigned merge <code>4f5ac63</code> retains product checkpoint <code>a23ff85</code> and transition
+cleanup <code>1975150</code> on <code>integration/effect-ash-foundations</code>. Its parents are
+<code>699395f</code> and <code>1975150</code>; its product tree exactly matches the verified feature
+tip. Fresh merged-checkout <code>CARGO_INCREMENTAL=0 cargo xtask verify</code> exited 0:
+the same 2,545 top-level tests and eight subprocess checks passed, including
+all 32 architecture checks, strict Clippy and warnings-denied rustdoc. The
+execution log is <code>/tmp/ash-cleanup-merged-verify-20260908.log</code>.</p>
+<p>The feature tip <code>19751501dca7a598ed63937323f5315bc9cfceda</code> was proved an ancestor
+of the retaining integration branch, and both worktrees were clean before
+removal. The registered <code>.worktree/reliable-cleanup</code> checkout and local
+<code>codex/reliable-cleanup</code> branch were removed through Git. Their tracked work is
+retained in integration history; ignored build output is reproducible. The
+remaining milestone checkout is <code>.worktree/effect-ash-foundations</code>.</p>
+<p>The unrelated changes on <code>main</code> and both pinned documentation worktrees were
+preserved. No main merge, push, tag or signing-configuration change was made.
+This closes the cleanup slice's 11 relative planning units: 85 of 100 are
+closed, leaving foreign provider work (10) and milestone closure (5). These
+weights are not measured token or time expenditure.</p>
+<h2 id="downstream-limits-to-retain">Downstream limits to retain</h2>
+<p>Cleanup establishes an invocation attempt, not termination or successful native
+release. Foreign partial acquisition and failed native release still require
+provider-specific rules. No existential package, universal error domain or
+owner-transfer rule is introduced. Captures retain their own state without a
+global registry; escaping suspension remains outside this slice.</p>
+<p>Arbitrary captured source handlers cannot simply be restored for cleanup: an
+<code>Int</code>-answer handler with clause <code>(resume ()) + 1</code> needs the abandoned body's
+result. Generalizing that boundary requires separate answer/control design.
+Independent semantic review retained these foreign, proof, existential,
+suspension and handler boundaries in the completed implementation.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#retained-observations">Retained observations</a><a href="#corrections-and-verification">Corrections and verification</a><a href="#final-product-verification">Final product verification</a><a href="#acceptance-evidence">Acceptance evidence</a><a href="#local-integration-and-lifecycle-closure">Local integration and lifecycle closure</a><a href="#downstream-limits-to-retain">Downstream limits to retain</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

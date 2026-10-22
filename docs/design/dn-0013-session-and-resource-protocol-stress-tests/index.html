@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0013: Session and Resource Protocol Stress Tests · Ash</title><meta name="description" content="Can general Ash mechanisms describe and statically check useful temporal protocols, including private handler workflows, so that illegal operation order, stale-state reuse, invalid resource duplication, invalid…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0013: Session and Resource Protocol Stress Tests · Ash"><meta property="og:description" content="Can general Ash mechanisms describe and statically check useful temporal protocols, including private handler workflows, so that illegal operation order, stale-state reuse, invalid resource duplication, invalid…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0013: Session and Resource Protocol Stress Tests · Ash"><meta name="twitter:description" content="Can general Ash mechanisms describe and statically check useful temporal protocols, including private handler workflows, so that illegal operation order, stale-state reuse, invalid resource duplication, invalid…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0013-session-and-resource-protocol-stress-tests.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0013: Session and Resource Protocol Stress Tests","headline":"DN-0013: Session and Resource Protocol Stress Tests","description":"Can general Ash mechanisms describe and statically check useful temporal protocols, including private handler workflows, so that illegal operation order, stale-state reuse, invalid resource duplication, invalid…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/","@id":"https://dikini.github.io/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0013-session-and-resource-protocol-stress-tests.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0013-session-and-resource-protocol-stress-tests" data-pagefind-meta="title">DN-0013: Session and Resource Protocol Stress Tests</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0013-session-and-resource-protocol-stress-tests.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0013</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006: Initial Type System</a>, <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009: Effects, Handlers, and Continuations</a>, <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010: Identities and Resource Lifetimes</a>, <a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012: Coeffects and Hooks</a>, <a href="/ash/docs/design/dn-0014-finite-kinds-and-promotion/">DN-0014: Finite Kinds and Promotion</a>, <a href="/ash/docs/design/dn-0017-resource-management-and-storage-policy/">DN-0017: Resource Management and Storage Policy</a>, <a href="/ash/docs/design/dn-0018-runtime-established-static-evidence/">DN-0018: Runtime-Established Static Evidence</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It does not define current Ash, accept an architecture, or propose privileged session types. Its protocols and examples are an evaluation corpus for general Ash mechanisms.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can general Ash mechanisms describe and statically check useful temporal protocols, including private handler workflows, so that illegal operation order, stale-state reuse, invalid resource duplication, invalid continuation use, and unsafe handler composition fail statically?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p>An effect signature describes a typed interaction API. It does not by itself describe the legal order of interactions. For example, signatures for <code>begin</code>, <code>query</code>, <code>commit</code>, and <code>rollback</code> do not establish the sequence <code>begin; query*; (commit | rollback)</code>.</p>
+<p>This note uses session-like protocols to stress possible future facilities such as finite static domains, type indices, associated types or other transition evidence, existential and generative identity, effect typing, continuation typing, and resource multiplicity. It asks whether those general facilities suffice. It does not select a dedicated protocol calculus, a privileged <code>Session</code> type, or any particular resource system.</p>
+<p>All examples below are illustrative. They are not current Ash syntax or semantics.</p>
+<p>The easy part appears to be representing a state graph. The harder part is preserving the authority carried by a state-indexed value when that value can be duplicated, discarded, captured, generalized, or carried through effect handlers and continuations.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="separate-interaction-apis-from-temporal-protocols">Separate interaction APIs from temporal protocols</h3>
+<blockquote>
+<p>Suggested rule: Treat effect typing and protocol typing as separate judgments: an effect says which typed interactions are available, while a protocol says when those interactions are legal.</p>
+</blockquote>
+<p>A candidate should first try to express protocols with general type-system machinery. Irreducible language support becomes a candidate only if the experiments identify a requirement those mechanisms cannot express.</p>
+<h3 id="represent-state-machines-with-ordinary-static-relationships">Represent state machines with ordinary static relationships</h3>
+<blockquote>
+<p>Suggested rule: Prefer finite nominal states, type indices, transition evidence, and ordinary algebraic data types before adding recursive or choice-specific session constructs.</p>
+</blockquote>
+<p>A transaction may be modeled conceptually as:</p>
+<pre tabindex="0"><code class="language-text">Txn&lt;Idle&gt; --begin--&gt; Txn&lt;Open&gt;
+Txn&lt;Open&gt; --query--&gt; Txn&lt;Open&gt;
+Txn&lt;Open&gt; --commit | rollback--&gt; Txn&lt;Closed&gt;
+</code></pre>
+<p>A relation such as <code>Step&lt;Protocol, State, Operation&gt; -&gt; NextState</code> can make a transition legal only when corresponding evidence exists. An algebraic result can expose branch-specific successor states. Nominal state nodes plus transition evidence may encode cycles such as <code>query*</code> without structural recursive types or type-level fixed points.</p>
+<p>This approach succeeds if legal transitions, choice, and cyclic state graphs can be checked without protocol-specific rules. It fails if ordinary relations cannot retain the branch or recursion information needed by realistic protocols.</p>
+<h3 id="keep-usage-properties-independent">Keep usage properties independent</h3>
+<blockquote>
+<p>Suggested rule: Model duplication and discard as separate properties, and require each candidate to say where those properties live.</p>
+</blockquote>
+<p>At minimum, the investigation must distinguish unrestricted, affine, and linear behavior, while not assuming that the unusual fourth combination—duplicable but not discardable—is meaningless. Candidate locations include values, bindings, types, type constructors, function arrows, closure captures, continuations, effect computations, and resource obligations.</p>
+<p>The diagnostic example is a closure that captures a restricted resource and is called twice. A successful design explains, without special treatment of the resource type, whether the captured value makes the closure restricted, changes its arrow, appears in a capture set, or creates an enclosing obligation. A design fails if the second call is accepted despite duplicating single-use authority, or if it rejects safe uses without identifying the relevant obligation.</p>
+<p>Usage and alias authority are separate axes. A unique mutable value may be
+non-duplicable, but uniqueness states that incompatible aliases do not exist;
+affinity states that a particular value may be discarded but not duplicated.
+One property must not stand in for the other.</p>
+<p>The first useful static distinction may be qualitative—whether duplication and
+discard are permitted—without tracking exact use counts. A candidate should add
+quantitative multiplicities only when the corpus contains a soundness or
+expressiveness case that runtime state or separate analysis cannot cover.</p>
+<h3 id="keep-handler-workflows-private-by-default">Keep handler workflows private by default</h3>
+<blockquote>
+<p>Suggested rule: Permit a handler implementation to use a private protocol, and expose only explicitly selected workflow points as public hooks.</p>
+</blockquote>
+<p>An effect operation may initiate a private workflow containing validation, provider actions, other effect operations, state transitions, and a final resume, abort, or suspension. A public coeffect hook can be understood as a projection of a named point in that workflow; private states need not become public API.</p>
+<p>The client protocol and the handler's implementation protocol may differ. A handler may therefore act as a protocol transducer, translating a public transaction sequence into a private connection or provider sequence.</p>
+<h3 id="treat-continuation-use-as-a-protocol">Treat continuation use as a protocol</h3>
+<blockquote>
+<p>Suggested rule: Make continuation availability, resumption, discard, and suspension visible to the same usage analysis that protects other restricted resources.</p>
+</blockquote>
+<p>A one-shot continuation may move from <code>Available</code> to <code>Resumed</code> or <code>Discarded</code>; a suspensive continuation may move through <code>Suspended</code> before later resumption. Multi-shot resumption is only safe when duplicating the continuation also safely duplicates everything it captures. Continuation multiplicity and resource multiplicity may be instances of one deeper usage property rather than unrelated features.</p>
+<p>A continuation type may carry a finite mode index, but naming the mode does not
+establish safe use. The analysis must still consume or update continuation
+authority, propagate restrictions from captured values, and preserve those
+facts across calls and handler boundaries. Usage, escape, and replayability may
+require separate indices or evidence rather than one closed enumeration.</p>
+<h3 id="require-compositional-safety">Require compositional safety</h3>
+<blockquote>
+<p>Suggested rule: Multiplicity safety must compose across function calls, effect operations, handler boundaries, continuation capture, and public hooks.</p>
+</blockquote>
+<p>Local handler checking is insufficient. Consider a handler that acquires an affine resource, performs another effect whose handler is multi-shot, and then releases the resource. The outer handler may resume only once while the inner handler duplicates a continuation containing the resource.</p>
+<p>A candidate succeeds only if it rejects the unsafe composition or proves that the captured authority can be duplicated. It fails if each handler passes in isolation while their composition duplicates or loses an obligation.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<p>The corpus should compare at least these mechanism families, alone and in combinations:</p>
+<ul>
+<li>affine types;</li>
+<li>linear types;</li>
+<li>uniqueness typing;</li>
+<li>multiplicity-bearing arrows;</li>
+<li>multiplicity polymorphism;</li>
+<li>capture typing;</li>
+<li>resource or effect obligations;</li>
+<li>generative identities;</li>
+<li>state-token approaches.</li>
+<li>structural inference from the restrictions of fields and captures;</li>
+<li>runtime counters or <a href="/ash/docs/design/dn-0018-runtime-established-static-evidence/">certificates</a>
+for exact-use policies that do not affect qualitative soundness.</li>
+</ul>
+<p>No mechanism should win because its vocabulary resembles session types. The useful candidate is the one that also explains closure capture, generalization, continuation use, effect handling, and composition with the fewest special cases.</p>
+<h2 id="interactions">Interactions</h2>
+<h3 id="three-protocol-layers">Three protocol layers</h3>
+<p>The investigation must keep three concentric layers distinct:</p>
+<ol>
+<li>The client protocol constrains the legal sequence of public effect operations.</li>
+<li>The handler protocol constrains the private workflow used to interpret an operation.</li>
+<li>The continuation protocol constrains the use of captured control.</li>
+</ol>
+<p>The layers may share machinery, but they have different boundaries and visibility. Only selected handler states or transitions need appear as public hooks.</p>
+<h3 id="effects-inside-handler-protocols">Effects inside handler protocols</h3>
+<p>A private workflow may invoke ordinary effects. The checker must then answer both which effects escape and which operations are legal in the current protocol state. A sequence such as <code>connect; write; close; write</code> can be well typed as individual operations yet invalid as a protocol.</p>
+<h3 id="resource-sensitive-generalization">Resource-sensitive generalization</h3>
+<p>Local polymorphic generalization must not duplicate or erase obligations held or captured by a binding. A candidate should integrate resource facts through the generalization eligibility policy rather than silently treating resource-bearing bindings as ordinary reusable values.</p>
+<h3 id="branches-recursion-and-identity">Branches, recursion, and identity</h3>
+<p>Branches must reconcile obligations at their join; recursion must thread the current state through each iteration; and generative or existential identity may be needed to prevent resources or endpoints from unrelated sessions from being mixed.</p>
+<h3 id="parallel-hooks-and-nested-handlers">Parallel hooks and nested handlers</h3>
+<p>Publishing a restricted capability to multiple hook subscribers can duplicate it. Nested handlers can change continuation multiplicity around a captured resource. Both cases test whether public composition preserves private protocol guarantees.</p>
+<h3 id="destruction-and-cancellation">Destruction and cancellation</h3>
+<p>Affine discard does not by itself define deterministic destruction. A candidate
+must state whether discarding an owned value elaborates to a destructor, which
+effects that destructor may perform, how destruction is ordered, and what
+happens during abort, cancellation, or partial failure. Linear completion
+obligations and affine values with implicit cleanup may produce different
+answers and should not be conflated.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>The following corpus is a minimum, not a feature checklist. Each experiment should record the accepted and rejected program, the inferred usage or transition facts, the mechanism responsible for the result, and any special rule required.</p>
+<p>Begin continuation experiments with a non-escaping one-shot handler. First
+require one resumption; then admit checked discard to complete the at-most-once
+case. Compare suspensive one-shot and multi-shot extensions with unrestricted
+captures and a replayable interpretation separately, and schedule them according
+to the additional semantic and implementation machinery each requires. Test
+combinations only after the individual usage, escape, capture, lifetime, and
+replay obligations are visible.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Stress category</th>
+<th>Success observation</th>
+<th>Failure observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Transition reuse</td>
+<td>Advancing an endpoint invalidates the old-state authority.</td>
+<td>The old endpoint remains usable after a transition.</td>
+</tr>
+<tr>
+<td>Aliasing</td>
+<td>Advancing one alias either rejects prior duplication or updates the single shared authority soundly.</td>
+<td>One alias advances while another retains stale authority.</td>
+</tr>
+<tr>
+<td>Discard</td>
+<td>An obligation that requires completion or cleanup cannot disappear silently.</td>
+<td>A required resource can be abandoned without discharge or an explicit permitted discard.</td>
+</tr>
+<tr>
+<td>Branching</td>
+<td>Each branch accounts for the resource and the join accepts only compatible resulting obligations.</td>
+<td>One branch loses, duplicates, or advances an obligation incompatibly.</td>
+</tr>
+<tr>
+<td>Recursion</td>
+<td>A loop such as <code>query*</code> threads exactly the successor state into the next iteration and exit.</td>
+<td>Recursion recreates an old state or drops its completion obligation.</td>
+</tr>
+<tr>
+<td>Closure capture</td>
+<td>Calling a closure zero, once, or many times is checked against the captured resource's discard and duplication properties.</td>
+<td>Closure invocation count is unrelated to captured authority.</td>
+</tr>
+<tr>
+<td>Polymorphic binding</td>
+<td>Generalization is restricted or annotated when a binding contains or captures a restricted resource.</td>
+<td>Instantiation duplicates or erases a resource obligation.</td>
+</tr>
+<tr>
+<td>One-shot continuation</td>
+<td>At most one resume is accepted, followed by valid finalization.</td>
+<td>A second resume is accepted or finalization uses pre-resume authority.</td>
+</tr>
+<tr>
+<td>Multi-shot continuation</td>
+<td>Repeated resume is accepted only when the captured environment is safely duplicable.</td>
+<td>A multi-shot handler duplicates a restricted capture.</td>
+</tr>
+<tr>
+<td>Abort</td>
+<td>Discarding the continuation checks every captured discard obligation.</td>
+<td>Abort silently abandons a non-discardable resource.</td>
+</tr>
+<tr>
+<td>Suspension</td>
+<td>Escaping control carries its resource state and resumes with that same authority later.</td>
+<td>Suspension loses, duplicates, or reconstructs the captured resource state.</td>
+</tr>
+<tr>
+<td>Parallel coeffects</td>
+<td>Parallel subscribers receive only duplicable data or a soundly mediated capability.</td>
+<td>A hook broadcasts a restricted capability as though it were unrestricted.</td>
+</tr>
+<tr>
+<td>Nested handler composition</td>
+<td>Continuation and resource multiplicities remain safe across handlers with different policies.</td>
+<td>Independently accepted handlers compose into duplication or loss.</td>
+</tr>
+<tr>
+<td>Composite propagation</td>
+<td>A product or closure is no more duplicable or discardable than its restricted contents.</td>
+<td>Wrapping a restricted value restores unrestricted use.</td>
+</tr>
+<tr>
+<td>Deterministic cleanup</td>
+<td>Every accepted exit path runs or transfers the required cleanup exactly as its contract states.</td>
+<td>Return, abort, cancellation, or destructor failure silently leaks or repeats cleanup.</td>
+</tr>
+<tr>
+<td>Dynamic exact bound</td>
+<td>A runtime counter enforces an exact-use policy without weakening static non-duplication.</td>
+<td>Encoding the count dynamically permits duplication of the underlying authority.</td>
+</tr>
+</tbody>
+</table>
+<p>Additional comparison cases should establish whether:</p>
+<ul>
+<li>finite nominal states and transition evidence express legal order without a privileged session construct;</li>
+<li>ordinary ADTs retain different successor states across protocol choice;</li>
+<li>nominal state graphs express useful recursive protocols without static fixed points;</li>
+<li>private handler transitions can contain effect operations while keeping their state private;</li>
+<li>public hooks can be verified as projections of actual private workflow points;</li>
+<li>a handler can translate a client protocol into a distinct provider protocol;</li>
+<li>calls to the minimal captured-resource closure are accepted zero times only when its capture is discardable, once when the single call accounts for the capture, and many times only when its capture is duplicable, with every disallowed call count rejected;</li>
+<li>the affine-resource/multi-shot-handler example is rejected compositionally.</li>
+</ul>
+<p>A prototype, if needed, is disposable. Retain it only as design evidence if it compares multiple mechanism families against the same corpus and records both false acceptances and false rejections. It must not become product architecture without a later decision or semantic proposal and an authorized task.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Are finite nominal state graphs sufficient for practical recursive protocols, or does some case require structural recursion or type-level fixed points?</li>
+<li>Which transition relation mechanism gives useful inference and diagnostics without making protocol states privileged?</li>
+<li>Where should duplication and discard properties live, and can one placement cover values, closures, continuations, and computations?</li>
+<li>Does the unusual duplicable-but-not-discardable combination reveal a real obligation model?</li>
+<li>Can resource-sensitive generalization reuse the candidate seam explored in <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006: Initial Type System</a> without changing ordinary <code>let</code> semantics?</li>
+<li>What identity mechanism prevents endpoints from distinct protocol instances from being mixed?</li>
+<li>How are branch joins, abort, exceptions, and cleanup obligations reconciled?</li>
+<li>Does affine elimination invoke implicit destruction, require explicit cleanup,
+or vary by resource type, and how are destructor effects ordered?</li>
+<li>Which real program requires static exact-use arithmetic rather than a runtime
+counter or separate bounded-resource analysis?</li>
+<li>How should hook publication describe sequencing, concurrency, and the multiplicity of payloads?</li>
+<li>Can one continuation/resource analysis cover one-shot, multi-shot, abortive, and suspensive handlers?</li>
+<li>Which experiment, if any, demonstrates irreducible need for language support specific to protocols?</li>
+</ul>
+<p>The main hypothesis remains that state-machine representation will emerge from ordinary static relationships, while usage discipline will supply the decisive evidence. The hypothesis survives only if the same general machinery rejects invalid state order, stale reuse, duplication, continuation misuse, and unsafe handler composition without protocol-specific escape hatches.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-directions">Candidate directions</a><a href="#interactions">Interactions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0012-coeffects-and-hooks/">← DN-0012: Coeffects and Hooks</a><a rel="next" href="/ash/docs/design/dn-0014-finite-kinds-and-promotion/">DN-0014: Finite Kinds and Promotion →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

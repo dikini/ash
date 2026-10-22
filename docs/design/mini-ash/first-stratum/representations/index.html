@@ -1,0 +1,154 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>First-stratum representation pressure · Ash</title><meta name="description" content="The corpus needs enough representation detail to expose scope, typing, elaboration, transformation, evaluation, and diagnostic costs. It does not assume that every candidate retains every stage."><meta name="robots" content="index, follow"><meta property="og:title" content="First-stratum representation pressure · Ash"><meta property="og:description" content="The corpus needs enough representation detail to expose scope, typing, elaboration, transformation, evaluation, and diagnostic costs. It does not assume that every candidate retains every stage."><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="First-stratum representation pressure · Ash"><meta name="twitter:description" content="The corpus needs enough representation detail to expose scope, typing, elaboration, transformation, evaluation, and diagnostic costs. It does not assume that every candidate retains every stage."><meta property="og:url" content="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/representations/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/representations/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/representations.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"First-stratum representation pressure","headline":"First-stratum representation pressure","description":"The corpus needs enough representation detail to expose scope, typing, elaboration, transformation, evaluation, and diagnostic costs. It does not assume that every candidate retains every stage.","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/representations/","@id":"https://dikini.github.io/ash/docs/design/mini-ash/first-stratum/representations/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/representations.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="first-stratum-representation-pressure" data-pagefind-meta="title">First-stratum representation pressure</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/mini-ash/first-stratum/representations.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>These representation sketches are informative evidence governed by
+<a href="/ash/docs/design/dn-0016-first-mini-ash-corpus/">DN-0016</a>. They define comparison
+obligations and do not accept a compiler pipeline, Core encoding, or runtime
+representation.</p>
+</blockquote>
+<p>The corpus needs enough representation detail to expose scope, typing,
+elaboration, transformation, evaluation, and diagnostic costs. It does not
+assume that every candidate retains every stage.</p>
+<h2 id="candidate-boundaries">Candidate boundaries</h2>
+<p>The comparison begins with these conceptual contracts:</p>
+<pre tabindex="0"><code class="language-text">source
+  → spanned surface form
+  → resolved form
+  → typed structured form
+  → validated evaluator input
+  → value and trace
+</code></pre>
+<p>Each conversion states its input assumptions, output invariants, structured
+failures, and provenance mapping. A boundary is justified only if the facts it
+establishes simplify a consumer enough to warrant another representation.</p>
+<h3 id="spanned-surface-form">Spanned surface form</h3>
+<p>The surface form preserves tokens or equivalent source coverage, block and
+definition grouping, equational external interfaces, inline operational
+interfaces, clause and explicit-match structure, and parser recovery nodes. It
+does not claim that names resolve or types agree. Grouping parentheses may
+disappear as semantic nodes after parsing, but their delimiter spans remain in
+source provenance.</p>
+<h3 id="resolved-form">Resolved form</h3>
+<p>Every binder has a stable identity distinct from its spelling, every occurrence
+names that identity, each global interface is paired with exactly one body, and
+duplicate or unknown names have already failed. V-003 must distinguish its two
+<code>value</code> binders without changing their source spelling.</p>
+<h3 id="typed-structured-form">Typed structured form</h3>
+<p>Every expression and binder exposes its monotype. Equational and operational
+functions use the same semantic function form after elaboration, while separate
+provenance records the original presentation and source locations. Expected
+types inserted during checking remain explainable without becoming surface
+syntax.</p>
+<p>X-003 requires one semantic function type to preserve two different shapes:
+successive <code>Function</code> nodes for a curried equation and one <code>Function</code> whose
+domain is a product for grouped operational parameters. A representation that
+stores an independent arity alongside the type risks making those facts
+disagree.</p>
+<p>X-001 requires equation clauses and an explicit match to enter one typed pattern
+and coverage subsystem. The equational form synthesizes the scrutinee and match
+body during elaboration; the inline operational form already contains them.
+After that boundary, both may use the same structured match Core and the same
+later decision lowering while retaining different source origins.</p>
+<h3 id="evaluator-input-and-values">Evaluator input and values</h3>
+<p>The evaluator consumes a successfully validated typed form. A lexical function
+value contains inspectable Ash data equivalent to a code identity plus an
+environment of captured Ash values. A retained design must not use a Rust
+closure as the only representation of its code, environment, or continuation.</p>
+<h2 id="typed-validation-obligations">Typed validation obligations</h2>
+<p>A validator must independently check at least:</p>
+<ul>
+<li>binder identities are unique and every occurrence is in scope;</li>
+<li>expression annotations agree with primitive, binding, function, and
+application structure;</li>
+<li>global bodies agree with their one explicit interface;</li>
+<li>an application argument agrees with its function domain, and the node result
+agrees with the codomain;</li>
+<li>both V-002 definitions elaborate to valid callable semantic structure without
+losing their presentation provenance;</li>
+<li>sequential global elaboration binds every checked definition over the
+remaining program without placing the name in its own initializer's scope;</li>
+<li>X-003's generated product destructuring agrees with the single product domain
+and its two component binder types;</li>
+<li>every source and generated node has a valid provenance record;</li>
+<li>nodes forbidden by a named representation contract cannot appear.</li>
+</ul>
+<p>Validation returns structured failures for the <code>I-NNN</code> cases in
+<a href="/ash/docs/design/mini-ash/first-stratum/diagnostics/">diagnostics.md</a>. Construction APIs may prevent some malformed
+states, but deserialization and transformations still require a complete
+validation boundary.</p>
+<h2 id="core-encoding-candidates">Core encoding candidates</h2>
+<p>Concrete Rust probes should compare at least three ways to avoid one closed
+recursive enum controlling every future feature:</p>
+<ol>
+<li>Feature fragments composed through a recursive fixed point and typed sum.</li>
+<li>Arena-owned nodes with stable identities and feature-local node families.</li>
+<li>A value/computation separation with a Freer-like operation-family seam.</li>
+</ol>
+<p>The third candidate does not add <code>Impure</code>, handlers, or effect operations to the
+first stratum. It must show how pure functions, bindings, and applications
+remain direct while a future operation family could be added without extending
+every unrelated consumer. The other candidates must answer the same extension
+question rather than lose because their type names differ from a textbook Freer
+encoding.</p>
+<p>For each encoding, record:</p>
+<ul>
+<li>complete Rust type sketches and representation size for the corpus;</li>
+<li>which invariants the host types express and which need validation;</li>
+<li>ownership, allocation, traversal, and rewriting mechanics;</li>
+<li>how a feature-specific visitor or transform composes;</li>
+<li>whether exhaustive reasoning survives feature composition;</li>
+<li>how source provenance reaches typed nodes and diagnostics;</li>
+<li>which changes V-001, V-004, and V-005 require in unrelated components;</li>
+<li>the seam, invariant, or redesign risk for future operations and CPS.</li>
+</ul>
+<p>Final-tagless or host-function encodings may serve as baselines, but they must
+account for inspection, serialization, validation, transformation, and source
+provenance. Concise evaluation alone is not enough.</p>
+<h2 id="typechecker-rule-organization">Typechecker rule organization</h2>
+<p>The representation must let one reviewable rule boundary own each decision in
+<a href="/ash/docs/design/mini-ash/first-stratum/typing/">typing.md</a>. Storage mechanisms such as arenas, substitutions, or a
+future union-find do not decide equality, function exposure, annotation policy,
+or diagnostic wording incidentally.</p>
+<p>Rule outcomes preserve facts and failures, for example:</p>
+<pre tabindex="0"><code class="language-text">FunctionExposure =
+    Function { domain, codomain }
+    | NotFunction { found }
+
+TypeComparison =
+    Equal
+    | Mismatch { expected, found, reason }
+</code></pre>
+<p>These shapes are illustrative. A candidate should demonstrate that changing a
+later generalization or function-grouping policy affects its owning rule rather
+than every caller.</p>
+<h2 id="evaluator-candidates">Evaluator candidates</h2>
+<p>Compare a direct evaluator over typed structured data with an explicit
+first-order machine. Both use inspectable lexical function values and must agree
+with <a href="/ash/docs/design/mini-ash/first-stratum/dynamics/">dynamics.md</a>.</p>
+<p>The direct evaluator is the smaller baseline. The machine candidate must justify
+its control, environment, and frame data through current evaluation-order,
+validation, tracing, or host-stack evidence. Later continuations and effects are
+pressure, not permission to add unreachable machinery now.</p>
+<h2 id="transformation-probe">Transformation probe</h2>
+<p>Each Core candidate implements one typed identity traversal and one local
+reduction or simplification. It validates the result and evaluates before and
+after the transform. V-002 tests presentation-independent Core, V-004 tests
+scope and capture, and V-008 tests nested applications and evaluation
+preservation.</p>
+<p>The probe is disposable. Its evidence records changed modules, validation work,
+provenance behavior, and failure modes; its code does not become product Core
+by remaining in the repository.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#candidate-boundaries">Candidate boundaries</a><a href="#typed-validation-obligations">Typed validation obligations</a><a href="#core-encoding-candidates">Core encoding candidates</a><a href="#typechecker-rule-organization">Typechecker rule organization</a><a href="#evaluator-candidates">Evaluator candidates</a><a href="#transformation-probe">Transformation probe</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

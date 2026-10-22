@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-22T19:31:41.597Z",
+  "site": {
+    "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+    "dirty": false
+  },
+  "trigger": {
+    "event": "manual",
+    "reason": "Publish website update"
+  },
+  "inputs": {
+    "sourceConfigSha256": "b01ad89201482f0d3dba6c3d330c82e192bf8b4b9d6f0703aa284545d06700ef",
+    "packageLockSha256": "fc83cb9e509e8f8549acbc1df55c35227fe0137adf7e13d2404898da861ea7b5",
+    "designTokensSha256": "22520001111bd3ff4ddbba1fe6e484b7bafe6518a5334fb86d75669d5a7a4c3b",
+    "node": "v24.0.1"
+  },
+  "sources": {
+    "ash-lang": {
+      "repository": "https://github.com/dikini/ash-lang.git",
+      "ref": "main",
+      "revision": "7949b6d9136b0152ee9104e67bd0451cb9db4727",
+      "mode": "remote",
+      "publications": [
+        {
+          "id": "spec",
+          "directories": [
+            "spec",
+            "docs/spec"
+          ],
+          "route": "/spec/"
+        },
+        {
+          "id": "tools",
+          "directories": [
+            "docs/tools"
+          ],
+          "route": "/docs/tools/"
+        },
+        {
+          "id": "design",
+          "directories": [
+            "docs/design"
+          ],
+          "route": "/docs/design/"
+        },
+        {
+          "id": "decisions",
+          "directories": [
+            "docs/decisions"
+          ],
+          "route": "/docs/decisions/"
+        }
+      ]
+    },
+    "ash-doc": {
+      "repository": "https://github.com/dikini/ash-doc.git",
+      "ref": "main",
+      "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+      "ashRevision": "354c76b391fe4af665cf6a03479a9874a57cb3e3",
+      "route": "/study/latest/",
+      "toolchain": {
+        "quarto": {
+          "version": "1.10.19",
+          "url": "https://github.com/quarto-dev/quarto-cli/releases/download/v1.10.19/quarto-1.10.19-linux-amd64.tar.gz",
+          "sha256": "8e38c2b2df6a6dbd369ea16e15acded6894545258d13a02f777f81ad18fd7973",
+          "binary": "quarto-1.10.19/bin/quarto",
+          "pandoc": "3.10",
+          "typst": "0.15.1",
+          "bundled_marginalia": "0.3.1"
+        }
+      }
+    }
+  },
+  "checkpoint": {
+    "source": "ash-lang",
+    "revision": "bade38c635755a608695dd58c8cbef1254aace4c",
+    "toolchain": "1.97.1",
+    "reviewed": "2026-10-18"
+  },
+  "renderers": {
+    "rrd-preview": {
+      "repository": "https://github.com/dikini/railroad",
+      "revision": "366d5eaa937e9e9fbae3bf8d44265ccc2c528067",
+      "archive": "rrd-preview-0.1.0.tgz",
+      "files": {
+        "dist/rehype.js": "05b301382edc1d064da5ec8119a2ea1ef3943870c8e5654858a1921fbcfd7dd5",
+        "LICENSE": "456c5084a14c8f11c4d52efa00545a1fbb46a20b7f561aa6c0457761909d7e8e",
+        "THIRD_PARTY_NOTICES.md": "43d0dbafb8c945cb4d1ee7a27fa39b4340ef4a4f8beff05781d8469b63da91a3"
+      },
+      "archiveSha256": "fa74c15ddbdc1889c1cacee7d5469d4a7bcdccfab04e9722cb8f00ebd7674ef5",
+      "archiveIntegrity": "sha512-gLWwNj5OaeIf33Zm2WuikE0nxUxrpptH7JrTWvC4BF9hT6yPMCXFvn33fcV2AroxDT9aRnNYXG9KR5dUmc3CLg=="
+    },
+    "@sequent-md/core": {
+      "repository": "https://github.com/dikini/sequent-md",
+      "revision": "bb7d271cbe0d98586c31849718707898a5ac8dcd",
+      "archive": "sequent-md-core-0.1.0.tgz",
+      "files": {
+        "src/index.js": "4c892306bd499963a2ea5fdecd30ef33b0c938fb6766a8a0b0a10bb0fdfeb3a5",
+        "src/symbols.js": "171e1888b0799b9ce43768e242d58a850fb1347bf2042f69323306cb998b9c9c"
+      },
+      "archiveSha256": "d5081da1c81e8e7a508333f5b9943e08b24d2f4782654101e6cd210386dd5b35",
+      "archiveIntegrity": "sha512-WV4LfoEst9idze7yqqSeLjzV1rPSbodJivcwAfuQUifLOutovZIOhRJhuRYlu221HoHvWDdOLsXdYy3rfDaQSw=="
+    },
+    "@sequent-md/rehype": {
+      "repository": "https://github.com/dikini/sequent-md",
+      "revision": "bb7d271cbe0d98586c31849718707898a5ac8dcd",
+      "archive": "sequent-md-rehype-0.1.0.tgz",
+      "files": {
+        "src/index.js": "9d4b1b23264886effa2fd54853104bc12382fb1f908c3f17421193f3fff5a59c"
+      },
+      "archiveSha256": "a9b5c1bac097e6ca6187019e4d471fe5fe314abdb1906c7c01c77cfa48aee59f",
+      "archiveIntegrity": "sha512-BqsRGLqELBzB+QTjpZwuyhhowGMnBiy8M6aX0ze1Wb0VTMEbDbLFj/bj79wMTey60F9ggHoUeVcvS8nIIzLBvQ=="
+    }
+  },
+  "discovery": {
+    "baseUrl": "https://dikini.github.io/ash",
+    "pageCount": 233,
+    "generatedMarkdownCount": 12,
+    "catalogueSha256": "c5968ef6298f85986f8e9acdefefbad68b7d120e37ab302367268892dcea9f2e",
+    "llmsSha256": "fdb42027ee73a15edcf742508c94bd638788e1deb7f6e38b97b948f131ed973b",
+    "markdownSetSha256": "e56954d96f0dc286983b1074fce6788f5be9f55b8e7de3eedf7a7bf3f5d35ea3"
+  },
+  "hosting": {
+    "provider": "github-pages",
+    "url": "https://dikini.github.io/ash/",
+    "basePath": "/ash"
+  }
+}

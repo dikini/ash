@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-numbering-tree-leaves.html" rel="next">
+<link href="./cases-implementing-persistent-fifo-frontier.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Choosing a search frontier · Ash</title><meta name="description" content="The resumable traversal case stored unfinished tree work in a list stack. The queue case stored values in first-in, first-out order. A graph search can use either representation for the vertices it has discovered but…"><meta name="robots" content="index, follow"><meta property="og:title" content="Choosing a search frontier · Ash"><meta property="og:description" content="The resumable traversal case stored unfinished tree work in a list stack. The queue case stored values in first-in, first-out order. A graph search can use either representation for the vertices it has discovered but…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Choosing a search frontier · Ash"><meta name="twitter:description" content="The resumable traversal case stored unfinished tree work in a list stack. The queue case stored values in first-in, first-out order. A graph search can use either representation for the vertices it has discovered but…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-choosing-a-search-frontier.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-choosing-a-search-frontier.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Choosing a search frontier","headline":"Choosing a search frontier","description":"The resumable traversal case stored unfinished tree work in a list stack. The queue case stored values in first-in, first-out order. A graph search can use either representation for the vertices it has discovered but…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-choosing-a-search-frontier.html","@id":"https://dikini.github.io/ash/study/latest/cases-choosing-a-search-frontier.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/choosing-a-search-frontier/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-choosing-a-search-frontier.html"><span class="chapter-title">Choosing a search frontier</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#follow-one-ordered-graph" id="toc-follow-one-ordered-graph" class="nav-link active" data-scroll-target="#follow-one-ordered-graph">Follow one ordered graph</a></li>
+  <li><a href="#retain-enough-work-to-resume" id="toc-retain-enough-work-to-resume" class="nav-link" data-scroll-target="#retain-enough-work-to-resume">Retain enough work to resume</a></li>
+  <li><a href="#derive-one-scheduling-transition" id="toc-derive-one-scheduling-transition" class="nav-link" data-scroll-target="#derive-one-scheduling-transition">Derive one scheduling transition</a></li>
+  <li><a href="#predict-the-two-found-paths" id="toc-predict-the-two-found-paths" class="nav-link" data-scroll-target="#predict-the-two-found-paths">Predict the two found paths</a></li>
+  <li><a href="#explain-why-only-fifo-proves-shortestness" id="toc-explain-why-only-fifo-proves-shortestness" class="nav-link" data-scroll-target="#explain-why-only-fifo-proves-shortestness">Explain why only FIFO proves shortestness</a></li>
+  <li><a href="#exhaust-the-reachable-graph" id="toc-exhaust-the-reachable-graph" class="nav-link" data-scroll-target="#exhaust-the-reachable-graph">Exhaust the reachable graph</a></li>
+  <li><a href="#separate-the-source-work-accounts" id="toc-separate-the-source-work-accounts" class="nav-link" data-scroll-target="#separate-the-source-work-accounts">Separate the source-work accounts</a></li>
+  <li><a href="#bound-logical-pending-entries" id="toc-bound-logical-pending-entries" class="nav-link" data-scroll-target="#bound-logical-pending-entries">Bound logical pending entries</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-choosing-a-search-frontier.html"><span class="chapter-title">Choosing a search frontier</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Choosing a search frontier</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The <a href="./cases-resuming-tree-traversal.html">resumable traversal case</a> stored unfinished tree work in a list stack. The <a href="./cases-implementing-persistent-fifo-frontier.html">queue case</a> stored values in first-in, first-out order. A graph search can use either representation for the vertices it has discovered but not yet examined. The choice decides which pending work becomes current next.</p>
+<p>We will keep every other search decision fixed. One transition records the same visited vertices, retained paths, and counts. Ordinary function arguments supply either list-stack operations or paired-list queue operations. Comparing the two results will isolate what the two removal orders change: last-in, first-out removal gives <em>depth-first search</em>, and first-in, first-out removal gives <em>breadth-first search</em>.</p>
+<section id="follow-one-ordered-graph" class="level2">
+<h2 class="anchored" data-anchor-id="follow-one-ordered-graph">Follow one ordered graph</h2>
+<p>The example graph has eight vertices. Each row gives the complete outgoing neighbor list in its source order.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Vertex</th>
+<th style="text-align: left;">Ordered neighbors</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>Start</code></td>
+<td style="text-align: left;"><code>Short</code>, <code>LongOne</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>Short</code></td>
+<td style="text-align: left;"><code>WideOne</code>, <code>WideTwo</code>, <code>Goal</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>LongOne</code></td>
+<td style="text-align: left;"><code>LongTwo</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>LongTwo</code></td>
+<td style="text-align: left;"><code>Start</code>, <code>Goal</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>WideOne</code></td>
+<td style="text-align: left;">none</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>WideTwo</code></td>
+<td style="text-align: left;">none</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>Goal</code></td>
+<td style="text-align: left;">none</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>Isolated</code></td>
+<td style="text-align: left;">none</td>
+</tr>
+</tbody>
+</table>
+<p>The route through <code>Short</code> reaches <code>Goal</code> in two directed edges. The route through <code>LongOne</code> and <code>LongTwo</code> takes three. <code>Isolated</code> has no incoming route from <code>Start</code>.</p>
+<p>The edge from <code>LongTwo</code> back to <code>Start</code> forms a cycle in the graph. An Ash call to <code>neighbors LongTwo</code> still returns one finite list whose first element is <code>Start</code> and whose second is <code>Goal</code>. No list node points back to an earlier list node. The cycle belongs to the graph relation, not to a cyclic Ash value. This distinction follows the pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">structural observation rule</a>: <code>&lt;cycle&gt;</code> concerns a repeated location on an active value-rendering path, not a pair of equations that name one another’s vertices.</p>
+<p>The graph-search model draws conceptual inspiration from Pat Morin’s <em>Open Data Structures (in pseudocode)</em>, edition 0.1G beta, section 12.3, under <a href="https://creativecommons.org/licenses/by/2.5/ca/">CC BY 2.5 Canada</a>. The <a href="https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/research/graph-search-frontiers.md">research record</a> preserves the attribution and comparison. This case departs from that source by using an equation-defined graph, a list dictionary, retained reverse paths, and mark-on-add DFS. It does not import the source’s <code>O(V + E)</code> runtime result.</p>
+</section>
+<section id="retain-enough-work-to-resume" class="level2">
+<h2 class="anchored" data-anchor-id="retain-enough-work-to-resume">Retain enough work to resume</h2>
+<p>A pending vertex alone cannot produce a path when the target is removed. Pair it with the path prefix that led to it:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Work(current, reverse_predecessors)</code></pre>
+<p>The predecessor list starts with the parent of <code>current</code> and ends with the search start. Initial work is <code>Work(Start, End)</code>. If that work schedules <code>Short</code>, the new item is <code>Work(Short, More(Start, End))</code>. Scheduling <code>Goal</code> from it produces <code>Work(Goal, More(Short, More(Start, End)))</code>.</p>
+<p>Every such step retains a valid path because <code>next</code> came from <code>neighbors current</code>. When the target is removed, <code>forward_path</code> reverses the predecessors into a list that ends with <code>current</code>. The result is therefore in start-to-target order.</p>
+<p>The search carries five fields together:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>SearchState(frontier, visited, pending, maximum, expanded)</code></pre>
+<p>They obey one relationship:</p>
+<ul>
+<li>every frontier item retains a valid start-to-current path;</li>
+<li><code>visited</code> contains exactly the vertices that have been scheduled, including the start;</li>
+<li>no vertex has more than one pending or previously removed work item;</li>
+<li><code>pending</code> equals the logical number of frontier work items;</li>
+<li><code>maximum</code> is the greatest <code>pending</code> value reached so far; and</li>
+<li><code>expanded</code> counts removed non-target vertices whose neighbor list has been entered.</li>
+</ul>
+<p>The generic type does not enforce this relationship. The initial state and the transition equations preserve it.</p>
+</section>
+<section id="derive-one-scheduling-transition" class="level2">
+<h2 class="anchored" data-anchor-id="derive-one-scheduling-transition">Derive one scheduling transition</h2>
+<p>Both searches mark the start in an empty dictionary before adding <code>Work(start, End)</code>. Their <code>pending</code> and <code>maximum</code> fields start at <code>Next(Zero)</code>, and <code>expanded</code> starts at <code>0</code>.</p>
+<p>After removing an item, the engine decrements <code>pending</code> before it tests the current vertex against the target. A match returns the forward path without expanding the target. A mismatch increments <code>expanded</code> and schedules the current vertex’s neighbors from list head to tail.</p>
+<p>For each neighbor, <code>schedule</code> performs these steps in order:</p>
+<ol type="1">
+<li>Look it up in the current threaded <code>visited</code> dictionary.</li>
+<li>If it is present, leave the state unchanged and continue with the rest.</li>
+<li>If it is absent, insert it before constructing or adding its work.</li>
+<li>Extend the reverse path with the current vertex.</li>
+<li>Add the new work item to the frontier.</li>
+<li>Increment <code>pending</code>, retain the greater of that value and <code>maximum</code>, and continue from the complete successor state.</li>
+</ol>
+<p>Marking a vertex before adding its work prevents repeated scheduling; it does not by itself make a path shortest. <!-- markdownlint-enable MD013 --></p>
+<p>The dictionary is a front-inserted list of entries. Its failed equality branch continues through the older entries, so a lookup observes the complete retained dictionary. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#patterns-matches-and-coverage">match and coverage rules</a> check the constructor cases. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#bindings">binding rules</a> evaluate each initializer before its successor binding, which supports the source-order state derivation above.</p>
+<p>Only the frontier operations vary. <code>search</code> receives an add function and a remove function over one type <code>F</code>. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#globals-and-modules">rank-1 global model</a> instantiates that type at each wrapper. <code>depth_first</code> supplies <code>stack_add</code> and <code>stack_remove</code> over <code>List&lt;Work&gt;</code>. <code>breadth_first</code> supplies <code>queue_add</code> and <code>queue_remove</code> over <code>Queue&lt;Work&gt;</code>. The stack prepends and removes at the front. The queue prepends to its rear list and removes the earliest logical item from its front, transferring a reversed rear when necessary.</p>
+<p>Here is the complete dependency module. Its public boundary contains the four public data types and two search wrappers. The support types and helpers remain private under the pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#public-private-and-opaque-declarations">declaration visibility rules</a>.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>pub type Vertex =
+    Start
+    | Short
+    | LongOne
+    | LongTwo
+    | WideOne
+    | WideTwo
+    | Goal
+    | Isolated
+
+pub type List&lt;A&gt; =
+    End
+    | More(A, List&lt;A&gt;)
+
+pub type Natural =
+    Zero
+    | Next(Natural)
+
+pub type SearchResult =
+    Missing(Int, Natural)
+    | Found(List&lt;Vertex&gt;, Int, Natural)
+
+type Option&lt;A&gt; =
+    Absent
+    | Present(A)
+
+type Entry&lt;K, V&gt; =
+    Entry(K, V)
+
+type Dictionary&lt;K, V&gt; =
+    NoEntries
+    | MoreEntry(Entry&lt;K, V&gt;, Dictionary&lt;K, V&gt;)
+
+type Work =
+    Work(Vertex, List&lt;Vertex&gt;)
+
+type SearchState&lt;F&gt; =
+    SearchState(F, Dictionary&lt;Vertex, Unit&gt;, Natural, Natural, Int)
+
+type Queue&lt;A&gt; =
+    Queue(List&lt;A&gt;, List&lt;A&gt;)
+
+same_vertex : Vertex -&gt; Vertex -&gt; Bool
+same_vertex Start Start = true
+same_vertex Short Short = true
+same_vertex LongOne LongOne = true
+same_vertex LongTwo LongTwo = true
+same_vertex WideOne WideOne = true
+same_vertex WideTwo WideTwo = true
+same_vertex Goal Goal = true
+same_vertex Isolated Isolated = true
+same_vertex ignored_left ignored_right = false
+
+neighbors : Vertex -&gt; List&lt;Vertex&gt;
+neighbors Start = More(Short, More(LongOne, End))
+neighbors Short = More(WideOne, More(WideTwo, More(Goal, End)))
+neighbors LongOne = More(LongTwo, End)
+neighbors LongTwo = More(Start, More(Goal, End))
+neighbors WideOne = End
+neighbors WideTwo = End
+neighbors Goal = End
+neighbors Isolated = End
+
+empty_dictionary : Unit -&gt; Dictionary&lt;K, V&gt;
+empty_dictionary () = NoEntries
+
+insert_dictionary : K -&gt; V -&gt; Dictionary&lt;K, V&gt; -&gt; Dictionary&lt;K, V&gt;
+insert_dictionary key value dictionary = MoreEntry(Entry(key, value), dictionary)
+
+lookup_dictionary : (K -&gt; K -&gt; Bool) -&gt; K -&gt; Dictionary&lt;K, V&gt; -&gt; Option&lt;V&gt;
+lookup_dictionary same_key query NoEntries = Absent
+lookup_dictionary same_key query MoreEntry(Entry(key, value), rest) = match same_key query key {
+    true =&gt; Present(value)
+    false =&gt; lookup_dictionary same_key query rest
+}
+
+stack_add : A -&gt; List&lt;A&gt; -&gt; List&lt;A&gt;
+stack_add value stack = More(value, stack)
+
+stack_remove : List&lt;A&gt; -&gt; Option&lt;(A, List&lt;A&gt;)&gt;
+stack_remove End = Absent
+stack_remove More(first, rest) = Present((first, rest))
+
+queue_empty : Unit -&gt; Queue&lt;A&gt;
+queue_empty () = Queue(End, End)
+
+queue_add : A -&gt; Queue&lt;A&gt; -&gt; Queue&lt;A&gt;
+queue_add value Queue(front, rear) = Queue(front, More(value, rear))
+
+reverse_into : List&lt;A&gt; -&gt; List&lt;A&gt; -&gt; List&lt;A&gt;
+reverse_into End reversed = reversed
+reverse_into More(first, rest) reversed = {
+    reverse_into rest (More(first, reversed))
+}
+
+queue_remove : Queue&lt;A&gt; -&gt; Option&lt;(A, Queue&lt;A&gt;)&gt;
+queue_remove Queue(End, End) = Absent
+queue_remove Queue(More(first, rest), rear) = {
+    Present((first, Queue(rest, rear)))
+}
+queue_remove Queue(End, rear) = {
+    let front = reverse_into rear End
+    queue_remove (Queue(front, End))
+}
+
+decrement : Natural -&gt; Natural
+decrement Zero = Zero
+decrement Next(rest) = rest
+
+greater : Natural -&gt; Natural -&gt; Bool
+greater Zero ignored_right = false
+greater Next(ignored_left) Zero = true
+greater Next(left) Next(right) = greater left right
+
+retain_greater : Natural -&gt; Natural -&gt; Natural
+retain_greater candidate retained = match greater candidate retained {
+    true =&gt; candidate
+    false =&gt; retained
+}
+
+forward_path : Work -&gt; List&lt;Vertex&gt;
+forward_path Work(current, predecessors) = {
+    reverse_into predecessors (More(current, End))
+}
+
+schedule : (Work -&gt; F -&gt; F) -&gt; List&lt;Vertex&gt; -&gt; Work -&gt; SearchState&lt;F&gt; -&gt; SearchState&lt;F&gt;
+schedule add End parent state = state
+schedule add More(next, rest) parent state = match state {
+    SearchState(frontier, visited, pending, maximum, expanded) =&gt; match lookup_dictionary same_vertex next visited {
+        Present(ignored_value) =&gt; schedule add rest parent state
+        Absent =&gt; {
+            let next_visited = insert_dictionary next () visited
+            match parent {
+                Work(current, predecessors) =&gt; {
+                    let next_work = Work(next, More(current, predecessors))
+                    let next_frontier = add next_work frontier
+                    let next_pending = Next(pending)
+                    let next_maximum = retain_greater next_pending maximum
+                    let next_state = SearchState(
+                        next_frontier,
+                        next_visited,
+                        next_pending,
+                        next_maximum,
+                        expanded
+                    )
+                    schedule add rest parent next_state
+                }
+            }
+        }
+    }
+}
+
+continue_search : (Work -&gt; F -&gt; F) -&gt; (F -&gt; Option&lt;(Work, F)&gt;) -&gt; Vertex -&gt; Dictionary&lt;Vertex, Unit&gt; -&gt; Natural -&gt; Natural -&gt; Int -&gt; Option&lt;(Work, F)&gt; -&gt; SearchResult
+continue_search add remove target visited pending maximum expanded Absent = Missing(expanded, maximum)
+continue_search add remove target visited pending maximum expanded Present((Work(current, predecessors), later_frontier)) = {
+    let later_pending = decrement pending
+    match same_vertex current target {
+        true =&gt; Found(forward_path (Work(current, predecessors)), expanded, maximum)
+        false =&gt; {
+            let next_state = SearchState(
+                later_frontier,
+                visited,
+                later_pending,
+                maximum,
+                expanded + 1
+            )
+            let scheduled = schedule add (neighbors current) (Work(current, predecessors)) next_state
+            search add remove target scheduled
+        }
+    }
+}
+
+search : (Work -&gt; F -&gt; F) -&gt; (F -&gt; Option&lt;(Work, F)&gt;) -&gt; Vertex -&gt; SearchState&lt;F&gt; -&gt; SearchResult
+search add remove target SearchState(frontier, visited, pending, maximum, expanded) = {
+    let removed = remove frontier
+    continue_search add remove target visited pending maximum expanded removed
+}
+
+pub depth_first : Vertex -&gt; Vertex -&gt; SearchResult
+depth_first start target = {
+    let visited = insert_dictionary start () (empty_dictionary ())
+    let initial_work = Work(start, End)
+    let frontier = stack_add initial_work End
+    let initial_size = Next(Zero)
+    let initial_state = SearchState(frontier, visited, initial_size, initial_size, 0)
+    search stack_add stack_remove target initial_state
+}
+
+pub breadth_first : Vertex -&gt; Vertex -&gt; SearchResult
+breadth_first start target = {
+    let visited = insert_dictionary start () (empty_dictionary ())
+    let initial_work = Work(start, End)
+    let frontier = queue_add initial_work (queue_empty ())
+    let initial_size = Next(Zero)
+    let initial_state = SearchState(frontier, visited, initial_size, initial_size, 0)
+    search queue_add queue_remove target initial_state
+}</code></pre>
+</section>
+<section id="predict-the-two-found-paths" class="level2">
+<h2 class="anchored" data-anchor-id="predict-the-two-found-paths">Predict the two found paths</h2>
+<p>Scheduling the <code>Start</code> neighbors head to tail first adds <code>Short</code>, then <code>LongOne</code>. The stack places each addition at its front, so it removes <code>LongOne</code> next. The queue keeps <code>Short</code> ahead of <code>LongOne</code> in logical order.</p>
+<p>Trace the stack first. It removes and expands <code>Start</code>, <code>LongOne</code>, and <code>LongTwo</code>, then removes <code>Goal</code>. The returned path has three edges, <code>expanded</code> is <code>3</code>, and the peak pending count is two.</p>
+<p>For the queue, removal proceeds through <code>Start</code>, <code>Short</code>, <code>LongOne</code>, <code>WideOne</code>, and <code>WideTwo</code> before <code>Goal</code>. The path has two edges, <code>expanded</code> is <code>5</code>, and the peak pending count is four. Unary <code>Natural</code> values render those peaks as <code>Next(Next(Zero))</code> and <code>Next(Next(Next(Next(Zero))))</code>.</p>
+<p>The entry calls both wrappers with the same start and target:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import searches as Searches
+
+main : Unit -&gt; (Searches.SearchResult, Searches.SearchResult)
+main () = (
+    Searches.depth_first Searches.Start Searches.Goal,
+    Searches.breadth_first Searches.Start Searches.Goal
+)</code></pre>
+<p>From the Cases directory, run:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash choosing-a-search-frontier/src/01-found-paths.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(Found(More(Start, More(LongOne, More(LongTwo, More(Goal, End)))), 3, Next(Next(Zero))), Found(More(Start, More(Short, More(Goal, End))), 5, Next(Next(Next(Next(Zero)))))) : (SearchResult, SearchResult)</code></pre>
+<p>The result matches the trace. The pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/docs/tools/ash.md#successful-output"><code>ash</code> success contract</a> supplies one standard-output line and status <code>0</code>; the structural spelling comes from the pinned <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">observation rules</a>.</p>
+</section>
+<section id="explain-why-only-fifo-proves-shortestness" class="level2">
+<h2 class="anchored" data-anchor-id="explain-why-only-fifo-proves-shortestness">Explain why only FIFO proves shortestness</h2>
+<p>Path length here means directed-edge count. Each work item retains a valid path, and scheduling a neighbor extends its parent’s path by exactly one edge. <!-- markdownlint-disable MD013 --> FIFO removal keeps first-discovery paths in nondecreasing directed-edge distance. <!-- markdownlint-enable MD013 --> The claim follows by layers: before a distance-<code>i</code> item is removed, all earlier pending items have distance at most <code>i</code>; its newly scheduled neighbors have distance <code>i + 1</code> and enter after those items. Marking before addition retains the first path discovered for each vertex, so no later path replaces it. The first target removed by this queue therefore has minimum edge length.</p>
+<p>The stack preserves the same path-validity and visited relationships, but it removes the most recent addition. On this graph it enters the three-edge route while the two-edge route remains pending. That observed longer DFS path is the negative case: visited timing prevents duplicate work, while FIFO layer order establishes shortestness. The argument covers this finite unweighted directed graph and other searches with the same premises. It does not cover weighted edges or an arbitrary add/remove pair.</p>
+</section>
+<section id="exhaust-the-reachable-graph" class="level2">
+<h2 class="anchored" data-anchor-id="exhaust-the-reachable-graph">Exhaust the reachable graph</h2>
+<p>Now predict what happens when the target is <code>Isolated</code>. Both searches must empty their frontier. When <code>LongTwo</code> offers <code>Start</code>, dictionary lookup finds the initial mark and skips that edge. Other converging edges likewise cannot schedule a second work item for an already visited vertex.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import searches as Searches
+
+main : Unit -&gt; (Searches.SearchResult, Searches.SearchResult)
+main () = (
+    Searches.depth_first Searches.Start Searches.Isolated,
+    Searches.breadth_first Searches.Start Searches.Isolated
+)</code></pre>
+<p>Run the second entry:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash choosing-a-search-frontier/src/02-unreachable-cycle.ash</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(Missing(7, Next(Next(Zero))), Missing(7, Next(Next(Next(Next(Zero)))))) : (SearchResult, SearchResult)</code></pre>
+<p>Seven vertices are reachable from <code>Start</code>, and each is expanded once because none is the target. The empty removal returns <code>Missing</code> with <code>expanded = 7</code>. Changing the target does not change either search’s peak for this graph: the stack still reaches two pending entries, and the queue reaches four. Finiteness follows from four premises: the graph has finitely many vertices; equality and every <code>neighbors</code> call return; every neighbor list is finite; and mark-before-add schedules each vertex at most once. It is not a claim that every possible graph-search input terminates.</p>
+</section>
+<section id="separate-the-source-work-accounts" class="level2">
+<h2 class="anchored" data-anchor-id="separate-the-source-work-accounts">Separate the source-work accounts</h2>
+<p>The result reports two measurements: completed non-target expansions and the greatest logical number of pending entries.</p>
+<p>Maximum pending entries count frontier work items, not their retained paths or the visited dictionary. <!-- markdownlint-enable MD013 --></p>
+<p>Other source work needs separate units:</p>
+<ul>
+<li><strong>Retained-path work:</strong> initial work constructs no predecessor <code>More</code>. Scheduling each new non-start vertex constructs one. For a found path with <code>l</code> edges, <code>forward_path</code> selects <code>l</code> predecessor nodes and constructs <code>l + 1</code> result nodes.</li>
+<li><strong>Visited work:</strong> discovering a vertex constructs one <code>Entry</code> and one dictionary-list node. A lookup applies <code>same_vertex</code> to each entry it inspects until a match or <code>NoEntries</code>.</li>
+<li><strong>Queue work:</strong> one queue list-node unit is one selected or constructed <code>More</code>, as in the preceding queue case. For <code>e</code> additions and <code>d</code> successful removals, its <code>3e + d</code> bound applies only to one empty-to-successor history.</li>
+<li><strong>Measurement work:</strong> every accepted addition constructs <code>Next(pending)</code> and recursively compares it with the retained maximum. The instrumentation has source work of its own.</li>
+</ul>
+<p>One BFS run follows a linear queue history that starts from <code>empty</code>; retained branching is outside that queue bound. <!-- markdownlint-enable MD013 --></p>
+<p>The dictionary can inspect a growing discovered prefix, so this representation does not inherit an array-based <code>O(V + E)</code> runtime theorem. These counts name selected and constructed source forms. They are not interchangeable, and none is a runtime measurement.</p>
+</section>
+<section id="bound-logical-pending-entries" class="level2">
+<h2 class="anchored" data-anchor-id="bound-logical-pending-entries">Bound logical pending entries</h2>
+<p>Let <code>b</code> bound the number of previously unseen neighbors scheduled by one DFS expansion, and let <code>d</code> be the greatest directed-edge depth reached in its DFS discovery tree. Along one descent, removing the active item and adding at most <code>b</code> children can leave at most <code>b - 1</code> pending siblings at that level. Starting from the one initial item gives the accumulated bound.</p>
+<p>For <code>b &gt;= 1</code> and DFS discovery-tree edge depth <code>d</code>, the stack holds at most <code>1 + d(b - 1)</code> pending entries. <!-- markdownlint-enable MD013 --></p>
+<p>If <code>b = 0</code>, the separate initial state has one pending entry. The formula is a bound on logical work items, not on recursive calls or path nodes.</p>
+<p>For BFS, let <code>L_i</code> be the number of vertices first discovered at edge distance <code>i</code>. While removing layer <code>i</code>, the queue contains only the unprocessed suffix of that layer and the discovered prefix of layer <code>i + 1</code>. No later layer can enter before a layer-<code>i</code> item schedules it.</p>
+<p>During BFS layer <code>i</code>, pending entries are at most <code>L_i + L_(i + 1)</code>, and therefore at most <code>2W</code> when <code>W</code> is the greatest layer size. <!-- markdownlint-enable MD013 --></p>
+<p>This two-layer account is why a bound using only one layer size would omit a transition already visible in the queue.</p>
+<p>Try changing only the <code>Start</code> neighbor order on paper. Predict the next stack and queue item, both found paths, and which shortest-path fact remains true. Then trace the <code>LongTwo -&gt; Start</code> edge and name the exact state field that prevents another addition. Finally, explain why neither <code>maximum</code> result can tell you the number of retained path nodes.</p>
+<p>The frontier choice changes removal order, the returned path, the number of non-target expansions before success, and the peak pending entries. It does not change the graph, scheduling transition, or visited timing.</p>
+<p>The named counts establish no elapsed time, machine instructions, native-stack behavior, heap bytes, allocation count, pointer identity, physical sharing, garbage collection, or compiler optimization. <!-- markdownlint-enable MD013 --></p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-implementing-persistent-fifo-frontier.html" class="pagination-link" aria-label="Implementing a persistent FIFO frontier">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Implementing a persistent FIFO frontier</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-numbering-tree-leaves.html" class="pagination-link" aria-label="Numbering a tree's leaves">
+        <span class="nav-page-text"><span class="chapter-title">Numbering a tree’s leaves</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,510 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0025: Library and Package Milestones · Ash</title><meta name="description" content="Which work should close Modular Ash, which language and library capabilities belong in its first descendant, and which package and compiled-artifact capabilities require a later milestone?"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0025: Library and Package Milestones · Ash"><meta property="og:description" content="Which work should close Modular Ash, which language and library capabilities belong in its first descendant, and which package and compiled-artifact capabilities require a later milestone?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0025: Library and Package Milestones · Ash"><meta name="twitter:description" content="Which work should close Modular Ash, which language and library capabilities belong in its first descendant, and which package and compiled-artifact capabilities require a later milestone?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0025-library-and-package-milestones/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0025-library-and-package-milestones/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0025-library-and-package-milestones.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0025: Library and Package Milestones","headline":"DN-0025: Library and Package Milestones","description":"Which work should close Modular Ash, which language and library capabilities belong in its first descendant, and which package and compiled-artifact capabilities require a later milestone?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0025-library-and-package-milestones/","@id":"https://dikini.github.io/ash/docs/design/dn-0025-library-and-package-milestones/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0025-library-and-package-milestones.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0025-library-and-package-milestones" data-pagefind-meta="title">DN-0025: Library and Package Milestones</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0025-library-and-package-milestones.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0025</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">DN-0020: Ash Dialect Milestones</a>, <a href="/ash/docs/design/dn-0022-passive-static-modules/">DN-0022: Passive Static Modules</a>, <a href="/ash/docs/design/dn-0023-interfaces-and-implementations/">DN-0023: Interfaces and Implementations</a>, <a href="/ash/docs/design/dn-0019-primitive-feature-composition/">DN-0019: Primitive Feature Composition</a>, <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006: Initial Type System</a>, <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008: Typed Core and Elaboration</a>, <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007: Typed Core Dialects</a>, the <a href="/ash/docs/design/lib-ash/imports-evidence/">explicit-import evidence</a>, the <a href="/ash/docs/design/lib-ash/kinds-evidence/">explicit-kind evidence</a>, the <a href="/ash/docs/design/lib-ash/method-parameters-evidence/">method-parameter evidence</a>, the <a href="/ash/docs/design/lib-ash/relational-interfaces-evidence/">relational-interface evidence</a>, the <a href="/ash/docs/design/modular-ash/core-library-evidence/">core-and-library audit</a>, and the <a href="/ash/docs/design/modular-ash/closure/">Modular Ash closure report</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It does not define current Ash, accept
+language semantics, or accept a package or artifact architecture.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Which work should close Modular Ash, which language and library capabilities
+belong in its first descendant, and which package and compiled-artifact
+capabilities require a later milestone?</p>
+<h2 id="current-boundary">Current boundary</h2>
+<p>The <a href="/ash/spec/">current specification</a> defines four bounded
+<code>lib-ash</code> increments on the completed Modular Ash base. It has passive acyclic source
+modules, public and private declarations, opaque type exports, qualified and
+targeted imports, targeted public name and implementation re-exports,
+compiler-generated body-free export summaries, method-only relational
+interfaces, explicit implementation selection, authenticated transitive
+authorization routes, explicit kinds, higher-kinded declaration parameters,
+explicit fixed-kinded method-local parameters, authenticated polymorphic method
+evidence, complete ordered interface applications, one optional total forward
+determination edge, kind-preserving evidence lowering, and one linked typed
+Core program.
+Interfaces are not module signatures. Persistent compiled modules, package
+resolution, and separate object linking remain outside current Ash.</p>
+<p>The <code>mini-ash</code> Git tag retains Mini-Ash as a historical runnable dialect.
+Current source does not carry a second grammar or compiler path for it.
+<a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">DN-0020</a> records the completed separately
+authorized core-versus-library audit and simplification analysis. The paired
+<a href="/ash/docs/design/modular-ash/core-library-evidence/">audit</a> and
+<a href="/ash/docs/design/modular-ash/closure/">closure report</a> retain that final milestone
+checkpoint. Task and plan cleanup, repeated root verification, independent
+reviews, and the closure commit completed the lifecycle mechanics. The
+annotated <code>modular-ash</code> tag retains that commit. None of those mechanics added
+language work.</p>
+<p>The retained relational addition crosses parsing, name resolution, kind and
+type checking, implementation selection, export summaries, linked-evidence
+validation, and Core elaboration. Package and artifact work crosses module
+identity, graph loading, compiler inputs, persistence, linker validation,
+diagnostics, and resource limits. Combining both sets in one milestone would
+make failures harder to attribute.</p>
+<h2 id="leading-milestone-sequence">Leading milestone sequence</h2>
+<p>The leading sequence has three stages:</p>
+<pre tabindex="0"><code class="language-text">modular-ash -&gt; lib-ash -&gt; pack-ash
+</code></pre>
+<h3 id="modular-ash"><code>modular-ash</code></h3>
+<p>Modular Ash is complete at its final milestone checkpoint. The retained
+core-versus-library audit, simplification analysis, module and interface
+evidence, and closure report establish the boundary. The annotated
+<code>modular-ash</code> tag retains the final verified closure commit.
+No proposed type-system, re-export, package, cache, or linker mechanism entered
+that closure.</p>
+<h3 id="lib-ash"><code>lib-ash</code></h3>
+<p>The first bounded <code>lib-ash</code> increment is complete. Implementation availability
+is explicit, and targeted imports can re-export selected names and
+implementation authorizations. The retained
+<a href="/ash/docs/design/lib-ash/imports-evidence/">evidence report</a> records its reviewed boundary.
+The second increment is complete. Its reviewed explicit kinds and higher-kinded
+declaration parameters across checking, summaries, evidence, and independent
+Core validation are retained by the
+<a href="/ash/docs/design/lib-ash/kinds-evidence/">kind evidence</a>. The third bounded increment is also
+complete. Its explicit method-local type parameters, authenticated evidence
+adapters, rank-1 source boundary, and runtime erasure are retained by the
+<a href="/ash/docs/design/lib-ash/method-parameters-evidence/">method-parameter evidence</a>. The fourth
+bounded increment is implemented and specified. Its complete relational
+applications, total forward determination, one-pass improvement, linked
+authentication, exact resources, and downstream exclusions are retained by the
+<a href="/ash/docs/design/lib-ash/relational-interfaces-evidence/">relational-interface evidence</a>.
+That integrated product checkpoint closes the revised <code>lib-ash</code> milestone.
+Associated outputs, general determination graphs, and defaults are separate
+future features rather than requirements for this milestone.</p>
+<h3 id="pack-ash"><code>pack-ash</code></h3>
+<p>After <code>lib-ash</code> stabilizes its summaries and identities, explore and, through
+later decisions and tasks, add package manifests, exact version resolution, a
+compiler-private cache, separate compiled-module linking, and a distributable
+artifact format pinned to the <code>pack-ash</code> milestone.</p>
+<p>This sequence avoids extending <code>modular-ash</code> indefinitely. It also avoids
+freezing a package artifact around public-summary semantics that <code>lib-ash</code>
+would immediately change.</p>
+<h2 id="prepared-lib-ash-sequence">Prepared <code>lib-ash</code> sequence</h2>
+<p>Planning detail decreases after the first increment. Each later semantic
+increment requires its own accepted proposal and task, and evidence may split,
+narrow, reorder, or remove it.</p>
+<ol>
+<li>Replace automatic direct-import implementation availability with explicit
+implementation selectors. Add targeted name and implementation re-exports,
+transitive authorization routes, and a migration corpus. This completed
+first increment is retained by the
+<a href="/ash/docs/design/lib-ash/imports-evidence/">explicit-import evidence report</a>.</li>
+<li>Add explicit <code>Type</code> and function kinds and higher-kinded parameters without
+kind inference or kind polymorphism in this increment. Make checking,
+summaries, substitution, and independent Core validation kind-aware. The
+absence of kind inference is a phase-dependent semantic boundary, not a
+permanent language principle; later work may consider bounded
+declaration-local kind inference separately from kind polymorphism. The
+completed second increment is retained by the
+<a href="/ash/docs/design/lib-ash/kinds-evidence/">explicit-kind evidence report</a>.</li>
+<li>Add method-local type parameters. Keep ordinary source rank-1 and admit
+polymorphic term slots only as authenticated compiler-generated interface
+evidence. The completed third increment is retained by the
+<a href="/ash/docs/design/lib-ash/method-parameters-evidence/">method-parameter evidence report</a>.</li>
+<li>Add complete ordered multi-parameter interface applications and at most one
+total forward determination edge. Retain one isolated improvement pass and
+full-application evidence selection. The completed product increment is
+retained by the
+<a href="/ash/docs/design/lib-ash/relational-interfaces-evidence/">relational-interface evidence report</a>.</li>
+<li>Close the revised <code>lib-ash</code> product boundary with the combined library
+corpus, summary and identity audit, downstream-pressure review, exact
+resource verification, normative reconciliation, migration guards, and one
+retained linked Core program. The fourth increment supplies these product
+facts; the integrated result completes the lifecycle.</li>
+</ol>
+<p>The first increment establishes the visibility and coherence closure used by
+later multi-parameter and determination work. The second establishes fixed
+kinds, canonical applications, and authenticated polymorphic identities.
+The third establishes canonical method schemes, occurrence-local
+instantiation, authenticated generated evidence adapters, and the preserved
+rank-1 source and erased-runtime boundaries.
+The fourth establishes complete relational applications and an explicit
+selection key without generalizing evidence authority or adding a Core or
+runtime mechanism.
+<code>pack-ash</code> remains separate until the complete <code>lib-ash</code> milestone stabilizes
+those summaries and identities.</p>
+<h2 id="lib-ash-type-and-interface-model"><code>lib-ash</code> type and interface model</h2>
+<h3 id="kinds-and-higher-kinded-parameters">Kinds and higher-kinded parameters</h3>
+<p>The initial kind language contains <code>Type</code> and function kinds. Ordinary type
+parameters default to <code>Type</code>; a parameter used as a constructor requires an
+explicit kind such as <code>Type -&gt; Type</code>. This increment does not infer kinds or
+support kind polymorphism. The first restriction is phase-dependent: later
+work may consider bounded declaration-local kind inference without treating it
+as kind polymorphism or as a prerequisite for this increment.</p>
+<p>Nominal constructors receive derived kinds. An unsaturated constructor is
+valid only where the expected kind admits it. Every value-level expression
+still has a type of kind <code>Type</code>.</p>
+<p>Core must retain enough information to check this boundary independently.
+Type binders carry kinds, and type abstraction, application, substitution, and
+validation are kind-aware. A value binder's type must still have kind <code>Type</code>.</p>
+<p>Methods may bind explicit rank-1 type parameters. For example, this
+illustrative declaration requires both a higher-kinded interface parameter and
+method-local parameters:</p>
+<pre tabindex="0"><code class="language-ash">interface Functor&lt;F : Type -&gt; Type&gt; {
+    map&lt;A, B&gt; : (A -&gt; B, F&lt;A&gt;) -&gt; F&lt;B&gt;
+}
+</code></pre>
+<p>This does not add source syntax for higher-rank values. A polymorphic interface
+method does, however, require compiler-generated higher-rank evidence. For
+<code>Functor&lt;F&gt;</code>, the method slot has a type shaped like
+<code>forall A B. (A -&gt; B, F&lt;A&gt;) -&gt; F&lt;B&gt;</code>. A constrained function receives that
+polymorphic slot, and a generated evidence adapter exposes the selected
+implementation method at that scheme.</p>
+<p>Core therefore admits polymorphic term parameters only in authenticated
+compiler-generated evidence positions during this increment. Independent Core
+validation checks that the nested scheme agrees with its <code>MethodId</code>; ordinary
+Ash annotations cannot introduce, accept, or return such a value. This keeps
+the source language rank-1 without pretending that polymorphic dictionaries
+are ordinary monomorphic functions.</p>
+<h3 id="retained-relational-determination-model">Retained relational determination model</h3>
+<p>The revised milestone settles on the simplest complete lowered form: a
+nonempty ordered interface parameter vector, a complete application vector,
+and at most one total forward edge from a nonempty determinant slice to its
+entire complement. Without an edge, every parameter remains part of the
+selection key. With an edge, every method must mention each determinant while
+dependents may occur anywhere or nowhere. One fixed pre-mutation snapshot
+permits forward improvement from inference-free keys; evidence selection still
+uses complete applications.</p>
+<p>This form is sufficient for the revised <code>lib-ash</code> goals. It preserves stable
+interface and implementation identities, complete relationships through body-
+free summaries and linked validation, occurrence-owned opaque evidence,
+simultaneous substitution, and ordinary Core method evidence. Determinant
+metadata erases before Core and adds no runtime mechanism.</p>
+<p>Associated-output declarations, projections, equations, normalization, and
+their source elaboration are not current Ash. Multiple, partial, chained,
+cyclic, reverse, or injective edges, neutral parameters, and alternative keys
+are likewise deferred rather than encoded into this boundary.</p>
+<p>The retained representation also answers three downward pressures without
+prematurely implementing them. Effects may reuse stable typed identities and
+ordered applications, but handler and provider authority must remain separate.
+Proofs may reuse typed identities and complete arguments, but proof authority
+must not be confused with implementation evidence. Existential packages may
+hide any argument while preserving its equality relationships with payloads
+and encapsulated evidence; because summaries and selections already carry the
+complete application, that future work need not refactor interface heads.
+Existentials still require their own binders, scope, generativity, Core forms,
+and evidence authority.</p>
+<p>Associated outputs and method or associated-output defaults are not current
+Ash or unfinished <code>lib-ash</code> work. If later examples justify them, each requires
+a separate proposal covering its source syntax, identity, checking,
+elaboration, authentication, termination where applicable, and evidence.</p>
+<h2 id="name-and-implementation-re-exports">Name and implementation re-exports</h2>
+<p>Names and implementation availability remain separate semantic channels. One
+import or re-export declaration may select both, but selecting one does not
+imply the other. The prepared first increment uses a targeted public import:</p>
+<pre tabindex="0"><code class="language-ash">pub import equality (Equal, equal, impl Equal)
+</code></pre>
+<p><code>Equal</code> imports and re-exports the interface name, <code>equal</code> imports and
+re-exports the method name, and <code>impl Equal</code> imports and re-exports every
+public implementation fact exported for that <code>InterfaceId</code>. Without <code>pub</code>,
+the same selectors affect only the importing module. <code>impl Equal</code> alone does
+not bind or export <code>Equal</code> as a source name.</p>
+<p>Only targeted imports may be public in this increment. A qualified import
+keeps its current local module alias and acquires no implementation facts. A
+module that needs qualified names and implementations may use two imports:</p>
+<pre tabindex="0"><code class="language-ash">import equality as Equality
+import equality (impl Equal)
+</code></pre>
+<p>A name selector may retain its existing <code>as</code> alias. An implementation selector
+cannot be renamed and names the dependency's public interface spelling. A
+public name re-export uses the selected local spelling while retaining the
+original declaration identity. A public implementation re-export retains the
+original implementation identity and records another authorization route; it
+does not copy the declaration.</p>
+<p>The initial design imports all public implementations for a selected interface
+name. It does not name individual implementations or select implementation-head
+patterns.</p>
+<p>This selector replaces Modular Ash's rule that every direct import
+automatically admits every public implementation from that dependency. Names
+keep their existing complete or targeted import behavior; implementations
+become opt-in per interface. This is an intentional source-compatibility change
+that requires proposal and migration evidence rather than an accidental parser
+or resolver consequence.</p>
+<p>An explicit implementation re-export adds those facts to the re-exporting
+module's public closure. Re-export closures compose transitively. Reaching one
+implementation identity through multiple paths retains one fact; distinct
+declarations still undergo overlap and determination checks. Dead-code
+elimination may remove unused evidence only after the full imported closure has
+passed validation.</p>
+<p>The first increment retained predecessor single-parameter interfaces, so its
+coherence evidence used ordinary full-head overlap. Current Ash generalizes
+that case to complete selection keys. A module checks the
+deduplicated union of its selected imported and local implementations. The
+first module that combines two distinct overlapping implementations owns the
+failure. A public summary is available only after that closure succeeds.</p>
+<p>The primary witness has three modules: a definition module publishes an
+interface, method, and implementation; a facade re-exports all three channels;
+and an application explicitly imports all three from the facade. Removing the
+application's implementation selector leaves the method name available but
+produces the existing unsatisfied-constraint failure.</p>
+<h2 id="lib-ash-error-ownership"><code>lib-ash</code> error ownership</h2>
+<p>An error belongs to the first judgment with enough information to establish it.
+Parsing owns malformed declarations and selectors. Resolution owns identities,
+visibility, and unavailable exports. Kind and interface checking own invalid
+kinds, method determinacy, and contradictory determination. Implementation
+checking owns completion, orphan status, prerequisites, and conflicts already
+visible to the defining module.</p>
+<p>Import-closure construction owns a conflict first created by combining imported
+implementation sets. If that module also re-exports the facts, it does not
+report the failure again during summary construction. Summary construction
+instead owns invalid public closure or privacy. Linked-evidence validation owns
+forged or inconsistent retained selections. Constraint improvement and
+selection at a source occurrence own ambiguous or unsatisfied goals and
+concrete active-goal cycles. Exhaustion of the shared constraint budget belongs
+to whichever declaration, import-closure, selection, linking, or validation
+judgment consumes its final unit. Core validation owns Core kind, scope, type,
+dialect, registry, and provenance failures.</p>
+<p>Diagnostics identify the normalized interface arguments, relevant
+determination edge, original implementation locations, and import or re-export
+paths that made the facts visible. When several routes carry one identity, the
+compiler chooses a shortest provenance path, breaking equal-length ties by
+dependency order, import source order, and then stable route identity.</p>
+<h2 id="lib-ash-evidence-and-closure"><code>lib-ash</code> evidence and closure</h2>
+<p>The first increment's
+<a href="/ash/docs/design/lib-ash/imports-evidence/">retained evidence</a> covers the complete
+name-versus-implementation and private-versus-public selector matrix; the
+three-module facade; transitive and diamond identity; aliases; hidden and opaque
+nominal facts; private exports; overlap at the first combined closure;
+deterministic shortest authorization routes; graph-wide selector, closure,
+summary, and validation budgets; rejection of forged routes; unchanged Core
+node inventory; and explicit migration of every imported implementation
+dependency. Neither complete nor ordinary targeted name imports make
+implementations available implicitly.</p>
+<p>The second increment's current
+<a href="/ash/docs/design/lib-ash/kinds-evidence/">kind evidence</a> covers explicit and omitted
+binder policies, fixed kinds through inference and first-order evidence,
+canonical unary type application, authenticated body-free facts, resolved and
+generated Core binder authority, exact resources, tampering, predecessor
+migration, and runtime erasure. The absence of kind inference in that increment
+is phase-dependent rather than a permanent library-language restriction.</p>
+<p>The third increment's current
+<a href="/ash/docs/design/lib-ash/method-parameters-evidence/">method-parameter evidence</a> covers
+fixed-kinded method schemes, rigid implementation checking, body-free and
+linked authentication, generated Core adapters, transforms, diagnostics,
+migration, exact resources, small-stack disposal, and runtime erasure.</p>
+<p>The fourth increment's current
+<a href="/ash/docs/design/lib-ash/relational-interfaces-evidence/">relational-interface evidence</a>
+covers complete ordered vectors, total partition admission, method
+determinacy, requirement and implementation rules, coherence, forward-only
+improvement, full-goal selection, body-free summaries, linked and independent
+Core authentication, hidden and opaque dependents, deterministic diagnostics,
+exact resources, predecessor migration, and runtime erasure.</p>
+<p>Together the four reports supply the revised <code>lib-ash</code> product boundary:
+specified retained semantics, positive and negative corpus evidence, separate
+dependent-module checking, linked evidence authentication, Core validation and
+transforms, one linked relational program, and no package resolver, persistent
+object format, universal evidence family, runtime registry, or dynamic
+interface lookup. The product checkpoint, transition cleanup, and integration
+are complete. Any milestone tag is a separate lifecycle action, not additional
+language semantics.</p>
+<h2 id="pack-ash-exact-graph-and-identity"><code>pack-ash</code> exact graph and identity</h2>
+<p>A package tool owns manifests, constraints, acquisition, lock data, and version
+selection. The compiler receives an exact graph and does not choose versions.
+The <code>ash</code> executable may act as a facade over a separate package executable or
+library.</p>
+<p>The package tool supplies semantic identities and the compiler derives revision
+and artifact keys:</p>
+<pre tabindex="0"><code class="language-text">PackageId     = resolver-owned locked package identity
+ModuleId      = PackageId + canonical logical module path
+SourceRevision = hash of the admitted source content
+ArtifactKey   = ModuleId + SourceRevision + complete compilation context
+</code></pre>
+<p><code>PackageId</code> distinguishes resolved package instances. Registry and immutable
+version-control packages can derive it from their locked source coordinates,
+name, and exact version or revision. A workspace form must provide the same
+relocation property without using its installation path or current content;
+its exact encoding remains an open, gating package-design question.</p>
+<p>The exact graph assigns each packaged source one canonical logical module path.
+It also records route aliases and named-root ownership. During source admission,
+the compiler maintains a bijection between <code>ModuleId</code> and canonical physical
+source: different routes to one source must name the graph's same logical
+module, and two sources cannot claim one logical path. An undeclared alternate
+logical path is a malformed exact graph rather than a second module identity.</p>
+<p>This mapping keeps <code>ModuleId</code> stable across import aliases, declared symlink
+routes, installation paths, cache locations, and graph routes without deriving
+identity from the first route discovered. <code>SourceRevision</code> changes when source
+content changes. <code>ArtifactKey</code> governs cache reuse and includes every semantic
+compilation input. The encoded forms remain private during the initial cache
+stage.</p>
+<p>A lock graph records exact versions, immutable source or workspace identities,
+checksums or revisions, dependency edges and local aliases, and required Ash
+milestones. Two routes to one locked node share a <code>PackageId</code>; two resolved
+versions remain distinct.</p>
+<p>Current module-path rules remain: an unqualified path is relative to the
+importing module, a named root comes from the supplied exact graph, targets
+remain inside every owning root, and parent traversal remains forbidden. A
+dependency alias chooses an exact edge but does not participate in module
+identity. The admitted module and its artifact retain the complete owning-root
+set and exact module-map fingerprint. Warm and source-free paths authenticate
+those facts against the locked graph instead of reconstructing them from a
+cache path.</p>
+<h2 id="compiled-artifacts-and-linking">Compiled artifacts and linking</h2>
+<p>A module artifact joins a checked body-free export summary with a validated
+typed Core fragment. The fragment contains definitions, private binders,
+implementation methods, generated evidence adapters, and diagnostic provenance.
+Cross-module references use a <code>ModuleId</code> plus declaration identity and the
+dependency or re-export summary route that authorized the occurrence. Local
+intermediate binders may use fragment-local indices.</p>
+<p>An artifact records its module identity, source revision, artifact key, module
+map and owning-root fingerprint, Ash milestone, private format version,
+dependency-summary fingerprints, external identities and authorization routes,
+exported and hidden linker closure, typed Core, retained evidence, and source
+provenance. Generated evidence adapters remain authenticated Core relationships;
+they do not become source-visible exports.</p>
+<p>The linker:</p>
+<ol>
+<li>authenticates headers and content hashes;</li>
+<li>verifies the exact graph, module map, owning roots, dependency identities,
+and summary fingerprints;</li>
+<li>authenticates every external occurrence against its exact direct-dependency
+or re-export summary route before resolving the identity;</li>
+<li>combines nominal, interface, implementation, and binder registries;</li>
+<li>validates each module's imported implementation closure and retained
+evidence without imposing coherence on unrelated graph branches;</li>
+<li>constructs <code>main ()</code>;</li>
+<li>independently validates the complete linked Core program;</li>
+<li>optionally eliminates dead code; and</li>
+<li>independently validates the transformed Core program.</li>
+</ol>
+<p>External authorization, visible coherence, evidence validation, and ordinary
+Core validation precede dead-code elimination. An invalid unreachable fragment
+cannot become valid because optimization removes it.</p>
+<p>Artifact work proceeds through three internal stages:</p>
+<ol>
+<li>a compiler-private cache whose format may change at any time;</li>
+<li>a separate linker that consumes compiler-private artifacts; and</li>
+<li>a distributable format frozen for a named Ash milestone and documented
+format revision.</li>
+</ol>
+<p>The stable format promises compatibility only within its stated milestone.
+Later Ash versions may require recompilation. The artifacts are Ash typed-Core
+objects, not necessarily native operating-system object files.</p>
+<p>The complete initial <code>ArtifactKey</code> contains the <code>ModuleId</code>, source revision,
+exact module-map and owning-root fingerprint, exact dependency-summary
+fingerprints, Ash milestone, semantic compiler options, and target
+configuration. Two identical source files in different modules cannot share an
+identity-bearing artifact. Finer front-end and backend caches may follow only
+after this model has correctness evidence.</p>
+<h2 id="pack-ash-failure-ownership"><code>pack-ash</code> failure ownership</h2>
+<p>The package tool reports version, acquisition, checksum, dependency-cycle,
+milestone, and manifest-versus-lock failures. The compiler reports source and
+module-checking failures. The linker reports unauthorized or unresolved
+external identities, two incompatible artifact keys for one exact-graph module,
+summary or module-map mismatch, missing hidden closure, forged evidence, and
+artifact or target incompatibility.</p>
+<p>A missing or stale private cache entry triggers recompilation and is not a
+source error. A corrupt private entry is discarded or quarantined before
+recompilation. A corrupt or incompatible distributable artifact without source
+is a normal user-facing error and names the expected and observed identity,
+milestone, format, and checksum facts.</p>
+<p>Serialized artifacts are untrusted input. One driver-owned graph budget spans
+artifact bytes and tables, module maps and owning-root sets, external-reference
+authentication, combined registries, evidence validation, both Core
+validations, and optimization. Decoding charges declared sizes before
+allocation, rejects invalid indices and duplicate table entries, and uses
+explicit graph worklists. Cache publication is atomic so readers cannot observe
+partial output. The package tool owns acquisition and lock-graph resource
+failures; the compiler or linker owns exhaustion after handing off the exact
+graph.</p>
+<h2 id="pack-ash-evidence-and-closure"><code>pack-ash</code> evidence and closure</h2>
+<p>The primary equivalence compares one-shot source compilation with separate
+artifact production and linking before optional dead-code elimination. Their
+Core graphs must be isomorphic while preserving package, module, declaration,
+type, evidence, and provenance identities; only fragment-local and generated
+binders may be alpha-renamed. With the same optimization configuration, their
+post-optimization Core and evaluation must also agree. Diagnostic equivalence
+means equal structured reason, causal identity, spans, and related provenance;
+stable rendering is compared exactly.</p>
+<p>Evidence must cover deterministic lock resolution, simultaneous package
+versions, alternate routes, workspace relocation, forbidden traversal,
+cold-versus-warm builds, precise summary invalidation, diamond linking,
+separately compiled method evidence, validation before dead-code
+elimination, corruption recovery, source-free incompatibility, tampering,
+deterministic output, and the cumulative resource boundary across decoding,
+linking, validation, and optimization.</p>
+<p>The private cache closes when cold and warm routes agree and invalidation and
+recovery work. Separate linking closes when it agrees with one-shot compilation
+on positive and negative cases. The distributable format closes when a clean
+environment can build from locked source-free dependencies and an independent
+reader, such as the separate linker process, enforces compatibility. Each stage
+must also pass every applicable item in the preceding evidence inventory;
+workspace relocation cannot pass until the package design selects a portable
+workspace identity.</p>
+<p>The leading recommendation requires that final distributable stage before the
+<code>pack-ash</code> tag. Otherwise the milestone would not complete the source-free
+package workflow that justifies separate objects.</p>
+<h2 id="alternatives-considered">Alternatives considered</h2>
+<h3 id="extend-modular-ash-with-all-features">Extend <code>modular-ash</code> with all features</h3>
+<p>This avoids new milestone names but leaves no stable boundary after the
+completed module and interface work. It also combines language inference,
+summary evolution, package identity, persistence, and linking in one failure
+surface.</p>
+<h3 id="close-modular-ash-then-combine-library-and-package-work">Close <code>modular-ash</code>, then combine library and package work</h3>
+<p>This preserves the current milestone but freezes artifacts while the same
+increment changes kinds, method and relational evidence, and re-export
+summaries. Cache and linker failures could conceal language-model failures.</p>
+<h3 id="use-three-stages">Use three stages</h3>
+<p>Closing <code>modular-ash</code>, stabilizing language and library semantics in <code>lib-ash</code>,
+and then building <code>pack-ash</code> around those summaries gives each milestone a
+testable boundary. This is the leading direction.</p>
+<h2 id="intentional-exclusions">Intentional exclusions</h2>
+<p>The design does not currently include:</p>
+<ul>
+<li>module signatures;</li>
+<li>source-level higher-rank values or kind polymorphism; the prepared kinds
+increment also excludes kind inference as a phase-dependent constraint, not
+a permanent language principle;</li>
+<li>fallback implementations or specialization;</li>
+<li>associated-output declarations or projections, general determination graphs,
+or method and associated-output defaults;</li>
+<li>effect handlers or providers, proof authority, a common universal evidence
+family, or existential pack and unpack forms;</li>
+<li>implementation-head import patterns or individual implementation names;</li>
+<li>parent-directory module traversal;</li>
+<li>dynamic module loading or runtime interface lookup;</li>
+<li>a permanent cross-version artifact ABI; or</li>
+<li>a required native object-file ABI.</li>
+</ul>
+<p>Module signatures require separate design because Ash interfaces describe
+type-class-like constraints rather than module APIs.</p>
+<h2 id="required-authority-transitions">Required authority transitions</h2>
+<p>This note can guide comparison and proposal work but cannot authorize product
+implementation. All four completed bounded increments followed the change-
+proposal and task workflow; the current specification and the retained
+<a href="/ash/docs/design/lib-ash/imports-evidence/">import</a>, <a href="/ash/docs/design/lib-ash/kinds-evidence/">kind</a>, and
+<a href="/ash/docs/design/lib-ash/method-parameters-evidence/">method-parameter</a>, and
+<a href="/ash/docs/design/lib-ash/relational-interfaces-evidence/">relational-interface</a> evidence
+reports record their results. Further language changes for <code>lib-ash</code>
+require one or more change proposals and tasks. Package, cache, and linker
+architecture that does not alter language semantics requires accepted
+architectural decisions and tasks. Any source-visible package or import
+semantic change also requires a change proposal. Current specification text
+changes only with retained implementation evidence.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which implementation-head import patterns are justified after the initial
+all-for-interface form has evidence?</li>
+<li>How does a portable lock graph encode unpublished workspace identity?</li>
+<li>Which manifest syntax and source namespaces are sufficient for the first
+resolver?</li>
+<li>Which artifact encoding and linker process boundary should become public at
+the end of <code>pack-ash</code>?</li>
+<li>When does a native backend justify a separate target object format?</li>
+<li>What independent design, if any, should introduce module signatures?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#current-boundary">Current boundary</a><a href="#leading-milestone-sequence">Leading milestone sequence</a><a href="#prepared-lib-ash-sequence">Prepared lib-ash sequence</a><a href="#lib-ash-type-and-interface-model">lib-ash type and interface model</a><a href="#name-and-implementation-re-exports">Name and implementation re-exports</a><a href="#lib-ash-error-ownership">lib-ash error ownership</a><a href="#lib-ash-evidence-and-closure">lib-ash evidence and closure</a><a href="#pack-ash-exact-graph-and-identity">pack-ash exact graph and identity</a><a href="#compiled-artifacts-and-linking">Compiled artifacts and linking</a><a href="#pack-ash-failure-ownership">pack-ash failure ownership</a><a href="#pack-ash-evidence-and-closure">pack-ash evidence and closure</a><a href="#alternatives-considered">Alternatives considered</a><a href="#intentional-exclusions">Intentional exclusions</a><a href="#required-authority-transitions">Required authority transitions</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/">← DN-0024: Executable Learning and Evidence Stream</a><a rel="next" href="/ash/docs/design/dn-0026-effect-ash-resource-first-milestones/">DN-0026: Effect Ash Resource-First Milestones →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

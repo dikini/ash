@@ -1,0 +1,359 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0039: Files and Filesystem Resources · Ash</title><meta name="description" content="Can an Ash library expose ordinary file and filesystem operations through checked resources, effects and handlers, while keeping host ABI and memory support generic? What contracts let copying APIs work first and…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0039: Files and Filesystem Resources · Ash"><meta property="og:description" content="Can an Ash library expose ordinary file and filesystem operations through checked resources, effects and handlers, while keeping host ABI and memory support generic? What contracts let copying APIs work first and…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0039: Files and Filesystem Resources · Ash"><meta name="twitter:description" content="Can an Ash library expose ordinary file and filesystem operations through checked resources, effects and handlers, while keeping host ABI and memory support generic? What contracts let copying APIs work first and…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0039-files-and-filesystem-resources/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0039-files-and-filesystem-resources/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0039-files-and-filesystem-resources.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0039: Files and Filesystem Resources","headline":"DN-0039: Files and Filesystem Resources","description":"Can an Ash library expose ordinary file and filesystem operations through checked resources, effects and handlers, while keeping host ABI and memory support generic? What contracts let copying APIs work first and…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0039-files-and-filesystem-resources/","@id":"https://dikini.github.io/ash/docs/design/dn-0039-files-and-filesystem-resources/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0039-files-and-filesystem-resources.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0039-files-and-filesystem-resources" data-pagefind-meta="title">DN-0039: Files and Filesystem Resources</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0039-files-and-filesystem-resources.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0039</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>,
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/">DN-0041</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
+</ul>
+<blockquote>
+<p>This note explores a file and filesystem library as a separate resource
+workstream. It defines no current Ash semantics, selects no implementation
+architecture, and authorizes no implementation. It adds no completion
+requirements to the ongoing SQLite, arena or common-resource experiments.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can an Ash library expose ordinary file and filesystem operations through
+checked resources, effects and handlers, while keeping host ABI and memory
+support generic? What contracts let copying APIs work first and later support
+arena-backed buffers without weakening lifetime or completion guarantees?</p>
+<p>The intended outcome is a reusable standard-library candidate, an additional
+foreign-library authoring example, and executable input/output for the typed
+data pipelines in <a href="/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/">DN-0041</a>.
+An unsuccessful experiment need not merge; a successful bounded experiment
+should preserve a path into Ash rather than require a replacement implementation.</p>
+<h2 id="context">Context</h2>
+<p>The <a href="/ash/spec/">current specification</a> defines passive modules,
+constrained interfaces, exact effects, lexical handlers, and the closed cell
+and native-buffer resources. Handles provide reusable access; the scope owns
+completion. Dependency checking prevents access escaping through values,
+closures and requests. Capture/resume moves owned control, and checked discard
+closes abandoned obligations in structural order.</p>
+<p>The <a href="/ash/spec/dynamic-semantics/#scoped-native-buffer-execution">native-buffer contract</a>
+does not define filesystem policy or fallible file close. Current lexical
+lifetime checking does not establish foreign layout, pointer stability,
+exclusive mutation, or the validity of a view after its backing storage changes.</p>
+<p><a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a> supplies
+experimental resource-definition, acquisition, interpretation and completion
+contracts. Its <a href="/ash/docs/design/provider-experiments/execution/">execution record</a> records
+branch evidence, including packed <code>Bytes</code> and UTF-8 <code>String</code>; those deliveries
+are not normative main semantics. Its Rust-authored manifests and adapters are
+an experimental bridge, not the intended long-term library-authoring requirement.</p>
+<p><a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a> asks how authors
+can describe a foreign interface in Ash from the host headers and binary.
+Files exercise that direction with lengths, native errors, acquisition,
+irreversible writes and fallible completion. They do not require an Ash ABI.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Always follow the types. A resource type definition must relate provider
+state, owner identity, access, effect operations, initialization and
+completion before an instance spelling is proposed.</li>
+<li>Extend the existing Ash pipeline and root workspace. Use project-local
+worktrees under <code>.worktree/</code>; do not introduce another Ash implementation.</li>
+<li>Keep library-specific symbols, flags, errors and policy in the binding.
+Generic compiler support must also serve SQLite and other providers.</li>
+<li>Start with synchronous copying operations on regular files and a declared
+host profile. Native addresses remain private to the foreign boundary.</li>
+<li>Keep unrestricted handle use distinct from uniqueness, exclusive access,
+payload copying and the scope's single completion obligation.</li>
+<li>Keep arena owners lexical and nontransportable. Data must not escape by
+carrying its arena owner, extending ownership through reference counting, or
+hiding a dependent value in an otherwise independent result.</li>
+<li>Exclude concurrency, asynchronous I/O, process transfer, callbacks, memory
+mapping and a new collector from the first experiment.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="distinguish-file-access-from-filesystem-authority">Distinguish file access from filesystem authority</h3>
+<p>An open file needs an owner and completion. Metadata lookup, removal and rename
+do not necessarily create an open file. They still require an explicit
+filesystem effect and its interpreter. A directory traversal may eventually
+introduce a separate scoped resource.</p>
+<p>Compare two filesystem interfaces: an explicitly interpreted filesystem
+service, and an identity-indexed directory/root resource that supplies relative
+path operations. The second can express a parent dependency, but lexical
+identity alone does not prove OS-level path confinement, symlink behavior or
+race freedom. State any such foreign assumptions separately.</p>
+<p>The first delivery should select one authority model and one supported host
+profile. Do not introduce implicit program-global providers or silently use
+process current-directory state. Program-lifetime standard streams and global
+resources need a separate contract.</p>
+<h3 id="typed-roles-before-syntax">Typed roles before syntax</h3>
+<p>The following names are schematic roles, not declarations or new Ash syntax.
+<code>R</code> names a fresh file-owner identity; <code>D</code>, when used, names an existing
+filesystem/directory owner. A host profile determines native representation.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Role</th>
+<th>Relationship to establish</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Path</td>
+<td>An ordinary host-profile-specific value; conversion from <code>String</code> is explicit and fallible where necessary.</td>
+</tr>
+<tr>
+<td>Open configuration</td>
+<td>Path, permissions and creation/truncation policy, with a declared filesystem effect and any parent dependency.</td>
+</tr>
+<tr>
+<td>Provider state</td>
+<td>Private ownership of the native handle; clients cannot manufacture it from an integer or pointer.</td>
+</tr>
+<tr>
+<td>File access</td>
+<td>A non-owning value indexed by <code>R</code>, with operation permissions and any dependency on <code>D</code>.</td>
+</tr>
+<tr>
+<td>Effect interface</td>
+<td>Exact operations for that access; state-changing cursor operations remain effects even when the returned data is copied.</td>
+</tr>
+<tr>
+<td>Initialization</td>
+<td>Existing configuration enters acquisition; failure creates no file owner or body execution.</td>
+</tr>
+<tr>
+<td>Completion</td>
+<td>One owner obligation, a close outcome and an explicit consumed/retained disposition.</td>
+</tr>
+<tr>
+<td>Public module contract</td>
+<td>Types, effects, permission relationships and completion facts sufficient for independent client checking.</td>
+</tr>
+</tbody>
+</table>
+<p>Investigate distinct readable and writable access types, or checked mode
+parameters on one family. Do not assume the experimental owner-parameter
+mechanism already admits arbitrary mode indices. Acquiring read-only access
+must not produce write authority, and access permissions must not imply
+exclusive aliases. Repeated reads through aliases share the file position
+unless the interface explicitly provides positioned reads.</p>
+<p>There are two surface roles: defining a resource family and acquiring an
+instance within a lexical body. Reuse the existing effect, handler and resource
+conventions where their actual types suffice. The initializer is an ordinary
+expression checked in the preceding environment. It is not an unexplained
+configuration name introduced by the resource syntax.</p>
+<p>Host paths need their own encoding contract. A UTF-8 convenience constructor
+may be useful, but a host-native path must not silently lose non-UTF-8 data.
+Paths are ordinary data; they are not proof that access will succeed.</p>
+<p>Authors must specify the foreign signatures/representations, path policy,
+operation permissions, native error/progress interpretation and completion
+disposition. Checking can infer ordinary expression types, selected interface
+evidence, effect rows and owner dependencies from those contracts. It cannot
+infer the truth of a foreign ABI or OS guarantee from an Ash function body.
+Bounds known only at runtime require checked conversion before the host call.</p>
+<h3 id="first-copying-operations">First copying operations</h3>
+<p>Define operation contracts using ordinary result types, not exceptions or
+automatic retry hidden in the evaluator. The initial interface should express:</p>
+<ul>
+<li>Open for reading and open/create for writing, with explicit destructive flags.</li>
+<li>Read at most a positive bound, returning copied <code>Bytes</code> or a distinct EOF.</li>
+<li>Write some copied input, returning committed progress or an error.</li>
+<li>Compose <code>read_all</code> and <code>write_all</code> as library operations with explicit limits
+and a no-progress rule.</li>
+<li>Close through scoped completion. Add positioning and metadata as subsequent
+executable deliveries when their types and target ranges are specified.</li>
+</ul>
+<p>A read result needs a distinction between EOF and bytes produced. Invalid or
+zero request bounds have an explicit policy; an empty buffer must not become
+an ambiguous EOF signal. A write result accounts for committed bytes. A helper
+that performs several calls must preserve accumulated progress if a later call
+fails. Previously written bytes are not rolled back by a failed Ash result.</p>
+<p>Short reads and partial writes are ordinary host behavior. A copying buffer
+does not remove that protocol. <a href="https://man7.org/linux/man-pages/man2/read.2.html">Linux read</a>
+and <a href="https://man7.org/linux/man-pages/man2/write.2.html">Linux write</a> document
+these observations for the proposed first host profile.</p>
+<p>Text decoding is a separate operation on copied <code>Bytes</code>, with an explicit
+encoding/error policy. File I/O must not replace invalid input or assume every
+file is text. Copied bytes and successfully decoded owned strings may outlive
+the file owner.</p>
+<h3 id="completion-and-host-profiles">Completion and host profiles</h3>
+<p>Close status and ownership disposition are separate facts. On Linux a failing
+close can still release the descriptor; retrying can affect a reused descriptor.
+A successful close also does not establish durable storage.
+<a href="https://man7.org/linux/man-pages/man2/close.2.html">Linux close</a></p>
+<p>Record the exact supported ABI and close behavior, including interruption.
+Do not transfer a Linux assumption to FreeBSD or another profile without
+evidence. Where completion reports a retained owner, specify who contains that
+obligation after the source scope ends and what further action is permitted.
+A report must not disguise a retained native owner as successfully released.</p>
+<p>Distinguish successful body return, a body returning an error value, abandoned
+control, and internal runtime failure. Preserve body and close outcomes when
+both exist; do not flatten them into an unexplained single failure. Native
+host teardown is separate from source completion and cannot claim that a
+source close operation ran successfully.</p>
+<p>Flush, storage synchronization and close need separate meanings. If the first
+adapter uses unbuffered descriptor I/O, say so. A buffered stream adapter would
+need an additional buffer ownership and flush contract.</p>
+<h3 id="arena-integration">Arena integration</h3>
+<p>Copying I/O can ship without typed arena allocation or borrowing. Later compare
+reading into private scratch storage and copying out, initializing a fresh
+arena allocation before publication, and a separately checked mutable buffer
+borrow. The last two are new contracts, not permissions supplied by an immutable
+arena reference.</p>
+<p>For a destination arena, the result depends on the destination storage lifetime,
+not automatically on the file lifetime. Reading into an allocation must account
+for capacity, alignment where relevant, initialized length and partial failure.
+Publish no readable reference to uninitialized bytes. Either preserve initialized
+progress or roll back an unpublished allocation under a stated contract.</p>
+<p>Borrowed views additionally need an access interval that excludes refill,
+mutation or reclamation. A live file and a live arena do not establish that
+interval. Memory mapping remains a later distinct resource study.</p>
+<h2 id="semantics-core-and-verification-obligations">Semantics, Core and verification obligations</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Required design account</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resolution and typing</td>
+<td>Authenticate resource, provider, operation and host-contract identities; check initializer effects before admitting the fresh owner.</td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td>Propagate file, parent and later buffer/view dependencies through aggregates, generic calls, methods, closures and requests.</td>
+</tr>
+<tr>
+<td>Elaboration</td>
+<td>Lower library policy through the generic resource mechanism; retain exact effect identity, permissions and completion relationships.</td>
+</tr>
+<tr>
+<td>Core validation</td>
+<td>Independently reject manufactured access, wrong operation signatures, foreign binding mismatches, copied owner authority and invalid close contracts.</td>
+</tr>
+<tr>
+<td>Execution</td>
+<td>Admit bounds and result storage before relevant publication; interpret the exact activation; preserve host progress and cleanup order.</td>
+</tr>
+<tr>
+<td>Captured control</td>
+<td>Resume preserves the same owner; discard completes owned inner resources without skipping outside or running obligations.</td>
+</tr>
+<tr>
+<td>Host failure</td>
+<td>Report native error, progress and disposition without converting an internal adapter mismatch into an ordinary I/O error.</td>
+</tr>
+</tbody>
+</table>
+<p>Any new operational rules must describe open success/failure, copied read/write,
+normal close, abandonment and teardown. Reuse existing transitions where they
+already express the behavior. A filesystem library alone does not justify a
+new format-specific or file-specific recursive Core form.</p>
+<p>Proof obligations include dependency preservation, activation freshness,
+no duplicated completion, no post-completion access, and initialized storage
+before exposure. Foreign ABI, OS behavior and adapter correctness remain
+explicit assumptions unless separately verified. Existing continuation proofs
+cover only their stated fragment; successful file programs do not extend them.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>Develop connected batches with public e2e and integration cases. Use focused
+native tests or regressions when a contract or demonstrated failure needs them;
+do not require a unit test or full workspace build after every helper change.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Delivery</th>
+<th>Executable evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F-0: contract and shared baseline</td>
+<td>A typed operation/lifecycle contract, declared host profile, agreed common interfaces and ownership of shared compiler files.</td>
+</tr>
+<tr>
+<td>F-1: copying read</td>
+<td>An imported Ash module opens a real fixture, reads binary and UTF-8 data, observes EOF, closes and returns independent copied data.</td>
+</tr>
+<tr>
+<td>F-2: copying write</td>
+<td>Ash writes, closes, reopens and checks exact bytes; bounded helpers report progress and no-progress failures.</td>
+</tr>
+<tr>
+<td>F-3: composition</td>
+<td>Imported helpers, nested files, acquisition refusal, close failure, capture/resume and owned discard preserve outcomes and cleanup order.</td>
+</tr>
+<tr>
+<td>F-4: filesystem operations</td>
+<td>Defined path and authority contracts support metadata/positioning and selected rename/remove operations on isolated fixtures.</td>
+</tr>
+<tr>
+<td>F-5: data pipelines</td>
+<td>Real configuration and row-processing programs compose with DN-0041 without a file-dependent decoded result.</td>
+</tr>
+<tr>
+<td>F-6: arena access</td>
+<td>A separately specified initialization or borrowing regime produces safe scoped buffers and rejects refill/use-after-scope cases.</td>
+</tr>
+</tbody>
+</table>
+<p>Negative evidence includes write through read-only access, handle escape through
+a closure, stale activation reuse, invalid native length conversion, unexpected
+host disposition and attempted publication of uninitialized storage. Exercise
+partial I/O and close errors through controlled adapter fault injection as well
+as actual host calls. Injection establishes wrapper behavior, not OS conformance.</p>
+<p>Record copied bytes, native calls, allocations, peak buffers and metadata,
+including completion and captured-control state. A <code>read_all</code> program may use
+document-sized storage; a bounded streaming program should report its actual
+buffer and processing-state bounds. External file contents are not included as
+live Ash memory, but all adapter-owned buffers are.</p>
+<h2 id="dependencies-and-authoring-tools">Dependencies and authoring tools</h2>
+<p>F-1 needs the copying byte representation and verified common resource seam,
+not arena borrowing or the whole SQLite library. F-3 needs the common control
+and completion contract. F-6 needs an agreed arena/buffer access extension.
+File and serialization module work can progress independently of unrelated
+shared compiler repairs; shared files have one agreed writer at a time.</p>
+<p>A bounded first bridge may use the existing experimental manifest and native
+adapter. Document that dependency. The eventual Ash-authored binding follows
+DN-0037: headers and a host binary, Ash declarations and policy, declarative
+link inputs, and generic compiler/runtime infrastructure.</p>
+<p>Useful tooling includes signature and target diagnostics, native link errors
+at the originating declaration, checked public summaries, operation/lifecycle
+traces, an isolated temporary-filesystem fixture runner, fault injection and
+allocation/copy counters. These should expose contracts and observations
+without requiring users to inspect compiler internals or native addresses.</p>
+<h2 id="retention-and-adoption">Retention and adoption</h2>
+<p>A later bounded prototype should test whether a library-defined file provider
+can preserve scoped authority and honest progress/completion reports through
+real Ash programs. Compare direct library operations with compositions through
+generic helpers and data pipelines. Retain successful source modules and
+evidence; revise a contract exposed as insufficient before extending execution.
+Do not merge an unsuccessful implementation merely because it is bounded.</p>
+<p>Language deltas require a change proposal, implementation task, specification
+updates, validation, relevant proof work and integration evidence. Accepted
+non-language choices follow the architectural-decision workflow. Library
+adoption additionally requires a supported target contract, authoring blueprint,
+examples and tooling. This note changes no current specification or active task.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which filesystem authority model and host profile should the first delivery use?</li>
+<li>Which operation permissions should be separate access types, and which need
+mode parameters or runtime checks?</li>
+<li>What close dispositions and report structure fit each admitted target?</li>
+<li>How should relative paths, directory lifetime and symlink policy interact?</li>
+<li>Which initialization/buffer contract enables arena I/O with the least copying?</li>
+<li>Which measured costs belong to library policy, generic runtime support or
+foreign ABI conversion?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#semantics-core-and-verification-obligations">Semantics, Core and verification obligations</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#dependencies-and-authoring-tools">Dependencies and authoring tools</a><a href="#retention-and-adoption">Retention and adoption</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">← DN-0038: Resource Properties and Mutable Variable Usage</a><a rel="next" href="/ash/docs/design/dn-0040-floating-point-semantics-and-representation/">DN-0040: Floating-Point Semantics and Representation →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

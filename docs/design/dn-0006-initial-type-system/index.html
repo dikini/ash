@@ -1,0 +1,235 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0006: Initial Type System · Ash</title><meta name="description" content="What is the smallest coherent account of kinds, type structure, functions, rank-1 polymorphism, local typing, recursion, and unification that can test Ash's surface and Core architecture without treating downstream…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0006: Initial Type System · Ash"><meta property="og:description" content="What is the smallest coherent account of kinds, type structure, functions, rank-1 polymorphism, local typing, recursion, and unification that can test Ash's surface and Core architecture without treating downstream…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0006: Initial Type System · Ash"><meta name="twitter:description" content="What is the smallest coherent account of kinds, type structure, functions, rank-1 polymorphism, local typing, recursion, and unification that can test Ash's surface and Core architecture without treating downstream…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0006-initial-type-system/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0006-initial-type-system/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0006-initial-type-system.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0006: Initial Type System","headline":"DN-0006: Initial Type System","description":"What is the smallest coherent account of kinds, type structure, functions, rank-1 polymorphism, local typing, recursion, and unification that can test Ash's surface and Core architecture without treating downstream…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0006-initial-type-system/","@id":"https://dikini.github.io/ash/docs/design/dn-0006-initial-type-system/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0006-initial-type-system.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0006-initial-type-system" data-pagefind-meta="title">DN-0006: Initial Type System</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0006-initial-type-system.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0006</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001: Ash Reboot Foundations</a>, <a href="/ash/docs/design/dn-0002-core-representation/">DN-0002: Core Representation</a>, <a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005: Surface Function Definitions</a>, <a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007: Data and Pattern Typing</a>, <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008: Typed Core and Elaboration</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative and non-normative. It compares candidates for a first coherent type system; it does not define current Ash or commit later Ash to a trajectory. All syntax and internal forms are illustrative.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>What is the smallest coherent account of kinds, type structure, functions, rank-1 polymorphism, local typing, recursion, and unification that can test Ash's surface and Core architecture without treating downstream capabilities as present requirements?</p>
+<h2 id="context-and-scope">Context and scope</h2>
+<p><a href="/ash/docs/design/dn-0001-reboot-foundations/">DN-0001</a> identifies a small pure functional nucleus as a likely starting point, but a design note does not make that nucleus current Ash. This note explores one type-system candidate for primitive types, immutable bindings, functions, calls, recursion, and parametric polymorphism. Data and pattern typing are separated into <a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007</a>; explicit typed Core is separated into <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008</a>.</p>
+<p>The main candidate combines:</p>
+<ul>
+<li>kinded type expressions;</li>
+<li>rank-1 parametric polymorphism;</li>
+<li>explicit global interfaces;</li>
+<li>bidirectional local elaboration;</li>
+<li>conservative local generalization;</li>
+<li>monomorphic checking of recursive uses;</li>
+<li>kind-preserving first-order structural unification.</li>
+</ul>
+<p>Calling this candidate “initial” describes the question being explored, not an accepted phase or release. Effects, interfaces, rows, associated types, opacity, existentials, generative identity, refinements, propositions, and higher-rank or higher-kinded polymorphism are architectural pressure only. This note neither requires them nor promises their order.</p>
+<h2 id="suggested-design-rules">Suggested design rules</h2>
+<h3 id="represent-kinds-from-the-first-coherent-cut">Represent kinds from the first coherent cut</h3>
+<blockquote>
+<p>Suggested rule: Type constructors and type expressions carry kinds, with kind-directed unary application and at least one atomic kind such as <code>Type</code>.</p>
+</blockquote>
+<p>A candidate kind algebra is:</p>
+<pre tabindex="0"><code class="language-text">Kind :=
+    Atom(KindId)
+    Arrow(Kind, Kind)
+</code></pre>
+<p>Illustrative judgments include:</p>
+<pre tabindex="0"><code class="language-text">Int       : Type
+List      : Type -&gt; Type
+Result    : Type -&gt; Type -&gt; Type
+Result&lt;Int&gt; : Type -&gt; Type
+</code></pre>
+<p>Application follows the ordinary rule:</p>
+<pre tabindex="0"><code class="language-text">F : K1 -&gt; K2
+X : K1
+----------------
+F&lt;X&gt; : K2
+</code></pre>
+<p>Semantically unary application lets <code>Result&lt;A, E&gt;</code> be surface sugar for <code>Apply(Apply(Result, A), E)</code>. Constructor arity need not become a separate validity rule when kinding already decides whether another argument is permitted.</p>
+<p>The representation may allow future atomic kinds without inventing row or effect kinds now. Whether partially applied constructors need surface expression syntax in the first language remains open.</p>
+<h3 id="keep-the-initial-type-algebra-small-and-explicit">Keep the initial type algebra small and explicit</h3>
+<blockquote>
+<p>Suggested rule: Give inference variables, rigid variables, nominal constructors, application, products, functions, and universal quantification distinct semantic representations.</p>
+</blockquote>
+<p>One candidate algebra is:</p>
+<pre tabindex="0"><code class="language-text">Type :=
+    InferVar(id, kind)
+    RigidVar(id, kind)
+    Constructor(id, kind)
+    Apply(Type, Type)
+    Tuple([Type])
+    Record([(LabelId, Type)])
+    Function(Type, Type)
+    Forall(Binder, Type)
+
+Binder := { variable, kind }
+</code></pre>
+<p>Tuples and records are included here only to show the boundary of the algebra; their equality, operations, and patterns are explored in <a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007</a>.</p>
+<p>An inference variable can be solved, a rigid variable cannot, and a nominal constructor is identified by its declaration. Keeping those entities distinct avoids reconstructing scope and identity from names later.</p>
+<h3 id="separate-equality-normalization-and-unifiability">Separate equality, normalization, and unifiability</h3>
+<blockquote>
+<p>Suggested rule: Type equality, type normalization or definitional equality, and unifiability are separate semantic questions even when an initial implementation often gives them the same answer.</p>
+</blockquote>
+<p>Nominal constructors would compare by declaration identity, not spelling or representation. Thus two structurally identical nominal declarations remain different unless some separate construct is explicitly defined as a transparent alias.</p>
+<p>The separation is pressure from possible aliases, opacity, associated projections, and type computation. None of those mechanisms needs to exist in the first coherent language. The immediate test is whether equality policy has one authoritative path instead of leaking into incidental host-language comparison code.</p>
+<h3 id="use-one-semantic-function-type">Use one semantic function type</h3>
+<blockquote>
+<p>Suggested rule: A function type is a domain and codomain, and surface parameter grouping follows that structure.</p>
+</blockquote>
+<pre tabindex="0"><code class="language-text">Function(domain, codomain)
+</code></pre>
+<p>This keeps <code>(A, B) -&gt; C</code> distinct from <code>A -&gt; B -&gt; C</code>, where the latter means <code>A -&gt; (B -&gt; C)</code>. An operational parameter list such as <code>fn(x, y) { ... }</code> can denote a product domain, while nested function expressions denote nested arrows. Equational presentation can follow the declared type rather than impose a separate arity doctrine. <a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005</a> explores the surface consequences.</p>
+<p>The representation should not settle where possible future computation or effect information belongs. Pure functions are enough to test this candidate; purity need not be baked into <code>Function</code> as a permanent promise.</p>
+<h3 id="quantify-global-interfaces-at-the-outer-boundary">Quantify global interfaces at the outer boundary</h3>
+<blockquote>
+<p>Suggested rule: A global interface is explicit, and its free type variables may be interpreted as outermost universal binders with explicit kinds internally.</p>
+</blockquote>
+<p>For example:</p>
+<pre tabindex="0"><code class="language-ash">id : A -&gt; A
+</code></pre>
+<p>could mean:</p>
+<pre tabindex="0"><code class="language-text">forall A : Type. A -&gt; A
+</code></pre>
+<p>Likewise:</p>
+<pre tabindex="0"><code class="language-ash">map : (A -&gt; B, List&lt;A&gt;) -&gt; List&lt;B&gt;
+</code></pre>
+<p>could quantify <code>A</code> and <code>B</code> at the global boundary. This does not place a <code>forall</code> beneath an arrow: <code>(A -&gt; A) -&gt; Int</code> would not silently become <code>(forall A. A -&gt; A) -&gt; Int</code>.</p>
+<p>During definition checking, quantified variables become rigid. At a use site, outer polymorphism is instantiated with fresh inference variables. Explicit kinds on internal binders preserve the distinction between a representational capability and a candidate rule that initially permits quantification only over <code>Type</code>.</p>
+<h3 id="propagate-expected-types-bidirectionally">Propagate expected types bidirectionally</h3>
+<blockquote>
+<p>Suggested rule: Local elaboration has separate infer and check judgments, and expected types flow inward whenever available.</p>
+</blockquote>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">infer_expr(expr) -&gt; TypedExpr, Type
+check_expr(expr, expected_type) -&gt; TypedExpr
+</code></pre>
+<p>For:</p>
+<pre tabindex="0"><code class="language-ash">let render : Item -&gt; Text = fn(item) {
+    item_to_text(item)
+}
+</code></pre>
+<p>the lambda can be checked against <code>Item -&gt; Text</code>, making the parameter type available before checking the body.</p>
+<p>Application can infer and instantiate the callee, expose a function type, check the argument against its domain, and return the codomain. This candidate aims to infer locally determined facts rather than reconstruct unstated abstraction intent.</p>
+<h3 id="generalize-local-bindings-conservatively">Generalize local bindings conservatively</h3>
+<blockquote>
+<p>Suggested rule: The initial candidate generalizes an unannotated local binding at rank 1 only when its right-hand side is an anonymous function. Application-shaped right-hand sides remain monomorphic absent an annotation, and one centralized eligibility rule can later consume additional typing facts.</p>
+</blockquote>
+<p>An anonymous-function right-hand side could generalize:</p>
+<pre tabindex="0"><code class="language-ash">let id = fn(x) { x }
+
+(id(1), id("hello"))
+</code></pre>
+<p>An application-shaped binding such as <code>let x = make_something()</code> remains monomorphic under this candidate unless an annotation requires polymorphism. That restriction does not follow from the candidate pure nucleus alone. Effects, generative identities, resources, or existential escape are possible pressures on a future eligibility rule, not features to implement now.</p>
+<p>The policy should be centralized conceptually:</p>
+<pre tabindex="0"><code class="language-text">generalization_eligibility(expression, typing_facts)
+</code></pre>
+<p>A later rule could consume more facts without making the initial representation pretend those facts already exist. Structured results such as <code>Generalize(vars)</code>, <code>KeepMonomorphic(reason)</code>, or <code>RequiresAnnotation(reason)</code> would support better diagnostics than a boolean.</p>
+<h3 id="check-recursive-uses-monomorphically">Check recursive uses monomorphically</h3>
+<blockquote>
+<p>Suggested rule: A recursive binding is checked against one provisional monomorphic type; inferred polymorphic recursion is outside the initial candidate.</p>
+</blockquote>
+<p>For a recursive function, checking may begin with a provisional shape such as <code>?A -&gt; ?B</code>. Every recursive use sees that same provisional type. The completed binding could then be considered for ordinary local generalization.</p>
+<p>Definitions requiring polymorphic recursion could require an annotation. General recursive values raise separate initialization and runtime questions; <a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005</a> explores restricting the first surface form to function values.</p>
+<h3 id="limit-unification-deliberately">Limit unification deliberately</h3>
+<blockquote>
+<p>Suggested rule: Inference uses kind-preserving first-order structural unification with an occurs check, while higher-order type synthesis remains outside the candidate.</p>
+</blockquote>
+<p>The unifier can cover inference variables, nominal constructors, application, tuples, records, and functions. Solving <code>?A := T</code> requires matching kinds and rejects cycles such as:</p>
+<pre tabindex="0"><code class="language-text">?A ~ ?A -&gt; Int
+</code></pre>
+<p>Recursive ADTs can remain nominal rather than implying equi-recursive inference.</p>
+<p>The representation might contain a higher-kinded inference variable such as <code>?F : Type -&gt; Type</code> without solving:</p>
+<pre tabindex="0"><code class="language-text">?F&lt;Int&gt; ~ Result&lt;Int, Error&gt;
+</code></pre>
+<p>by synthesizing a type-level lambda. Representability does not require higher-order unification.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="kinded-rank-1-system-with-first-order-local-inference">Kinded rank-1 system with first-order local inference</h3>
+<p>This is the main candidate above. It tests kinding, explicit interfaces, local polymorphism, and typed elaboration while giving annotations a deliberate role.</p>
+<h3 id="monomorphic-first-language">Monomorphic first language</h3>
+<p>A monomorphic cut would reduce elaborator and Core complexity. It would also postpone testing whether rigid variables, instantiation, local generalization, and explicit Core polymorphism compose with functions and data. If those seams are central risks, postponement may produce less evidence than the smaller implementation cost warrants.</p>
+<h3 id="hm-style-inference-with-broad-generalization">HM-style inference with broad generalization</h3>
+<p>Inferring most rank-1 types and generalizing every eligible pure binding would be familiar and concise. It risks turning the candidate pure nucleus into a user-visible generalization promise and making future restrictions disruptive. It may also pull global inference into the language before stable module boundaries are understood.</p>
+<h3 id="annotation-led-bidirectional-system-without-local-generalization">Annotation-led bidirectional system without local generalization</h3>
+<p>This direction preserves expected-type propagation but keeps local polymorphism explicit. It is easier to specify and may produce clearer boundaries, at the cost of repetition in common local helpers. Experiments should measure whether annotations are occasional guidance or pervasive noise.</p>
+<h3 id="delay-kinds-until-higher-kinded-features">Delay kinds until higher-kinded features</h3>
+<p>An arity-based first implementation would be smaller on paper. It would classify partial application as malformed and could spread constructor-arity assumptions through representations and checking. A prototype should determine whether carrying kinds now is actually costly enough to justify that debt.</p>
+<h3 id="equality-by-normalized-structure">Equality by normalized structure</h3>
+<p>Structural or normalized equality may be appropriate for transparent type forms, but using it for nominal constructors would erase declaration identity. A mixed system needs explicit rules for which forms are transparent, nominal, or reducible rather than one universal host comparison.</p>
+<h2 id="interactions-and-architectural-pressure">Interactions and architectural pressure</h2>
+<ul>
+<li><a href="/ash/docs/design/dn-0005-surface-function-definitions/">DN-0005</a> depends on the distinction between explicit global interfaces, locally inferred terms, tuple domains, nested arrows, and expected-type propagation.</li>
+<li><a href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007</a> supplies product, ADT, pattern, and coverage cases that stress kinding, instantiation, equality, and unification.</li>
+<li><a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008</a> explores whether omitted surface quantification and instantiation should become explicit Core operations and whether every transform can revalidate types.</li>
+<li><a href="/ash/docs/design/dn-0002-core-representation/">DN-0002</a> applies pressure for a typed Core whose function and continuation representation can grow beyond the initial pure language. It does not require effects now.</li>
+<li>Possible interfaces distinguish a constraint requiring evidence from the evidence term itself. They pressure the design to separate unification, constraint resolution, normalization, and equality.</li>
+<li>Possible associated types pressure normalization and equality to remain separate from unification. No projection form is required in the initial algebra.</li>
+<li>Possible record and effect rows pressure kind representation and generalization seams, but do not establish one shared row algebra.</li>
+<li>Possible opacity, existentials, and generative identity pressure rigid variables, nominal identity, binder scope, and representation access to remain distinct. They are not initial requirements.</li>
+<li>Possible effects pressure generalization policy and function typing without deciding whether effect information belongs on arrows, computations, or another form.</li>
+</ul>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>A type-checker and elaborator prototype should be limited to the positive cases, negative cases, and comparison observations listed below, using provisional syntax. Retain its code only if a later task authorizes it; otherwise preserve measurements and counterexamples as design evidence.</p>
+<p>Positive cases should include:</p>
+<ul>
+<li>an explicitly typed polymorphic global such as <code>id : A -&gt; A</code>;</li>
+<li>a locally generalized function used at two unrelated types;</li>
+<li>a product-domain polymorphic function with an expected-typed callback;</li>
+<li>partial application of a multi-parameter type constructor with valid kinds;</li>
+<li>ordinary monomorphic recursive inference;</li>
+<li>paired equational and operational functions with the same inferred body facts.</li>
+</ul>
+<p>Negative cases should include:</p>
+<ul>
+<li>a rigid variable incorrectly unified with a concrete type while checking a global;</li>
+<li>a kind mismatch in type application;</li>
+<li>an occurs-check failure;</li>
+<li>a higher-order unification problem the candidate intentionally refuses;</li>
+<li>inferred polymorphic recursion;</li>
+<li>a local application whose generalization status is ambiguous;</li>
+<li>an omitted annotation at a boundary the candidate cannot infer predictably.</li>
+</ul>
+<p>Record for each candidate:</p>
+<ul>
+<li>the annotations required in representative small programs;</li>
+<li>where fresh inference variables are introduced and solved;</li>
+<li>whether kind and scope errors yield structured diagnostics;</li>
+<li>whether equality, normalization, unification, and constraint resolution have separate call paths;</li>
+<li>whether all inferred surface omissions become explicit, checkable Core structure;</li>
+<li>whether adding a mock future fact to the generalization decision changes one rule or many callers.</li>
+</ul>
+<p>The retained <a href="/ash/docs/design/mini-ash/rank-1-polymorphism/evidence/">rank-1 integration report</a>
+answers the Mini-Ash slice of these questions. It found that first-order
+unification, rigid global parameters, function-only local generalization, and
+explicit Core type operations compose with parameterized data without exposing
+inference variables beyond elaboration. Higher-rank, higher-kinded, module, and
+effect pressure remains open rather than becoming Mini-Ash behavior.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Is rank-1 polymorphism part of the smallest useful architectural test, or should a monomorphic cut come first?</li>
+<li>Should global free type variables be implicitly quantified, explicitly bound, or support both presentations?</li>
+<li>Does the first surface language expose partially applied type constructors, or only represent them internally?</li>
+<li>Which atomic kinds, if any beyond <code>Type</code>, are justified by present evidence?</li>
+<li>How are transparent aliases, if any, distinguished from nominal declarations?</li>
+<li>What is the initial equality rule for records, including field order?</li>
+<li>Which value forms beyond anonymous-function right-hand sides, if any, should become eligible for generalization?</li>
+<li>When should a local annotation be required instead of introducing more inference variables?</li>
+<li>How are mutually recursive bindings checked and generalized?</li>
+<li>Which annotations, if any, permit polymorphic recursion?</li>
+<li>Does function exposure instantiate only outer polymorphism, and how is failure reported?</li>
+<li>Where do type levels, substitutions, union-find state, and scoped rigid variables live without turning mechanisms into semantic policy?</li>
+<li>Which future pressure is sufficiently concrete to test now, and which should remain only a named seam?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context-and-scope">Context and scope</a><a href="#suggested-design-rules">Suggested design rules</a><a href="#candidate-directions">Candidate directions</a><a href="#interactions-and-architectural-pressure">Interactions and architectural pressure</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0005-surface-function-definitions/">← DN-0005: Surface Function Definitions</a><a rel="next" href="/ash/docs/design/dn-0007-data-and-pattern-typing/">DN-0007: Data and Pattern Typing →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

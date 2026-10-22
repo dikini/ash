@@ -1,0 +1,124 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>SQLite copying source examples · Ash</title><meta name="description" content="These modules are an experimental handoff under DN-0036. Their candidate types, literals, resources, and foreign operations do not define current Ash semantics or a production foreign ABI. Verification and current…"><meta name="robots" content="index, follow"><meta property="og:title" content="SQLite copying source examples · Ash"><meta property="og:description" content="These modules are an experimental handoff under DN-0036. Their candidate types, literals, resources, and foreign operations do not define current Ash semantics or a production foreign ABI. Verification and current…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="SQLite copying source examples · Ash"><meta name="twitter:description" content="These modules are an experimental handoff under DN-0036. Their candidate types, literals, resources, and foreign operations do not define current Ash semantics or a production foreign ABI. Verification and current…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/provider-experiments/examples/sqlite-copying/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/provider-experiments/examples/sqlite-copying/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/examples/sqlite-copying/README.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"SQLite copying source examples","headline":"SQLite copying source examples","description":"These modules are an experimental handoff under DN-0036. Their candidate types, literals, resources, and foreign operations do not define current Ash semantics or a production foreign ABI. Verification and current…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/provider-experiments/examples/sqlite-copying/","@id":"https://dikini.github.io/ash/docs/design/provider-experiments/examples/sqlite-copying/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/examples/sqlite-copying/README.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="sqlite-copying-source-examples" data-pagefind-meta="title">SQLite copying source examples</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/examples/sqlite-copying/README.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>These modules are an experimental handoff under
+<a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>.
+Their candidate types, literals, resources, and foreign operations do not define
+current Ash semantics or a production foreign ABI. Verification and current
+limitations belong to the <a href="/ash/docs/design/provider-experiments/execution/#current-sqlite-checkpoint">execution record</a>.</p>
+<p>The modules are copied from the
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/fixtures/provider-experiments/sqlite-copying/">public source fixtures</a>.
+<code>session-entry.ash</code> replaces the host-injected path with <code>"session.sqlite3"</code>.
+<code>text-entry.ash</code> is the directly verified Unicode TEXT bind/copy example.
+<code>copying-entry.ash</code> exercises copied Unicode text, arbitrary blobs, nulls, empty
+values, and text containing NUL. <code>rows.ash</code> supplies an ordinary generic row
+collector. <code>session-entry.ash</code> uses ordinary SQL for transactions, reuses an
+INSERT statement, and reads the file through a fresh connection. The entries
+preserve source lifecycle reports.</p>
+<p><code>control-resume.ash</code> captures the live statement and connection, resumes, and
+copies a Unicode TEXT/BLOB row without reacquisition. <code>control-discard.ash</code>
+discards that owned continuation: source cleanup queries the outer connection
+before statement finalization and connection close. Both control entries pass
+the public driver and actual host after the verified shared repair import.
+All five packaged entries now pass through the actual host with their required
+source results, native lifecycle and copy observations, and zero retained owners.
+The original seventeen public copying/session/control cases pass in Common's
+matched source evidence; SQLite reuses that evidence and freshly passes the
+supplementary forwarding regression. The
+<a href="/ash/docs/design/provider-experiments/sqlite-copying-delivery-2026-10-08/">delivery record</a> distinguishes
+these checks and records the exact source comparison. Final integrated
+whole-workspace verification remains pending.</p>
+<p>The public driver uses calibrated, separate source, final-elaborator and Core
+budgets. These larger allowances admit the programs; they do not establish a
+compiler-cost reduction. The host prints actual charged units, nominal and hard
+budgets, completion flags, assessments and optimization targets. An absent
+measurement is unobserved. All fifteen measured phases in the five-entry run
+complete within their nominal budgets, without an accepted deficit.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/foreign-adapter/examples/sqlite_session.rs">host example</a>
+registers the authenticated provider and SQLite manifests and executable binding.
+It prints source values and types, native observations, copy sizes, and retained
+owner counts. The commands below are reproduction inputs, not verification
+claims. The <a href="/ash/docs/design/provider-experiments/execution/#sqlite-compiler-work-measurement-receipt-109">measurement account</a>
+distinguishes the Rust harness, compiled Ash inputs and charged analysis work.</p>
+<p>From the repository root, build with Cargo in the workspace to select its
+pinned Rust toolchain. Then run the binary against a private copy of the package:</p>
+<pre tabindex="0"><code class="language-sh">(
+    ash_repo=$(pwd -P)
+    CARGO_BUILD_JOBS=1 cargo build --locked -p ash-foreign-adapter --example sqlite_session || exit
+    sqlite_example_dir=$(mktemp -d) || exit
+    cp "$ash_repo"/docs/design/provider-experiments/examples/sqlite-copying/*.ash "$sqlite_example_dir"/ || exit
+    printf 'Example directory: %s\n' "$sqlite_example_dir"
+    cd "$sqlite_example_dir" || exit
+    sqlite_example_status=0
+    for sqlite_entry in text-entry.ash copying-entry.ash session-entry.ash control-resume.ash control-discard.ash
+    do
+        "$ash_repo/target/debug/examples/sqlite_session" "$sqlite_example_dir/$sqlite_entry" || sqlite_example_status=1
+    done
+    exit "$sqlite_example_status"
+)
+</code></pre>
+<p>The recipe runs every entry and returns a failing status if any entry fails.
+The recorded five-entry run satisfies every required outcome below.</p>
+<p>The session database belongs to the printed temporary directory. Use a fresh directory
+for another session run because the entry creates its table. Keep the directory
+while reviewing its source, observations, and database, then remove it when done.</p>
+<p>Check the value and observations together. A successful host exit means the
+driver returned a value; that value can still contain a source <code>Err</code>,
+<code>NotAcquired</code>, or completion error. Each program's required outcome is:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Entry</th>
+<th>Required source result and observations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text-entry.ash</code></td>
+<td>Nested closed reports containing <code>Ok(TextValue("héllo 世界"))</code>; one open/prepare/finalize/close and 13 copied bytes in each direction.</td>
+</tr>
+<tr>
+<td><code>copying-entry.ash</code></td>
+<td><code>CopySession</code> retains both closed reports and all eight copied fields, including empty values, nulls and embedded-NUL output; copied input sizes <code>[13, 2, 0, 0]</code> and output sizes <code>[13, 2, 0, 0, 11]</code>.</td>
+</tr>
+<tr>
+<td><code>session-entry.ash</code></td>
+<td><code>SessionReports</code> retains every statement and connection report; both queries return the same three rows. Two opens/closes and six prepares/finalizes, with the first close before the second open.</td>
+</tr>
+<tr>
+<td><code>control-resume.ash</code></td>
+<td>Nested closed reports containing <code>Ok(CopiedRow(TextValue("héllo 世界"), BlobBytes([0, 255])))</code>; one open/prepare/finalize/close, two steps and output copy sizes <code>[13, 2]</code>.</td>
+</tr>
+<tr>
+<td><code>control-discard.ash</code></td>
+<td><code>42</code>, with no abandoned body or scope result; one <code>errcode</code> and <code>errmsg</code> query before finalization, one finalize before close, no step or row copy.</td>
+</tr>
+</tbody>
+</table>
+<p><code>FinishDispatched</code> must precede each corresponding native finalize/close call.
+It distinguishes admitted binding finish from native guard destruction. The
+native status code and source completion report establish separate outcomes;
+dispatch alone does not establish successful completion. The printed retained
+owner count is sampled before runtime destruction. These entries require zero
+retained owners and no <code>close_v2</code> call, but those observations alone do not prove
+that source finishers ran.</p>
+<p>The public tests compare the required source results and native observations:</p>
+<pre tabindex="0"><code class="language-sh">CARGO_BUILD_JOBS=1 cargo test --locked -p ash --test provider_sqlite_copying --test provider_sqlite_sessions --test provider_sqlite_control
+</code></pre>
+<p>Run these checks in the SQLite worktree in the agreed Cargo window. Keep the
+original tests and complete native assertions. The selected API remains a
+DN-0036 experiment; the <a href="/ash/docs/design/provider-experiments/execution/#current-sqlite-checkpoint">current execution record</a>
+records the preserving imports, evidence reuse and pending final integration.</p></article><aside class="article-aside"><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

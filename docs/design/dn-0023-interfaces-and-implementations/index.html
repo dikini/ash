@@ -1,0 +1,661 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0023: Interfaces and Implementations · Ash</title><meta name="description" content="What is the smallest coherent type-class-like interface and impl increment that exercises separately checked passive modules, constrained rank-1 code, typed implementation selection, and explicit Core evidence…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0023: Interfaces and Implementations · Ash"><meta property="og:description" content="What is the smallest coherent type-class-like interface and impl increment that exercises separately checked passive modules, constrained rank-1 code, typed implementation selection, and explicit Core evidence…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0023: Interfaces and Implementations · Ash"><meta name="twitter:description" content="What is the smallest coherent type-class-like interface and impl increment that exercises separately checked passive modules, constrained rank-1 code, typed implementation selection, and explicit Core evidence…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0023-interfaces-and-implementations/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0023-interfaces-and-implementations/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0023-interfaces-and-implementations.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0023: Interfaces and Implementations","headline":"DN-0023: Interfaces and Implementations","description":"What is the smallest coherent type-class-like interface and impl increment that exercises separately checked passive modules, constrained rank-1 code, typed implementation selection, and explicit Core evidence…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0023-interfaces-and-implementations/","@id":"https://dikini.github.io/ash/docs/design/dn-0023-interfaces-and-implementations/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0023-interfaces-and-implementations.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0023-interfaces-and-implementations" data-pagefind-meta="title">DN-0023: Interfaces and Implementations</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0023-interfaces-and-implementations.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0023</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0020-ash-dialect-milestones/">DN-0020: Ash Dialect Milestones</a>, <a href="/ash/docs/design/dn-0022-passive-static-modules/">DN-0022: Passive Static Modules</a>, <a href="/ash/docs/design/dn-0011-modules-providers-and-resolution/">DN-0011: Modules, Providers, and Resolution</a>, <a href="/ash/docs/design/dn-0006-initial-type-system/">DN-0006: Initial Type System</a>, <a href="/ash/docs/design/dn-0008-typed-core-and-elaboration/">DN-0008: Typed Core and Elaboration</a>, <a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006: Front-End Semantic Boundaries</a>, <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007: Typed Core Dialects</a>, <a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008: Explicit Evaluator Machine</a>, the <a href="/ash/docs/design/modular-ash/evidence/">passive-module evidence</a>, and the <a href="/ash/docs/design/modular-ash/interfaces-evidence/">interface implementation evidence</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It records the exploration that led to the
+implemented method-only interface increment, but it does not define current
+Ash. The <a href="/ash/spec/">specification</a> is the source of current
+language behavior.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>What is the smallest coherent type-class-like <code>interface</code> and <code>impl</code> increment
+that exercises separately checked passive modules, constrained rank-1 code,
+typed implementation selection, and explicit Core evidence without turning
+modules into signatures or adding associated-type machinery prematurely?</p>
+<h2 id="result">Result</h2>
+<p>At the retained Modular Ash checkpoint, method-only interfaces and
+implementations provided that increment. It had one-parameter interfaces,
+explicit requirements on global signatures, private and public
+implementations, direct-dependency implementation availability, typed selection
+retained on checked occurrences, linked evidence validation, and lowering
+through ordinary pure Core functions and applications. The original interface
+increment's normative checkpoint is unsigned commit
+<code>f783271</code>. The <a href="/ash/spec/">current specification</a> includes the
+outer-<code>Function</code> correction retained by unsigned commit <code>089c54e</code>. The
+<a href="/ash/docs/design/modular-ash/interfaces-evidence/">interface implementation evidence</a> records
+<code>ee998a0</code> as the final reviewed product checkpoint.</p>
+<p>The evidence report records the implemented corpus, diagnostic and resource
+boundaries, Core and evaluator locality, and the unspecialized generic evidence
+trace. Current semantic details belong to the specification, not this retained
+design account. Associated types, specialization, first-class dictionaries,
+and runtime implementation lookup remain outside the implemented increment.</p>
+<h2 id="original-boundary">Original boundary</h2>
+<p>When this exploration began, Modular Ash had passive declarations-only modules,
+canonical module-qualified identities, direct imports, private and opaque
+types, body-free checked export summaries, rank-1 schemes, and one linked pure
+Core program. It had no interface declaration, implementation declaration,
+constraint, associated projection, implementation selection, or source-level
+evidence value.</p>
+<p>Project prose then used <em>global interface</em> and <em>external interface</em> to mean a
+function's declared type signature. The implemented specification uses <em>global
+signature</em> so <code>interface</code> has one Ash meaning.</p>
+<p>The remaining sections retain the original alternatives, selected model,
+comparison cases, and future pressure. Statements about a candidate or
+recommendation describe that exploration; they do not supersede the current
+specification.</p>
+<p>The passive-module boundary is the starting invariant:</p>
+<pre tabindex="0"><code class="language-text">canonical module identity
+    -&gt; body-free checked dependency summaries
+    -&gt; separate resolution and checking
+    -&gt; dependency-ordered linked Core groups
+    -&gt; whole-program validation and evaluation
+</code></pre>
+<p>The proposed relationship was required to fit between checking and Core
+construction:</p>
+<pre tabindex="0"><code class="language-text">checked constraint + available checked impl facts
+    -&gt; satisfaction or structured rejection
+    -&gt; checked typed method evidence
+    -&gt; ordinary Core type and term application
+</code></pre>
+<p>Generated export summaries remain compiler artifacts. They do not become
+source module signatures. Interface facts erase only after the judgment that
+authenticates selection and constructs typed evidence.</p>
+<h2 id="constraints">Constraints</h2>
+<h3 id="preserve-direct-module-dependencies">Preserve direct module dependencies</h3>
+<p>A module may use its own implementation declarations and public
+implementation facts from modules it directly imports. A dependency's imports
+do not become the importer's ambient implementation scope. Evidence already
+selected inside a separately checked dependency remains valid in that
+dependency's constrained or concrete Core.</p>
+<p>Complete and targeted imports differ only in source-name bindings. Either form
+names a direct dependency and therefore makes that dependency's public
+implementation facts available. Implementations are anonymous typed facts,
+not names selected by a targeted import.</p>
+<h3 id="resolve-typed-identities-not-spellings">Resolve typed identities, not spellings</h3>
+<p>Interface, method, and implementation identities are qualified by their
+defining module:</p>
+<pre tabindex="0"><code class="language-text">InterfaceId = defining ModuleId + interface declaration
+MethodId    = InterfaceId + method declaration
+ImplId      = defining ModuleId + impl declaration
+ImplMethodId = ImplId + MethodId
+RequirementId = (global BinderId or ImplId) + requirement order
+</code></pre>
+<p>Aliases, alternate canonical paths, and equal display spellings cannot create
+or satisfy a second relationship. Repeated routes to one <code>ImplId</code> deduplicate
+before coherence checks.</p>
+<h3 id="keep-constraint-resolution-separate">Keep constraint resolution separate</h3>
+<p>Type equality, type normalization, unification, and constraint satisfaction
+remain separate rule responsibilities. Constraint selection never solves an
+ordinary inference variable merely to make one implementation applicable. An
+obligation whose type is not determined at its closure boundary is ambiguous.</p>
+<p>The first implementation may keep scoped obligations and evidence holes inside
+the existing elaborator. A persistent constraint IR, general constraint store,
+or retained interface Core dialect requires additional evidence and, if it
+becomes an architectural boundary, a separate architectural decision.</p>
+<h3 id="keep-modules-passive">Keep modules passive</h3>
+<p>An implementation declaration adds a checked static relationship. Importing
+it performs no registration, initialization, runtime lookup, or dispatch-table
+mutation. Dynamic loading, providers, registration, unloading, handlers, and
+effects remain outside this increment.</p>
+<h2 id="candidate-increments">Candidate increments</h2>
+<h3 id="method-only-interfaces-with-typed-evidence">Method-only interfaces with typed evidence</h3>
+<p>The smallest candidate adds one-parameter interfaces, required methods,
+explicit constraints on global signatures, local and public implementations,
+generic structural implementations, and implicit source evidence made explicit
+during elaboration.</p>
+<p>This candidate exercises every new owning judgment: interface identity,
+implementation availability, coherence, constraint satisfaction, separately
+checked constrained exports, evidence construction, Core validation, and
+execution. It is sufficient for the first core-versus-library comparison.</p>
+<h3 id="methods-and-associated-types-together">Methods and associated types together</h3>
+<p>Adding associated types in the same product increment would also require
+projection syntax, projection identity, normalization, equality with
+unresolved projections, kind checking, cycle rules, summary representation,
+and evidence-dependent type substitution. Those are separable questions.</p>
+<p>Associated-type examples remain required design pressure. They should test
+whether the method-only boundaries preserve the selected impl and its type
+arguments long enough to add an associated output later. They do not justify
+product associated types before a method-only corpus demonstrates a consumer.</p>
+<h3 id="specialization-only-interfaces">Specialization-only interfaces</h3>
+<p>Whole-program specialization could erase every implementation choice by
+cloning constrained code for concrete callers. It does not represent a
+separately checked exported function whose constraint remains abstract, and it
+makes correctness depend on final-link optimization. This conflicts with the
+implemented body-free summary boundary.</p>
+<p>Specialization remains an optional validated transform after evidence-passing
+Core works independently. It is not the semantic baseline.</p>
+<h3 id="explicit-source-dictionaries">Explicit source dictionaries</h3>
+<p>A source-level dictionary value could make evidence selection explicit and let
+callers store or choose implementations directly. Preserving interface identity
+would require a compiler-generated nominal dictionary or another typed
+first-class evidence representation; a structural tuple would erase identity
+before source checking had authenticated it. Explicit dictionaries would also
+need construction, naming, visibility, and ambiguity rules.</p>
+<p>The selected candidate instead infers evidence in source and makes it
+explicit only in checked elaboration and Core method arguments. This supports
+separately checked constrained code without adding a new source value category.
+No current corpus case needs to store or pass evidence independently from a
+constrained function, so first-class dictionaries are deferred.</p>
+<h3 id="interfaces-as-module-signatures">Interfaces as module signatures</h3>
+<p>A source signature could describe a module's required and provided members.
+That is a different abstraction. It would conflate module nameability and
+opacity with constraint satisfaction and implementation selection. This
+direction is rejected for the Modular Ash interface increment.</p>
+<h2 id="selected-source-model">Selected source model</h2>
+<h3 id="declarations-and-constraints">Declarations and constraints</h3>
+<p>An interface has one parameter of kind <code>Type</code> and one or more required method
+signatures. Every method type contains that parameter and has <code>Function</code> as its
+outermost constructor, so ordinary typing determines the requested interface
+argument and every evidence slot is a function. Function types may also occur
+inside the method domain or codomain. A method introduces no additional type
+parameters or constraints. Methods have no default bodies in the first
+increment.</p>
+<p>The accepted change proposal specified one trailing <code>where</code> clause shared by
+global signatures, operational headers, and impl heads. The earlier comparison
+form is:</p>
+<pre tabindex="0"><code class="language-ash">pub interface Equal&lt;A&gt; {
+    equal : (A, A) -&gt; Bool
+}
+</code></pre>
+<p>The interface name shares the nominal type namespace. Its method names enter
+the term namespace and must not conflict with another file-wide term binding.
+A public interface exports its name and methods together. A private interface
+and its methods remain local.</p>
+<p>A global signature may carry an ordered nonempty constraint list:</p>
+<pre tabindex="0"><code class="language-ash">pub same : (A, A) -&gt; Bool where Equal&lt;A&gt;
+same pair = equal(pair)
+</code></pre>
+<p>Multiple constraints use a comma-separated trailing <code>where</code> list. Every
+constrained type variable must also occur in the value type so that a caller's
+ordinary typing determines the requested implementation. Duplicate constraints
+are rejected. Constraints are part of the checked rank-1 scheme and export
+summary; they are not ordinary source types or runtime values.</p>
+<p>An inline operational global carries the same ordered requirement list in its
+header and produces the same constrained scheme. The accepted change proposal
+selected one token placement for both presentations; equational and operational
+globals do not have different constraint semantics.</p>
+<p>An interface method behaves as a constrained term with the interface's
+parameter and constraint. A complete import qualifies it by module alias, such
+as <code>Equality.equal</code>. Targeted imports may bind the public interface name and
+method term independently through their existing namespaces.</p>
+<h3 id="implementation-declarations">Implementation declarations</h3>
+<p>An implementation supplies every required method exactly once. It supplies no
+extra method, default, associated declaration, or independently public member.
+Implementation method bodies reuse the existing equational function-body
+rules; the interface supplies their signatures.</p>
+<pre tabindex="0"><code class="language-ash">pub impl Equal&lt;Int&gt; {
+    equal (left, right) = left == right
+}
+</code></pre>
+<p>An implementation may bind type parameters through its head and state explicit
+prerequisites:</p>
+<pre tabindex="0"><code class="language-ash">pub impl Equal&lt;Option&lt;A&gt;&gt; where Equal&lt;A&gt; {
+    equal (left, right) = match (left, right) {
+        (None, None) =&gt; true
+        (Some(left_value), Some(right_value)) =&gt; equal((left_value, right_value))
+        _ =&gt; false
+    }
+}
+</code></pre>
+<p>The accepted change proposal selected this <code>where</code> spelling as part of its
+complete grammar.</p>
+<p><code>impl</code> is private by default. <code>pub impl</code> publishes an anonymous implementation
+fact in the defining module's checked export summary. A public implementation
+must implement a public interface. Its head may retain a private local nominal
+identity without exporting that type's source name; this permits inferred
+composition over a hidden carrier. It may also mention public and opaque types.
+Opacity never grants constructor access to an external implementation body.</p>
+<p>Resolution allocates the <code>ImplId</code> and every <code>ImplMethodId</code> before any method
+body is checked. It also allocates one hidden module-qualified <code>BinderId</code> for
+each impl method and records its <code>ImplMethodId</code> mapping. Impl member heads do
+not introduce ordinary lexical term bindings that shadow interface methods.
+Occurrences such as <code>equal</code> inside an impl body resolve to the interface
+<code>MethodId</code>; typed constraint resolution chooses prerequisite or current-impl
+evidence from the inferred argument type.</p>
+<p>All methods of one impl enter one simultaneous evidence scope. The current impl
+may satisfy an obligation for its own head, allowing direct and mutual method
+recursion; an obligation for a proper component of a generic head uses the
+impl's declared prerequisite evidence instead.</p>
+<p>Impl head variables are rigid while its methods check. Self evidence satisfies
+only an obligation identity-equal to the current head under that same rigid
+substitution; it does not freshly instantiate the generic impl. This prevents a
+method of <code>impl I&lt;Option&lt;A&gt;&gt;</code> from using itself to satisfy
+<code>I&lt;Option&lt;Option&lt;A&gt;&gt;&gt;</code> and bypassing the proper-subterm rule.</p>
+<h3 id="orphan-and-overlap-rules">Orphan and overlap rules</h3>
+<p>An implementation is legal only when its defining module owns either the
+interface or the outer nominal constructor of the head type. A primitive head
+has no source owner, so only the interface owner may implement an interface for
+<code>Int</code>, <code>Bool</code>, or <code>Unit</code>. A bare type-variable head is rejected.</p>
+<p>One module's effective implementation environment contains its local impls and
+deduplicated public impls from direct dependencies. It must be coherent before
+body checking: two distinct impls for the same interface are rejected when
+freshened heads can unify. Prerequisites do not make overlap safe. Source or
+import order selects only which conflict is reported first; it never selects a
+winner.</p>
+<p>The orphan rule and Ash's acyclic dependency graph make overlapping public
+impls from distinct modules unreachable: unifying heads require a shared
+interface and outer-head ownership pair, which only one defining module can
+own. The checker still deduplicates direct implementation facts and rejects
+overlap among admitted facts in an effective environment.</p>
+<p>There are no priorities, negative impls, default impls, specialization rules,
+or condition-entailment exceptions in this increment.</p>
+<h3 id="generic-prerequisites-and-termination">Generic prerequisites and termination</h3>
+<p>Every type variable in an implementation prerequisite must occur in its head.
+After freshening and alpha-normalizing a generic impl, the sole type argument
+of every prerequisite must be a strict syntactic subterm of the impl head's
+type argument. This admits structural evidence such as <code>Equal&lt;A&gt;</code> required by
+<code>Equal&lt;Option&lt;A&gt;&gt;</code> and rejects rules that expand their own goals. A ground
+prerequisite is exempt from the subterm test and uses the active-goal cycle
+check below.</p>
+<p>Ground prerequisite cycles can still cross interfaces. Resolution uses an
+explicit worklist and an active-goal set keyed by canonical
+<code>(InterfaceId, arguments)</code>. Re-entering an active goal is a constraint cycle,
+not resource exhaustion. A graph-wide work budget separately bounds wide or
+deep valid searches.</p>
+<p>This structural decrease rule belongs only to the method-only increment.
+Associated projections may change normalized type size and require a different
+termination account.</p>
+<h2 id="satisfaction-and-checking">Satisfaction and checking</h2>
+<p>Interface checking authenticates parameter scope, distinct method names,
+method signatures, and public/private consistency. Implementation checking
+then:</p>
+<ol>
+<li>resolves the interface and head types by identity;</li>
+<li>checks the orphan rule and generic prerequisite restrictions;</li>
+<li>checks overlap in the effective implementation environment;</li>
+<li>substitutes the implementation head for the interface parameter;</li>
+<li>checks method completeness and rejects extra members; and</li>
+<li>checks each method body against the substituted method signature under its
+prerequisite evidence.</li>
+</ol>
+<p>A module publishes no interface or impl summary facts until its complete body
+checks, matching the existing all-or-nothing module summary boundary.</p>
+<p>Instantiating a constrained scheme creates ordinary type inference variables
+and ordered pending evidence obligations. Ordinary bidirectional typing first
+determines the obligation arguments. At a definition closure boundary, each
+obligation must be satisfied by:</p>
+<ul>
+<li>an identity-equal abstract constraint declared by the current global
+signature or current impl prerequisites; or</li>
+<li>exactly one implementation in the effective environment.</li>
+</ul>
+<p>Identity-equal abstract evidence is considered first and shadows impl search.
+This preserves the meaning of a caller-supplied constraint even when a generic
+impl in the same environment could also match. Abstract evidence follows its
+declaration order. Global requirement evidence precedes the source value
+arguments of a constrained global. Impl prerequisite evidence precedes the
+source value arguments of every impl method.</p>
+<p>An unresolved inference variable does not cause implementation search to guess
+a type. A local generalized function cannot infer and export a new constraint
+in the first increment; it may use evidence already available from its
+enclosing checked global. Recursive constrained globals reuse their declared
+abstract evidence and do not acquire polymorphic recursion.</p>
+<p>The entry module's <code>main</code> has an empty requirement list in addition to its
+existing monomorphic <code>Unit -&gt; R</code> contract. Every obligation in its body must
+resolve to concrete available implementation evidence.</p>
+<h2 id="export-summaries">Export summaries</h2>
+<p>A body-free checked summary adds:</p>
+<ul>
+<li>public interface identities, parameter metadata, ordered method identities,
+method schemes, and provenance;</li>
+<li>public impl identities, canonical heads, prerequisite constraints, ordered
+<code>ImplMethodId</code> to module-qualified <code>BinderId</code> mappings, checked method
+schemes, and provenance; and</li>
+<li>hidden nominal identity facts needed by public constraints, public interface
+method schemes, or impl heads, without source nameability or constructor
+access.</li>
+</ul>
+<p>Implementation head parameters are bound summary metadata and may be
+alpha-renamed by an importer. Summaries carry identities and checked schemes,
+not implementation bodies. Candidate matching never uses display names.</p>
+<p>Every constraint in a public global scheme names a public interface. Every
+prerequisite of a public impl also names a public interface. Private interface
+identities do not leak into summaries; a public impl may still retain a hidden
+nominal head because existing summaries can carry that nominal identity without
+making its spelling available.</p>
+<p>Imported impl facts are available only in the directly importing module. They
+are not copied into that module's export summary as new impl exports. A
+constrained exported global retains its abstract constraint; a global whose
+body selected concrete evidence retains per-occurrence <code>EvidenceSelection</code>
+facts as structural annotations on the exact checked method or constrained-term
+occurrences that require them. Core synthesis consumes the annotation attached
+to that occurrence; it never joins a detached vector by span. The recursive
+selection has two forms:</p>
+<pre tabindex="0"><code class="language-text">EvidenceSelection =
+    Abstract {
+        requirement: RequirementId,
+        methods: [MethodId]
+    }
+  | Implementation {
+        impl: ImplId,
+        substitution,
+        prerequisites: [EvidenceSelection],
+        methods: [ImplMethodId]
+    }
+</code></pre>
+<p>The abstract form refers to ordered evidence parameters from a constrained
+global or impl prerequisite. The implementation form records the matched type
+substitution, recursively selected prerequisites, and ordered impl methods.
+Later linking retains these facts without repeating implementation selection.
+Linked interface-evidence validation authenticates them, and Core synthesis
+then consumes them exactly once. The body-free summary exposes only the
+constraints and impl facts a dependent needs.</p>
+<h2 id="core-evidence-and-erasure">Core evidence and erasure</h2>
+<p>The selected elaboration flattens one logical interface
+dictionary into ordered method evidence. Constraint order follows the source
+signature; method order follows the interface declaration. Each evidence slot
+is an ordinary function value.</p>
+<p>Conceptually:</p>
+<pre tabindex="0"><code class="language-text">parameters: [A]
+requirements: [Equal&lt;A&gt;]
+value type: (A, A) -&gt; Bool
+
+    lowers to
+
+TypeAbstraction A (
+    Function equal_method (
+        Function pair (... equal_method pair ...))))
+</code></pre>
+<p>At a concrete call, constraint resolution supplies the selected impl's method
+function binders. At an abstract call, it supplies the current constrained
+global's evidence binders. Type application, evidence application, and value
+application are ordinary existing Core operations.</p>
+<p>Implementation methods become hidden source-backed Core globals. Resolution
+allocates their module-qualified <code>BinderId</code> values alongside stable
+<code>ImplMethodId</code> values, and checked summaries retain that mapping. The defining
+checked module retains every method body and identity, so an exported impl
+cannot refer to a missing linked definition.</p>
+<p>A selected generic impl method is first type-applied with the head substitution
+and then term-applied to each recursively selected prerequisite method in
+declared constraint and method order. The result supplies one evidence slot for
+the original obligation. The impl summary's checked method scheme and ordered
+prerequisites make every intermediate application derivable and checkable.</p>
+<p>A generic implementation method therefore accepts its prerequisite method
+evidence before its source arguments. All impl-method binders join the defining
+module's existing single recursive group with its ordinary globals. This
+preserves global-to-method and method-to-global recursion. No runtime impl
+registry, dictionary lookup, interface node, or evaluator dispatch rule is
+required.</p>
+<p>Typed elaboration produces the per-occurrence <code>EvidenceSelection</code> records and
+stores them in graph-owned checked modules. Linking retains those selections in
+the combined checked groups. Linked interface-evidence validation authenticates
+the selections against the combined interface and implementation registries and
+produces a validated capability before Core synthesis. Core synthesis consumes
+the validated selections: it resolves stable <code>ImplMethodId</code> values through
+retained module-qualified <code>BinderId</code> mappings and releases the selections after
+constructing the applications.
+These records extend the existing <code>CheckedModule</code> boundary; they are not a
+separate typed surface tree, general constraint IR, or new Core dialect.</p>
+<p>Before erasure, that interface-aware evidence validation checks:</p>
+<ul>
+<li>exact interface, method, impl, and nominal identities;</li>
+<li>ordered and complete method slots, even when slot types are structurally
+equal;</li>
+<li>head matching and recursively satisfied prerequisites;</li>
+<li>abstract <code>RequirementId</code> ownership, checked method schemes, substitutions,
+ordering, and provenance; and</li>
+<li>absence of unsolved inference variables.</li>
+</ul>
+<p>For a generic impl it additionally checks the head type applications,
+prerequisite evidence applications, and resulting method slot type at every
+intermediate step.</p>
+<p>After this judgment, interface and impl identities may erase. The independent
+Core validator then authenticates the resulting type abstractions, evidence
+binders, module-qualified impl-method binder scope, applications, recursive
+scope, types, and Core provenance. This follows the same boundary as module
+erasure: source relationships are checked before Core, and Core independently
+validates the lower-level program it receives.</p>
+<p>Impl selection is complete before evaluation. A generic evidence expression may
+use type and prerequisite-evidence applications; existing pure machine frames
+evaluate it to a function closure before the source value argument is applied.
+Unspecialized evidence passing therefore introduces no runtime search or new
+failure mode. The retained implementation evidence records its application
+order and final observation as a baseline for any later specialized Core.</p>
+<p>A future specialization transform may replace known evidence binders and
+applications with selected method globals. The unspecialized evidence-passing
+program remains executable and supplies the differential oracle.
+Specialization is neither required for correctness nor part of this first
+increment.</p>
+<h2 id="elaboration-traces">Elaboration traces</h2>
+<p>These traces test the representation against the implemented separate-checking
+and Core boundaries. Identity labels are abbreviated for readability; each one
+denotes the stable qualified identity described above.</p>
+<h3 id="a-constrained-summary-crosses-a-module-boundary">A constrained summary crosses a module boundary</h3>
+<p>Suppose <code>equality.ash</code> defines public <code>Equal&lt;A&gt;</code> and:</p>
+<pre tabindex="0"><code class="language-ash">pub same : (A, A) -&gt; Bool where Equal&lt;A&gt;
+same pair = equal(pair)
+</code></pre>
+<p>Checking <code>same</code> attaches <code>Abstract { requirement: same.0, methods: [equal] }</code>
+to its <code>equal</code> occurrence. Its body elaborates conceptually to:</p>
+<pre tabindex="0"><code class="language-text">same = /\\A. \\equal_evidence. \\pair. equal_evidence pair
+</code></pre>
+<p>The body-free summary exports <code>same</code> with its ordered <code>Equal&lt;A&gt;</code> requirement;
+it does not export the body or an implementation choice. A caller that directly
+imports a public <code>Equal&lt;Int&gt;</code> impl selects its <code>equal_int</code> method and constructs:</p>
+<pre tabindex="0"><code class="language-text">same [Int] equal_int (1, 1)
+</code></pre>
+<p>The dependency was checked with abstract evidence. The caller supplies concrete
+evidence without rechecking or specializing the dependency.</p>
+<h3 id="a-generic-impl-consumes-prerequisite-evidence">A generic impl consumes prerequisite evidence</h3>
+<p>For <code>impl Equal&lt;Option&lt;A&gt;&gt; where Equal&lt;A&gt;</code>, the impl method has the conceptual
+Core scheme:</p>
+<pre tabindex="0"><code class="language-text">equal_option : forall A. equal_A -&gt; (Option&lt;A&gt;, Option&lt;A&gt;) -&gt; Bool
+</code></pre>
+<p>An <code>equal</code> occurrence over contained <code>A</code> values in that body receives
+<code>Abstract { requirement: impl.0, methods: [equal] }</code>. Selection for an
+<code>Equal&lt;Option&lt;Int&gt;&gt;</code> obligation records:</p>
+<pre tabindex="0"><code class="language-text">Implementation {
+    impl: equal_option_impl,
+    substitution: [A := Int],
+    prerequisites: [
+        Implementation {
+            impl: equal_int_impl,
+            substitution: [],
+            prerequisites: [],
+            methods: [equal_int]
+        }
+    ],
+    methods: [equal_option]
+}
+</code></pre>
+<p>Core synthesis constructs the evidence function once:</p>
+<pre tabindex="0"><code class="language-text">equal_option [Int] equal_int
+</code></pre>
+<p>It can then supply that function to a constrained callee. Selection and cycle
+checking remain typed judgments; evaluation sees only existing applications.</p>
+<h3 id="same-typed-slots-retain-method-identity-and-order">Same-typed slots retain method identity and order</h3>
+<p>For an interface whose ordered methods are:</p>
+<pre tabindex="0"><code class="language-ash">first : (A, A) -&gt; A
+second : (A, A) -&gt; A
+</code></pre>
+<p>both evidence slots have the same structural type. The constrained scheme still
+orders them by <code>[first MethodId, second MethodId]</code>, and elaboration produces:</p>
+<pre tabindex="0"><code class="language-text">/\\A. \\first_evidence. \\second_evidence. \\pair.
+    second_evidence (first_evidence pair, second_evidence pair)
+</code></pre>
+<p>Swapping the two <code>ImplMethodId</code> values is rejected by interface-aware evidence
+validation even though ordinary Core types alone would accept the swap.</p>
+<h3 id="recursive-methods-keep-source-and-core-identities-distinct">Recursive methods keep source and Core identities distinct</h3>
+<p>Suppose one impl defines two mutually recursive methods. Each body occurrence
+resolves to its interface <code>MethodId</code>, then exact-rigid current-impl evidence maps
+that occurrence to the corresponding <code>ImplMethodId</code>. Resolution has already
+allocated module-qualified binders:</p>
+<pre tabindex="0"><code class="language-text">impl.first MethodId  -&gt; this_impl.first ImplMethodId  -&gt; module first BinderId
+impl.second MethodId -&gt; this_impl.second ImplMethodId -&gt; module second BinderId
+</code></pre>
+<p>Both hidden binders enter the defining module's ordinary recursive group. Calls
+between them therefore use normal recursive Core references. A call on a proper
+component of the generic head instead selects declared prerequisite evidence;
+the lexical spelling does not choose between those cases.</p>
+<h3 id="abstract-evidence-passes-through-another-constrained-caller">Abstract evidence passes through another constrained caller</h3>
+<p>If <code>all_same : List&lt;A&gt; -&gt; Bool where Equal&lt;A&gt;</code> calls imported <code>same</code>, its
+call-site selection is
+<code>Abstract { requirement: all_same.0, methods: [equal] }</code>. The Core shape is:</p>
+<pre tabindex="0"><code class="language-text">all_same = /\\A. \\equal_evidence. \\values.
+    ... same [A] equal_evidence (...) ...
+</code></pre>
+<p>No impl search is repeated inside <code>same</code>, and the imported summary need not
+expose its body. A concrete caller later selects one implementation and passes
+the resulting method function into <code>all_same</code>; that same abstract slot flows
+through every nested constrained call.</p>
+<p>Together these traces preserve every source relationship until its owning
+validation judgment and then use only existing Core binders and applications.
+They exposed no unresolved representation question, so the increment did not
+require a disposable compiler probe before the accepted change proposal.</p>
+<h2 id="associated-type-pressure">Associated-type pressure</h2>
+<p>The design comparison retains one illustrative case:</p>
+<pre tabindex="0"><code class="language-ash">interface Iterator&lt;I&gt; {
+    type Item
+    next : I -&gt; Option&lt;Item&gt;
+}
+</code></pre>
+<p>One selected impl determines <code>Item</code>, and every occurrence of that projection
+must denote the same type. A later associated-type design should compare
+normalized outer type evidence, retained projection types, and their behavior
+under separate module checking. DN-0023 selects none of those representations.
+If source equality or separate checking needs unresolved projections to survive
+longer, that would be evidence for an explicit projection type and
+normalization boundary.</p>
+<p>The method-only product increment reserves stable interface and impl identities
+and keeps selection facts until evidence construction. It does not reserve
+surface syntax, a placeholder Core node, or a dormant normalization engine for
+associated types.</p>
+<h2 id="failure-ownership-and-resources">Failure ownership and resources</h2>
+<p>Failures remain owned by the first judgment that can establish them:</p>
+<ul>
+<li>parsing owns malformed interface, constraint, and impl syntax;</li>
+<li>resolution owns interface and method names, access, identities, and imported
+summary authentication;</li>
+<li>interface and impl checking own malformed declarations, orphan violations,
+overlap, prerequisite admissibility, method membership, and method typing;</li>
+<li>constraint resolution owns unsatisfied, ambiguous, cyclic, and resource
+failures;</li>
+<li>linked interface-evidence validation owns forged or inconsistent retained
+evidence as <code>evidence.validation.*</code>; and</li>
+<li>Core validation owns malformed lowered binders, applications, types, scope,
+dialect membership, and provenance.</li>
+</ul>
+<p>Constraint-satisfaction diagnostics retain the requirement use as primary and
+relate the interface, selected or competing impl declarations, method
+declaration, impl method, and import occurrence needed to explain the result.
+A local orphan or overlap diagnostic uses the offending impl head as primary.
+Equal display names from different modules remain distinct.</p>
+<p>One graph-wide constraint budget charges proportional work before retaining:</p>
+<ul>
+<li>imported interface and impl summary metadata;</li>
+<li>implementation-environment construction and route deduplication;</li>
+<li>overlap comparisons and type traversal;</li>
+<li>obligations, candidate matches, prerequisite edges, active goals, and
+evidence nodes.</li>
+</ul>
+<p>A future specialization experiment would own and report its separate
+output-growth measurement; that cost is not part of the first product
+increment's constraint budget.</p>
+<p>Candidate traversal and diagnostic selection use deterministic dependency,
+import, and source order. Prerequisite resolution and destruction use explicit
+worklists at admitted depth.</p>
+<h2 id="original-required-comparison-corpus">Original required comparison corpus</h2>
+<p>The original positive corpus required:</p>
+<ul>
+<li>a local method-only interface, concrete impl, constrained call, and exact
+observation;</li>
+<li>a public interface in one module, public impl in another, constrained
+generic function in a third, and monomorphic caller in the entry module;</li>
+<li>a separately checked constrained export that remains abstract until a caller
+supplies concrete evidence;</li>
+<li>a generic structural impl whose proper-subterm prerequisite resolves;</li>
+<li>one hidden-carrier impl that composes without exporting the carrier name;</li>
+<li>one opaque-type impl whose body cannot inspect representation;</li>
+<li>complete and targeted method imports plus automatic impl availability from a
+direct dependency;</li>
+<li>alternate routes that preserve one interface and impl identity;</li>
+<li>direct routes that deduplicate one implementation identity, plus synthetic
+checked facts that exercise effective-environment overlap;</li>
+<li>recursive and higher-order constrained functions that thread evidence;</li>
+<li>two same-typed method slots whose declaration order remains distinct in the
+checked evidence plan;</li>
+<li>paired equational and operational constrained globals using the same
+satisfaction rule;</li>
+<li>an explicit elaboration trace comparing implicit source evidence with the
+rejected first-class dictionary candidate; and</li>
+<li>a bounded representation trace comparing retained evidence with later
+specialization, without making specialization product behavior.</li>
+</ul>
+<p>The original negative corpus required:</p>
+<ul>
+<li>a private interface access failure and a private impl unavailable to an
+importer, producing an unsatisfied obligation without leaking private
+metadata;</li>
+<li>a foreign-interface/foreign-type orphan and an unconstrained blanket impl;</li>
+<li>duplicate and generic-overlap local impls, plus authenticated
+effective-environment overlap facts;</li>
+<li>no transitive ambient impl through an intermediary import;</li>
+<li>unsatisfied and inference-ambiguous obligations;</li>
+<li>a constrained <code>main</code> and a public requirement naming a private interface;</li>
+<li>a rigid variable incorrectly solved to make an impl apply;</li>
+<li>expanding generic prerequisites and ground prerequisite cycles;</li>
+<li>missing, duplicate, extra, and wrongly typed methods;</li>
+<li>a failed module or impl body publishing no usable summary;</li>
+<li>equal-spelled identities from different modules failing to satisfy each
+other;</li>
+<li>malformed evidence plans with wrong or reordered method identities;</li>
+<li>malformed lowered Core evidence types, applications, recursive flow, scope,
+and provenance; and</li>
+<li>deterministic graph-wide budget exhaustion and deep stack-safe resolution.</li>
+</ul>
+<p>The associated-type comparison should cover one resolved projection, one
+ambiguous projection, one cycle, one wrong associated definition, and one use
+across a module summary. These are design evidence, not required product cases
+for the method-only increment.</p>
+<h2 id="selected-increment-and-exclusions">Selected increment and exclusions</h2>
+<p>The selected and implemented product increment contains:</p>
+<ul>
+<li>one-parameter method-only interfaces;</li>
+<li>required methods without defaults or method-local polymorphism;</li>
+<li>explicit constraints on rank-1 global signatures;</li>
+<li>private and public impls, including generic structural impls with explicit
+decreasing prerequisites;</li>
+<li>scoped direct-import availability, strict overlap rejection, and the orphan
+rule above;</li>
+<li>implicit source evidence made explicit as ordered method functions;</li>
+<li>interface-aware evidence validation followed by lowering into the current
+pure Core; and</li>
+<li>structured diagnostics and graph-wide resource accounting.</li>
+</ul>
+<p>It excludes associated types, multi-parameter interfaces, higher-kinded
+parameters, default methods, specialization as semantics, priorities, negative
+impls, first-class source dictionaries, inferred local constraints, interface
+objects, module signatures, import re-exports, dynamic loading, providers,
+registration, unloading, effects, and runtime implementation lookup.</p>
+<h2 id="implemented-boundary-and-future-pressure">Implemented boundary and future pressure</h2>
+<p>The accepted change proposal selected the method-only transition explored here,
+and the implementation task completed it. The current
+<a href="/ash/spec/">specification</a> now owns the grammar, checking, selection,
+evidence, lowering, and evaluation rules. The retained
+<a href="/ash/docs/design/modular-ash/interfaces-evidence/">implementation evidence</a> maps the original
+comparison corpus to tests and implementation boundaries.</p>
+<p>The interface increment supplies the consumer needed by a separately
+authorized core-versus-library audit. This note does not perform or authorize
+that audit. Associated-type examples continue to pressure normalization and
+separate checking, while specialization may later compare optimized Core with
+the retained unspecialized evidence trace. Associated types, specialization,
+first-class dictionaries, and runtime lookup remain future design questions,
+not partially implemented behavior.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#result">Result</a><a href="#original-boundary">Original boundary</a><a href="#constraints">Constraints</a><a href="#candidate-increments">Candidate increments</a><a href="#selected-source-model">Selected source model</a><a href="#satisfaction-and-checking">Satisfaction and checking</a><a href="#export-summaries">Export summaries</a><a href="#core-evidence-and-erasure">Core evidence and erasure</a><a href="#elaboration-traces">Elaboration traces</a><a href="#associated-type-pressure">Associated-type pressure</a><a href="#failure-ownership-and-resources">Failure ownership and resources</a><a href="#original-required-comparison-corpus">Original required comparison corpus</a><a href="#selected-increment-and-exclusions">Selected increment and exclusions</a><a href="#implemented-boundary-and-future-pressure">Implemented boundary and future pressure</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0022-passive-static-modules/">← DN-0022: Passive Static Modules</a><a rel="next" href="/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/">DN-0024: Executable Learning and Evidence Stream →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

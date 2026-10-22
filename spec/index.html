@@ -1,0 +1,556 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Ash Specification · Ash</title><meta name="description" content="This directory is the canonical Ash specification. It is normative and describes exactly the implemented language and runtime behavior."><meta name="robots" content="index, follow"><meta property="og:title" content="Ash Specification · Ash"><meta property="og:description" content="This directory is the canonical Ash specification. It is normative and describes exactly the implemented language and runtime behavior."><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Ash Specification · Ash"><meta name="twitter:description" content="This directory is the canonical Ash specification. It is normative and describes exactly the implemented language and runtime behavior."><meta property="og:url" content="https://dikini.github.io/ash/spec/"><link rel="canonical" href="https://dikini.github.io/ash/spec/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/README.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Ash Specification","headline":"Ash Specification","description":"This directory is the canonical Ash specification. It is normative and describes exactly the implemented language and runtime behavior.","inLanguage":"en","url":"https://dikini.github.io/ash/spec/","@id":"https://dikini.github.io/ash/spec/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/README.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Specification</p><h1 id="ash-specification" data-pagefind-meta="title">Ash Specification</h1><p class="spec-source">Development specification · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/README.md">ash-lang <code>7949b6d</code></a></p></header><nav class="spec-chapters" aria-label="Specification chapters"><a href="/ash/spec/" aria-current="page">Overview</a><a href="/ash/spec/lexical-structure/">Lexical Structure</a><a href="/ash/spec/syntax/">Syntax</a><a href="/ash/spec/name-resolution/">Name Resolution</a><a href="/ash/spec/static-semantics/">Static Semantics</a><a href="/ash/spec/elaboration/">Elaboration</a><a href="/ash/spec/dynamic-semantics/">Dynamic Semantics</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This directory is the canonical Ash specification. It is normative and
+describes exactly the implemented language and runtime behavior.</p>
+<h2 id="current-ash">Current Ash</h2>
+<p>Ash is a rank-1 language whose programs are acyclic graphs of passive source
+modules. Each <code>.ash</code> source file defines one unnamed module containing
+imports followed by nominal data or <code>newtype</code> declarations, method-only
+interface declarations, effect declarations, anonymous implementation
+declarations, scalar foreign-library declarations, and global function
+definitions. Global signatures may state
+explicit interface constraints and latent effect rows, and implementation
+heads may state explicit prerequisite constraints. A module has no result
+expression, runtime module value, or initialization.</p>
+<p>Imports expose only public facts. A private complete import places a
+dependency's public namespaces under a module alias. A private targeted import
+places selected public spellings in the importing module's file-wide
+namespaces. A public import must be targeted and re-exports its selected
+spellings. These name channels preserve the defining declaration identities.</p>
+<p>An <code>impl Interface</code> item is an independent channel. It binds no source name and
+makes the dependency summary's public implementations for that interface
+available for evidence selection. Neither a complete import nor a targeted
+name item selects implementations. A public implementation item also adds the
+selected facts to the importer's public implementation closure, so later
+facades can select them transitively without changing their defining
+identities. Private nominal identities may flow through public schemes and
+implementation facts without becoming nameable. A <code>pub opaque type</code> exports a
+name without constructors, and a <code>pub type</code> exports its name and complete
+constructor family. The corresponding <code>newtype</code> visibility modes use the same
+name and constructor access rules.</p>
+<p>A module <code>newtype</code> introduces a nominal type over one representation. It has
+exactly one same-spelled, one-field constructor. Construction and matching are
+explicit, and the nominal type remains distinct from its representation.
+After independent Core validation, wrapping and unwrapping erase without a
+wrapper allocation or runtime tag. Interface evidence remains nominal: an
+implementation for the representation does not satisfy a requirement for the
+<code>newtype</code>.</p>
+<p>A local <code>newtype</code> introduces one compile-time lexical identity for the
+following declarations and result of its block. Its representation sees the
+preceding type scope; later declarations may shadow the nominal and constructor
+names together. The identity cannot escape in a type, effect row, scheme, or
+requirement. A closure may capture and unwrap a local value when its exposed
+computation contains no such identity. Execution creates no fresh identity or
+scope state.</p>
+<p>A sequential local <code>with</code> supplies exact interface methods for a complete
+application whose selection key contains an active local nominal. It is not
+local implementation search. Supplied methods capture preceding ordinary values;
+the evidence is available only in the following lexical remainder. Selected
+methods lower to ordinary functions, and checked closures may retain them
+after that evidence block returns without exporting the evidence itself.</p>
+<p>An interface declares one or more ordered, fixed-kinded type parameters and an
+ordered set of method signatures. It may declare one total forward
+determination edge from a nonempty parameter key to the entire dependent
+complement. A method may bind an explicit ordered list of fixed-kinded local
+parameters, and every method value type has <code>Function</code> as its top-level
+constructor. Each occurrence instantiates the complete interface vector and
+the method parameters, while only the complete interface application creates
+an evidence obligation. Its methods are constrained terms. An implementation
+supplies the complete method set for one complete interface application but
+introduces no source name. Private implementations remain available only in
+their defining module; <code>pub impl</code> publishes a body-free fact that dependents or
+later facades may select explicitly. Body-free summaries preserve canonical
+interface parameter and determination records, complete applications, method
+schemes, and their defining identities.</p>
+<p>Ash's monomorphic kind language contains <code>Type</code>, <code>EffectRow</code>, and
+right-associative function kinds such as <code>Type -&gt; Type</code>. Declaration parameters
+may state their kinds.
+Every omitted declaration kind annotation and every binder introduced by an
+omitted implementation binder list is fixed to <code>Type</code>. An omitted global
+binder list discovers ordinary free type variables and effect-row-tail
+variables in their shared first-occurrence order. A name occurring only in
+ordinary type positions has kind <code>Type</code>; one occurring only as an effect-row
+tail has kind <code>EffectRow</code>; using the same name in both roles is invalid. Ash
+does not infer a function kind from use. This is a phase-dependent constraint,
+not a commitment against later bounded declaration-local kind inference. A
+type constructor or parameter may remain bare or partially applied when its
+resulting kind satisfies the context that owns the type.</p>
+<p>An effect declaration defines one module-owned API with one or more operations.
+Function computations carry rows of exact, parameterized effect identities.
+<code>perform</code> requests an operation, and an exhaustive lexical <code>handle</code> removes one
+exact instance. Each selected clause must consume its non-escaping continuation
+capability exactly once on every normally completing path, with <code>resume</code> or
+checked <code>discard</code>. Discard closes the selected capture and recursively owned
+live captures in structural order, then continues the clause with <code>Unit</code>.
+Inference proves safe closure without skipping outside or running completion
+owners. Its effect row includes invoked cleanup actions.</p>
+<p>An owner-free <code>foreign library</code> declaration supplies passive ABI facts
+and exact native effects with one <code>call</code> operation each. Complete ordered
+<code>Type</code> and <code>EffectRow</code> parameters and original contracts survive publication
+and imports. <code>@builtin.foreign</code> supplies ordinary common result types,
+including <code>Call&lt;T&gt;</code> and opaque <code>ConversionError</code>. Compilation installs an
+explicit checked Core interpretation for admitted owner-free native entry
+instances, leaving an empty outward row. Ordinary source handlers cannot
+install a native symbol's interpreter. Source contracts and checked Core supply
+no executable binding; default execution refuses missing bindings before Ash
+runs. Checked scalar literal constants publish ordinary mathematical <code>Int</code>
+values and supply exact declared native operands. A declared <code>function_address</code>
+sentinel supplies only a fixed all-bits-one native operand; it publishes no
+ordinary value and grants no call permission. Source resource declarations admit
+opaque and initialized byte owners with declared dependencies, private data and
+checked <code>scope</code> or <code>acquired_only</code> reports. Their owner families retain complete
+ordered Type/Row arguments with a Type-kind owned identity and support one
+acquisition and <code>void</code> or scalar-status finish and host-destruction contracts
+with total consumed or retained dispositions. Scalar status predicates use
+checked literal facts from the original owner library; the predicate itself
+grants no value or operand authority. Retention revokes ordinary access and
+quarantines the same
+owner and dependency closure; safe host destruction preserves dependency order.
+Ordinary pure module-global helpers may transform independent lifecycle payloads,
+including through same-module and imported polymorphic definitions. Their complete
+Type/Row instances and original copied calls remain checked; they cannot carry
+native State or acquire native permission. Privileged lifecycle wrappers remain
+unsupported. In permitted direct provider phases, sealed lexical copy windows
+produce independent bytes from exact live owner/view families under the bounded
+<a href="/ash/spec/static-semantics/#source-foreign-declarations">copy rules</a>. Windows cannot
+suspend, complete their owner or escape. Checked lexical forwarding supports
+the associated interface methods and ordinary
+constrained helpers, preserving exact operation types, effect rows and typed
+access operands. Sealed common byte reads and writes borrow the exact
+initialized live state in acquire, handler and finish phases. Original call
+correspondence, complete Type/Row instances and the unique guard authenticate
+access; private data and a compatible state type grant no permission.
+Conversion refusals are ordinary <code>Foreign.Call</code> results, and complete reply
+admission precedes native access. Outward capture/resume moves the same source
+owner; owned discard runs required finish computations in structural order with
+needed outer resources live, without an abandoned result wrapper. Running
+completion cannot be abandoned. Acquisition discard revokes an unpublished
+guard without fabricating private data. Exact constructor and native-call
+identities authenticate publication and completion; declarations alone confer
+no ownership. The <a href="/ash/spec/static-semantics/#source-resource-declarations">source-resource
+rules</a> bound this lifecycle
+and its supported associated handler shape.</p>
+<p><code>resource cell&lt;R&gt; c = initializer { body }</code> acquires one scoped mutable integer
+cell through the compiler-owned <code>@builtin.cell</code> API. The scope owns release;
+handles provide reusable access while it remains live. Inferred dependencies
+prevent handles, captured access and identity-indexed operations from escaping
+their owner, including through request payloads. Copied integers may escape.
+Each execution has a fresh activation, and capture/resume moves the owned
+scope without duplication. Normal completion or owned abandonment releases it
+once.</p>
+<p>The ordinary passive <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/libraries/native_buffer.ash">native-buffer library</a>
+uses <code>resource Buffer.Buffer&lt;R&gt; b = length { body }</code> after an explicit import.
+Its Ash acquisition, associated handlers and finish use common checked foreign
+contracts, bytes, guards and the <code>acquired_only</code> codec. Positive lengths acquire
+zeroed writable bytes; invalid lengths refuse before C. Acquisition returns
+ordinary <code>Failure(Error)</code> without a body, or releases normally and returns
+<code>Success(body_value)</code>. Nested outcomes remain nested. Capture/resume moves the
+same owner; owned discard completes it once without the abandoned wrapper.
+Generated hosts execute the native calls. The old builtin module, lowercase
+resource designator and fixed evaluator adapter are removed; cell semantics
+remain unchanged.</p>
+<p><code>hook H { body }</code> supplies the empty identity chain for an exact effect API
+with one endomorphic <code>publish</code> operation. <code>register H transformer { body }</code>
+evaluates one ordinary transformer and retains it for that scope. Publication
+uses <code>perform H.publish value</code>; outer registrations transform before inner
+ones, and callbacks run under handlers surrounding their registration. An exact
+nested root starts a separate chain. Normal return removes each registration
+once; capture/resume preserves its owner. Owned abandonment removes it without
+running its transformer or remaining publication callbacks; discard cannot
+skip required outside completion. Callback effects and stored resource
+dependencies remain checked.</p>
+<p><code>cleanup action { body }</code> evaluates and retains one <code>Unit -&gt; Unit</code> action.
+Normal completion invokes it, then returns the saved body value unchanged.
+Capture/resume transfers the invocation owner; copies of the callable gain no
+cleanup authority. Owned abandonment invokes actions under the surviving
+context with needed live resource handlers. Ordinary source handlers removed by
+the cut are not restored.
+Required removed interpreters reject at each action's closing position.
+An executing action and its unfinished close operation remain required
+completions and cannot be discarded. Action effects and stored dependencies
+remain checked. Ordinary typed reporting can retain ordered cleanup failures
+separately from the body outcome; constructors have no implicit failure meaning.
+Internal termination or exhaustion provides no source-cleanup guarantee.</p>
+<p>The source path selected for execution is the entry module. It declares exactly
+one local, monomorphic, unconstrained <code>main : Unit -&gt; R</code>, where <code>R</code> is closed.
+Its computation row is empty. After checking every dependency, Ash links the
+module definition groups and evaluates <code>main ()</code>.
+Imports, exports, aliases, and opacity are static access rules and do not remain
+as runtime operations. Interface identities, implementation identities, and
+their checking registries also erase. Selected evidence lowers to ordinary
+functions, applications, and dialect-specific type operations. Pure erases
+instantiation; Effect retains lexical instantiation for exact operation
+matching across generic calls and returned closures. Evaluation has no runtime
+module object, implementation registry, interface lookup, or handler registry.</p>
+<p>Ordinary source value positions remain rank-1.
+No source annotation denotes a nested scheme. Source code cannot write
+<code>forall</code> or expression type arguments; give a parameter, result, tuple field,
+or constructor field a polymorphic annotation; store or return an
+uninstantiated method scheme; pass one to an ordinary parameter; add implicit
+method binders or method requirements; or use polymorphic recursion.
+Core admits a nested scheme only where authenticated compiler-generated method
+evidence requires it. Every other source value position remains monomorphic;
+the internal lexical polymorphic functions retained by Effect execution do not
+make schemes first-class source values.</p>
+<p>Determination adds no associated-output syntax or projection, multiple or
+partial edges, proposition or proof evidence, common universal evidence, or
+existential pack and unpack form.</p>
+<p>Module and local <code>newtype</code> add no runtime-fresh identity,
+implicit coercion, general representational equality, local implementation,
+effect or resource mechanism, existential package, dynamic loading, runtime
+nominal registry, heap-inspection API, special value rendering, or general ABI
+or foreign-representation guarantee. Its canonical conversion establishes no
+interface, proof, provider, handler, or hook authority.</p>
+<p>Within a module, Ash provides global and explicit local recursion, rank-1
+polymorphism, nominal data, allocation-free module and local <code>newtype</code>, structural tuples, constructor values, typed
+patterns, exhaustive matches and equations, sequential bindings, method-only
+interfaces, explicit constraints, anonymous implementations, and pure and
+effectful expressions with single-use, non-escaping handler continuations.</p>
+<p>Beyond the fixed builtin providers and the bounded source-resource forms
+described above, the effect kernel adds no general provider or resource
+declarations, first-class registration tokens, arbitrary removal or priorities,
+general destructor declarations, escaping or multi-shot resume, asynchronous
+execution, or dynamic loading.
+A linked nonempty effect row is a source rejection rather than an
+unhandled-operation runtime result.</p>
+<h2 id="module-examples">Module examples</h2>
+<p>The following two sibling files form a complete program. <code>main.ash</code> imports
+<code>./arithmetic.ash</code> under the alias <code>Arithmetic</code>:</p>
+<pre tabindex="0"><code class="language-ash">import arithmetic as Arithmetic
+
+main : Unit -&gt; Int
+main () = Arithmetic.answer(())
+</code></pre>
+<p><code>arithmetic.ash</code> exports only <code>answer</code>:</p>
+<pre tabindex="0"><code class="language-ash">pub answer : Unit -&gt; Int
+answer () = 42
+</code></pre>
+<p>Kinds and higher-kinded parameters also cross module boundaries. This
+<code>dependency.ash</code> file exports a kinded interface, an implementation for the
+bare <code>Option</code> constructor, and a global whose explicit parameter has kind
+<code>Type -&gt; Type</code>:</p>
+<pre tabindex="0"><code class="language-ash">pub type Option&lt;A&gt; =
+    None
+    | Some(A)
+
+pub interface Observe&lt;F : Type -&gt; Type&gt; {
+    observe : F&lt;Int&gt; -&gt; Int
+}
+
+pub impl Observe&lt;Option&gt; {
+    observe value = 40 + 2
+}
+
+pub relay&lt;F : Type -&gt; Type&gt; : F&lt;Int&gt; -&gt; F&lt;Int&gt;
+relay value = value
+</code></pre>
+<p>The sibling entry imports the nominal, constructor, constrained method,
+polymorphic global, and selected implementation fact:</p>
+<pre tabindex="0"><code class="language-ash">import dependency (Option, Some, observe, relay, impl Observe)
+main : Unit -&gt; Int
+main () = observe(relay(Some(1)))
+</code></pre>
+<p>The dependency summary carries the defining identities and fixed kinds without
+the dependency body. Linking authenticates the selected <code>Observe&lt;Option&gt;</code>
+evidence before Core synthesis. The program observes <code>42 : Int</code>; kinds and
+selected interface evidence introduce no runtime lookup or module value.</p>
+<p>A targeted import can select and rename that export without introducing a
+module alias:</p>
+<pre tabindex="0"><code class="language-ash">import arithmetic (answer as imported_answer)
+
+main : Unit -&gt; Int
+main () = imported_answer(())
+</code></pre>
+<h3 id="module-newtypes">Module newtypes</h3>
+<p>This complete module wraps and unwraps a distinct nominal <code>UserId</code>. The wrapper
+has the integer representation at runtime, so the program observes the value
+<code>42</code> while retaining the result type <code>UserId</code>:</p>
+<pre tabindex="0"><code class="language-ash">newtype UserId = UserId(Int)
+
+increment : UserId -&gt; UserId
+increment (UserId value) = UserId(value + 1)
+
+main : Unit -&gt; UserId
+main () = increment(UserId(41))
+</code></pre>
+<p>The executable test <code>overview_module_newtype_example_is_executable</code> checks this
+example. Neither constructor use is an implicit conversion, and an importer
+may use the constructor only through a transparent authorized route.</p>
+<h3 id="local-newtypes">Local newtypes</h3>
+<p>This complete module returns a closure that captures a local representation,
+then calls it after <code>make</code> returns. The closure exposes only <code>Unit -&gt; Int</code>, so
+the program observes <code>42 : Int</code> without exposing the local identity:</p>
+<pre tabindex="0"><code class="language-ash">make : Unit -&gt; (Unit -&gt; Int)
+make () = {
+    newtype Offset = Offset(Int)
+    let offset = Offset(41)
+    fn(ignored) {
+        match offset {
+            Offset(value) =&gt; value + 1
+        }
+    }
+}
+
+main : Unit -&gt; Int
+main () = make()()
+</code></pre>
+<p>The executable test <code>overview_local_newtype_closure_example_is_executable</code>
+checks this example. Local declarations are sequential and private; they do
+not add local implementations or implicit existential packages.</p>
+<h3 id="scoped-exact-evidence">Scoped exact evidence</h3>
+<p>This complete module supplies the relation <code>Read&lt;Token, Int&gt;</code> for a local
+identity. The supplied method captures <code>saved</code>; <code>forward</code> receives its ordinary
+method function through the existing constraint mechanism. The result is
+<code>42 : Int</code>:</p>
+<pre tabindex="0"><code class="language-ash">interface Read&lt;A, B&gt; where A -&gt; B {
+    read : A -&gt; B
+}
+
+forward&lt;A, B&gt; : A -&gt; B where Read&lt;A, B&gt;
+forward value = read(value)
+
+main : Unit -&gt; Int
+main () = {
+    newtype Token = Token(Int)
+    let saved = Token(41)
+    with Read&lt;Token, Int&gt; {
+        read ignored = match saved {
+            Token(value) =&gt; value + 1
+        }
+    }
+    forward(saved)
+}
+</code></pre>
+<p>The test <code>overview_scoped_evidence_example_is_executable</code> checks this example
+and the direct <code>read(saved)</code> variant. Abstract requirements and exact-current
+implementation evidence precede lexical evidence; lexical evidence precedes
+concrete implementation matching. This form introduces no resource lifetime,
+proof authority, acquisition, or existential package.</p>
+<h3 id="interfaces-and-selected-evidence">Interfaces and selected evidence</h3>
+<p>An interface method can use a local implementation without changing the entry
+contract. This complete module selects <code>Equal&lt;Int&gt;</code> at the call to <code>equal</code> and
+observes <code>true : Bool</code>:</p>
+<pre tabindex="0"><code class="language-ash">interface Equal&lt;A&gt; {
+    equal : (A, A) -&gt; Bool
+}
+
+impl Equal&lt;Int&gt; {
+    equal (left, right) = left == right
+}
+
+main : Unit -&gt; Bool
+main () = equal(1, 1)
+</code></pre>
+<p>Constraints also cross module boundaries through checked public declarations.
+In the following sibling-file program, <code>main.ash</code> uses a complete import for
+qualified names and a separate targeted item for implementation evidence:</p>
+<pre tabindex="0"><code class="language-ash">import equality as Equality
+import equality (impl Equal)
+
+main : Unit -&gt; Bool
+main () = Equality.same((1, 1))
+</code></pre>
+<p>The defining <code>equality.ash</code> exports a method-only interface, a constrained
+global, and an anonymous implementation fact:</p>
+<pre tabindex="0"><code class="language-ash">pub interface Equal&lt;A&gt; {
+    equal : (A, A) -&gt; Bool
+}
+
+pub impl Equal&lt;Int&gt; {
+    equal (left, right) = left == right
+}
+
+pub same : (A, A) -&gt; Bool where Equal&lt;A&gt;
+same pair = equal pair
+</code></pre>
+<p>The body of <code>same</code> uses its declared requirement. At the imported call,
+ordinary typing fixes the argument to <code>Int</code>, and the explicit selector makes
+the defining module's public implementation available. The program observes
+<code>true : Bool</code>.</p>
+<p>A targeted public import can place a facade between that implementation owner
+and the entry. This complete <code>facade.ash</code> re-exports names and implementations
+through independent items:</p>
+<pre tabindex="0"><code class="language-ash">pub import equality (Equal, equal, impl Equal)
+</code></pre>
+<p>The facade entry selects the same channels from <code>facade.ash</code>:</p>
+<pre tabindex="0"><code class="language-ash">import facade (Equal, equal, impl Equal)
+
+main : Unit -&gt; Bool
+main () = equal(1, 1)
+</code></pre>
+<p>The selector follows the facade's public authorization route to the
+implementation defined in <code>equality.ash</code>. The interface, implementation,
+method, and binder identities remain those of the defining module. Aliases and
+authorization routes do not become runtime values; the selected method
+evidence runs as ordinary function application.</p>
+<h3 id="polymorphic-method-evidence">Polymorphic method evidence</h3>
+<p>One constrained global may use the same method scheme at unrelated
+instantiations. This <code>api.ash</code> module exports a higher-kinded interface whose
+method binds two local type parameters, then uses it once from <code>Int</code> to <code>Bool</code>
+and once from <code>Bool</code> to <code>Int</code>:</p>
+<pre tabindex="0"><code class="language-ash">pub interface Functor&lt;F : Type -&gt; Type&gt; {
+    map&lt;A, B&gt; : (A -&gt; B, F&lt;A&gt;) -&gt; F&lt;B&gt;
+}
+
+to_bool : Int -&gt; Bool
+to_bool value = value == 42
+
+to_int : Bool -&gt; Int
+to_int true = 42
+to_int false = 0
+
+pub map_pair&lt;F : Type -&gt; Type&gt; : (F&lt;Int&gt;, F&lt;Bool&gt;) -&gt; (F&lt;Bool&gt;, F&lt;Int&gt;) where Functor&lt;F&gt;
+map_pair (numbers, flags) = (map((to_bool, numbers)), map((to_int, flags)))
+</code></pre>
+<p>The sibling <code>carrier.ash</code> module reuses the defining method identity and
+publishes a generic implementation for <code>Box</code>:</p>
+<pre tabindex="0"><code class="language-ash">pub import api (Functor, map)
+
+pub type Box&lt;A&gt; = Box(A)
+
+pub impl Functor&lt;Box&gt; {
+    map (function, Box(value)) = Box(function(value))
+}
+</code></pre>
+<p>A total determination edge permits a dependent parameter to occur anywhere or
+nowhere in a method type, while every determinant must occur. Improvement uses
+an inference-free key to fill the whole dependent tuple before complete-
+application evidence selection. This program determines <code>Result</code> as <code>Unit</code>
+from the <code>Bool</code> key even though <code>Result</code> is absent from <code>measure</code> and observes
+<code>42 : Int</code>:</p>
+<pre tabindex="0"><code class="language-ash">interface Measure&lt;Key, Result&gt; where Key -&gt; Result {
+    measure : Key -&gt; Int
+}
+
+impl Measure&lt;Bool, Unit&gt; {
+    measure value = 42
+}
+
+main : Unit -&gt; Int
+main () = measure(true)
+</code></pre>
+<p>The <code>entry.ash</code> module imports the constrained global and explicitly selects
+the implementation:</p>
+<pre tabindex="0"><code class="language-ash">import api (map_pair)
+import carrier (Box, impl Functor)
+
+main : Unit -&gt; (Box&lt;Bool&gt;, Box&lt;Int&gt;)
+main () = map_pair((Box(42), Box(true)))
+</code></pre>
+<p>The program observes:</p>
+<pre tabindex="0"><code class="language-text">(Box(true), Box(42)) : (Box&lt;Bool&gt;, Box&lt;Int&gt;)
+</code></pre>
+<p>The method scheme is authenticated across both source-body-free summaries.
+Concrete evidence uses one generated adapter over the implementation method;
+this Pure program erases its type operations through the existing evaluator
+rules. The source filename retained by the test corpus is <code>interface.ash</code>, but
+the executable tree stages that content as <code>api.ash</code> because <code>interface</code> is reserved in
+a module path.</p>
+<h3 id="opaque-types-and-smart-constructors">Opaque types and smart constructors</h3>
+<p>An opaque type is nameable in an importer, but its constructors are not. This
+<code>token.ash</code> module keeps construction and matching inside its boundary:</p>
+<pre tabindex="0"><code class="language-ash">pub opaque type Token = Token(Int)
+
+pub make : Int -&gt; Token
+make value = Token(value)
+
+pub step : Token -&gt; Token
+step (Token value) = Token(value + 1)
+
+pub read : Token -&gt; Int
+read (Token value) = value
+</code></pre>
+<p>An importer may name <code>Token.Token</code> in an annotation and compose the public
+operations. It cannot use the <code>Token</code> constructor in a term or pattern:</p>
+<pre tabindex="0"><code class="language-ash">import token as Token
+
+main : Unit -&gt; Int
+main () = {
+    let token : Token.Token = Token.make(41)
+    Token.read(Token.step(token))
+}
+</code></pre>
+<h3 id="hidden-carriers">Hidden carriers</h3>
+<p>A private type can occur in public function schemes without exporting its
+source name. In <code>carrier.ash</code>, the identity shared by <code>make</code>, <code>step</code>, and <code>read</code>
+remains consistent for importers:</p>
+<pre tabindex="0"><code class="language-ash">type Hidden = Hidden(Int)
+
+pub make : Int -&gt; Hidden
+make value = Hidden(value)
+
+pub step : Hidden -&gt; Hidden
+step (Hidden value) = Hidden(value + 1)
+
+pub read : Hidden -&gt; Int
+read (Hidden value) = value
+</code></pre>
+<p>An importer can infer a local carrier and pass it among compatible operations.
+It cannot name that carrier in an annotation or global signature:</p>
+<pre tabindex="0"><code class="language-ash">import carrier as Carrier
+
+main : Unit -&gt; Int
+main () = {
+    let hidden = Carrier.make(41)
+    Carrier.read(Carrier.step(hidden))
+}
+</code></pre>
+<h3 id="transparent-matching">Transparent matching</h3>
+<p>A public transparent type exports its complete constructor family. For example,
+<code>choice.ash</code> exports <code>Choice</code>, <code>First</code>, and <code>Second</code>:</p>
+<pre tabindex="0"><code class="language-ash">pub type Choice =
+    First(Int)
+    | Second(Int)
+
+pub sample : Unit -&gt; Choice
+sample () = First(42)
+</code></pre>
+<p>Importers can construct and match those constructors, and coverage checks use
+the complete exported family:</p>
+<pre tabindex="0"><code class="language-ash">import choice as Choice
+
+main : Unit -&gt; Int
+main () = match Choice.sample(()) {
+    Choice.First(value) =&gt; value
+    Choice.Second(value) =&gt; value + 1
+}
+</code></pre>
+<h2 id="specification-chapters">Specification chapters</h2>
+<p>The specification is split by concern:</p>
+<ul>
+<li><a href="/ash/spec/lexical-structure/">Lexical structure</a> defines admitted source text,
+tokens, whitespace, and logical line boundaries.</li>
+<li><a href="/ash/spec/syntax/">Syntax</a> defines module, import, declaration, expression, and
+pattern grammar, precedence, and associativity.</li>
+<li><a href="/ash/spec/name-resolution/">Name resolution</a> defines module identity, import and
+export access, lexical scope, and binder identity.</li>
+<li><a href="/ash/spec/static-semantics/">Static semantics</a> defines dependency-ordered module
+checking, exported schemes, entry checking, and expression typing.</li>
+<li><a href="/ash/spec/elaboration/">Elaboration</a> defines how checked modules and surface
+presentations converge on one linked typed Core program.</li>
+<li><a href="/ash/spec/dynamic-semantics/">Dynamic semantics</a> defines values and deterministic
+evaluation of the generated entry application.</li>
+</ul>
+<p>The <a href="/ash/docs/tools/ash/"><code>ash</code> tool documentation</a> describes invocation,
+module-root configuration, output, diagnostics, and exit status. Those are tool
+behaviors, not additional language semantics.</p>
+<h2 id="change-discipline">Change discipline</h2>
+<p>Future behavior belongs in <a href="/ash/docs/design/">design notes</a> and
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/proposals/README.md">change proposals</a>, not here. A language change
+updates this specification in the same merge as the implementation and tests
+that make the new statements true. Partially implemented or intended behavior
+must not appear here.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#current-ash">Current Ash</a><a href="#module-examples">Module examples</a><a href="#specification-chapters">Specification chapters</a><a href="#change-discipline">Change discipline</a></nav><div class="aside-note"><p>These rules describe the source revision linked above.</p><a href="/ash/docs/tools/ash/">Read the ash tool guide ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent specification chapters"><span></span><a rel="next" href="/ash/spec/lexical-structure/">Lexical Structure →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

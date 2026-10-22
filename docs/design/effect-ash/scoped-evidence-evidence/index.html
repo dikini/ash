@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Scoped exact evidence · Ash</title><meta name="description" content="This report retains implementation and review evidence from 90f517d, the combined module/local-newtype and resume-required kernel baseline. It is informative. Both independent reviews, the full gate, and transition…"><meta name="robots" content="index, follow"><meta property="og:title" content="Scoped exact evidence · Ash"><meta property="og:description" content="This report retains implementation and review evidence from 90f517d, the combined module/local-newtype and resume-required kernel baseline. It is informative. Both independent reviews, the full gate, and transition…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Scoped exact evidence · Ash"><meta name="twitter:description" content="This report retains implementation and review evidence from 90f517d, the combined module/local-newtype and resume-required kernel baseline. It is informative. Both independent reviews, the full gate, and transition…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/effect-ash/scoped-evidence-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/effect-ash/scoped-evidence-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/scoped-evidence-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Scoped exact evidence","headline":"Scoped exact evidence","description":"This report retains implementation and review evidence from 90f517d, the combined module/local-newtype and resume-required kernel baseline. It is informative. Both independent reviews, the full gate, and transition…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/effect-ash/scoped-evidence-evidence/","@id":"https://dikini.github.io/ash/docs/design/effect-ash/scoped-evidence-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/scoped-evidence-evidence.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="scoped-exact-evidence" data-pagefind-meta="title">Scoped exact evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/effect-ash/scoped-evidence-evidence.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This report retains implementation and review evidence from <code>90f517d</code>, the
+combined module/local-newtype and resume-required kernel baseline. It is
+informative. Both independent reviews, the full gate, and transition artifacts
+are closed; the checkpoint was locally integrated. The <a href="/ash/docs/design/effect-ash/milestone-closure-evidence/">milestone closure report</a>
+records integration into <code>main</code> and final verification status. The specification
+defines the implemented language; this report retains checkpoint evidence.</p>
+<h2 id="retained-boundary">Retained boundary</h2>
+<p>CP-0015 was accepted at <code>2f657d8</code> under the user's request to implement the
+bounded slice autonomously. TASK-0025 and its execution plan were activated at
+<code>cee0af0</code>. The first direct/forwarding path is retained at <code>f01e8e3</code>; method and
+selection interactions are retained at <code>d87203d</code>.
+The reviewed nested-body scheduling correction is retained at <code>bceb688</code>.
+Complete source/capture/header authentication and resource corrections are
+retained at <code>85bbe0d</code>.
+The specification, executable examples, and evidence are retained at <code>c16cd5d</code>.
+CP-0015, TASK-0025, and its execution plan were removed from the product tree after this
+verified checkpoint; Git retains their transition authority and work history.</p>
+<p>Sequential private <code>with</code> declarations supply every method for one exact
+complete interface application. Its selection key must contain an active local
+nominal identity. Abstract requirements and exact-current evidence precede the
+lexical source; concrete matching follows it. Improvement retains the existing
+fixed snapshot and single transactional forward pass. Recursive prerequisites
+still select by complete goal, not by a new determinant-key barrier.</p>
+<p>One flat parent link per source and one optional head per pending occurrence
+retain the occurrence's original lexical scope through deferred inference.
+Independent linked validation reconstructs scope from the ordered resolved
+tree. Supplied bodies see preceding values and evidence, with no implicit self
+or sibling selection. Their contextual method parameters are independently
+rigid and introduce no source type names.</p>
+<p>Lowering uses ordinary nonrecursive bindings, functions, captures, type
+abstractions, and applications. The existing method-evidence catalog retains
+inert owner/use authentication facts; it is not a runtime registry. Lexical
+facts do not enter summaries or imports. This adds no runtime identity,
+dictionary, evaluator operation, proof authority, existential package,
+acquisition, resource lifetime, or checked-discard rule.</p>
+<h2 id="behavioral-evidence">Behavioral evidence</h2>
+<ul>
+<li><code>tests/scoped_evidence.rs</code> carries the complete pure relation through direct
+and constrained calls, linked authentication, Core validation, and execution.
+Both observe <code>42</code>.</li>
+<li><code>tests/scoped_evidence_syntax.rs</code> covers sequential projection and excludes
+module, visibility, head-parameter, prerequisite, and recursive-group forms.</li>
+<li>The verified 50-case interaction corpus covers exact
+identity and key admission; deterministic method membership and diagnostics;
+lexical/concrete priority; enclosing abstract/current context; mandatory
+improvement conflicts; fixed-snapshot and delayed closure behavior; recursive
+complete-goal prerequisites; polymorphic and higher-kinded methods; and
+enclosing parameters.
+Two final cases preserve an enclosing generic implementation parameter,
+including an unused dependent absent from the method type and representation.</li>
+<li>Closure cases execute selected methods after their evidence block returns
+and identity-free closures after their nominal scope returns. Disjoint
+sources can supply different behavior for the same identity. Repeated
+evaluation of one static source preserves distinct ordinary captures.
+A cross-module factory exports its ordinary closure without exporting its
+private interface or lexical evidence.</li>
+<li>Method bodies may capture preceding recursive functions but gain no implicit
+self or sibling evidence. Effect cases preserve rows, operation/resume
+traces, and nested handler ownership, while rejecting enclosing resume
+capture. Accepted interaction cases revalidate both Core transforms and
+preserve their values; effect cases also preserve their traces.</li>
+<li><code>tests/spec_examples.rs</code> adds the direct/forwarding example, the owned
+missing-local-key rejection, and a normative-fragment manifest. The
+suite contains 74 tests.</li>
+</ul>
+<h2 id="review-corrections">Review corrections</h2>
+<p>Independent high-reasoning semantic and Rust/resource reviews covered the
+complete <code>90f517d</code>-to-product diff. Both closed without outstanding Critical or
+Important findings after the following corrections.</p>
+<ul>
+<li>Supplied methods receive independent declaration-context rigids. Nested
+methods do not reuse canonical interface parameter identities. Existing
+canonical substitution coalesces closed effect instances; contextual body
+weakening uses the existing row subset relation.</li>
+<li>Linked validation derives preceding evidence and nominal scope from the
+ordered resolved tree. Complete-goal checks reject concrete substitution for
+an available exact lexical source while preserving the different-dependent
+recursive-prerequisite fallback.</li>
+<li>Complete headers participate in nominal and rigid scope checks even when an
+argument occurs in no method type. Authenticated enclosing implementation and
+lexical-method mappings apply only beneath their actual Core subtrees.
+Supplementary implementation owners are retained only for lexical-header
+dependencies, after the original catalog stages.</li>
+<li>Core authenticates contextual parameter count, membership, module, positional
+kinds and spellings, ordered identities, group provenance, and exclusive
+ownership. Generated Core alpha-renaming stays independent.</li>
+<li>Every lexical header also passes the existing complete-application kind
+checker. The last regression coherently changed an unused dependent from
+<code>Int</code> to unapplied <code>Box</code> in both its catalog owner and matching anchor.
+Core accepted it before correction. The unchanged valid fixture passes;
+the malformed complete header now rejects.</li>
+<li>Capture authentication preserves ordered occurrences, not just a binder set.
+Retargeting one occurrence in <code>x + x + y</code> initially escaped set-based
+checking. Owner/ordinal anchors now identify each use. Distinct ordinals
+cannot share one node within an owner; nested owners may share an occurrence.
+Temporary address-based routing never dereferences addresses and remains
+local to synthesis; only canonical identities survive.</li>
+<li>Linked validation rejects empty retained method groups and wrong equation
+binders even for unused sources. It charges the equation scan before work.</li>
+<li>Nested supplied bodies use the existing projector, resolver, and elaborator
+queues. Final outer Core construction happens after the body driver returns.
+Shared equation preparation/finishing and a small continuation payload
+preserve the historical 256 KiB predecessor and new depth-32/512 KiB success
+and rejection cases. No stack or production limit was raised.</li>
+<li>Handler cleanup preserves the original supplied-body diagnostic under the
+existing poisoned-elaborator contract, rather than replacing it with an
+internal cleanup error.</li>
+<li>Deep replacement retention and four temporary-Type failure paths use the
+existing iterative owners through fallible work. Separate depth-16,384,
+256 KiB regressions first overflowed during selection, scheduling, or method
+finishing; they now report structured failure without recursive teardown.
+New vectors and replacement storage reserve fallibly after precharging.</li>
+</ul>
+<p>Two proposed negative tests were rejected during review. Reordering intact
+supplied groups is valid because interface order defines canonical slots.
+Coherently renaming otherwise unobserved placeholders and diagnostic origins
+preserved actual type and scope relations; it did not justify universal
+source-provenance authority.</p>
+<h2 id="additive-work-and-failure-evidence">Additive work and failure evidence</h2>
+<p>The following are implementation accounting formulas, not language limits.
+Existing type walks, kind operations, and source-free paths retain their owners.
+Focused tests require exact success, one-short failure, and a fresh valid retry;
+publication checks reject partial sources, selections, and Core results.</p>
+<h3 id="selector">Selector</h3>
+<p>Let <code>w(T)</code> be existing constraint-budget type-walk cost and <code>h</code> indicate a
+retained lexical head. Source ingress costs <code>2 + sum(w(arguments))</code>; owned
+pending ingress costs <code>1 + h + sum(w(arguments))</code>. For <code>&lt;N, Int&gt;</code>, these are
+six and <code>5 + h</code> constraint units.</p>
+<p>Cloned method ingress costs <code>2 + m + r + v + h</code>, plus application/method
+argument and retained-value type walks. Here <code>m</code> counts method arguments,
+<code>r</code> is zero or one plus rigid arguments, and <code>v</code> marks a checked value type.
+The conditional-method fixture costs <code>14 + h</code> constraint units and four
+type-work units. Tests cover scope-chain depths zero, one, and 256; failures
+preserve earlier records and occurrence-owned heads through later traversal.</p>
+<h3 id="elaboration-and-resolution">Elaboration and resolution</h3>
+<p>Declaration preparation without preceding lexical sources costs
+<code>3M + K + sum(P) + MG + G</code> constraint units in checking and
+<code>4M + K + sum(P) + MG + G</code> in synthesis. Here <code>M</code> counts interface methods,
+<code>G</code> supplied groups, <code>K</code> key positions, and <code>P</code> copied interface parameters
+per method. The one-method <code>Read&lt;N, Int&gt;</code> fixture costs eight and nine.
+Replacement-map reservation separately costs <code>P + Q</code> type-work units per
+method, with <code>Q</code> method-local parameters, before argument cloning.</p>
+<p>Cleanup precharges <code>(M + 1)C</code> for <code>M</code> members and backing-map capacity <code>C</code>
+before removing the declaration from its iterative owner. The sparse-capacity
+test fills 128 entries, clears them, and retains one without shrinking.</p>
+<p>Resolver method lookup costs <code>I + M + 2P + 2C</code>: local interface-table width
+<code>I</code>, canonical method width <code>M</code>, two <code>P</code>-slot parameter buffers, and two
+metadata copies with existing cost <code>C</code>. Imported lookup omits <code>I</code> because
+the interface is indexed. Tests vary local/imported widths and parameter counts.
+Unknown methods deferred to membership checking add no lookup work.</p>
+<h3 id="linked-checks-and-capture-collection">Linked checks and capture collection</h3>
+<p>The two-method linked node fixture costs 16 constraint units. Owner retention
+costs <code>30 + 2T</code> for complete method-table width <code>T</code>: 34 at width two and 40
+at width five. Block scheduling costs 12 for that lexical fixture versus eight
+for its source-free predecessor. Lexical plan ingress costs <code>1 + M</code> for
+<code>M</code> method IDs.</p>
+<p>The header-only scope pass costs 50 constraint and three type-work units for
+its fixture. Empty-owner gating adds zero to either budget. Lexical-header
+dependency detection has a seven-constraint-unit helper fixture; Core's
+two-parameter authentication fixture costs eleven type-work units.</p>
+<p>The audit group fixture costs <code>2 + G + GE</code>: declaration, <code>G</code> groups, result,
+and <code>GE</code> equation slots. Kind checking precharges <code>G</code> group visits in addition
+to unchanged header checks and equation-edge charges. Empty groups therefore
+remain bounded.</p>
+<p>The borrowed capture walker returns <code>y, x, x</code> in occurrence order. Its simple
+fixture costs eleven type-work units, or fourteen with binder retention. Nested
+groups cost <code>7 + G + 5GE</code>. Routing adds fourteen collection units and nine
+lookup units for three captures, separately from ordinary synthesis scheduling.
+Builder and Core tests cover exact capture-owner lookup, anchor publication,
+initializer-subtree membership, duplicate-use exclusion, and source-free gates.
+The builder fixture costs <code>19 + A + 7R</code> per anchor, where <code>A</code> counts prior
+anchors and <code>R</code> reached expectations; existing builder setup retains two
+carriers per expectation. Core capture envelopes cost
+<code>A + sum(1 + H + S_i)</code>: all-anchor visits <code>A</code>, backing-map capacity <code>H</code>, and
+subtree work <code>S_i = 1 + popped nodes + scheduled edges</code> per capture. Sparse
+capacity and fresh-validator retries are included.</p>
+<h3 id="core-complete-headers-and-prerequisites">Core complete headers and prerequisites</h3>
+<p>A concrete lexical prerequisite precharges <code>L + M</code> for owner and method scans.
+The smallest regression previously used eleven units instead of thirteen;
+one/two-method and unrelated-owner fixtures cover exact boundaries.</p>
+<p>Complete-header kind checking adds <code>L + L*M</code> scan units, for <code>L</code> lexical
+method-owner rows and <code>M</code> catalog methods, plus existing argument synthesis
+and kind-comparison costs. No lexical owners add no work. The one-owner,
+one-method, two-argument fixture costs eleven units including five existing
+catalog checks; it passes exact, one-short, and fresh retry probes.</p>
+<h2 id="verification">Verification</h2>
+<p>The baseline full gate passed on 2026-09-05: formatting, metadata, build,
+Clippy, 1,968 tests across 59 binaries, and rustdoc with warnings denied.
+The vertical, interaction, and scheduling commits above each retain their
+review and focused verification in Git history.</p>
+<p>Before the last header-kind correction, the stable tree passed 978 library
+tests, all-target Clippy with warnings denied, and 221 tests across eight
+targets: 31 architecture, 32 data/ADT, six interface-resource, 20 local-newtype,
+two vertical, 50 interaction, six syntax, and 74 executable-specification tests.
+The architecture inventory names only actual new static carriers; scanner
+rules, runtime inventories, and production limits are unchanged.</p>
+<p>After the correction, all 979 library tests passed. The final exact-budget
+assertions passed in a separate fresh run. Both independent reviewers closed
+the correction; the complete semantic and code/resource reviews remain closed.
+The full <code>CARGO_INCREMENTAL=0 cargo xtask verify</code> gate passed on 2026-09-06:
+formatting, metadata, build, Clippy, 2,088 tests across 62 binaries, and rustdoc
+with warnings denied. Markdown lint and diff checks passed after consolidation;
+all 194 local file links in the thirteen changed Markdown files resolved.
+After transition cleanup, Markdown lint and diff checks pass, and all 187
+remaining local file links in the thirteen changed Markdown files resolve.</p>
+<p>The requirement audit found no missing evidence category. Manual ordering
+review confirms resolution and header arity/kinds before local-key admission,
+then active-key conflicts, complete membership, and body checking. The corpus
+isolates key-before-membership and duplicate-before-membership; it does not
+claim a separate executable test for every mixed-error combination. Grammar
+and selection-rule notation agree with their prose; the specification changes
+retain the proposal's explicit non-goals and branch-versus-main distinction.</p>
+<p>An isolated target directory with incremental compilation disabled avoids a
+corrupted pre-existing build cache. Ignored build logs are disposable and carry
+no semantic authority.</p>
+<h2 id="local-integration">Local integration</h2>
+<p>The explicit merge <code>1f691ad2282d25e18eb4732eed7b2cd36240c28d</code> retains exact
+feature tip <code>64bcf494f71d04ec38a7369fab7e11ab13032638</code> on
+<code>integration/effect-ash-foundations</code>. Both tips have tree
+<code>a5e21c0f8ed6270f9b6cc979fb5dbea50a896a45</code>; the merge changed no product content.
+Integration documentation now records that retained boundary. A fresh full
+<code>CARGO_INCREMENTAL=0 cargo xtask verify</code> run from the integration checkout passed
+on 2026-09-06: formatting, metadata, build, Clippy, 2,088 tests across 62 binaries,
+and rustdoc with warnings denied. Only integration-status documentation differs
+from the merged feature tree. Markdown lint, diff checks, and all 188 local
+file links in the thirteen changed Markdown files pass.</p>
+<p>After proving the feature checkout clean and its exact tip an ancestor of
+integration, <code>git worktree remove</code> removed <code>.worktree/scoped-exact-evidence</code>
+and its disposable build cache. The merged <code>codex/scoped-exact-evidence</code> branch
+was deleted. Its commits remain reachable through integration. Only
+<code>.worktree/effect-ash-foundations</code> remains under the repository's <code>.worktree/</code>.
+Main stays at <code>7195500b7a165f8191efa1485e1ca6f4114180fb</code>; its unrelated tracked
+and untracked changes, the two historical worktrees, other branch refs, remote
+refs, and tags are unchanged. No push or merge into <code>main</code> was performed.</p>
+<h2 id="boundary-at-this-checkpoint">Boundary at this checkpoint</h2>
+<p>Capture/usage and checked discard were separate work. This slice supplies no
+resource-lifetime, provider, proof, existential, acquisition, or runtime-dispatch
+authority. Local integration targets <code>integration/effect-ash-foundations</code>;
+merging into <code>main</code>, pushing, and tagging are not authorized by this checkpoint.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#retained-boundary">Retained boundary</a><a href="#behavioral-evidence">Behavioral evidence</a><a href="#review-corrections">Review corrections</a><a href="#additive-work-and-failure-evidence">Additive work and failure evidence</a><a href="#verification">Verification</a><a href="#local-integration">Local integration</a><a href="#boundary-at-this-checkpoint">Boundary at this checkpoint</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

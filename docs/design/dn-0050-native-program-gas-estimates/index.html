@@ -1,0 +1,1093 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0050: Native program gas estimates · Ash</title><meta name="description" content="This note records the initial native gas calibration and subsequent larger SQLite observations. The user approved preparation 24P and initially startup 7B, then source checking 100S and startup 11B on 2026-10-15.…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0050: Native program gas estimates · Ash"><meta property="og:description" content="This note records the initial native gas calibration and subsequent larger SQLite observations. The user approved preparation 24P and initially startup 7B, then source checking 100S and startup 11B on 2026-10-15.…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0050: Native program gas estimates · Ash"><meta name="twitter:description" content="This note records the initial native gas calibration and subsequent larger SQLite observations. The user approved preparation 24P and initially startup 7B, then source checking 100S and startup 11B on 2026-10-15.…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0050-native-program-gas-estimates/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0050-native-program-gas-estimates/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0050-native-program-gas-estimates.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0050: Native program gas estimates","headline":"DN-0050: Native program gas estimates","description":"This note records the initial native gas calibration and subsequent larger SQLite observations. The user approved preparation 24P and initially startup 7B, then source checking 100S and startup 11B on 2026-10-15.…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0050-native-program-gas-estimates/","@id":"https://dikini.github.io/ash/docs/design/dn-0050-native-program-gas-estimates/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"calibration record; 800S source, 800S final elaboration, 16S compiler-arena rewrite, 345S Core, 125P preparation and 22B startup accepted","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0050-native-program-gas-estimates.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0050-native-program-gas-estimates" data-pagefind-meta="title">DN-0050: Native program gas estimates</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0050-native-program-gas-estimates.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0050</code></li>
+<li>Status: calibration record; <code>800S</code> source, <code>800S</code> final elaboration, <code>16S</code> compiler-arena rewrite, <code>345S</code> Core, <code>125P</code> preparation and <code>22B</code> startup accepted</li>
+<li>Related: <a href="https://github.com/dikini/ash-lang/blob/adddeffe5d135bd03bf5fc30051965e5da70ed24/docs/tasks/TASK-0040-ash-copying-sqlite-library.md">TASK-0040 transition history</a>,
+<a href="/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/">AD-0013</a>,
+<a href="https://github.com/dikini/ash-lang/blob/adddeffe5d135bd03bf5fc30051965e5da70ed24/docs/proposals/CP-0022-ash-authored-foreign-interfaces.md">CP-0022 transition history</a></li>
+</ul>
+<p>This note records the initial native gas calibration and subsequent larger
+SQLite observations. The user approved preparation <code>24P</code> and initially startup
+<code>7B</code>, then source checking <code>100S</code> and startup <code>11B</code> on 2026-10-15.
+<a href="/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/">AD-0013</a>
+governs the accepted policy. The earlier policy-only review excludes these
+revisions and the unfinished SQLite port. A subsequent independent local review
+cleared only the revised policy and ordinary fallback after focused checks;
+newer port work remains outside that clearance.</p>
+<p>The human subsequently approved the full-workload 25% reserve coefficients
+below: preparation <code>51P</code>, final elaboration <code>33S</code> and compiler Core <code>108S</code>.
+Independent local review cleared that bounded implementation after focused
+mechanism, normal-host and quality checks. The human then approved startup
+<code>22B</code> from the complete persistence observation below; focused independent review cleared that startup-only revision. The human then approved final elaboration <code>161S</code> and compiler Core <code>345S</code> from the compact-generic observations below. These bounded clearances and diagnostic completions remain separate from whole-port review and retaining verification.</p>
+<p>The current formulas are:</p>
+<pre tabindex="0"><code class="language-text">source checking = 800 * canonical loaded source UTF8 bytes, including builtins
+preparation     = 125 * (admitted source UTF8 bytes + validated main Core nodes)
+final elaboration = 800 * canonical loaded source UTF8 bytes, including builtins
+compiler rewrite  = 16 * the same source closure, per compiler arena lifetime
+independent Core  = 345 * canonical loaded source UTF8 bytes, including builtins
+startup         = 22 * (canonical image bytes + canonical expected-fact bytes)
+</code></pre>
+<p>Each Source/Final/Core total includes paid sizing and subsequent work in its
+phase. The same paid canonical byte count separately funds each compiler rewrite
+arena once; repeated rewrites retain cumulative spending. These totals have no
+additional historical ten-percent margin. Generic, standalone and private-image
+rewrite defaults remain unchanged. Resolution and other construction/constraint, allocation, depth, stack and
+authority checks retain their existing policies. There is no static overall gas ceiling.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Earlier observation</th>
+<th align="right">Input size</th>
+<th align="right">Complete measured work</th>
+<th align="right">Historical forecast</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Persistence source / run 517</td>
+<td align="right">42,851 bytes including 1,844 builtin bytes</td>
+<td align="right">2,946,584</td>
+<td align="right">4,285,100</td>
+</tr>
+<tr>
+<td>Repeated source / run 539</td>
+<td align="right">37,603 bytes</td>
+<td align="right">1,045,628</td>
+<td align="right">3,760,300</td>
+</tr>
+<tr>
+<td>Simultaneous source / run 541</td>
+<td align="right">37,605 bytes</td>
+<td align="right">1,243,262</td>
+<td align="right">3,760,500</td>
+</tr>
+<tr>
+<td>Control host startup / run 532</td>
+<td align="right">207,022 image + facts bytes</td>
+<td align="right">1,697,083</td>
+<td align="right">2,277,242</td>
+</tr>
+<tr>
+<td>Copied-column host startup / run 489</td>
+<td align="right">174,197 image + facts bytes</td>
+<td align="right">1,265,014</td>
+<td align="right">1,916,167</td>
+</tr>
+</tbody>
+</table>
+<p>These are existing observations at distinct code pins, not a same-version fit,
+frozen holdout or current full-port accuracy claim. Persistence's three archived
+user files alone contain 41,007 bytes; the admitted denominator also includes
+builtin sources. The minimum 25%-reserve source coefficient from that row is
+86; the human selected the conservative rounded coefficient 100. The earlier startup coefficient 11 was
+<code>ceil(1.25 * max(work / bytes))</code> over those complete observations. The actual
+meter still refuses work amplification. These revisions grant no authority.</p>
+<h2 id="recursive-hook-source-observation-and-accepted-revision">Recursive-hook Source observation and accepted revision</h2>
+<p>The unchanged <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/hooks_runtime.rs">recursive-hook regression</a>
+<code>repeated_source_site_activations_overlap_without_merging</code> uses 283 UTF8 bytes,
+one loaded module and no imports or builtin sources. It requires five overlapping
+registrations and result <code>13</code>. The integrated checkpoint at <code>7997564</code> refused
+Source checking at 28,230 of 28,300 units. Capture-control normalization requested
+95 units after changing the continuation state. The active cumulative meter is
+moved into the elaborator and restored before error propagation; its outer
+placeholder is not additional allowance. The trace showed no missing census,
+reset, top-up or double debit.</p>
+<p>Run 726 used the saved checkpoint binary and exact witness with one finite
+diagnostic Source allowance of 113,200. Its existing calibration hook received
+normal allowance 28,300; no global override changed resolution or other owners.
+The complete Source total was 42,836, including the paid census of two units
+once. The module prefix was 42,835; the closed-entry and retained-provenance
+prefixes both ended at 42,836. These are cumulative, not additive. Resolution
+remained separate at 253 of 327,680. The observer stopped before module linking,
+Final/Core checking or evaluation. This is not a normal result-<code>13</code> pass.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Source fitting row</th>
+<th align="right">Canonical S</th>
+<th align="right">Complete reported work</th>
+<th align="right">Work / S</th>
+<th align="right">Historical accepted <code>200S</code> forecast</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Persistence / 517</td>
+<td align="right">42,851</td>
+<td align="right">2,946,584</td>
+<td align="right">68.763483</td>
+<td align="right">8,570,200</td>
+</tr>
+<tr>
+<td>Repeated / 539</td>
+<td align="right">37,603</td>
+<td align="right">1,045,628</td>
+<td align="right">27.807037</td>
+<td align="right">7,520,600</td>
+</tr>
+<tr>
+<td>Simultaneous / 541</td>
+<td align="right">37,605</td>
+<td align="right">1,243,262</td>
+<td align="right">33.061082</td>
+<td align="right">7,521,000</td>
+</tr>
+<tr>
+<td>Later copying</td>
+<td align="right">41,830</td>
+<td align="right">2,176,588</td>
+<td align="right">52.034138</td>
+<td align="right">8,366,000</td>
+</tr>
+<tr>
+<td>Later persistence</td>
+<td align="right">43,209</td>
+<td align="right">2,950,458</td>
+<td align="right">68.283413</td>
+<td align="right">8,641,800</td>
+</tr>
+<tr>
+<td>Recursive hook / 726</td>
+<td align="right">283</td>
+<td align="right">42,836</td>
+<td align="right">151.363958</td>
+<td align="right">56,600</td>
+</tr>
+</tbody>
+</table>
+<p>The earlier rows retain their distinct historical source/accounting pins and
+complete reported totals; they are not current remeasurements of paid census.
+All rows contribute to fitting. There is no untouched holdout, same-version
+full-port accuracy claim or universal complexity bound. Applying the existing
+25% engineering-reserve rule to the maximum gives <code>ceil(1.25 * 151.363958) = 190</code>.
+The project lead selected conservative rounded <code>200S</code> under the user's delegated
+autonomous judgment, after independent measurement/accounting review. It gives
+56,600 units for this hook, 32.13% above the measured total. The reserve is an
+engineering choice, not a confidence bound.</p>
+<p>Only the Source coefficient changes. Canonical sizing, cumulative paid carry,
+terminal refusal, overflow and all other phase, depth, stack and authority checks
+remain. Whitespace or admitted unused source can still buy linear allowance;
+compact structural amplification still meets the actual meter. No intercept,
+floor, extra ten-percent margin or static overall cap is added. Final/Core,
+preparation, startup and runtime metrics do not participate in this Source fit.
+Normal hook execution, focused policy verification and independent implementation
+review remain separate from this diagnostic and the required fresh checkpoint.</p>
+<h2 id="product-sqlite-source-observation-and-delegated-revision">Product SQLite Source observation and delegated revision</h2>
+<p>At PR #34's <code>f26dabe2c4d9</code> input, the normal full SQLite-library target passed 30
+cases and refused four during Source checking. These are incomplete work
+observations, not measured full demands. The constraint case admitted five
+canonical sources totaling 39,033 UTF8 bytes. Its six census charges remained
+inside the normal <code>200S</code> total of 7,806,600. Independent accounting review found
+no reset, top-up, missing census or double debit; nested original-admission,
+CST and row measurements are included in their parent totals.</p>
+<p>Run 891 used the byte-identical constraint Source closure with one disclosed
+finite Source-only total of 31,226,400, four times normal. Other allowances,
+stack, depth and checks remained unchanged. Complete Source work was 8,510,624:
+module checking ended at 8,510,573, then the closed-entry and retained-provenance
+work brought the same cumulative ledger to 8,510,624. The observer stopped
+before linking, Final/Core checking, evaluation or native execution. All
+temporary inputs were restored. The result and retained binary are recorded in
+<code>task36-sqlite-source-demand891-complete-result-20261016.json</code>.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Complete Source fitting group</th>
+<th align="right">Observations</th>
+<th align="right">Maximum work / S</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Historical rows above, at their distinct code/accounting pins</td>
+<td align="right">6</td>
+<td align="right">151.363958</td>
+</tr>
+<tr>
+<td>Current normal complete reports in run 886</td>
+<td align="right">35</td>
+<td align="right">128.169520</td>
+</tr>
+<tr>
+<td>Current constraint Source-only measurement / 891</td>
+<td align="right">1</td>
+<td align="right">218.036636</td>
+</tr>
+</tbody>
+</table>
+<p>All 35 complete run-886 reports participate, including cases with more than one
+Source compilation. The literal table is
+<code>task36-source-demand891-fit-observations-corrected-20261016.json</code>. Failed,
+incomplete totals and Final/Core/preparation/startup/native costs do not enter
+this Source fit. There is no holdout or universal complexity guarantee.</p>
+<p>The existing 25% engineering-reserve rule gives
+<code>ceil(1.25 * 218.036636) = 273</code>. After independent measurement/accounting review,
+the project lead selected the conservative rounded <code>300S</code> under the user's
+delegated autonomous judgment; this was not a direct human choice of 300.
+It gives this constraint case 11,709,900 units, 37.59% above measured demand.
+That revision changed only the Source coefficient. Paid canonical sizing and cumulative
+carry, overflow and terminal refusal remain exact; no floor, intercept, reset,
+extra ten-percent margin or changes to other phase/depth/stack checks are added.
+The other three exhausted demands were not completed by this measurement.
+Normal affected callers, implementation review, retention and the fresh
+checkpoint remain separate evidence obligations.</p>
+<h2 id="current-source-final-and-separate-rewrite-revision">Current Source, Final and separate rewrite revision</h2>
+<p>The earlier full SQLite library run at Source <code>300S</code> / Final <code>161S</code> passed 30
+cases and exhausted four required cases. Separate finite Source/Final
+measurements completed the constraint and native-index cases, then stopped at
+persistence's Source refusal. A single first-refusal observation identified the
+separate builder rewrite meter denying one unit at its implementation default
+of 327,680; the outer Source meter still had credit. No duplicated debit or
+missing Source funding was established.</p>
+<p>The remaining two cases completed with finite diagnostic Source <code>1200S</code>, Final
+<code>644S</code> and separate rewrite capacity 1,310,720 per arena. Each invocation used
+the original source texts and display paths, paid each phase's own canonical
+census once and stopped after complete Final, before independent Core,
+preparation or native execution. All temporary changes were restored.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Complete diagnostic case</th>
+<th align="right">Canonical S</th>
+<th align="right">Source</th>
+<th align="right">Final</th>
+<th align="right">Largest rewrite arena</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Constraint / 902</td>
+<td align="right">39,033</td>
+<td align="right">8,510,632</td>
+<td align="right">6,794,355</td>
+<td align="right">At most 327,680; not measured</td>
+</tr>
+<tr>
+<td>Native index / 902</td>
+<td align="right">39,068</td>
+<td align="right">8,483,884</td>
+<td align="right">6,761,494</td>
+<td align="right">At most 327,680; not measured</td>
+</tr>
+<tr>
+<td>Persistence / 904</td>
+<td align="right">44,512</td>
+<td align="right">28,158,349</td>
+<td align="right">26,809,274</td>
+<td align="right">510,782</td>
+</tr>
+<tr>
+<td>Prepare refusals / 904</td>
+<td align="right">38,797</td>
+<td align="right">12,941,261</td>
+<td align="right">11,100,299</td>
+<td align="right">129,551</td>
+</tr>
+</tbody>
+</table>
+<p>The exact normal-895 table has 37 complete Source and 35 complete Final
+observations. Adding these four completed diagnostic observations gives 41 and
+39 separate fitting rows. Run 904 also records 25 distinct arena lifetimes and
+95 monotone checkpoints; checkpoints are not additional work, and owner
+capacities are not summed. Failed or absent phase totals do not enter the fit.
+The older measurements above remain at their own versions and accounting pins.
+These are fitting observations, not independent cases or holdout evidence.</p>
+<p>Persistence determines all three maxima: <code>632.601299*S</code> Source,
+<code>602.293179*S</code> Final and <code>11.475153*S</code> rewrite. Applying the same 25% fitting
+reserve gives integer minima 791, 753 and 15. After independent accounting and
+scope review, the project lead selected conservative rounded coefficients
+<code>800S</code>, <code>800S</code> and <code>16S</code> under the user's delegated judgment. This was not a
+direct human selection of those numbers. The rewrite rule uses the same trusted
+canonical S returned by the paid census and initializes a separate meter once
+for each empty compiler arena; generic, standalone and private-image defaults
+remain unchanged. <a href="/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/">AD-0013</a>
+governs this accepted policy. Normal affected callers, implementation review,
+retained verification and the full checkpoint remain separate obligations.</p>
+<h2 id="current-complete-preparation-revision">Current complete-preparation revision</h2>
+<p>The next normal full SQLite run passed 30 cases. The other four completed Source,
+Final and independent Core, then exhausted preparation <code>51P</code>. One exact owning
+refusal requested five units for a paid flat structural-key lookup at 2,154,186
+of 2,154,189 units. The census and encoder retained the same cumulative meter;
+no reset, fixed inner meter or duplicate debit was established.</p>
+<p>One finite <code>204P</code> batch completed preparation for the four existing integration
+witnesses. Source <code>800S</code>, Final <code>800S</code>, rewrite <code>16S</code>, Core <code>345S</code>, startup and
+all checks retained their normal policies. Each helper returned after complete
+image encoding and emission, before generated-host building, startup or
+execution. Existing C/archive input creation remained unchanged. All temporary
+changes were restored; these diagnostic completions are not normal host passes.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Complete preparation case</th>
+<th align="right">Source bytes S</th>
+<th align="right">Main nodes N</th>
+<th align="right">P = S + N</th>
+<th align="right">Complete work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Constraint / 920</td>
+<td align="right">39,033</td>
+<td align="right">3,206</td>
+<td align="right">42,239</td>
+<td align="right">2,570,536</td>
+</tr>
+<tr>
+<td>Native index / 921</td>
+<td align="right">39,068</td>
+<td align="right">3,211</td>
+<td align="right">42,279</td>
+<td align="right">2,572,659</td>
+</tr>
+<tr>
+<td>Persistence / 922</td>
+<td align="right">44,510</td>
+<td align="right">6,395</td>
+<td align="right">50,905</td>
+<td align="right">4,984,019</td>
+</tr>
+<tr>
+<td>Prepare refusals / 923</td>
+<td align="right">38,797</td>
+<td align="right">3,968</td>
+<td align="right">42,765</td>
+<td align="right">3,193,663</td>
+</tr>
+</tbody>
+</table>
+<p>The actual source hashes are pinned. The first, second and fourth source texts
+match the earlier observation; persistence's existing fixture substitutes its
+fresh <code>session.db</code> directory in two string literals. This accounts for its
+44,510-byte input instead of the historical 44,512 bytes. Display and process
+identities are fresh. Repeated emission/completion markers report the same
+cumulative work and are not added.</p>
+<p>These are four exact P fitting rows. The normal run also records 31 completed
+preparation observations with S but without N. Their conservative <code>work/S</code>
+upper bound for <code>work/P</code> is at most 50.025664 because P &gt;= S; they are separate
+from the exact P rows. Censored refusals and compilation-only reports do not
+supply complete preparation rows. Earlier observations retain their own pins.</p>
+<p>Persistence sets the exact maximum at <code>97.908241P</code>. The 25% fitting reserve gives
+minimum integer coefficient 123. After independent accounting, input and fit
+review, the project lead selected conservative rounded <code>125P</code> under the user's
+delegated judgment, rather than a direct human numeric choice. It gives this
+measured case 27.67056% headroom. Only the coefficient changes; paid sizing,
+cumulative carry, overflow, terminal refusal and all other allowances/checks
+remain unchanged. These fitting observations are not holdout evidence or a
+universal bound. Normal native/caller verification, actual-head review and
+retention remain separate obligations under
+<a href="/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/">AD-0013</a>.</p>
+<h2 id="complete-persistence-startup-and-accepted-revision">Complete persistence startup and accepted revision</h2>
+<p>The normal run-610 persistence host completed source checking, final elaboration,
+independent compiler Core and native preparation, then exhausted its <code>11B</code>
+startup meter. At the owning refusal, the cumulative meter and its nonoverlapping
+remaining-credit loans held 3,823,113 of 3,823,127 units; a row substitution
+requested 49 with 14 remaining. This was cumulative work exhaustion, not a
+measured depth or allocation failure.</p>
+<p>Run 614 used that exact saved host/image/facts and all checks, with one disclosed
+finite diagnostic total of 8,388,608 assigned at zero. It consumed 6,072,727
+units through final native binding admission and stopped before evaluation or
+SQLite calls. Image bytes were 278,473 and expected facts 69,084, so <code>B</code> was
+347,557. This diagnostic is not a native persistence pass.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Startup fitting row</th>
+<th align="right">B</th>
+<th align="right">Complete work</th>
+<th align="right">Accepted <code>22B</code> forecast</th>
+<th align="right">Error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copied-column predecessor / 489</td>
+<td align="right">174,197</td>
+<td align="right">1,265,014</td>
+<td align="right">3,832,334</td>
+<td align="right">+202.95%</td>
+</tr>
+<tr>
+<td>Control-resume predecessor / 532</td>
+<td align="right">207,022</td>
+<td align="right">1,697,083</td>
+<td align="right">4,554,484</td>
+<td align="right">+168.37%</td>
+</tr>
+<tr>
+<td>Persistence / 614</td>
+<td align="right">347,557</td>
+<td align="right">6,072,727</td>
+<td align="right">7,646,254</td>
+<td align="right">+25.91%</td>
+</tr>
+</tbody>
+</table>
+<p>The new maximum is 17.472607 work units per byte. Applying the same 25% reserve
+rule gives <code>ceil(1.25 * maximum) = 22</code>; the human approved that total. A 50%
+comparison gives <code>27B</code> and 9,384,039 units for persistence (+54.53%); it is not
+adopted. These are fitting rows at explicitly different source/accounting pins,
+not a same-version holdout or a universal complexity bound.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Persistence startup stage</th>
+<th align="right">Charged work</th>
+<th align="right">Share</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Decode and framing</td>
+<td align="right">368,035</td>
+<td align="right">6.06%</td>
+</tr>
+<tr>
+<td>Canonical expected facts</td>
+<td align="right">69,180</td>
+<td align="right">1.14%</td>
+</tr>
+<tr>
+<td>Source plus registry restoration, combined</td>
+<td align="right">182,227</td>
+<td align="right">3.00%</td>
+</tr>
+<tr>
+<td>All original templates: reconstruction and independent checks</td>
+<td align="right">652,769</td>
+<td align="right">10.75%</td>
+</tr>
+<tr>
+<td>Main reconstruction</td>
+<td align="right">931,230</td>
+<td align="right">15.33%</td>
+</tr>
+<tr>
+<td>Fresh main Core validation, including capture</td>
+<td align="right">3,852,656</td>
+<td align="right">63.44%</td>
+</tr>
+<tr>
+<td>Post-Core restoration</td>
+<td align="right">1</td>
+<td align="right">&lt;0.01%</td>
+</tr>
+<tr>
+<td>Generated registration and final native binding admission</td>
+<td align="right">16,629</td>
+<td align="right">0.27%</td>
+</tr>
+</tbody>
+</table>
+<p>Source and registry line markers coalesced; only their combined cost is known.
+Original-view restoration and authentication also occur inside the template
+block. These are logical charged visits, metadata reconstruction and validation
+work, not SQL execution, database rows, disk I/O or CPU time. The persistence
+client has eight lexical resource scopes (two connections and six statements),
+versus two in copying and three in simultaneous statements; main graphs have
+6,395, 2,107 and 2,492 nodes respectively. Exact Type/Row, owner, fresh window,
+copy correspondence and capture checks remain per context. That supports the
+larger structural demand but does not quantify each scope or substitution's
+share, or establish removable redundant authentication.</p>
+<p>The receipt <code>sqlite-persistence-complete-startup-614-20261015.json</code>, numeric table
+<code>sqlite-persistence-startup-614-fit-table-20261015.json</code> and short report retain
+exact source/configuration, binary, image/facts, observer and before/after pins.
+The startup revision changes only its coefficient. Framing, canonical facts,
+restoration, fresh Core/capture and binding share the existing cumulative paid
+meter. Normal persistence verification follows focused checks and independent
+review; all unfinished port and acceptance obligations remain separate.</p>
+<h2 id="revised-policy-verification">Revised policy verification</h2>
+<p>Focused checks pass for the canonical loaded-source census, duplicate import
+credit, exact total without an added ten percent, paid carry, overflow and
+fresh retries. Existing copy work/storage refusals remain terminal without an
+ordinary report. Current normal generated hosts pass the product TEXT/empty/NULL/
+invalid-UTF8/embedded-NUL query, TRANSIENT byte/text/null binding, retained control
+resume, and imported buffer zeroing/length. These are focused observations, not
+a full regression gate or completed SQLite acceptance.</p>
+<p>At the preceding policy revision, full copying completed source checking at
+2,176,588 of 4,183,000, then passed final elaboration and independent Core.
+Persistence completed source checking at 2,950,458 of 4,320,900 but exhausted
+the then-current final-elaboration allowance at 432,537. The later complete
+measurements and approved coefficients below are separate. Those inputs include
+the ordinary diagnostic policy and differ from the archived rows above. Bounded policy/fallback independent review passed; unfinished SQLite foundations
+and later diagnostic integration remain outside that review.</p>
+<h2 id="full-workload-calibration-and-approved-coefficients">Full-workload calibration and approved coefficients</h2>
+<p>Three complete workloads now use the same accounting implementation and test
+binary: <code>6af81238...</code>, configuration <code>452006fa...</code>. Runs 597/598 used source pin
+<code>6b5fea5c...</code>; run 601's <code>068f748c...</code> differs only in this informative note.
+All executable and meter bytes and modes match. <code>S</code> is the actual canonical
+resident source UTF8 closure, including builtins, before final elaboration and
+Core. <code>P</code> is admitted source bytes plus validated main Core nodes before
+preparation.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Client</th>
+<th align="right">S</th>
+<th align="right">Main nodes</th>
+<th align="right">P</th>
+<th align="right">Complete final elaboration</th>
+<th align="right">Complete independent Core</th>
+<th align="right">Complete preparation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copying / 597</td>
+<td align="right">43,313</td>
+<td align="right">2,107</td>
+<td align="right">45,420</td>
+<td align="right">279,909</td>
+<td align="right">597,511</td>
+<td align="right">1,148,886</td>
+</tr>
+<tr>
+<td>Simultaneous / 598</td>
+<td align="right">39,499</td>
+<td align="right">2,492</td>
+<td align="right">41,991</td>
+<td align="right">332,157</td>
+<td align="right">836,143</td>
+<td align="right">1,059,089</td>
+</tr>
+<tr>
+<td>Persistence / 601</td>
+<td align="right">44,698</td>
+<td align="right">6,395</td>
+<td align="right">51,093</td>
+<td align="right">1,165,115</td>
+<td align="right">3,852,068</td>
+<td align="right">2,071,102</td>
+</tr>
+</tbody>
+</table>
+<p>The upper-envelope rule gave the following choices. The human approved the
+25% column; the 50% column remains an unadopted comparison:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Phase</th>
+<th align="right">Maximum complete work / input</th>
+<th align="right">25% reserve, rounded up</th>
+<th align="right">50% reserve, rounded up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Preparation</td>
+<td align="right">40.535925</td>
+<td align="right"><code>51P</code></td>
+<td align="right"><code>61P</code></td>
+</tr>
+<tr>
+<td>Final elaboration</td>
+<td align="right">26.066379</td>
+<td align="right"><code>33S</code></td>
+<td align="right"><code>40S</code></td>
+</tr>
+<tr>
+<td>Independent Core</td>
+<td align="right">86.179874</td>
+<td align="right"><code>108S</code></td>
+<td align="right"><code>130S</code></td>
+</tr>
+</tbody>
+</table>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Phase / client</th>
+<th align="right">25% model forecast</th>
+<th align="right">Error against measured work</th>
+<th align="right">50% model forecast</th>
+<th align="right">Error against measured work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Preparation / copying</td>
+<td align="right">2,316,420</td>
+<td align="right">+101.62%</td>
+<td align="right">2,770,620</td>
+<td align="right">+141.16%</td>
+</tr>
+<tr>
+<td>Preparation / simultaneous</td>
+<td align="right">2,141,541</td>
+<td align="right">+102.21%</td>
+<td align="right">2,561,451</td>
+<td align="right">+141.85%</td>
+</tr>
+<tr>
+<td>Preparation / persistence</td>
+<td align="right">2,605,743</td>
+<td align="right">+25.81%</td>
+<td align="right">3,116,673</td>
+<td align="right">+50.48%</td>
+</tr>
+<tr>
+<td>Final elaboration / copying</td>
+<td align="right">1,429,329</td>
+<td align="right">+410.64%</td>
+<td align="right">1,732,520</td>
+<td align="right">+518.96%</td>
+</tr>
+<tr>
+<td>Final elaboration / simultaneous</td>
+<td align="right">1,303,467</td>
+<td align="right">+292.42%</td>
+<td align="right">1,579,960</td>
+<td align="right">+375.67%</td>
+</tr>
+<tr>
+<td>Final elaboration / persistence</td>
+<td align="right">1,475,034</td>
+<td align="right">+26.60%</td>
+<td align="right">1,787,920</td>
+<td align="right">+53.45%</td>
+</tr>
+<tr>
+<td>Independent Core / copying</td>
+<td align="right">4,677,804</td>
+<td align="right">+682.88%</td>
+<td align="right">5,630,690</td>
+<td align="right">+842.36%</td>
+</tr>
+<tr>
+<td>Independent Core / simultaneous</td>
+<td align="right">4,265,892</td>
+<td align="right">+410.19%</td>
+<td align="right">5,134,870</td>
+<td align="right">+514.11%</td>
+</tr>
+<tr>
+<td>Independent Core / persistence</td>
+<td align="right">4,827,384</td>
+<td align="right">+25.32%</td>
+<td align="right">5,810,740</td>
+<td align="right">+50.85%</td>
+</tr>
+</tbody>
+</table>
+<p>The approved totals at that revision were <code>51P</code>, <code>33S</code> and <code>108S</code>.
+All three workloads contribute to fitting; none is an untouched holdout. The
+25% and 50% reserves are engineering choices, not confidence bounds. No fitted
+row underpredicts. Source-byte sizing is coarse: persistence determines every
+coefficient and smaller contexts receive substantially more unused allowance.
+Unused allowance is not consumed work. No static overall ceiling is proposed.</p>
+<p>The measured final and Core totals exclude a prospective source-sizing loop.
+The canonical resident source slice already exists before both phases. Each new
+<code>S</code>-based ledger would pay one unit plus one per source before reading lengths,
+then retain those charges inside its computed total. That adds 6/6/7 units to
+these cases; it is proposed accounting, not measured prototype overhead. Paying
+it does not change the rounded coefficients. There is no free census, reset or
+spent-work top-up. Preparation totals already include their paid 6/6/7-unit
+census and native-input prefixes of 150/300/150 units.</p>
+<p>Each overridden diagnostic meter received one finite total of 4,194,304.
+Persistence final elaboration and actual independent Core began at zero used
+work; the other final/Core observations retained normal allowances. Preparation
+changed only the actual meter's capacity once before image construction,
+retaining every sizing and native-input charge. Complete Core values come from
+the caller's cumulative meter after validation, not a remaining-credit loan.
+Every original, registry, Type/Row, owner, window, capture and native-binding
+check remained. Stops after whole preparation preceded generated-host
+compilation, evaluation and native calls. These are diagnostic completions,
+not normal passes or a proposed production cap.</p>
+<p>The earlier run 599 completed persistence final elaboration at 1,165,168, then
+stopped in the unchanged Core allowance. Its entry differs from run 601 only
+by two same-width substitutions of the isolated database pathname, used for
+initial open and reopen. Library, rows and builtin source hashes match; entry
+bytes do not. The 53-unit final-work variation has no established cause. Keep
+that observation separate from the paired run-601 row above.</p>
+<p>Receipts <code>sqlite-complete-phase-gas-597-fullcopy-20261015.json</code>,
+<code>sqlite-complete-phase-gas-598-simultaneous-20261015.json</code> and
+<code>sqlite-complete-phase-gas-601-persistence-20261015.json</code> retain exact source,
+binary, script and log hashes. The current numeric table is
+<code>sqlite-full-workload-gas-proposal-v2-table-20261015.json</code>; its predecessor is
+retained separately. An earlier observer attempt stopped on an instrumentation
+guard before image construction and contributes no complete preparation row.
+The preceding implementation used <code>100S</code> / <code>51P</code> / <code>11B</code>, final elaboration
+<code>33S</code> and compiler Core <code>108S</code>; its bounded policy review passed. Normal copying,
+simultaneous statements, buffer and blob controls passed, while persistence
+reached startup and exhausted <code>11B</code>. Focused verification and independent review later cleared the <code>22B</code> revision, followed by normal file-backed persistence. Full-port acceptance and general prediction accuracy remain separate.</p>
+<h2 id="compact-generic-final-elaboration-observations">Compact generic final-elaboration observations</h2>
+<p>The unchanged 96-level prerequisite chain and 256-argument nominal application
+exhausted <code>33S</code> during final elaboration. Read-only inspection and exact first
+refusal observations found one paid census and one direct elaborator meter;
+no double debit or proven removable work justified a repair. The refusal sites
+were evidence-type cloning and zonking during unification. A stop site alone
+does not establish aggregate cost or dominance.</p>
+<p>Runs 676/677 completed final elaboration with one finite diagnostic total of
+4,194,304 each. Each retained its two already-paid census units and exact
+unchanged source and 320 KiB stack. Both stopped before independent Core,
+evaluation or native C. Their complete totals include the census; they are not
+normal pipeline or native passes. Source <code>89d92fe4</code>, configuration <code>452006fa</code>
+and the matching test binaries were unchanged before and after observation.</p>
+<p>The human approved <code>Final TOTAL = 161S</code> using
+<code>ceil(1.25 * max(complete Final / S))</code>. The maximum is
+<code>228879 / 1781 = 128.5115104</code>; the upward integer coefficient is 161.
+The 25% is an engineering reserve, not statistical confidence.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Workload</th>
+<th align="right">S bytes</th>
+<th align="right">Complete Final</th>
+<th align="right">161S</th>
+<th align="right">Surplus</th>
+<th align="right">Error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deep generic / 676</td>
+<td align="right">1,781</td>
+<td align="right">228,879</td>
+<td align="right">286,741</td>
+<td align="right">57,862</td>
+<td align="right">+25.28%</td>
+</tr>
+<tr>
+<td>Wide nominal / 677</td>
+<td align="right">2,759</td>
+<td align="right">260,085</td>
+<td align="right">444,199</td>
+<td align="right">184,114</td>
+<td align="right">+70.79%</td>
+</tr>
+<tr>
+<td>Archived copying / 597</td>
+<td align="right">43,313</td>
+<td align="right">279,909</td>
+<td align="right">6,973,393</td>
+<td align="right">6,693,484</td>
+<td align="right">+2391.31%</td>
+</tr>
+<tr>
+<td>Archived simultaneous / 598</td>
+<td align="right">39,499</td>
+<td align="right">332,157</td>
+<td align="right">6,359,339</td>
+<td align="right">6,027,182</td>
+<td align="right">+1814.56%</td>
+</tr>
+<tr>
+<td>Archived persistence / 601</td>
+<td align="right">44,698</td>
+<td align="right">1,165,115</td>
+<td align="right">7,196,378</td>
+<td align="right">6,031,263</td>
+<td align="right">+517.65%</td>
+</tr>
+</tbody>
+</table>
+<p>The three archived SQLite totals are raw older-binary observations before the
+paid resident-source census. Prospective additions of 6/6/7 units are separate
+estimates, not measured current totals, and do not change the coefficient.
+All five rows are fitting rows, with no holdout or same-version accuracy claim.
+The byte proxy is deliberately loose for SQLite; unused allowance does not
+consume work. The actual meter and all semantic, identity, depth, stack and
+allocation checks remain. Normal complete-pipeline and retaining evidence are
+separate from these diagnostics. Other phase policies are unchanged.</p>
+<h2 id="deep-generic-independent-core-observation">Deep-generic independent Core observation</h2>
+<p>After final elaboration completed under <code>161S</code>, the unchanged depth-96 generic
+witness exhausted independent Core <code>108S</code>. The normal first refusal was a work
+charge during fresh kind validation: the validator had used all 192,346 units
+of its remaining-credit loan, with the outer meter retaining the two paid census
+units. The next charge requested one unit. This was not a depth or allocation
+refusal; the stop site alone establishes no dominant redundant work.</p>
+<p>Run 683 assigned one finite diagnostic total of 4,194,304 to the outer Core
+meter, retaining used 2 before the validator derived its loan. Whole Core used
+490,324 after successful validation, loan debit and validated-program
+construction. The diagnostic stopped in the public owner's success branch
+before evaluation. The exact 1,781-byte source, 320 KiB stack, compiler source
+<code>e4a31c1e</code>, configuration <code>452006fa</code> and binary <code>91214bf3</code> matched before/after.
+This is complete compiler-Core evidence, not a normal program or native pass.</p>
+<p>The human approved <code>Core TOTAL = 345S</code>, using the same rule
+<code>ceil(1.25 * max(complete Core / S))</code>. The maximum is
+<code>490324 / 1781 = 275.3082538</code>; the upward coefficient is 345.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Workload</th>
+<th align="right">S bytes</th>
+<th align="right">Complete Core</th>
+<th align="right">345S</th>
+<th align="right">Surplus</th>
+<th align="right">Error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deep generic / 683</td>
+<td align="right">1,781</td>
+<td align="right">490,324</td>
+<td align="right">614,445</td>
+<td align="right">124,121</td>
+<td align="right">+25.31%</td>
+</tr>
+<tr>
+<td>Archived copying / 597</td>
+<td align="right">43,313</td>
+<td align="right">597,511</td>
+<td align="right">14,942,985</td>
+<td align="right">14,345,474</td>
+<td align="right">+2400.87%</td>
+</tr>
+<tr>
+<td>Archived simultaneous / 598</td>
+<td align="right">39,499</td>
+<td align="right">836,143</td>
+<td align="right">13,627,155</td>
+<td align="right">12,791,012</td>
+<td align="right">+1529.76%</td>
+</tr>
+<tr>
+<td>Archived persistence / 601</td>
+<td align="right">44,698</td>
+<td align="right">3,852,068</td>
+<td align="right">15,420,810</td>
+<td align="right">11,568,742</td>
+<td align="right">+300.33%</td>
+</tr>
+</tbody>
+</table>
+<p>The current total already includes the actual two census units. The archived
+SQLite totals predate the paid census; prospective additions of 6/6/7 are
+separate estimates, not measured current totals, and do not change 345.
+These four known fitting rows span different compiler versions and supply no
+holdout or universal prediction bound. The 25% reserve is an engineering choice.
+The byte proxy is loose for SQLite; unused allowance does not consume work.
+All other budgets and all authority, fresh-validation, capture, depth, stack
+and allocation checks remain. Normal complete-pipeline evidence and independent
+review remain separate from the diagnostic.</p>
+<h2 id="initial-accepted-pilot-and-its-calibration">Initial accepted pilot and its calibration</h2>
+<p>Keep the actual cumulative work meter. Compute finite gas from resident input,
+without a static overall ceiling or per-module resets:</p>
+<pre tabindex="0"><code class="language-text">P = admitted source UTF8 bytes + validated main Core node count
+B = canonical image bytes + canonical expected-fact bytes
+preparation gas = 24 * P
+startup gas     = 7 * B
+</code></pre>
+<p><code>P</code> is available before image construction. Read resident string lengths and the
+main arena length; do not reopen source paths, walk expanded Type/Row trees or
+replay construction. A test-only sizing loop charges one unit for the node count
+and one per source before reading its length. Its finite bootstrap is the actual
+source count plus one. Carry this work inside the computed total, refuse
+arithmetic overflow or a total below work already spent, and never reset or add
+spent gas as a top-up.</p>
+<p>Choose each coefficient as the ceiling of 1.25 times the largest FIT ratio.
+Preparation includes the new sizing cost in the observed total:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Coefficient</th>
+<th align="right">Largest FIT ratio</th>
+<th align="right">With chosen 25% reserve</th>
+<th align="right">Rounded upward</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Preparation <code>(previous whole work + sizing) / P</code></td>
+<td align="right">18.748480</td>
+<td align="right">23.435600</td>
+<td align="right">24</td>
+</tr>
+<tr>
+<td>Startup <code>whole work / B</code></td>
+<td align="right">5.423416</td>
+<td align="right">6.779271</td>
+<td align="right">7</td>
+</tr>
+</tbody>
+</table>
+<p>There is no fitted intercept. The 25% reserve is an engineering choice, not a
+statistical confidence bound. Neither proxy is a universal cost bound. The
+actual meter refuses amplification or unexpectedly expensive validation.
+Source whitespace, admitted unused source and valid unused framed records can
+increase gas linearly. Trailing or unframed bytes receive no startup credit.
+Compact DAGs receive no exponential credit.</p>
+<h2 id="observed-totals-overhead-and-prediction-errors">Observed totals, overhead and prediction errors</h2>
+<p>Complete baseline observations used one finite diagnostic allowance of 1,048,576
+per whole phase, assigned once in debugger memory. Every accumulated charge and
+existing check remained. Preparation completed through the public build path;
+startup completed through final native-program admission and stopped before
+evaluation or native calls. These are diagnostic completions, not normal-limit
+passes. The profiling allowance is not a proposed policy cap.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Workload / split</th>
+<th align="right">Source bytes / main nodes</th>
+<th>Preparation including sizing / forecast</th>
+<th align="right">Error</th>
+<th>Startup observed / forecast</th>
+<th align="right">Error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Five-method SQLite <code>SELECT 42</code> / FIT</td>
+<td align="right">19,798 / 761</td>
+<td>385,450 / 493,416</td>
+<td align="right">+28.01%</td>
+<td>561,573 / 724,822</td>
+<td align="right">+29.07%</td>
+</tr>
+<tr>
+<td>Imported buffer zeroing/length / FIT</td>
+<td align="right">5,204 / 190</td>
+<td>88,225 / 129,456</td>
+<td align="right">+46.73%</td>
+<td>118,427 / 197,680</td>
+<td align="right">+66.92%</td>
+</tr>
+<tr>
+<td>Real TRANSIENT/blob fixture / frozen HOLDOUT</td>
+<td align="right">13,504 / 337</td>
+<td>255,019 / 332,184</td>
+<td align="right">+30.26%</td>
+<td>321,643 / 481,950</td>
+<td align="right">+49.84%</td>
+</tr>
+</tbody>
+</table>
+<p>Sizing added respectively 5, 4 and 5 work units: 0.00130%, 0.00453% and 0.00196%
+of baseline preparation. Single measured loop times were 1.433, 1.282 and 1.223
+microseconds, not a benchmark or CPU-to-gas conversion. Diagnostic restoration
+setup was separate from sizing overhead. Preparation observations above combine
+the completed baseline with this measured overhead; they are not a new complete
+production execution of a changed admission path.</p>
+<p>Three count-only stops at the actual <code>encode_effect_for_build</code> entry confirmed
+all main-node counts and each source's text hash, length, order and module
+basename against the saved images. Temporary directory names changed between
+invocations. No limit was assigned and no image, host or C execution followed
+these stops. The existing native-input prefix was 150 units for SQLite and blob,
+and zero for buffer. It is already inside baseline whole preparation; sizing is
+the only added cost. Adoption must retain that prefix in the same meter.</p>
+<p>No row underpredicted. The holdout chose neither coefficients nor reserve. Its
+assembled pilot fixture was not the final product library. At that observation,
+full-library text/blob/null binding, diagnostics, tail policy, persistence and
+simultaneous identities remained unfinished and uncalibrated under TASK-0040.
+These pilot errors do not establish full SQLite accuracy; later full-workload
+observations and their separately scoped verification remain distinct.</p>
+<p>The five-method product's unchanged normal 327,680 allowance was exceeded by
+57,765 preparation units and 233,893 startup units before sizing. Diagnostic
+remaining allowances were 663,131 and 487,003. Earlier component sums did not
+establish these complete totals.</p>
+<h2 id="initial-tested-boundaries-and-adoption-work">Initial tested boundaries and adoption work</h2>
+<p>Run 466 passed the test-only resident sizing prototype: checked addition and
+multiplication overflow, refusal below already-spent sizing, paid loop reads,
+exact/one-short sizing admission, an existing 11-unit prefix, fresh retries,
+retained used work on finalization, and exhaustion of the remaining allowance.
+Its optional artifact counts matched the three actual preparation-hook stops.
+The adopted implementation retains that sizing algorithm before native-input
+validation; the general source-compiler budget was unchanged in that initial
+adoption. The later <code>100S</code> revision above is separate.</p>
+<p>Run 464 separately passed the startup byte-proxy mechanism: canonical framing,
+trailing/truncated input refusal, formula overflow, exact/one-short/prefix/fresh
+retry, and compact-DAG metered refusal. A 65-record shared tuple DAG had 872
+physical image/fact bytes and received 6,104 units, then refused expansion at
+that allowance. This is mechanism evidence, not full Core/native calibration or
+a whole-construction adversary result for the new preparation formula.</p>
+<p>Run 467 passed the adopted implementation's sizing, overflow and prefix cases,
+including an actual 150-unit prefix. A separate amplification test fed 512
+repeated resident Type children into the real structural encoder under <code>24P</code>.
+It refused at 792/792 units, preserving the 152-unit sizing/native-input prefix.
+This is an encoder-stage test, not a whole-public-construction adversary claim.</p>
+<p>The initial startup implementation uses its existing paid complete decoder, bounds/end-of-input checks and
+canonical expected-facts comparison as the framing gate before restoration.
+These charges stay inside <code>7B</code>, in the same meter through final native binding;
+there is no second parser, free census or spent-work top-up. Existing source,
+registry, Core, provenance, window and native-binding checks remain fresh.</p>
+<p>Normal adopted-formula host tests then passed for the product <code>SELECT 42</code>,
+imported buffer and frozen TRANSIENT/blob fixture. Fresh preparation totals were
+385,438, 88,213 and 255,007. These are new executions; the earlier fit table is
+not silently rewritten or refitted. For the exact passed product host,
+preparation had 107,978 units remaining out of 493,416. A read-only stop before
+evaluation measured startup through final native binding: 561,553 used of
+724,766, leaving 163,213. It matched the saved embedded payload hashes and made
+no limit assignment, rebuild or native call. Normal host execution had already
+passed independently of that observer.</p>
+<p>The earlier <code>4B + 3H</code> preparation fit used output image/fact size and host length
+and was retrospective. Existing length writers require an already constructed
+image, so that formula cannot fund construction. <code>24P</code> replaces it for the
+prospective pilot; startup remained <code>7B</code> at that initial adoption. No exact output forecast or expanded
+root inventory is needed for this simple input proxy.</p>
+<h2 id="larger-product-workload">Larger product workload</h2>
+<p>The subsequent product library adds strict UTF-8 TEXT copying, embedded-NUL
+output preservation and a second view family. Normal source, Core and native
+preparation completed, but its generated host exhausted the unchanged <code>7B</code>
+startup allowance before evaluation. This is an out-of-sample refusal, not a
+native TEXT-copy pass.</p>
+<p>One authorized observation of that exact saved host used a finite diagnostic
+allowance of 2,097,152, assigned once at zero used work after ledger construction.
+All charges and checks remained, and it stopped before evaluation or native C:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Workload</th>
+<th align="right">Image + facts bytes</th>
+<th align="right">Approved <code>7B</code></th>
+<th align="right">Complete startup</th>
+<th align="right">Shortfall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Product TEXT/empty/NULL/invalid-UTF8/embedded-NUL columns</td>
+<td align="right">174,197</td>
+<td align="right">1,219,379</td>
+<td align="right">1,265,014</td>
+<td align="right">45,635</td>
+</tr>
+</tbody>
+</table>
+<p>Decode completed at 172,882 cumulative units, canonical fact authentication at
+224,000, final Core began at 945,616 and finished at 1,255,897. Restoration
+finished at 1,255,898; final native binding completed at 1,265,014. The finite
+diagnostic allowance left 832,138 units. It is a measurement stopping allowance,
+not a changed production formula or a normal host pass. That refusal subsequently motivated the approved <code>11B</code> revision above. This
+record makes no universal sufficiency claim for either formula or future
+full-library workloads.</p>
+<p>The exact saved run-489 executable, image and facts were rehashed. Their receipt
+is <code>sqlite-product-text-startup-total-diagnostic-489-20261015.json</code>. These
+artifacts are separate from the disposed run-488 host; no byte-equality transfer
+to that disposed artifact is claimed.</p>
+<h2 id="evidence-scope">Evidence scope</h2>
+<p>Checkpoint receipts retain exact source, configuration, binary, payload, script
+and log hashes. The product FIT is in
+<code>sqlite-gas-preparation-current-20261015-retry1.json</code> and
+<code>sqlite-gas-startup-current-20261015.json</code>; corresponding <code>buffer</code> and
+<code>blob-holdout</code> receipts cover the other rows. The numeric prospective table is
+<code>sqlite-gas-prospective-input-sizing-and-errors-20261015.json</code>; the inventory
+comparison is <code>sqlite-gas-prospective-prehook-equivalence-20261015.json</code>.</p>
+<p>Product digest <code>5e40ad117b...</code> and corpus digest <code>0c9d1af4...</code> differed only by
+this note and its index link at collection; executable/charge files and modes
+were unchanged. Run 466's <code>af41eccd...</code> additionally includes the test-only sizing
+prototype. Adopted-policy mechanism run 467 used <code>0e963a79...</code>; normal host runs
+468–470 used <code>997a4409...</code>. Their only intervening changes were test logging and
+artifact retention. The saved policy predecessor bytes match the original
+manifest. Configuration was <code>452006fa...</code>. Only final totals support phase
+attribution; intermediate source-line labels were ambiguous. One optional-field
+error and one copied-executable mode error remain incomplete diagnostic attempts.</p>
+<p>The Rust-backed copying/persistence/resume/bounded-NUL/forwarding
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/provider-experiments/resource-calibration/sqlite-rust-summary.json">baseline</a>
+supplies workload coverage and physical Rust build/runtime measurements. Its
+lexical source counts and timings are not Ash gas. Older Ash public-driver
+source, elaboration and Core calibration describes different phases.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#recursive-hook-source-observation-and-accepted-revision">Recursive-hook Source observation and accepted revision</a><a href="#product-sqlite-source-observation-and-delegated-revision">Product SQLite Source observation and delegated revision</a><a href="#current-source-final-and-separate-rewrite-revision">Current Source, Final and separate rewrite revision</a><a href="#current-complete-preparation-revision">Current complete-preparation revision</a><a href="#complete-persistence-startup-and-accepted-revision">Complete persistence startup and accepted revision</a><a href="#revised-policy-verification">Revised policy verification</a><a href="#full-workload-calibration-and-approved-coefficients">Full-workload calibration and approved coefficients</a><a href="#compact-generic-final-elaboration-observations">Compact generic final-elaboration observations</a><a href="#deep-generic-independent-core-observation">Deep-generic independent Core observation</a><a href="#initial-accepted-pilot-and-its-calibration">Initial accepted pilot and its calibration</a><a href="#observed-totals-overhead-and-prediction-errors">Observed totals, overhead and prediction errors</a><a href="#initial-tested-boundaries-and-adoption-work">Initial tested boundaries and adoption work</a><a href="#larger-product-workload">Larger product workload</a><a href="#evidence-scope">Evidence scope</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0048-pure-core-kernels-and-parallel-lowering/">← DN-0048: Pure Core Kernels and Parallel Lowering</a><a rel="next" href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053: Scoped Generic Cells Without Native Owners →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

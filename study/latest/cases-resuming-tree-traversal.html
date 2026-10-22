@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./cases-implementing-persistent-fifo-frontier.html" rel="next">
+<link href="./cases-guaranteeing-logarithmic-retrieval.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-6d721d43cb2de3688862873f9fbdaef3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-0dff78d6b43f3fc237db56a659ff6fe2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 400; src: url("fonts/texgyrepagella-regular.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 400; src: url("fonts/texgyrepagella-italic.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: normal; font-weight: 700; src: url("fonts/texgyrepagella-bold.otf"); }
+@font-face { font-family: "TeX Gyre Pagella"; font-style: italic; font-weight: 700; src: url("fonts/texgyrepagella-bolditalic.otf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 400; src: url("fonts/PT-Serif-Regular.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 400; src: url("fonts/PT-Serif-Italic.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: normal; font-weight: 700; src: url("fonts/PT-Serif-Bold.ttf"); }
+@font-face { font-family: "PT Serif"; font-style: italic; font-weight: 700; src: url("fonts/PT-Serif-BoldItalic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; src: url("fonts/IBMPlexMono-Regular.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 400; src: url("fonts/IBMPlexMono-Italic.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 700; src: url("fonts/IBMPlexMono-Bold.ttf"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: italic; font-weight: 700; src: url("fonts/IBMPlexMono-BoldItalic.ttf"); }
+</style>
+
+
+<link rel="stylesheet" href="styles/ash-tokens.css">
+<link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/study-chrome.css">
+<title>Resuming tree traversal · Ash</title><meta name="description" content="Suppose a caller needs the first association in a dictionary, then wants to stop and decide whether to ask for another. Balanced lookup finds one key along a logarithmic path. Traversal has a different goal: visit…"><meta name="robots" content="index, follow"><meta property="og:title" content="Resuming tree traversal · Ash"><meta property="og:description" content="Suppose a caller needs the first association in a dictionary, then wants to stop and decide whether to ask for another. Balanced lookup finds one key along a logarithmic path. Traversal has a different goal: visit…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Resuming tree traversal · Ash"><meta name="twitter:description" content="Suppose a caller needs the first association in a dictionary, then wants to stop and decide whether to ask for another. Balanced lookup finds one key along a logarithmic path. Traversal has a different goal: visit…"><meta property="og:url" content="https://dikini.github.io/ash/study/latest/cases-resuming-tree-traversal.html"><link rel="canonical" href="https://dikini.github.io/ash/study/latest/cases-resuming-tree-traversal.html"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Resuming tree traversal","headline":"Resuming tree traversal","description":"Suppose a caller needs the first association in a dictionary, then wants to stop and decide whether to ask for another. Balanced lookup finds one key along a logarithmic path. Traversal has a different goal: visit…","inLanguage":"en","url":"https://dikini.github.io/ash/study/latest/cases-resuming-tree-traversal.html","@id":"https://dikini.github.io/ash/study/latest/cases-resuming-tree-traversal.html#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/resuming-tree-traversal/README.md","version":"c3c29b1da1d48605d7a9c94e213c3a18477ef549"}</script></head>
+
+<body class="nav-sidebar floating quarto-light">
+<a class="ash-skip-link" href="#quarto-document-content">Skip to content</a><header class="ash-study-header" data-pagefind-ignore=""><a class="ash-study-brand" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash<span class="brand-dot">·</span></span></a><nav aria-label="Ash website"><a href="/ash/learn/">Learn</a><a href="/ash/docs/">Documentation</a><a href="/ash/study/">Study overview</a><a href="/ash/">Back to Ash ↗</a></nav></header><aside class="ash-study-banner" aria-label="Documentation snapshot" data-pagefind-ignore="">Development snapshot · ffi-base · Ash <a href="https://github.com/dikini/ash-lang/tree/354c76b391fe4af665cf6a03479a9874a57cb3e3">354c76b</a> · Docs <a href="https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549">c3c29b1</a>. Not a published book edition.</aside>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-resuming-tree-traversal.html"><span class="chapter-title">Resuming tree traversal</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Ash documentation review draft</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ash documentation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./setup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reader setup</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./learn-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learn Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-what-is-an-ash-program.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">An Ash program</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-another-source-file.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using another source file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-using-more-than-one-input.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Using more than one input</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-choosing-a-result.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a result</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-naming-intermediate-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Naming intermediate values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-values-travel-together.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Making values travel together</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-working-with-text.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Working with text</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-handling-data-forms.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Handling data forms</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-patterns-in-depth.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Patterns in depth</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-following-recursive-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following recursive data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-edges-of-the-language.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">The edges of the language</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-ordering-from-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Ordering from data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-functions-as-values.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Functions as values</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-definitions-for-many-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Definitions for many types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-module-channels.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Module channels</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-opaque-types.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Opaque types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-generalizing-local-functions.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Generalizing local functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-defining-local-recursion.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Defining local recursion</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./learn-where-ash-goes-next.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Where Ash goes next</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./libraries-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Design library abstractions in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-choosing-implementation-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing implementation evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-forwarding-capability-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Forwarding capability evidence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-accepting-type-constructors.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accepting a type constructor</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-giving-method-local-type-parameters.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Giving a method local type parameters</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-determining-interface-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Determining interface results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-requiring-element-behavior.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requiring element behavior</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-wrapping-a-representation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Wrapping a representation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./libraries-supplying-scoped-evidence.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying scoped evidence</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./effects-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Working with effects and scoped resources</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-requesting-a-value.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Requesting a value</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-following-effect-contracts.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Following effect contracts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-preserving-callback-effects.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving callback effects</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-choosing-a-handler.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a handler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-resuming-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Resuming a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-stopping-a-calculation.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Stopping a calculation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-counting-with-a-cell.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Counting with a cell</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-keeping-access-in-scope.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Keeping access in scope</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-running-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-transforming-publications.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Transforming publications</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-acquiring-a-buffer.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Acquiring a buffer</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./effects-combining-effects-and-scopes.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Combining effects and scopes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a href="./cases-introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Explore algorithms and effects in Ash</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-recursive-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding recursive lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-building-finite-lists.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Building finite lists</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-accumulating-list-results.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Accumulating list results</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-dictionary-as-list.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Representing a dictionary as a list</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-folding-branching-data.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Folding branching data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-searching-ordered-tree.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Searching an ordered tree</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-abstracting-key-order.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Abstracting key order</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-protecting-dictionary-invariant.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Protecting the dictionary invariant</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-resuming-tree-traversal.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Resuming tree traversal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-implementing-persistent-fifo-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Implementing a persistent FIFO frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-choosing-a-search-frontier.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Choosing a search frontier</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-numbering-tree-leaves.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Numbering a tree’s leaves</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-measuring-tree-search.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Measuring tree-search comparisons</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-order-prices.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying an order’s dependencies</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-running-a-scripted-session.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Running a scripted session</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-bounding-search-work.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Bounding search work</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-compressing-parent-paths.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Compressing parent paths</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-reading-a-bounded-message.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Reading a bounded byte message</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-controlling-a-hook-pipeline.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Controlling a hook pipeline</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-preserving-outcomes-through-cleanup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Preserving outcomes through cleanup</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-supplying-a-local-pricing-policy.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Supplying a local pricing policy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-querying-an-immutable-world.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Querying an immutable world</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-rolling-back-a-cancellable-journal.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Rolling back a cancellable journal</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-redacting-before-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Redact before publication</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-checking-proposed-edits.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Check proposed edits</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-cancelling-a-stable-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Cancel a stable sort</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cases-round-tripping-tagged-frames.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Round-trip a tagged frame</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#represent-the-unfinished-traversal" id="toc-represent-the-unfinished-traversal" class="nav-link active" data-scroll-target="#represent-the-unfinished-traversal">Represent the unfinished traversal</a></li>
+  <li><a href="#determine-the-operation-types" id="toc-determine-the-operation-types" class="nav-link" data-scroll-target="#determine-the-operation-types">Determine the operation types</a></li>
+  <li><a href="#calculate-preparation-and-one-step" id="toc-calculate-preparation-and-one-step" class="nav-link" data-scroll-target="#calculate-preparation-and-one-step">Calculate preparation and one step</a></li>
+  <li><a href="#collect-a-sequence-to-check-the-calculation" id="toc-collect-a-sequence-to-check-the-calculation" class="nav-link" data-scroll-target="#collect-a-sequence-to-check-the-calculation">Collect a sequence to check the calculation</a></li>
+  <li><a href="#retain-a-state-and-resume-it-twice" id="toc-retain-a-state-and-resume-it-twice" class="nav-link" data-scroll-target="#retain-a-state-and-resume-it-twice">Retain a state and resume it twice</a></li>
+  <li><a href="#test-the-source-boundary-in-patterns-and-values" id="toc-test-the-source-boundary-in-patterns-and-values" class="nav-link" data-scroll-target="#test-the-source-boundary-in-patterns-and-values">Test the source boundary in patterns and values</a></li>
+  <li><a href="#count-the-explicit-pending-work" id="toc-count-the-explicit-pending-work" class="nav-link" data-scroll-target="#count-the-explicit-pending-work">Count the explicit pending work</a></li>
+  <li><a href="#practice-and-continue" id="toc-practice-and-continue" class="nav-link" data-scroll-target="#practice-and-continue">Practice and continue</a></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main tabindex="-1" data-pagefind-body="" class="content page-columns page-full" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cases-introduction.html">Explore algorithms and effects in Ash</a></li><li class="breadcrumb-item"><a href="./cases-resuming-tree-traversal.html"><span class="chapter-title">Resuming tree traversal</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Resuming tree traversal</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Suppose a caller needs the first association in a dictionary, then wants to stop and decide whether to ask for another. <a href="./cases-guaranteeing-logarithmic-retrieval.html">Balanced lookup</a> finds one key along a logarithmic path. Traversal has a different goal: visit every association in key order, allowing the caller to stop between visits.</p>
+<p>Use the three associations <code>two:20</code>, <code>one:10</code>, and <code>three:30</code>. Inserting them into the preceding dictionary gives this tree. The following sketches describe its shape and traversal; they are not executable Ash.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>          two:20
+          /    \
+     one:10    three:30</code></pre>
+<p>The first request should return <code>one:10</code>; a later request should return <code>two:20</code>, then <code>three:30</code>. A fourth request should say that traversal is finished. An empty dictionary should be finished on the first request.</p>
+<p>Returning a complete in-order list would visit all <code>n</code> nodes and construct all <code>n</code> list forms before the caller receives the first association. That costs <code>O(n)</code> source work and new list state up front. Instead, each request can return one association and a value describing where to continue. The caller keeps that value while paused and supplies it to the next request. What information must it contain?</p>
+<section id="represent-the-unfinished-traversal" class="level2">
+<h2 class="anchored" data-anchor-id="represent-the-unfinished-traversal">Represent the unfinished traversal</h2>
+<p>Recall the visitation order at a node, called <em>in-order traversal</em>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>visit left subtree; produce current association; visit right subtree</code></pre>
+<p>To find the first entry, descend from <code>two</code> to <code>one</code>. Before descending, save <code>two:20</code> and its right subtree: both must be visited after the left subtree. At <code>one</code>, save <code>one:10</code> and its empty right subtree. Reaching its empty left subtree finishes the descent. The saved entries now form a stack, with <code>one</code> at the front and <code>two</code> behind it.</p>
+<p>A frame records four things: the pending key, its value, the right subtree still to visit, and the remaining stack. Work in its left subtree belongs before that association; the descent records it in frames ahead of this one. Generalize those fields over the dictionary’s existing <code>K</code> and <code>V</code> types. These are checked, non-executable excerpts from the defining module and the clients used below; the commands run their complete source files.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>type FrameStack&lt;K, V&gt; =
+    NoFrame
+    | MoreFrame(K, V, Dictionary&lt;K, V&gt;, FrameStack&lt;K, V&gt;)</code></pre>
+<p><code>NoFrame</code> means that no entry remains. <code>MoreFrame</code> puts one pending association in front of the rest. Its third field is a whole dictionary, not a list of its entries. Saving that subtree preserves the work for a later request without traversing it now.</p>
+<p>For the example, the prepared stack has this schematic shape. <code>one</code>, <code>two</code>, and the named subtree stand for their actual values:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>MoreFrame(
+    one, 10, Empty,
+    MoreFrame(two, 20, subtree rooted at three:30, NoFrame)
+)</code></pre>
+<p>The outer frame is the next entry to produce. After producing it, traversal must handle its saved right subtree before the remaining frames. This is the stack invariant: the front association, then its right subtree, then the remaining stack describe exactly the unfinished in-order sequence. The type records the fields; the operations must preserve their intended order.</p>
+<p>Wrap the stack in a public iterator type:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>pub opaque type Iterator&lt;K, V&gt; =
+    Iterator(FrameStack&lt;K, V&gt;)</code></pre>
+<p>Inside the module, <code>Iterator</code> exposes the frame stack to its operations. Outside it, the opaque type gives callers a name for the state while withholding its constructor. This is the same <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/name-resolution.md#public-private-and-opaque-declarations">opaque-declaration boundary</a> used for the dictionary. A caller obtains states through the public operations rather than assembling frames itself.</p>
+<p>The saved state is ordinary immutable data. Each returned iterator is already prepared for its next request. There is no delayed expression to force: the remaining work happens when the caller explicitly invokes an operation.</p>
+</section>
+<section id="determine-the-operation-types" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="determine-the-operation-types">Determine the operation types</h2>
+<p>Start with the caller’s two operations. Preparing a dictionary gives an iterator with the same key and value types:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>pub iterator : Dictionary&lt;K, V&gt; -&gt; Iterator&lt;K, V&gt;</code></pre>
+<p>Advancing it either reports completion or returns one association together with the state for the next request:</p>
+<div id="wide-dictionaries-next_type" class="column-page-right">
+<!-- excerpt: src/dictionaries.ash#next_type -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>pub next : Iterator&lt;K, V&gt; -&gt; Option&lt;((K, V), Iterator&lt;K, V&gt;)&gt;</code></pre>
+</div>
+<p>Read the successful payload from the outside in. <code>Some</code> holds a pair whose first component is <code>(K, V)</code> and whose second is <code>Iterator&lt;K, V&gt;</code>. <code>None</code> has no payload. Keeping the later iterator is what makes another request possible; keeping the current one allows a caller to repeat the same request.</p>
+<p>These operations need no <code>Order&lt;K&gt;</code> requirement. Insertion has already established the tree’s ordering; traversal follows its structure. It neither compares keys nor repairs a malformed ordering.</p>
+<p>One private operation must prepare the next frame. It takes a subtree and an existing stack of later ancestors, then returns the prepared stack:</p>
+<div id="wide-dictionaries-push_left_type" class="column-page-right">
+<!-- excerpt: src/dictionaries.ash#push_left_type -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>push_left : Dictionary&lt;K, V&gt; -&gt; FrameStack&lt;K, V&gt; -&gt; FrameStack&lt;K, V&gt;</code></pre>
+</div>
+<p>The second input matters when resuming: after visiting a saved right subtree, traversal still owes the associations recorded in the remaining stack. Starting each descent with <code>NoFrame</code> would discard those ancestors.</p>
+</section>
+<section id="calculate-preparation-and-one-step" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="calculate-preparation-and-one-step">Calculate preparation and one step</h2>
+<p>First express the public composition. An initial traversal has no ancestors, so prepare the whole dictionary over <code>NoFrame</code> and wrap the result:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>iterator dictionary = Iterator(push_left dictionary NoFrame)</code></pre>
+<p>The wrapper does not postpone <code>push_left</code>. Ash evaluates arguments before application under its strict <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#application">application rules</a>, including arguments supplied to constructors. This call completes the initial left spine before returning an iterator, while leaving other subtrees unentered.</p>
+<p>Now calculate <code>next</code> from its input’s two possible stack forms. An empty stack has no association to return:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>next Iterator(NoFrame) = None</code></pre>
+<p>For a frame, the key and value are ready. Remove that frame, prepare its saved right subtree over <code>rest</code>, and package the association with the later iterator:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>next Iterator(MoreFrame(key, value, right, rest)) = Some(
+    ((key, value), Iterator(push_left right rest))
+)</code></pre>
+<p>This equation explains the resume point: the saved right subtree comes next, then the previously saved ancestors. An empty right subtree simply exposes <code>rest</code>. A nonempty one contributes its own leftmost entries in front of <code>rest</code>.</p>
+<p>It remains to fill in <code>push_left</code>. At <code>Empty</code>, there is no earlier association to place in front of the supplied stack:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>push_left Empty stack = stack</code></pre>
+<p>At a node, its left subtree must come first. Save the current association and right subtree in one frame, then descend into <code>left</code> over that frame:</p>
+<div id="wide-dictionaries-push_node" class="column-page-right">
+<!-- excerpt: src/dictionaries.ash#push_node -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>push_left Node(ignored_color, left, key, value, right) stack = {
+    let later_stack = MoreFrame(key, value, right, stack)
+    push_left left later_stack
+}</code></pre>
+</div>
+<p>The local <code>later_stack</code> names precisely what remains after the left subtree. The node’s color does not affect in-order visitation, so the pattern calls it <code>ignored_color</code>. The recursive call handles a smaller subtree in a finite acyclic tree; eventually its empty left edge returns the prepared stack.</p>
+<p>Why does this preserve the order? The empty case contributes no entries. For a node, assume the recursive descent prepares its left subtree in order. Placing that preparation before the new frame gives the left entries, then the current association, then its right subtree, then the supplied stack. Those are exactly the required pieces in their required order. Combined with the two <code>next</code> equations, each request removes the first unfinished association and leaves the rest ready for another request.</p>
+<p>For the three-key example, the prepared frames change as follows. This is a schematic trace, not a captured tool result. The front frame appears first:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 24%">
+<col style="width: 24%">
+<col style="width: 48%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Request</th>
+<th style="text-align: left;">Returned association</th>
+<th style="text-align: left;">Prepared frames afterward</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Start</td>
+<td style="text-align: left;">No association yet</td>
+<td style="text-align: left;"><code>one</code> over <code>two</code>, with <code>three</code> saved by <code>two</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">First <code>next</code></td>
+<td style="text-align: left;"><code>one:10</code></td>
+<td style="text-align: left;"><code>two</code>, with its right subtree at <code>three</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Second <code>next</code></td>
+<td style="text-align: left;"><code>two:20</code></td>
+<td style="text-align: left;"><code>three</code>, with an empty right subtree</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Third <code>next</code></td>
+<td style="text-align: left;"><code>three:30</code></td>
+<td style="text-align: left;"><code>NoFrame</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Fourth <code>next</code></td>
+<td style="text-align: left;"><code>None</code></td>
+<td style="text-align: left;">No later iterator in the result</td>
+</tr>
+</tbody>
+</table>
+<p>The second request is the one that enters the saved subtree at <code>three</code>. Pausing before that request leaves that descent undone.</p>
+</section>
+<section id="collect-a-sequence-to-check-the-calculation" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="collect-a-sequence-to-check-the-calculation">Collect a sequence to check the calculation</h2>
+<p>A client can test the repeated requests by collecting them into the familiar <code>List&lt;(K, V)&gt;</code>. This deliberately finishes traversal; it lets one observation show its order. The public names come from these imports:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>import dictionaries as Dictionaries
+import dictionaries (impl Order)</code></pre>
+<p>The first import supplies <code>Dictionaries</code> as a qualifier. The separate <code>impl Order</code> import supplies the ordering implementation used to build the dictionary. The iterator operations themselves do not require it.</p>
+<p>The collection operation consumes an iterator and produces a list:</p>
+<div id="wide-01-sequence-collect_type" class="column-page-right">
+<!-- excerpt: src/01-sequence.ash#collect_type -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>collect : Dictionaries.Iterator&lt;K, V&gt; -&gt; Dictionaries.List&lt;(K, V)&gt;</code></pre>
+</div>
+<p>Ask for one entry. <code>None</code> gives the empty list; <code>Some((entry, later))</code> gives a list whose head is <code>entry</code> and whose tail collects from <code>later</code>:</p>
+<div id="wide-01-sequence-collect" class="column-page-right">
+<!-- excerpt: src/01-sequence.ash#collect -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>collect current = match Dictionaries.next current {
+    Dictionaries.None =&gt; Dictionaries.End
+    Dictionaries.Some((entry, later)) =&gt; Dictionaries.More(entry, collect later)
+}</code></pre>
+</div>
+<p>Passing <code>later</code> is essential. Recursing on <code>current</code> would request the same entry again. The structural argument above says that each successful request removes one unfinished association, so this recursion reaches <code>None</code> on a finite dictionary.</p>
+<p>A second operation converts an optional result to a completion flag:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>is_finished : Dictionaries.Option&lt;A&gt; -&gt; Bool</code></pre>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>is_finished Dictionaries.None = true
+is_finished Dictionaries.Some(ignored) = false</code></pre>
+<p>Together these observations determine the entry’s result type:</p>
+<div id="wide-01-sequence-main_type" class="column-page-right">
+<!-- excerpt: src/01-sequence.ash#main_type -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>main : Unit -&gt; (Bool, Dictionaries.List&lt;(Dictionaries.Natural, Int)&gt;)</code></pre>
+</div>
+<p>The first component checks an empty dictionary; the second records the ordered sequence. Inside <code>main</code>, construct the three existing natural-number keys:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    let one = Dictionaries.Next(Dictionaries.Zero)
+    let two = Dictionaries.Next(one)
+    let three = Dictionaries.Next(two)</code></pre>
+<p>Prepare the empty dictionary with an explicit key and value type:</p>
+<div id="wide-01-sequence-empty" class="column-page-right">
+<!-- excerpt: src/01-sequence.ash#empty -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    let empty_dictionary : Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; = Dictionaries.empty ()</code></pre>
+</div>
+<p>Supply the nonempty entries in the example’s insertion order:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    let entries = Dictionaries.More(
+        (two, 20),
+        Dictionaries.More(
+            (one, 10),
+            Dictionaries.More((three, 30), Dictionaries.End)
+        )
+    )</code></pre>
+<p>Finally build the dictionary, inspect the empty iterator, and collect the nonempty one:</p>
+<div id="wide-01-sequence-finish" class="column-page-right">
+<!-- excerpt: src/01-sequence.ash#finish -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    let dictionary = Dictionaries.build entries
+    let empty_finished = is_finished (Dictionaries.next (Dictionaries.iterator empty_dictionary))
+    (empty_finished, collect (Dictionaries.iterator dictionary))</code></pre>
+</div>
+<p>Predict the flag, the three associations, and the end of the list. Run the complete client from <code>content/cases</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash resuming-tree-traversal/src/01-sequence.ash</code></pre>
+<p>Read these selected components of that one captured result separately. They are not separate runs or a replacement full transcript. The leading flag is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>true</code></pre>
+<p>The empty iterator immediately returns <code>None</code>. The three successive <code>More</code> heads, in their captured order, are:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(Next(Zero), 10)</code></pre>
+<p><code>Next(Zero)</code> is <code>one</code>, paired with <code>10</code>.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(Next(Next(Zero)), 20)</code></pre>
+<p><code>Next(Next(Zero))</code> is <code>two</code>, paired with <code>20</code>.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(Next(Next(Next(Zero))), 30)</code></pre>
+<p>The third natural number is paired with <code>30</code>. The list’s final tail is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>End</code></pre>
+<p>Reaching <code>End</code> means that <code>collect</code> received <code>None</code> on its fourth request. The type of the complete result is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>(Bool, List&lt;(Natural, Int)&gt;)</code></pre>
+<p>These observations agree with the trace. Their order follows from in-order traversal and the inherited dictionary ordering invariant. The iterator made no comparison and performed no validation or sorting. A malformed value constructed inside <code>Dictionaries</code> could produce an out-of-order sequence.</p>
+</section>
+<section id="retain-a-state-and-resume-it-twice" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="retain-a-state-and-resume-it-twice">Retain a state and resume it twice</h2>
+<p>A later iterator is an ordinary immutable value. To check that using it does not consume it, retain the state after producing <code>one</code> and call <code>next</code> on that same state twice. Each call should produce <code>two:20</code> with a state ready for <code>three:30</code>.</p>
+<p>The observation needs three fields: the retained iterator, the first call’s result, and the second call’s result. Each call has the same optional association-and-iterator type derived above. <code>Unexpected</code> records an empty initial result, which the nonempty example should not produce:</p>
+<div id="wide-02-retained-state-replay_data" class="column-page-right">
+<!-- excerpt: src/02-retained-state.ash#replay_data -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>type ReplayObservation =
+    Unexpected
+    | Replay(
+        Dictionaries.Iterator&lt;Dictionaries.Natural, Int&gt;,
+        Dictionaries.Option&lt;(
+            (Dictionaries.Natural, Int),
+            Dictionaries.Iterator&lt;Dictionaries.Natural, Int&gt;
+        )&gt;,
+        Dictionaries.Option&lt;(
+            (Dictionaries.Natural, Int),
+            Dictionaries.Iterator&lt;Dictionaries.Natural, Int&gt;
+        )&gt;
+    )</code></pre>
+</div>
+<p>The client uses the same two imports. Its checking operation has this type:</p>
+<div id="wide-02-retained-state-replay_type" class="column-page-right">
+<!-- excerpt: src/02-retained-state.ash#replay_type -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>replay : Dictionaries.Iterator&lt;Dictionaries.Natural, Int&gt; -&gt; ReplayObservation</code></pre>
+</div>
+<p>One request obtains the state after the first association. In the successful case, save <code>after_one</code> in the observation and use it as both subsequent inputs:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>replay start = match Dictionaries.next start {
+    Dictionaries.None =&gt; Unexpected
+    Dictionaries.Some((ignored_first, after_one)) =&gt; Replay(
+        after_one,
+        Dictionaries.next after_one,
+        Dictionaries.next after_one
+    )
+}</code></pre>
+<p><code>ignored_first</code> names the association that positions the experiment; the experiment observes what happens from the returned state. Both subsequent calls receive <code>after_one</code>, so neither uses the state returned by the other.</p>
+<p>This client returns the observation directly:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>main : Unit -&gt; ReplayObservation</code></pre>
+<p>Inside <code>main</code>, define <code>one</code>, <code>two</code>, and <code>three</code> as before. This time insert in ascending order, which the balanced dictionary also turns into a root <code>two</code> with children <code>one</code> and <code>three</code>:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    let entries = Dictionaries.More(
+        (one, 10),
+        Dictionaries.More(
+            (two, 20),
+            Dictionaries.More((three, 30), Dictionaries.End)
+        )
+    )</code></pre>
+<p>Compose building, preparation, and the replay check:</p>
+<div id="wide-02-retained-state-finish" class="column-page-right">
+<!-- excerpt: src/02-retained-state.ash#finish -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>    replay (Dictionaries.iterator (Dictionaries.build entries))</code></pre>
+</div>
+<p>The tree shape predicts a saved frame for <code>two</code> retaining the subtree at <code>three</code>. Both subsequent calls should prepare equivalent frames for <code>three</code>. Run the complete client:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ash resuming-tree-traversal/src/02-retained-state.ash</code></pre>
+<p>The following are the three fields of the single captured <code>Replay</code> result, followed by its type. Its first field is the saved iterator:</p>
+<div id="wide-retained-state-saved" class="column-page-right">
+<!-- observation: retained-state#saved -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Iterator(MoreFrame(Next(Next(Zero)), 20, Node(Black, Empty, Next(Next(Next(Zero))), 30, Empty), NoFrame))</code></pre>
+</div>
+<p>The front frame contains <code>two:20</code>, a right subtree containing <code>three:30</code>, and <code>NoFrame</code>. That subtree remains a <code>Node</code>; it has not yet been converted to frames. The second field comes from the first <code>next after_one</code>:</p>
+<div id="wide-retained-state-first" class="column-page-right">
+<!-- observation: retained-state#first -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Some((Next(Next(Zero)), 20), Iterator(MoreFrame(Next(Next(Next(Zero))), 30, Empty, NoFrame)))</code></pre>
+</div>
+<p>It returns <code>two:20</code> and prepares a frame for <code>three:30</code>. The third field comes from the second <code>next after_one</code>:</p>
+<div id="wide-retained-state-second" class="column-page-right">
+<!-- observation: retained-state#second -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>Some((Next(Next(Zero)), 20), Iterator(MoreFrame(Next(Next(Next(Zero))), 30, Empty, NoFrame)))</code></pre>
+</div>
+<p>It shows the same association and prepared state. Both calls descend into the same saved right subtree and construct a frame for <code>three</code>; retaining state does not memoize that remaining source work. The complete result’s type is:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>ReplayObservation</code></pre>
+<p><code>Iterator</code>, <code>MoreFrame</code>, <code>Node</code>, and their fields are visible in these observations. Ash’s structural <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#observation">observation rules</a> render nominal values even when their constructors are unavailable to the entry module. Constructor payload tuples appear as fields in this output, which is why the captured <code>Some</code> displays the association and iterator as two fields. Seeing those forms supplies no constructor binding to client source. Test that separate boundary next.</p>
+</section>
+<section id="test-the-source-boundary-in-patterns-and-values" class="level2 page-columns page-full">
+<h2 class="anchored" data-anchor-id="test-the-source-boundary-in-patterns-and-values">Test the source boundary in patterns and values</h2>
+<p>First try to inspect the iterator with a constructor pattern. The importer may name <code>Dictionaries.Iterator&lt;...&gt;</code>, but the <code>Dictionaries.Iterator</code> occurrence in this match arm should be rejected during name resolution. The type name is public, but the constructor that would expose the frame stack is withheld.</p>
+<div id="wide-source-03-opaque-pattern" class="column-page-right">
+<!-- source: src/03-opaque-pattern.ash -->
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries as Dictionaries
+
+main : Unit -&gt; Int
+main () = {
+    let dictionary : Dictionaries.Dictionary&lt;Dictionaries.Natural, Int&gt; = Dictionaries.empty ()
+    match Dictionaries.iterator dictionary {
+        Dictionaries.Iterator(ignored_stack) =&gt; 1
+    }
+}</code></pre>
+</div>
+<p>Run the rejected entry:</p>
+<div style="page-break-after: always;"></div>
+<div id="wide-diagnostic-03-opaque-pattern" class="column-page-right">
+<!-- diagnostic: src/03-opaque-pattern.ash -->
+<!-- markdownlint-disable MD013 -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en resuming-tree-traversal/src/03-opaque-pattern.ash
+The constructor `Iterator` belongs to an opaque type and is not accessible here.
+  --&gt; /path/to/ash-doc/content/cases/resuming-tree-traversal/src/03-opaque-pattern.ash:7:22
+7 |         Dictionaries.Iterator(ignored_stack) =&gt; 1
+  |                      ^ This name is not accessible here.
+  --&gt; /path/to/ash-doc/content/cases/resuming-tree-traversal/src/dictionaries.ash:35:5
+35 |     Iterator(FrameStack&lt;K, V&gt;)
+   |     ^ The inaccessible declaration is here.
+reason: resolve.opaque-constructor</code></pre>
+</div>
+<p>The message explains that <code>Iterator</code> belongs to an opaque type. The first label marks the member in the client pattern, and the related label identifies its withheld declaration in <code>dictionaries.ash</code>. The constructor exists, but it is unavailable in this module. Use <code>Dictionaries.next</code> to observe the next association through the public API, as in the accepted sequence.</p>
+<p>Now use the same unavailable constructor as a value. A constructor is an ordinary term before it is applied, so binding <code>Dictionaries.Iterator</code> should cross the same opacity boundary at a different source occurrence. Predict the same channel and status behavior, with the primary label on the initializer instead of a pattern.</p>
+<pre tabindex="0" aria-label="Code or transcript" class="ash"><code>import dictionaries as Dictionaries
+
+main : Unit -&gt; Int
+main () = {
+    let unavailable = Dictionaries.Iterator
+    0
+}</code></pre>
+<p>Run the second rejected entry:</p>
+<div style="page-break-after: always;"></div>
+<div id="wide-diagnostic-04-opaque-construction" class="column-page-right">
+<!-- diagnostic: src/04-opaque-construction.ash -->
+<!-- markdownlint-disable MD013 -->
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>$ ash --message-format human --locale en resuming-tree-traversal/src/04-opaque-construction.ash
+The constructor `Iterator` belongs to an opaque type and is not accessible here.
+  --&gt; /path/to/ash-doc/content/cases/resuming-tree-traversal/src/04-opaque-construction.ash:5:36
+5 |     let unavailable = Dictionaries.Iterator
+  |                                    ^ This name is not accessible here.
+  --&gt; /path/to/ash-doc/content/cases/resuming-tree-traversal/src/dictionaries.ash:35:5
+35 |     Iterator(FrameStack&lt;K, V&gt;)
+   |     ^ The inaccessible declaration is here.
+reason: resolve.opaque-constructor</code></pre>
+</div>
+<p>This rejection labels <code>Iterator</code> in the local initializer and returns to the same hidden declaration. Use <code>Dictionaries.iterator</code> to obtain the initial state from a dictionary, then retain states returned by <code>next</code>. Together the two runs show that the constructor is unavailable in both patterns and values, even though successful structural output can spell its name.</p>
+</section>
+<section id="count-the-explicit-pending-work" class="level2">
+<h2 class="anchored" data-anchor-id="count-the-explicit-pending-work">Count the explicit pending work</h2>
+<p>Let <code>d</code> be the number of <code>Node</code> forms on one left-spine descent. <code>push_left</code> applies once at each of those <code>d</code> nodes and once more at the terminal <code>Empty</code>, for exactly:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>d + 1 push_left applications
+d MoreFrame constructions</code></pre>
+<p>Let <code>h</code> be the largest number of <code>Node</code> forms on a path from the root to <code>Empty</code>. Initialization descends one left spine, so <code>d &lt;= h</code>. It constructs at most <code>h</code> explicit <code>MoreFrame</code> forms and one <code>Iterator</code> wrapper. The <code>O(h)</code> state bound counts only those explicit frame forms. Each frame also retains an existing key, value, saved right-subtree value, and rest-of-stack value. Much or all of the original <code>n</code>-node dictionary may remain transitively reachable, so the claim is not an <code>O(h)</code> bound on all reachable data or runtime bytes.</p>
+<p>For a successful <code>next</code>, popping the first frame is one frame operation. If the saved right subtree has a <code>d_i</code>-node left spine, preparing the returned state pushes <code>d_i</code> new frames. The current node followed by that descent lies on one dictionary path, hence:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>1 pop + d_i pushes
+1 + d_i &lt;= h</code></pre>
+<p>The call also constructs one new <code>Iterator</code> wrapper and one <code>Some</code> result. Its worst-case explicit frame work is therefore <code>O(h)</code>. An exhausted call selects <code>NoFrame</code> and constructs <code>None</code> without pushing or popping a frame. The remaining ancestors and the newly prepared left spine form one pending tree path, so every returned state still contains at most <code>h</code> explicit frames.</p>
+<p>Now count one complete linear traversal of a finite <code>n</code>-node dictionary. Every node enters a frame exactly once: nodes on the initial left spine enter during initialization, and every other node enters when a saved right subtree is prepared. Each of those frames later leaves exactly once when its association is produced. The totals, including initialization, are therefore:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>n pushes + n pops = 2n frame operations</code></pre>
+<p>This exact count includes <code>n = 0</code>: the empty traversal moves no frame, and its final <code>None</code> call adds no frame move. For <code>n &gt; 0</code>, distribute the <code>2n</code> operations over the <code>n</code> produced pairs:</p>
+<pre tabindex="0" aria-label="Code or transcript" class="text"><code>2n frame operations / n produced pairs = 2 frame operations per pair</code></pre>
+<p>The quotient gives two frame operations per pair across the complete linear chain. Dividing a sequence’s total work across its steps this way is called <em>amortized analysis</em>; here it yields amortized constant frame work. One individual <code>next</code> can still pop one frame and push <code>d_i</code> frames, so its worst-case work remains <code>O(h)</code>. The complete sequence uses frame work within <code>O(n + h)</code>.</p>
+<p>The amortized account does not extend across arbitrary branching histories. Calling <code>next</code> again on an older state can repeat its saved right-subtree left-spine descent and construct the corresponding frame path again, as the replay did.</p>
+<p>The preceding case established <code>h &lt;= 2 log2(n + 1)</code> for a valid red-black dictionary under its ordering and balance premises. Inheriting those premises makes initialization and one worst-case <code>next</code> use logarithmic explicit frame work. The complete traversal remains linear because it still produces all <code>n</code> associations.</p>
+<p>These return and traversal claims apply to finite acyclic dictionary spines reached through completed public operations and to iterator states produced from them. A defining module can construct malformed or constructor-guarded cyclic spines despite opacity under Ash’s static <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#recursive-block-groups">recursive block-group rules</a>. An initial left-edge cycle can prevent <code>iterator</code> from returning. A cycle in a saved right subtree may permit earlier results and then prevent the <code>next</code> call that enters it from returning. The spine premise does not require acyclic keys or values: a cyclic key or value payload can be returned without traversal; later structural observation may render an active-path revisit as <code>&lt;cycle&gt;</code>.</p>
+<p>At source level, a frame supplies existing key, value, subtree, and stack values unchanged to a new constructor application. The account counts named source applications and constructor applications only. It establishes no elapsed-time, machine-instruction, native-stack, tail-call-optimization, runtime-byte, heap-layout, pointer-identity, physical-sharing, garbage-collection, compiler-layout, or compiler-optimization property. It also introduces no mutation, laziness, hidden mutable cursor, or infinite-data claim.</p>
+</section>
+<section id="practice-and-continue" class="level2">
+<h2 class="anchored" data-anchor-id="practice-and-continue">Practice and continue</h2>
+<ol type="1">
+<li>Draw the initial <code>MoreFrame</code> stack for the three-entry dictionary built in <code>01-sequence.ash</code>. Then draw the states returned after each successful <code>next</code>.</li>
+<li>Draw a valid tree whose root’s right subtree has a nonempty left branch. Predict the frames pushed after the root is produced, including their order.</li>
+<li>Starting from the fact that every node enters and leaves one frame, derive the <code>n</code> pushes, <code>n</code> pops, and <code>2n</code> total without counting the final <code>None</code> as a frame operation.</li>
+<li>Explain why constant amortized frame work applies to one linear chain of states but not to a history that repeatedly resumes the same older state.</li>
+</ol>
+<p>This iterator keeps pending work in last-in, first-out order: the leftmost unfinished association must come before its ancestors. What changes when a traversal must retain pending work in first-in, first-out order instead?</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script>
+// Keep local navigation in the chrome when Quarto hides its floating TOC.
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.querySelector('#TOC');
+  const article = document.querySelector('main.content');
+  if (!toc || !article) return;
+  const disclosure = document.createElement('details');
+  disclosure.className = 'on-this-page';
+  const label = document.createElement('summary');
+  label.textContent = 'On this page';
+  disclosure.append(label);
+  const pagePath = pathname => pathname.replace(/\/index\.html$/, '/');
+  for (const link of toc.querySelectorAll('a[href]')) {
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || pagePath(target.pathname) !== pagePath(location.pathname) || !target.hash) continue;
+    const copy = link.cloneNode(true);
+    copy.setAttribute('href', target.hash);
+    copy.removeAttribute('id');
+    copy.removeAttribute('class');
+    disclosure.append(copy);
+  }
+  article.before(disclosure);
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./cases-guaranteeing-logarithmic-retrieval.html" class="pagination-link" aria-label="Guaranteeing logarithmic retrieval">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-title">Guaranteeing logarithmic retrieval</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./cases-implementing-persistent-fifo-frontier.html" class="pagination-link" aria-label="Implementing a persistent FIFO frontier">
+        <span class="nav-page-text"><span class="chapter-title">Implementing a persistent FIFO frontier</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,659 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0032: Algebra of Scoped Resource Composition · Ash</title><meta name="description" content="Can named resource provisions and supplied computations compose through ordinary binding and sequencing, with lifetime transformations justified by laws?"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0032: Algebra of Scoped Resource Composition · Ash"><meta property="og:description" content="Can named resource provisions and supplied computations compose through ordinary binding and sequencing, with lifetime transformations justified by laws?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0032: Algebra of Scoped Resource Composition · Ash"><meta name="twitter:description" content="Can named resource provisions and supplied computations compose through ordinary binding and sequencing, with lifetime transformations justified by laws?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0032-algebra-of-scoped-resource-composition.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0032: Algebra of Scoped Resource Composition","headline":"DN-0032: Algebra of Scoped Resource Composition","description":"Can named resource provisions and supplied computations compose through ordinary binding and sequencing, with lifetime transformations justified by laws?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/","@id":"https://dikini.github.io/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0032-algebra-of-scoped-resource-composition.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0032-algebra-of-scoped-resource-composition" data-pagefind-meta="title">DN-0032: Algebra of Scoped Resource Composition</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0032-algebra-of-scoped-resource-composition.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0032</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0031-resource-composition-concept-map/">DN-0031</a>, <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009</a>, <a href="/ash/docs/design/dn-0010-identities-and-resource-lifetimes/">DN-0010</a>, <a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013</a></li>
+</ul>
+<blockquote>
+<p>This is a candidate algebra, not current Ash semantics or an accepted
+architecture. The equations below distinguish definitions, bounded
+derivations, and proof obligations. No complete type-safety or compiler
+correctness theorem is claimed. No implementation is authorized.</p>
+</blockquote>
+<h2 id="question-and-result">Question and result</h2>
+<p>Can named resource provisions and supplied computations compose through ordinary
+binding and sequencing, with lifetime transformations justified by laws?</p>
+<p><a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a> develops a
+direct operational candidate for this question. It uses existing Core sequencing,
+an ordered interpretation stack, and separately checked continuation capabilities.
+Its rules require no computation wrappers, selectable monadic binds, or
+conversions between computation models. The algebra below remains comparison
+material; its computation notation does not prescribe Ash source or Core syntax.</p>
+<p>The proposed foundation is a lambda calculus of computations with named effect
+instances, parameterized theories for scopes, and a substructural account of
+ownership. Its central construction is:</p>
+<pre tabindex="0"><code class="language-text">resource contexts compose by ordered concatenation
+computation bodies compose by bind
+resource/body pairs compose by lifting both bodies into the combined context
+</code></pre>
+<p>This derives the intended <code>A[A'] · B[B'] = (A,B)[A';B']</code> for open, compatible
+resource expressions. It does not identify that operator with running and
+closing two scopes separately. Equivalence of such execution schedules is a
+further theorem, illustrated below.</p>
+<h2 id="literature-and-transfer-boundaries">Literature and transfer boundaries</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Source</th>
+<th>Structure used here</th>
+<th>What is not imported</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plotkin and Pretnar, <a href="https://arxiv.org/html/1312.1399">Handling Algebraic Effects</a>, sections 2, 4–5</td>
+<td>Operations and equations; an interpretation must respect the theory; handling applies that interpretation.</td>
+<td>Arbitrary handlers do not automatically preserve equations or distribute over sequencing.</td>
+</tr>
+<tr>
+<td>Matache, Lindley, Moss, Staton, Wu and Yang, <a href="https://www.cs.ox.ac.uk/people/samuel.staton/papers/2025toplas.pdf">Scoped Effects, Scoped Operations, and Parameterized Algebraic Theories</a>, sections 2.3, 3–4</td>
+<td>Separate computation variables and scope parameters; binding substitution; ordered linear parameters for well-bracketed scopes.</td>
+<td>Their scope parameters are not ordinary cell handles. Their model's unrestricted computation variables do not justify copying Ash closures that retain obligations.</td>
+</tr>
+<tr>
+<td>Atkey, <a href="https://bentnib.org/paramnotions-jfp.pdf">Parameterised Notions of Computation</a>, sections 2, 4–5</td>
+<td>Computations indexed by input/output resource descriptions; sequencing and lifting through additional context.</td>
+<td>No global store, universal symmetric resource product, or complete model of the combined Ash proposal is assumed.</td>
+</tr>
+<tr>
+<td>Benton, <a href="https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-352.html">A Mixed Linear and Non-Linear Logic</a></td>
+<td>Separate reusable values from restricted authority; usage-sensitive function abstraction.</td>
+<td>Linearity alone supplies neither scope escape checking nor effectful destruction.</td>
+</tr>
+<tr>
+<td>Wadler, <a href="https://homepages.inf.ed.ac.uk/wadler/papers/propositions-as-sessions/propositions-as-sessions.pdf">Propositions as Sessions</a>, section 2 and Figure 2</td>
+<td>Binding, typed connection by cut, substitution, and scope movement under freshness conditions.</td>
+<td>No claim that sequential composition is parallel composition, or that resource types are session types. Deadlock freedom does not transfer.</td>
+</tr>
+</tbody>
+</table>
+<p>The adaptation and composition derivation below are this note's synthesis.
+These sources do not prove the combined system proposed here.</p>
+<h2 id="roles-types-and-names">Roles, types and names</h2>
+<p>An <strong>effect theory</strong> <code>E = (Sigma, Laws)</code> gives typed operations and equations.
+For example, <code>read : Unit -&gt; Int</code> is a signature entry; a read/write equation
+is additional meaning. Two implementations of the signature need not satisfy
+the same laws.</p>
+<p>A <strong>provider</strong> supplies an interpretation of a theory, possibly in another
+effectful computation model, and evidence for the laws it claims. A <strong>handler</strong>
+applies that interpretation at a lexical boundary. A <strong>resource provision</strong>
+binds a named capability to a provider under such a boundary. It need not own
+mutable state or require physical allocation. These are proposed roles, not new
+primitive declarations.</p>
+<p>Use <code>r : E</code> for a formal resource slot and <code>r.op(v)</code> for a request. An exact
+effect requirement is <code>E@r</code>. A provider environment binds slots, for example
+<code>rho = (r -&gt; P, s -&gt; Q)</code>. An installed scope may introduce a fresh instance
+name <code>a</code>; its runtime realization is distinct from the source spelling <code>r</code>.
+Names are not global lookup strings. Provider implementation identity, instance
+identity, and handler boundary identity remain distinct.</p>
+<p>Ordinary data types describe operation arguments, results and access values.
+If an API exposes an explicit handle, its type and <code>E@r</code> must use the same
+instance identity. A provider's code can be reusable even when authority from
+one installation cannot be copied.</p>
+<h2 id="binding-is-lambda-binding">Binding is lambda binding</h2>
+<p>For values, use ordinary capture-avoiding substitution and call-by-value beta:</p>
+<pre tabindex="0"><code class="language-text">(lambda x. m) v = m[v/x]
+</code></pre>
+<p>Here <code>v</code> is a value; this equation does not duplicate evaluation of an effectful
+argument. Resource abstraction can be represented metatheoretically by a
+contextual lambda, written <code>[r:E, s:F].m</code>. Its application obeys:</p>
+<pre tabindex="0"><code class="language-text">([r:E, s:F].m) @ (a,b) = m[a/r, b/s]
+</code></pre>
+<p>This is illustrative binding notation, not a claim that current rank-1 Ash
+expresses the abstraction. Substitution acts together on request identities,
+access values/types, provider selection, effect rows and retained dependencies.
+For example, <code>(E@r)[a/r] = E@a</code>. Alpha-renaming changes none of these meanings.</p>
+<p>Typed substitutions compose: applying <code>theta</code> then <code>sigma</code> equals applying
+their capture-avoiding composite. Proof: structural induction over the term,
+renaming a bound name fresh before descending under it. The same induction
+must cover type, row and evidence occurrences in a concrete elaboration.</p>
+<p>Substitution of independent ownership parameters is injective unless a supplied
+structural map authorizes otherwise. Passing one duplicable handle into two
+access slots is different from turning one owner into two owners. This prevents
+resource parameterization from quietly introducing contraction.</p>
+<h2 id="computation-and-usage-kernel">Computation and usage kernel</h2>
+<p>Start with finite, sequential computations, exact named dispatch, and
+resume-once interpretations. General recursion, escaping or multi-shot
+continuations, concurrent processes and abnormal completion are extensions,
+not covered by the bounded proofs here. Observable logging is permitted in the
+model; allocation effects require the additional laws described later.</p>
+<p>Let <code>Comp(D0,D1; X; epsilon)</code> describe a computation returning <code>X</code>, transforming
+an input ownership/protocol context <code>D0</code> into <code>D1</code>, with outstanding effects
+<code>epsilon</code>. The context is not a store of payload values. For an operation
+retaining access, its owner's entry appears in both contexts. An explicit close
+transition removes its obligation. Contexts may carry protocol information
+where an API needs it; this does not make all resources stateful.</p>
+<p>The following signatures describe sequencing. <code>epsilon union delta</code> combines
+requirements, not operation schedules. Actual Ash row admissibility must still
+be checked when elaborating them.</p>
+<pre tabindex="0"><code class="language-text">return : X -&gt; Comp(D,D; X; {})
+
+bind : Comp(D0,D1; X; epsilon)
+     -&gt; (X -&gt; Comp(D1,D2; Y; delta))
+     -&gt; Comp(D0,D2; Y; epsilon union delta)
+</code></pre>
+<p>Arrows here abbreviate usage-correct functions. A function capturing restricted
+authority must have correspondingly restricted use; the display is not an
+unrestricted duplication rule. The intermediate context is threaded once,
+not copied between the two computations.</p>
+<p>The kernel uses the usual typed bind equations:</p>
+<pre tabindex="0"><code class="language-text">return x &gt;&gt;= f                 = f(x)
+m &gt;&gt;= return                  = m
+(m &gt;&gt;= f) &gt;&gt;= g               = m &gt;&gt;= (lambda x. f(x) &gt;&gt;= g)
+</code></pre>
+<p>For finite operation trees, define bind by substitution at return leaves:</p>
+<pre tabindex="0"><code class="language-text">return x &gt;&gt;= f                := f(x)
+op_r(v; k) &gt;&gt;= f              := op_r(v; lambda y. k(y) &gt;&gt;= f)
+</code></pre>
+<p>The three equations follow by induction on the tree. This gives an actual
+bounded derivation rather than a new sequencing axiom. For a scoped term, bind
+substitutes at the scope's outside continuation; it does not automatically put
+that continuation inside the scope. Scope movement is separate.</p>
+<p>Keep reusable value bindings separate from restricted obligations. A default
+scope-owner context admits neither implicit contraction nor weakening. For
+the nested-scope fragment it is ordered as well. Access handles can still be
+reused while their required owner exists. Full closure escape checking must
+track those dependencies; a bare split into linear and unrestricted contexts
+is not enough.</p>
+<p>Structural maps, if supported, have explicit types and laws: duplication
+<code>R -&gt; R tensor R</code>, disposal <code>R -&gt; I</code>, and exchange
+<code>R tensor S -&gt; S tensor R</code>. Disposal can have effects and is not deletion.
+Copying access does not imply any of these maps for its owner.</p>
+<h2 id="deriving-composition-of-resources-and-bodies">Deriving composition of resources and bodies</h2>
+<p>Let <code>R</code> be an ordered context of resource parameters. <code>R tensor S</code> is
+capture-avoiding concatenation of compatible contexts; <code>I</code> is empty. Fresh
+slots remain distinct. This context product is associative and unital, not
+assumed commutative. It is a product of requirements, not parallel execution.</p>
+<p>For the first construction, bodies preserve the supplied owners. Write an
+open fragment as <code>F = (R,f)</code>, where <code>f</code> maps input <code>X</code> to a computation returning
+<code>Y</code> using the resources in <code>R</code>. Providers remain parameters of the fragment.
+Applying an environment supplies them; constructing <code>F</code> does not run them.</p>
+<p>We need left and right context liftings. <code>lift_S(f)</code> runs <code>f</code> with additional
+resources <code>S</code> present and unchanged. It preserves exact dispatch and cannot
+access a new slot accidentally. Its justification is a typed frame property,
+not ownership weakening. For the free named-operation kernel it follows by
+structural induction. For installed providers with observable establishment or
+completion, the corresponding semantic lifting needs proof.</p>
+<p>Coherent liftings preserve return and bind and agree under repeated context
+extension. Under those premises define, with left-to-right <code>dot</code>:</p>
+<pre tabindex="0"><code class="language-text">(R,f) dot (S,g)
+  := (R tensor S, lambda x.
+        lift_S(f)(x) &gt;&gt;= lift_R(g))
+
+identity_X := (I, lambda x. return x)
+</code></pre>
+<p>Left/right embeddings keep the order <code>R tensor S</code>; <code>lift_R(g)</code> here puts the
+extra <code>R</code> before <code>S</code>, not after it. The output type of <code>f</code> must match the input
+of <code>g</code>. Both computations' rows are embedded into the combined context and
+combined. This is precisely resource-context composition plus continuation
+substitution. Ignoring explicit input/result binders gives:</p>
+<pre tabindex="0"><code class="language-text">A[A'] dot B[B'] = (A,B)[A';B']
+</code></pre>
+<p>Associativity is derivable. In a common context <code>R tensor S tensor T</code>, the two
+parenthesizations have the same provider parameters in the same order and
+bodies:</p>
+<pre tabindex="0"><code class="language-text">(f(x) &gt;&gt;= g) &gt;&gt;= h
+f(x) &gt;&gt;= (lambda y. g(y) &gt;&gt;= h)
+</code></pre>
+<p>They agree by bind associativity and coherence of the liftings. Identity
+follows from the two return laws and empty-context lifting. Thus these open
+fragments form a category of compatible typed computations, modulo the stated
+equations and alpha-renaming. The resource contexts have an ordered monoidal
+structure; this does not establish a symmetric monoidal structure on effectful
+computations or an interchange law.</p>
+<p>An independently supplied <code>g</code> does not gain free references merely through
+composition. To use <code>R</code>, declare <code>g</code> under <code>R</code> as well, or pass its access as
+part of <code>f</code>'s result while the composed scope owns it. Shared context entries
+are threaded once, not concatenated twice. If establishing <code>S</code> depends on
+<code>f</code>'s result, use indexed bind with a continuation that establishes <code>S</code>; do not
+hoist that establishment into an input-independent provider tuple. The more
+general <code>Comp(D0,D1;X;epsilon)</code> interface describes those transitions, but its
+full scope typing is still to be supplied.</p>
+<h2 id="providers-interpret-handlers-delimit">Providers interpret; handlers delimit</h2>
+<p>For an exact instance, an interpretation acts on operation trees as follows:</p>
+<pre tabindex="0"><code class="language-text">H_P(return x)     = ret_P(x)
+H_P(op_r(v; k))   = P_op(v, lambda y. H_P(k(y)))
+</code></pre>
+<p>This is the deep, exact-instance case. Unmatched operations are forwarded with
+their handled continuations. Provider clauses execute in their declared
+interpretation context. An operation they issue is not silently routed back
+into themselves. Captured owner restrictions apply to the supplied continuation.</p>
+<p>In general <code>H_P</code> can change result and residual effect types; its contract must
+say how. Resource-independent notation does not require a state representation.
+For a fixed, compatible ordered environment define installation composition by
+<code>H_(P,Q)(m) := H_P(H_Q(m))</code>. This is scope nesting, not a theorem about reordering.
+An effect used by <code>Q</code> can be handled by enclosing <code>P</code>; the reverse dependency
+requires a different arrangement. Substitution and row checking determine
+whether this composition is admitted.</p>
+<p>A law-respecting provider sends each equation of its declared theory to an
+equality in its target model. That fact extends to equations derived by
+congruence, substitution and transitivity, by induction on derivations. It
+does not establish preservation of laws belonging to unrelated effects or
+unproved interaction equations.</p>
+<p>In particular, do not assume <code>H_P(m &gt;&gt;= k) = H_P(m) &gt;&gt;= (H_P composed_with k)</code>.
+A handler can transform answers, choose branches or carry state across the
+whole body. Such a distributivity law requires additional structure. The open
+fragment derivation above deliberately sequences bodies before interpretation.</p>
+<h2 id="scope-movement-and-lifetime-intervals">Scope movement and lifetime intervals</h2>
+<p>Use <code>nu a.m</code> for pure fresh-name binding, not physical acquisition. Process
+calculus scope extrusion motivates the freshness condition in a sequential
+analogue: a fresh-name boundary can move across a computation that cannot
+mention or observe that name. This says nothing by itself about moving a lock,
+allocation, provider callback or external interaction.</p>
+<p>For an installed provider write <code>S_P^a(m)</code> for its scoped interpretation,
+including any establishment/completion behavior. Two useful equations to
+prove for suitable providers and contexts are:</p>
+<pre tabindex="0"><code class="language-text">S_P^a(m) &gt;&gt;= k
+  ≈ S_P^a(m &gt;&gt;= k)                      (right extension)
+
+m &gt;&gt;= (lambda x. S_Q^b(n(x)))
+  ≈ S_Q^b(m &gt;&gt;= n)                      (left extension)
+</code></pre>
+<p>Right extension requires <code>a</code> absent from the support of the outside <code>k</code>.
+Left extension requires <code>b</code> absent from <code>m</code> and <code>Q</code> independent of <code>x</code>. Support
+includes captured values, effect identities, types and selected evidence.
+Freshness prevents capture; it is not the entire proof. Both equations also
+need compatible result contracts and proof that moving the interpretation's
+establishment/completion does not change observable behavior. For example, a
+fallible acquisition cannot generally move ahead of <code>m</code>.</p>
+<p>When those premises hold, the closed-execution fusion equation follows:</p>
+<pre tabindex="0"><code class="language-text">S_P^a(m) &gt;&gt;= (lambda x. S_Q^b(n(x)))
+≈ S_P^a(m &gt;&gt;= (lambda x. S_Q^b(n(x))))   by right extension
+≈ S_P^a(S_Q^b(m &gt;&gt;= n))                 by left extension inside P
+</code></pre>
+<p>This is the execution theorem corresponding to the open composition law. It
+is conditional, with named proof steps. These freshness conditions apply to
+the closed starting expression. An open composition whose later body uses
+<code>a</code> directly can be well formed without having that closed decomposition.</p>
+<p>For one dynamic execution, a scope lifetime is an interval in the execution's
+event order. A composed region uses the hull of its constituent intervals.
+Hull is associative and unital with the empty interval; this geometric fact
+does not prove a program transformation. Retained continuation dependencies
+remain within logical lifetime even while inactive. Divergence or retained
+control can leave an interval without a finite endpoint.</p>
+<p>Logical availability and physical establishment are related by realization
+proofs. Their schedules can differ where observations permit. Composition
+does not prescribe that all physical acquisitions happen at region entry.</p>
+<h2 id="small-model-proof-and-counterexample">Small model, proof and counterexample</h2>
+<p>Consider immutable integer providers <code>P=10</code> and <code>Q=20</code>, with pure, total setup,
+no observable completion and exact named requests. Interpret <code>a.ask()</code> as 10
+and <code>b.ask()</code> as 20. Let <code>m = a.ask()</code> and
+<code>n(x) = b.ask() &gt;&gt;= (lambda y. return (x+y))</code>.</p>
+<p>The separate schedule obtains 10 then 20 and returns 30. The composed schedule
+evaluates the same requests in the same order and returns 30. More generally,
+each interpreter replaces only its exact requests by returned constants and
+forwards external operations unchanged. Induction on finite computation trees
+proves both extension laws under the support premises, preserving the external
+trace as well as the result. This is a nonempty model of the fusion law, not
+just a syntactic postulate.</p>
+<p>Finite private cells give another bounded model if initialization is pure and
+total, completion is unobservable, identities cannot escape, and no external
+observer can access the cells. Relate the two executions by equal live cell
+contents on all accessible names; a retained inaccessible cell contributes no
+observable step. Reads and writes preserve this relation. Finite induction
+proves the same result and external trace. Observable allocation failure or
+allocation accounting invalidates this model's assumptions.</p>
+<p>For a contrary case, let <code>P</code> emit <code>close-a</code> on completion and let <code>k</code> emit <code>b</code>.
+Separate execution emits <code>close-a, b</code>; right extension emits <code>b, close-a</code>.
+Even though <code>k</code> has no reference to <code>a</code>, the equation fails under ordered trace
+observation. Likewise, moving <code>Q</code> before <code>m</code> fails if acquiring <code>Q</code> fails before
+an event that <code>m</code> would otherwise emit. Types and provider-law proofs must
+establish the required premises; no separate unsafe-composition annotation is
+introduced by this algebra.</p>
+<h2 id="correctness-and-measurement">Correctness and measurement</h2>
+<p>Use three different relations: alpha/definitional equality for binding and
+construction; theory equality for derivable provider laws; contextual
+equivalence for observable execution. Do not equate them without a soundness
+theorem. Observation includes returned values, termination/failure and external
+traces, extended with identity or timing observations when the contract exposes
+them. With nondeterminism, trace sets alone may be insufficient; a suitable
+contextual or bisimulation model must be selected.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Obligation</th>
+<th>Proof route</th>
+<th>Present status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Binding coherence</td>
+<td>Induction for alpha-renaming and simultaneous substitution.</td>
+<td>Argument given for abstract syntax; concrete Ash elaboration theorem open.</td>
+</tr>
+<tr>
+<td>Body sequencing</td>
+<td>Induction on finite return/operation trees.</td>
+<td>Bounded derivation given.</td>
+</tr>
+<tr>
+<td>Open composition identity/associativity</td>
+<td>Bind laws plus coherent context liftings.</td>
+<td>Conditional derivation given; free named-operation kernel supplies liftings.</td>
+</tr>
+<tr>
+<td>Provider correctness</td>
+<td>Prove defining equations in its target model, then induction on equation derivations.</td>
+<td>General proof method; concrete provider proofs required.</td>
+</tr>
+<tr>
+<td>Scope fusion</td>
+<td>Establish extension laws, then the two-step derivation above.</td>
+<td>Reader model proved by induction argument; private-cell simulation sketch; trace counterexample supplied.</td>
+</tr>
+<tr>
+<td>Resource safety</td>
+<td>Preservation of ownership/protocol contexts, support and unique completion authority.</td>
+<td>Full operational semantics and subject-reduction proof remain open.</td>
+</tr>
+<tr>
+<td>Capture and abandonment</td>
+<td>Ownership transfer into continuations and compatible closing of all retained obligations.</td>
+<td>Existing Ash evidence is a constraint, not a proof for this extension.</td>
+</tr>
+<tr>
+<td>Compiler rewrite</td>
+<td>Contextual simulation or a proved equation with instantiated premises.</td>
+<td>No current compiler transformation claimed.</td>
+</tr>
+</tbody>
+</table>
+<p>Cost is a separate semantics: count operation dispatches and establishments,
+measure peak retained owners/bytes, and record completion work. Compare costs
+only after observational equivalence is established. Counts can add under
+sequencing; peaks depend on interval overlap and cannot generally be added as
+exact values. A composition can reduce dispatch while increasing retention.
+Host guarantees remain assumptions at the provider boundary; proofs about an
+external provider are relative to its stated environment model.</p>
+<h2 id="constraints-alternatives-and-ash-transfer">Constraints, alternatives and Ash transfer</h2>
+<h3 id="continuation-extensions-and-sequencing-laws">Continuation extensions and sequencing laws</h3>
+<p>Current Ash's hidden continuation capability is nonduplicable and nonescaping;
+normal clause completion consumes it through resume or checked discard
+(<a href="/ash/spec/static-semantics/#effects">current rules</a>). These are the
+current admissibility conditions, not universal axioms of resource composition.
+The finite resume-once fragment above bounds its proofs, not future Ash.</p>
+<p>As explored in <a href="/ash/docs/design/dn-0009-effects-handlers-and-continuations/">DN-0009</a> and
+<a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013</a>, continuation
+use has separate dimensions: duplication, abandonment, escape, suspension and
+possibly concurrent resumption. Do not collapse them into a single linear to
+multi-shot progression. A continuation may escape while still being one-shot;
+multi-shot execution need not be concurrent.</p>
+<p>The following maps theorem premises over Core. The candidate interpretation
+below explores how sequencing could depend on a continuation model; neither
+discussion selects a source annotation, mode kind or representation.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Behavior under consideration</th>
+<th>Required facts about the whole captured Core segment</th>
+<th>Laws requiring review</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Current resume/discard</td>
+<td>The owner moves once; discard preserves outside/running completion and closes the owned capture.</td>
+<td>Scope movement preserves the selected owner and completion dependencies.</td>
+</tr>
+<tr>
+<td>Sequential multi-shot</td>
+<td>Every captured restricted value and owner admits the chosen duplication or sharing interpretation; requests made again have the provider's specified meaning.</td>
+<td>Duplication, lifting and fusion preserve that interpretation and the number/order of observable operations.</td>
+</tr>
+<tr>
+<td>Escaping one-shot</td>
+<td>Referenced resources, code and selected evidence remain available; the eventual owner of completion is defined.</td>
+<td>Lexical scope exit is no longer a sufficient physical release point.</td>
+</tr>
+<tr>
+<td>Suspension</td>
+<td>Suspended obligations remain owned; any later abandonment has a valid closing interpretation.</td>
+<td>Lifetime bounds include inactive periods; eventual completion is not inferred.</td>
+</tr>
+<tr>
+<td>Concurrent resumption</td>
+<td>Shared access and completion synchronization satisfy provider contracts, beyond permission for sequential repetition.</td>
+<td>Exchange, interference and concurrent observations need separate proofs.</td>
+</tr>
+</tbody>
+</table>
+<p>Multi-shot does not mean copying an existing resource owner byte for byte.
+Providers may support shared access to one retained instance, independent
+instances per branch, or no duplication of captures containing that provision.
+These are different interpretations, not equivalent implementation choices.
+Independent instances need coherent fresh-name substitution for all related
+handles, operations and evidence. Shared instances retain a defined completion
+owner; copying their handles does not multiply release authority. This note
+selects neither policy and introduces no reference-counting requirement.</p>
+<p>Repeated requests can intentionally repeat external effects. Such an
+interpretation is not automatically invalid, but a rewrite must preserve its
+specified observations. Permission to copy captured values alone proves
+neither provider compatibility nor equivalence of repeated computation.</p>
+<p>For example, a continuation that increments a cell and then reads it can
+produce 1 then 2 when resumed twice with shared state, or 1 then 1 with fresh
+copies initially containing zero. A scope-fusion transformation must not
+change between those interpretations. If moving a resource boundary across a
+capture point changes what is retained or duplicated, the existing one-shot
+fusion proof does not apply even if all source names remain fresh.</p>
+<p>Record each law's continuation assumptions with its proof. Reuse the binding
+and sequencing derivations where their substitution and usage premises still
+hold; re-establish operational soundness for the extended Core transitions.
+Scope movement additionally preserves capture extent, identity relationships,
+provider interpretation and completion multiplicity. A future extension is
+conservative only if old well-typed programs retain their old observations and
+old proofs remain usable under their original assumptions. This is a required
+theorem, not a consequence of adding a mode label.</p>
+<p>The interval account is also conditional on the control model. In sequential
+execution, each dynamic activation can retain an interval that includes all
+its uses. Branch copies have distinct activations; shared ownership relates
+several uses to one owner. Under concurrency, a partial order of events and
+dependency regions may be needed; one total-order hull can be a conservative
+summary without being the complete semantics. No current lifetime proof is
+silently generalized to these cases.</p>
+<h3 id="asynchronous-effect-hooks-require-scheduling-semantics">Asynchronous effect hooks require scheduling semantics</h3>
+<p>Asynchronous hooks are another future extension boundary. Once publication
+can proceed independently of subscriber completion, publisher and subscriber
+work have concurrent lifetimes and require scheduling semantics. This does
+not require parallel threads: interleaving on one executor still introduces
+ordering, progress and ownership questions.</p>
+<p>Current <a href="/ash/spec/static-semantics/#synchronous-typed-hooks">synchronous hooks</a>
+interpret an exact effect API through an ordered transformer chain. Keeping
+asynchronous execution, concurrency and scheduling outside Effect Ash was a
+deliberate milestone boundary: <a href="/ash/docs/design/dn-0026-effect-ash-resource-first-milestones/#leading-boundary">DN-0026</a>
+records that boundary and its later suspension and concurrency slices.
+<a href="/ash/docs/design/dn-0012-coeffects-and-hooks/">DN-0012</a> supplies the broader hook exploration.
+The present algebra must permit that extension without changing the meaning
+of existing synchronous publication.</p>
+<p>For asynchronous hooks, laws over Core must account for:</p>
+<ul>
+<li>the ordering of publication, subscriber selection, scheduling, execution and
+completion, including whether publication waits for any result;</li>
+<li>transfer or sharing of payloads and captured resource access during fan-out;</li>
+<li>which handler/provider context interprets subscriber effects after the
+publishing computation proceeds;</li>
+<li>ownership of queued and running callbacks, and what deregistration or region
+completion means while such work remains;</li>
+<li>failure, cancellation, joining or draining, and release of every obligation
+under the selected policy;</li>
+<li>the scheduler assumptions required for progress claims, including any
+fairness premise rather than an unconditional eventual-completion claim.</li>
+</ul>
+<p>These are semantic questions and proof premises, not selected policies. Row
+union alone establishes none of them. Scheduling a callback is not equivalent
+to completing it; a scope cannot be released merely because publication has
+returned if scheduled work still depends on it. A fusion proof must preserve
+the permitted ordering of events and retained interpretation context, not
+only the publisher's result. Use dependency regions and event partial orders
+where a single sequential interval no longer expresses the obligations.</p>
+<p>Asynchronous hooks and multi-shot continuations are independent extensions:
+several subscribers can each execute once, whereas multi-shot resumes one
+captured continuation repeatedly. Their interaction needs a further proof
+that fan-out and replay do not duplicate restricted authority or change
+completion multiplicity. A future scheduler may require additional Core
+operations; that does not require replacing existing binding/sequencing or
+assuming a universal scheduler in the present algebra.</p>
+<h3 id="candidate-interpretation-sequencing-relative-to-a-continuation-model">Candidate interpretation: sequencing relative to a continuation model</h3>
+<p>One plausible foundation treats Ash's implicit monadic sequencing as relative
+to a continuation model. One source sequencing construct could then admit
+different semantic interpretations and implementations. This is a direction
+for theory and formalisation, not a claim that current Ash supports selectable
+continuation contracts or that all such models satisfy the same laws.</p>
+<p>In schematic CPS notation, the familiar construction is:</p>
+<pre tabindex="0"><code class="language-text">return x = lambda k. k(x)
+bind m f = lambda k. m(lambda x. f(x)(k))
+</code></pre>
+<p>These equations describe continuation composition. They leave the answer type,
+delimiters, usage restrictions, resource ownership and disposal transitions
+unspecified. Their shared shape does not establish that affine and multi-shot
+models have identical types or observations. In a restricted model, even the
+permission to construct or reuse the displayed closures needs justification.
+The indexed <code>Comp</code> signature above is a starting point for stating those
+conditions, not a completed typing of this CPS account.</p>
+<p>A handler installs an interpretation boundary. A request captures the segment
+through that boundary, and resumption reinstalls it. For the illustrative body
+below, suppose both expressions lie inside the selected boundary:</p>
+<pre tabindex="0"><code class="language-text">let x = perform Choose()
+emit(x)
+</code></pre>
+<p>The captured suffix includes <code>emit(x)</code>. An interpretation that resumes once
+executes that suffix once; one that resumes twice may emit twice; abandonment
+skips the suffix and must account for captured completion obligations. The
+prefix before capture is not repeated by resumption. This is a schematic
+comparison of possible interpretations, not executable current Ash syntax.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Contract dimension</th>
+<th>Question for the sequencing model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Exactly-once use</td>
+<td>How does the model ensure one consumption while distinguishing resumption from eventual completion?</td>
+</tr>
+<tr>
+<td>Affine use</td>
+<td>When may the suffix be abandoned, and which captured obligations must still be completed?</td>
+</tr>
+<tr>
+<td>Multi-shot use</td>
+<td>Which captures may be reused, and do repeated requests share resources or use distinct branch instances?</td>
+</tr>
+<tr>
+<td>Explicit disposal</td>
+<td>What transitions and observable effects complete an abandoned capture, and who owns their execution?</td>
+</tr>
+</tbody>
+</table>
+<p>These dimensions are not exclusive modes. In particular, disposal is distinct
+from multiplicity; effectful disposal cannot be modeled as silent weakening.
+Escape and suspension add the lifetime obligations described above.</p>
+<p>Compare two formalisation routes: one computation calculus with contracts on
+captured continuations, or a family of usage-sensitive or indexed computation
+models with related <code>return</code> and <code>bind</code> operations. The first may preserve a
+shared account of syntax and substitution; the second may expose differences
+in admissible composition more directly. Neither route is selected. For each,
+define typing, delimiter behavior, capture/resume/dispose transitions and
+observational equivalence before proving the well-typed identity and
+associativity equations. Check scope movement and lifting separately. A
+handler's interpretation need not preserve bind merely because its source and
+target models each have lawful bind.</p>
+<p>Implementation variation is a further question. Stack segments, CPS closures
+or another representation could implement a specified contract if they preserve
+its observations and ownership rules. Changing from one resumption to repeated
+resumption, or from shared to branch-local state, changes the semantic contract;
+it is not an interchangeable implementation of the same behavior. A useful
+comparison would first fix each model's observations, then ask which runtime
+representations implement it and which laws transfer between models.</p>
+<h3 id="sequencing-is-already-ambient-in-ash">Sequencing is already ambient in Ash</h3>
+<p>The <code>bind</code> notation in this note is a semantic description of existing Ash
+sequencing, not a proposed source method, monad wrapper or additional Core
+operation. The source expression below realizes <code>m &gt;&gt;= (lambda x. n)</code>:</p>
+<pre tabindex="0"><code class="language-text">{
+    let x = m
+    n
+}
+</code></pre>
+<p>Here <code>m</code> and <code>n</code> are metavariables for Ash expressions and <code>n</code> may use <code>x</code>.
+The <a href="/ash/spec/dynamic-semantics/#bindings">binding semantics</a> evaluates <code>m</code>
+with a frame retaining <code>n</code>, its pattern and lexical environment. Returning a
+value matches it and continues with <code>n</code>. Core already contains
+<code>PureComputation::Bind(BindingNode)</code> in <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/dialect.rs">the shared substrate</a>.
+Its location in the shared pure family does not make sequencing unavailable
+to Effect Core. Strict application and other evaluation contexts also sequence
+computations without a written <code>let</code>.</p>
+<p>In schematic continuation notation, suppressing the heap and other machine
+components, the sequencing equation is:</p>
+<pre tabindex="0"><code class="language-text">eval(let x = m in n, env, k)
+  = eval(m, env, lambda v. eval(n, env[x -&gt; v], k))
+</code></pre>
+<p>This is the continuation reading of bind, not a proposed translation that must
+allocate the displayed lambda. The actual abstract machine uses frames. An
+ordinary value supplies the corresponding return behavior.</p>
+<p><a href="/ash/spec/dynamic-semantics/#effect-handlers-and-completion">Handler semantics</a>
+delimits that control: a request selects the nearest exact interpretation,
+moves the segment through that boundary into the clause's owner, and <code>resume</code>
+reinstalls it. Checked <code>discard</code> closes its owned obligations. Core has
+explicit request, handler, resume and discard nodes in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/core/effect.rs">the Effect family</a>; execution is in
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/eval/machine.rs">the evaluator</a>.</p>
+<p>Thus a delimited-continuation interpretation is a useful semantic account of
+existing Core. It is not an unrestricted source <code>Cont</code> value: exact effect
+identity, lexical instantiation, non-escaping continuation use and completion
+ownership constrain the admissible control transformations. The continuation
+equation alone neither models all of those obligations nor proves their laws.</p>
+<p>The proposed contribution is therefore an algebra over existing scoped
+computations. Body composition uses current sequencing. Resource-context
+composition describes the bindings and interpretations surrounding it.
+Typing and proofs establish when scope reassociation or lifetime movement
+preserves that computation. General parameterized provision and the proof
+interface remain missing. The current fragment needs no second source
+sequencing construct; whether future continuation models share its typing,
+operational rules and bind laws remains a formalisation question.</p>
+<h3 id="alternatives-and-reuse">Alternatives and reuse</h3>
+<p>The selected starting point for further study is contextual lambda abstraction
+over named provisions, with ordered scope parameters and indexed sequencing.
+It reuses the largest relevant literature base while retaining the user's
+resource/body separation.</p>
+<p>Compare it against two alternatives: ordinary higher-order wrappers around
+current scopes, which are simpler but may not express the fresh binding and
+fusion laws; and a full session-process calculus, which supplies richer
+interaction protocols but adds concurrency structure not required by this
+question. Neither alternative is ruled out by a theorem here.</p>
+<p><a href="/ash/docs/design/dn-0031-resource-composition-concept-map/">DN-0031</a> remains the coverage map.
+Reuse current binder identities, exact effect instances, evidence transport,
+resource dependency inference and continuation ownership as constraints on an
+encoding. The general provider, contextual abstraction, structural proofs and
+composition laws are not thereby implemented. No new resource registry,
+universal state object, proof syntax or kind is chosen in this derivation.</p>
+<h2 id="next-evidence-and-open-questions">Next evidence and open questions</h2>
+<p>Complete a small typed syntax and transition system before claiming soundness
+of the combined calculus. The first comparison should cover two named instances,
+aliases, supplied bodies with captures, dependent sequencing, and failed
+establishment. Account for current owned abandonment, then compare multi-shot,
+escape and suspension against the separate premises above. Keep shared versus
+branch-local cells, duplicated cleanup, repeated external effects and captured
+provider dependencies as positive/negative cases. No prototype is authorized here; a prototype needs a
+specific question, comparison criteria and disposal/retention conditions.</p>
+<p>The remaining design questions are how contextual parameters appear in Ash
+types, how proof terms certify the lifting and extension laws, how usage and
+stored dependencies compose, and which observation model covers the intended
+external providers. These are gaps in the proposed system, not gaps in the
+bounded algebraic derivation.</p></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question-and-result">Question and result</a><a href="#literature-and-transfer-boundaries">Literature and transfer boundaries</a><a href="#roles-types-and-names">Roles, types and names</a><a href="#binding-is-lambda-binding">Binding is lambda binding</a><a href="#computation-and-usage-kernel">Computation and usage kernel</a><a href="#deriving-composition-of-resources-and-bodies">Deriving composition of resources and bodies</a><a href="#providers-interpret-handlers-delimit">Providers interpret; handlers delimit</a><a href="#scope-movement-and-lifetime-intervals">Scope movement and lifetime intervals</a><a href="#small-model-proof-and-counterexample">Small model, proof and counterexample</a><a href="#correctness-and-measurement">Correctness and measurement</a><a href="#constraints-alternatives-and-ash-transfer">Constraints, alternatives and Ash transfer</a><a href="#next-evidence-and-open-questions">Next evidence and open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0031-resource-composition-concept-map/">← DN-0031: Resource Composition Concept Map</a><a rel="next" href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033: Direct Effects and Continuation Capabilities →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

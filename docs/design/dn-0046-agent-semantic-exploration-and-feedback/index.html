@@ -1,0 +1,385 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/_astro/Site.xf0X8kzZ.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0046: Agent Semantic Exploration and Feedback · Ash</title><meta name="description" content="How should Ash let an AI programmer navigate checked source, ask semantic questions and run small experiments without reconstructing compiler facts from text searches or diagnostic prose? Can planned LSP support,…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0046: Agent Semantic Exploration and Feedback · Ash"><meta property="og:description" content="How should Ash let an AI programmer navigate checked source, ask semantic questions and run small experiments without reconstructing compiler facts from text searches or diagnostic prose? Can planned LSP support,…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0046: Agent Semantic Exploration and Feedback · Ash"><meta name="twitter:description" content="How should Ash let an AI programmer navigate checked source, ask semantic questions and run small experiments without reconstructing compiler facts from text searches or diagnostic prose? Can planned LSP support,…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0046-agent-semantic-exploration-and-feedback.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0046: Agent Semantic Exploration and Feedback","headline":"DN-0046: Agent Semantic Exploration and Feedback","description":"How should Ash let an AI programmer navigate checked source, ask semantic questions and run small experiments without reconstructing compiler facts from text searches or diagnostic prose? Can planned LSP support,…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/","@id":"https://dikini.github.io/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0046-agent-semantic-exploration-and-feedback.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="page">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0046-agent-semantic-exploration-and-feedback" data-pagefind-meta="title">DN-0046: Agent Semantic Exploration and Feedback</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0046-agent-semantic-exploration-and-feedback.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0046</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/">DN-0045</a>,
+<a href="/ash/docs/design/dn-0029-human-diagnostic-presentation/">DN-0029</a>,
+<a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0010-human-diagnostic-presentation-and-localization/">AD-0010</a></li>
+</ul>
+<blockquote>
+<p>This working design note is informative. It defines no current Ash semantics,
+accepts no architecture, and authorizes no implementation or prototype. The
+candidate interface, analysis and experiments remain open to revision.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>How should Ash let an AI programmer navigate checked source, ask semantic
+questions and run small experiments without reconstructing compiler facts from
+text searches or diagnostic prose? Can planned LSP support, semantic search and
+REPL-like experiments share one view of the program while preserving the
+compiler's checking, execution and authority boundaries?</p>
+<h2 id="context">Context</h2>
+<p>Ash is intended for human and AI programmers. The candidate agent interface
+complements planned LSP support: agents could consume definition, reference,
+type and diagnostic information alongside broader questions and experiments.
+These services and an agent protocol are proposed, not current Ash tooling.</p>
+<p><a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006</a> establishes
+resolution before checking, binder identities distinct from spellings, and
+structured outcomes with causal source relationships. These support semantic
+navigation without guaranteeing identity stability across edited snapshots.</p>
+<p><a href="/ash/docs/decisions/ad-0010-human-diagnostic-presentation-and-localization/">AD-0010</a>
+already separates human presentation from locale-independent, schema-versioned
+JSON diagnostics. Semantic reasons, named facts and label relationships belong
+to compiler phases. An agent adapter should consume those facts rather than
+parse localized prose or recreate a second typechecker.</p>
+<p>The <a href="/ash/spec/">current specification</a> describes passive modules,
+static import and evidence selection, and lexical effect interpretation. Modules
+have no runtime initialization or runtime value. An exploration session therefore
+does not inherit a language-defined mutable module world. Resource activation,
+continuation capture and cleanup remain execution concerns, not navigation state.</p>
+<h3 id="dependency-on-native-compilation-work">Dependency on native compilation work</h3>
+<p><a href="/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/">DN-0045</a> owns the
+exploration of shared checking, lowering, source-snapshot and execution contracts
+for interpreted and native paths. This note depends on those contracts: an agent
+adapter must ask the same compiler services about the same inputs and must not
+create separate development semantics, lowering rules or runtime guarantees.</p>
+<p>That dependency does not require completed optimized AOT or JIT before any
+semantic exploration is useful. Navigation, checked queries and bounded runs
+could first use the current interpreter. Later execution paths could serve the
+same requests when their supported fragment and verification justify it. Backend
+choice and native compilation order remain DN-0045 questions.</p>
+<h3 id="current-compiler-building-blocks">Current compiler building blocks</h3>
+<p>The compiler already supplies parts of this workflow. These are implementation
+facts, not an existing workspace-session or semantic-query contract:</p>
+<ul>
+<li>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/module.rs">module loader</a> constructs a dependency-ordered graph
+from source paths. It does not provide versioned unsaved overlays or a
+content-version identity for an agent session.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/resolved.rs">Resolved occurrences and checked modules</a> retain
+declaration identities, source origins, checked global schemes, selected
+occurrence evidence and dependency summaries. They provide inputs for
+navigation and signature queries, not a bounded public search index.</li>
+<li>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/driver.rs">driver's <code>run_path</code></a> loads, checks, links, validates
+and evaluates a modular graph in one operation. Its success returns an
+observation, not a reusable checked workspace that clients can query before
+choosing whether to execute.</li>
+<li><a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/diagnostic.rs">Diagnostics</a> and their
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/presentation.rs">presentation</a> already provide structured reasons,
+facts and causal labels. They support failure explanations; they do not expose
+every successful type, evidence or dependency derivation.</li>
+<li>The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/src/elaborate.rs">elaborator</a> exposes standalone expression
+synthesis and checking, returning a <code>TypedNode</code> with type and effects. Its
+admitted context does not reconstruct a linked module program or an arbitrary
+executable lexical environment. Complete-entry probes therefore remain a
+smaller proposed service boundary than general evaluation at a source position.</li>
+</ul>
+<p>A candidate preparation service would retain or project compiler-owned results
+before execution, together with their source and configuration inputs. Linking
+currently consumes checked modules, so reuse needs an explicit ownership and
+projection design. The query adapter would inspect selected evidence rather than
+select implementations again. The current
+<a href="/ash/spec/static-semantics/#globals-and-modules">module publication and linking rules</a>
+remain authoritative: a failed module publishes neither a checked module nor its
+checked summary, and final Core synthesis consumes authenticated evidence.</p>
+<p><a href="/ash/docs/decisions/ad-0006-front-end-semantic-boundaries/">AD-0006</a> defers a separate
+fully typed surface tree until a consumer justifies it. The initial candidate is
+source-associated fact tables for the queries being tested, published by the
+owning compiler phases. General expression-type inspection would require retaining
+additional facts; neither spans nor Core node IDs alone establish a universal
+source-occurrence identity. This note does not yet justify duplicating the whole
+typed tree.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Compiler-owned resolution, checking and validation remain authoritative. LSP,
+semantic search and experiment adapters do not own language rules.</li>
+<li>A response identifies the source snapshot and relevant compiler configuration
+that produced it. Dependency content and unsaved edits belong to that snapshot.</li>
+<li>A query distinguishes checked facts, conservative possibilities, incomplete
+analysis and observations from one execution. Unknown is not an empty result.</li>
+<li>Answers for a chosen lexical context preserve import, opacity and access rules.
+Navigation to a defining identity does not grant that context permission to use
+hidden constructors or private declarations.</li>
+<li>Output is compact and machine-readable, with source relationships and explicit
+limits. Human rendering can use the same facts without becoming the protocol.</li>
+<li>Independent questions may be batched against one snapshot. Batching does not
+turn dependent executions or edits into simultaneous operations.</li>
+<li>A small experiment checks its complete entry and lexical authority. It cannot
+borrow a resume capability, resource handle or foreign authority from a tool.</li>
+<li>Compiler caches and program state have separate lifetimes. A cached checked
+module does not keep its previous resource activations alive.</li>
+<li>No source edit or semantic query automatically replays effectful execution.
+Runtime failures and cleanup outcomes retain their original guarantees.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Direction</th>
+<th>Benefit</th>
+<th>Limitation to test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LSP alone</td>
+<td>Familiar navigation.</td>
+<td>Broader queries need extensions.</td>
+</tr>
+<tr>
+<td>Separate tools</td>
+<td>Narrow adapters.</td>
+<td>Client reconciles snapshots and state.</td>
+</tr>
+<tr>
+<td>Integrated session</td>
+<td>Shared snapshot.</td>
+<td>Coordination must justify its cost.</td>
+</tr>
+</tbody>
+</table>
+<p>Separate LSP, search and execution tools offer a baseline if explicit snapshot
+references suffice. The working direction is an integrated session using shared
+services, with additional compiler-owned queries where LSP does not fit. The
+session coordinates requests without requiring persistent execution state. New
+query contracts must justify their cost without creating a second compiler.</p>
+<h3 id="semantic-search">Semantic search</h3>
+<p>Semantic search, or semantic grep, would select checked relationships rather
+than matching spellings alone. Useful questions to investigate include:</p>
+<ul>
+<li>Which occurrences refer to one resolved declaration across aliases and
+re-exports, and which similarly spelled names refer to different declarations?</li>
+<li>Which checked functions expose a given result type, nominal identity, interface
+requirement or exact effect instance in their signatures?</li>
+<li>Where are exact interface methods selected or forwarded as ordinary evidence
+functions, and which declaration supplied the selected evidence?</li>
+<li>Which known functions or caller paths may request an operation, including
+requests handled internally and requests made by clauses outside their handler?</li>
+<li>Which checked dependencies connect a stored value, closure or operation to a
+scoped resource, and which source positions explain a rejected escape or discard?</li>
+</ul>
+<p>The first questions can expose verified resolution and typing facts. Control
+questions need a stated analysis scope and conservative results. Current
+<a href="/ash/spec/static-semantics/#effects">capture checking</a> retains summaries for
+known functions, closures, recursion and imports; higher-order callees and open
+rows can remain uncertain. Generic identities may coincide after specialization.
+An empty outward row does not imply absence of internally handled requests.</p>
+<p>Existing summaries are evidence for possible query services, not a ready public
+query contract. A search must report whether it inspected checked bodies,
+dependency summaries or an incomplete source region. A list of possible requests
+is not a proof that each runs, nor is an unobserved path proof of impossibility.</p>
+<h3 id="concrete-workflow-repair-an-escaping-callback">Concrete workflow: repair an escaping callback</h3>
+<p>Consider the task: return a callback that remembers the integer read from a
+temporary cell. The requirement is to remember the copied value, so moving the
+read before scope exit preserves the intended behavior. A callback that must read
+changing live state would require a different design.</p>
+<p>Current <a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">resource rules</a>
+track stored dependencies separately from visible types and outward effect rows.
+An identity-free function type does not erase a retained resource dependency.
+Copied integers and closures retaining only those copies may escape; the
+<a href="/ash/spec/dynamic-semantics/#scoped-cell-execution">execution rules</a> let such
+closures run after the cell payload has been released.</p>
+<p>The proposed agent workflow is:</p>
+<ol>
+<li><strong>Establish snapshot S0 and check it.</strong> Admit the source, dependencies, root
+configuration and relevant compiler configuration. Use a rejected candidate
+whose callback contains an internally handled cell read: its outward type can
+be <code>Unit -&gt; Int</code>, but its stored resource dependency still rejects escape with
+<code>type.resource-escape</code>. A direct read with an incompatible outward row may
+fail ordinary typing first; the workflow must preserve diagnostic precedence.</li>
+<li><strong>Explore the relevant relationships.</strong> Follow the diagnostic's labelled
+occurrences to the cell acquisition, callback and helper declarations. Find
+references by resolved identity across aliases, then inspect relevant caller
+signatures. Report completed resolution facts separately from checked facts
+unavailable because the module failed.</li>
+<li><strong>Explain the failure.</strong> Expose the compiler's available causal labels:
+returned closure, retained cell access or evidence, and the acquisition that
+closes before the closure is used. A richer explanation query could connect
+those facts without reconstructing resource rules in the adapter. Unknown
+relevant higher-order behavior remains unknown.</li>
+<li><strong>Create source variant S1.</strong> Read the integer while the cell scope is live,
+then return a closure retaining only that copied integer. S1 has its own
+snapshot identity; S0's diagnostic remains historical evidence.</li>
+<li><strong>Check and run a complete probe.</strong> Construct an entry that creates the callback,
+leaves the resource scope and then invokes it. Check, link and independently
+validate that program before running it. A callback that returns its saved
+integer should return <code>41</code> for an initializer of <code>41</code>; another initializer
+should produce its corresponding value. These are proposed probe expectations,
+not observations produced by a current agent service.</li>
+<li><strong>Retain the evidence and check affected callers.</strong> Keep the original rejected
+capture and the accepted copied-value case as source regressions. Each probe
+starts from explicit fresh state; compiler caches may remain warm. A query
+result from S0 cannot silently serve as evidence about S1.</li>
+</ol>
+<p>Existing <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/resource_scope_typing.rs">typing cases</a>,
+<code>identity_free_closure_cannot_escape_its_resource_owner</code> and
+<code>copied_integer_and_constant_closure_have_no_stored_resource_dependency</code>, anchor
+the rejected and accepted cases. The
+<a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/tests/resource_scope_runtime.rs">runtime case</a>
+<code>copied_closure_runs_after_payload_release</code> invokes a copied-value closure after
+scope exit and expects <code>42</code> from a saved <code>41</code> plus one. These fixtures support the
+language behavior; they do not demonstrate the proposed session, query or probe
+construction services.</p>
+<h3 id="shared-compiler-services">Shared compiler services</h3>
+<p>The candidate session coordinates these services. Planned LSP support, agent
+requests and human presentation would consume the same compiler-owned results.
+The service boundaries do not decide whether additional requests travel through
+LSP extensions or a separate agent adapter.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Service</th>
+<th>Required result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Snapshots and dependencies</td>
+<td>Source content, unsaved variants, imports and configuration, with versions, result freshness and dependency invalidation.</td>
+</tr>
+<tr>
+<td>Preparation and checking</td>
+<td>Resolution, checking, evidence selection, linking and independent Core validation, with completed stages and reusable results.</td>
+</tr>
+<tr>
+<td>Navigation and semantic search</td>
+<td>Definitions, references, checked signatures, selected evidence and bounded predicates over resolved identities, with coverage and pagination.</td>
+</tr>
+<tr>
+<td>Explanations</td>
+<td>Compiler-owned diagnostic reasons and source causes; later, justified explanations of successful typing, evidence and dependency choices.</td>
+</tr>
+<tr>
+<td>Probe preparation</td>
+<td>A complete derived entry or source variant with inputs and fixtures, preserving lexical access, expected typing, evidence, handler context and resource scope.</td>
+</tr>
+<tr>
+<td>Execution and observation</td>
+<td>A run against validated Core, explicit initial state and limits, with its execution path, values, failures and completion status; interpreted first and native when justified by DN-0045.</td>
+</tr>
+</tbody>
+</table>
+<p>A candidate response contract identifies its snapshot, configuration, completed
+analysis stage and covered source or dependencies. It separates checked facts,
+conservative possibilities, incomplete analysis and observations. Bounds,
+truncation and a deliberate continuation mechanism prevent a partial result from
+looking exhaustive. Execution results additionally identify the entry and inputs.</p>
+<p>A failed snapshot may still expose completed resolution information and its
+diagnostics. It cannot expose a failed module as successfully checked or publish
+partially emitted Core as executable. Signature effect rows, outward computation
+rows, conservative possible requests and observed requests need separate query
+meanings; none substitutes for the others.</p>
+<h3 id="smallest-useful-first-scope">Smallest useful first scope</h3>
+<p>The first candidate scope should exercise one explicit source snapshot and a
+complete checked entry through the current interpreter:</p>
+<ol>
+<li>Admit the module graph and source/configuration inputs under a snapshot identity.</li>
+<li>Expose declaration/reference navigation, checked global schemes, selected
+occurrence evidence and existing structured diagnostics.</li>
+<li>Admit an edited source variant as another snapshot and check its complete entry.</li>
+<li>Execute that validated entry from fresh state and attach its observation to the
+matching snapshot, entry and inputs.</li>
+</ol>
+<p>This scope tests the repair workflow without requiring optimized AOT, JIT, a CPS
+decision, persistent runtime values or general evaluation at a source location.
+Compiler-owned expression-type projections, richer dependency explanations and
+conservative control queries are later extensions to measure individually. Cache
+reuse can then be measured against the same workflow without changing its results.</p>
+<p>Initially, a probe is an ordinary complete entry supplied in a source variant.
+Selection of a location alone does not establish an executable lexical
+environment. A generated wrapper must preserve expected typing, evidence
+selection and scope; adding a function can introduce a resume barrier. General
+lexical probe construction, expression-evaluation syntax and supported source
+transformations remain open.</p>
+<p>This is a candidate comparison scope, not implementation authorization. Its value
+is testable: can an agent follow the cause, make a correct source variant and
+obtain repeatable feedback with less context reconstruction and fewer round trips?</p>
+<h3 id="freshness-output-and-state">Freshness, output and state</h3>
+<p>A session should distinguish source versions, dependency inputs, analysis results
+and execution observations. After an edit, a client may inspect an older result
+as history, but the adapter must not silently present it as current. Returned
+identities and source spans need an explicit relationship to their snapshot;
+cross-snapshot correspondence remains a question rather than an assumed property.</p>
+<p>Batched navigation and semantic questions can reduce tool round trips. Results
+should state limits and incomplete regions and permit deliberate continuation
+without flooding the agent with whole files or repeated diagnostic catalogues.
+An experiment result should identify its entry, inputs, execution path and
+completion status, with values, failures and cleanup observations kept distinct.</p>
+<p>A long-lived compiler service may reuse parsed sources, checked summaries and
+compiled code. Fresh program runs can still start with separate execution state.
+A future persistent REPL world would need explicit creation, reset and disposal,
+including retained values and resource obligations. Keeping compiler caches warm
+does not require that additional world model. Independent isolated runs offer a
+baseline for repeatable experiments and parallel agent work.</p>
+<h3 id="effect-and-resource-authority">Effect and resource authority</h3>
+<p>An experiment uses authority established by its checked source. Current
+<a href="/ash/spec/dynamic-semantics/#effect-handlers-and-completion">effect execution</a>
+selects the nearest exact accepting interpretation and preserves the clause's
+surrounding control. The adapter cannot silently install ambient handlers,
+replace effect results with mocks or transfer live scope owners between runs.</p>
+<p><a href="/ash/spec/dynamic-semantics/#scoped-cell-execution">Resource scopes</a> create
+fresh activations and move ownership through capture and resume. Their handles
+are not durable session identifiers. <a href="/ash/spec/dynamic-semantics/#scoped-cleanup-actions">Cleanup</a>
+distinguishes normal completion, owned abandonment, running actions and internal
+termination. Stopping a probe is not evidence that source cleanup completed.</p>
+<p>Foreign interaction under the work explored by
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a> adds host inputs and
+effects that resetting Ash state may not undo. A probe must make those inputs and
+selected authority explicit. Automatic re-execution after an edit could repeat
+external mutations; static feedback and requested execution should remain separate.
+This note adds no isolation guarantee for arbitrary native code or foreign callbacks.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p><a href="https://arxiv.org/html/2405.15793v3">SWE-agent</a>, section 5.1 and Table 3, compared
+agent interfaces on 300 SWE-bench Lite bug-fix tasks using GPT-4 Turbo. Syntax
+feedback, summarized search and bounded observations improved results in that
+setting. This supports testing concise semantic responses and useful correction
+feedback. It does not establish an Ash query design, a universal latency target,
+or a benefit from JIT or persistent REPL state. These remain hypotheses for Ash.</p>
+<p>A future authorized comparison should give all three candidates the same checked
+source snapshots, services and task budget. Tasks should cover aliased identities,
+selected evidence, an internally handled request, an uncertain higher-order call,
+a resource escape and a small executable counterexample. Include an edit between
+queries, a dependency change and an execution that cannot promise completed cleanup.</p>
+<p>Compare correct answers and honest uncertainty, source freshness, diagnostic
+causes, agent round trips, output size and time to a useful correction. Count cold
+and cached checking separately from execution. Repeat observations from explicit
+initial state, and compare supported interpreted and native runs against DN-0045's
+common behavior contract when both paths exist. Faster results do not excuse
+different accepted source or hidden authority.</p>
+<p>If a later authorization permits a bounded prototype, it should test whether the
+integrated session reduces reconciliation and round trips while preserving those
+facts. Retain the comparison data, query counterexamples and contracts supported
+by the evidence. Discard adapters that duplicate semantic rules, require stale
+state or add coordination without demonstrated benefit. Prototype code remains
+disposable design evidence until an architectural decision and task authorize
+product retention. This note grants no such authorization.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which questions can use ordinary LSP requests, and which justify additional
+compiler-owned semantic queries?</li>
+<li>What snapshot identity covers unsaved files, dependency summaries and compiler
+configuration without requiring cross-edit binder stability?</li>
+<li>How should partial checking and conservative control summaries expose useful
+facts while making uncertainty unavoidable to the client?</li>
+<li>Which lexical probe contexts can be reconstructed without changing typing,
+evidence, resume barriers or resource authority?</li>
+<li>Do agent tasks need persistent values, or do cached compilation and fresh runs
+provide sufficient exploration? How would a retained world close its owners?</li>
+<li>What response bounds and batching choices improve task success for humans and
+agents using the same underlying services?</li>
+</ul></article><aside class="article-aside"><nav aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/">← DN-0045: Native Compilation and Interactive Execution</a><a rel="next" href="/ash/docs/design/dn-0047-ecs-and-open-heterogeneous-stores/">DN-0047: ECS and Open Heterogeneous Stores →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

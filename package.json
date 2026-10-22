@@ -18,6 +18,7 @@
     "prepare:decisions": "node scripts/prepare-spec.mjs",
     "prepare:study": "node scripts/prepare-study.mjs",
     "prepare:pages": "node scripts/prepare-pages.mjs",
+    "publish:pages": "node scripts/publish-pages.mjs",
     "preview": "astro preview --host 127.0.0.1",
     "test": "npm run test:tokens && node --test --test-isolation=none tests/*.test.mjs",
     "test:browser": "playwright test",

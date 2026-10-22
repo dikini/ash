@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 test('Pages artifact serves links and metadata under the project path without changing source output', async () => {
-  const { preparePages } = await import('../scripts/prepare-pages.mjs');
+  const { preparePages, hashPagesArtifact } = await import('../scripts/prepare-pages.mjs');
   const root = await mkdtemp(join(tmpdir(), 'ash-pages-'));
   try {
     const source = join(root, 'dist');
@@ -24,7 +24,9 @@ test('Pages artifact serves links and metadata under the project path without ch
     await writeFile(join(source, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://dikini.github.io/sitemap.xml\n');
     await writeFile(join(source, 'sitemap.xml'), '<urlset><url><loc>https://dikini.github.io/</loc></url></urlset>');
     await writeFile(join(source, 'content-index.json'), JSON.stringify({ baseUrl: 'https://dikini.github.io', buildManifest: '/build-manifest.json', pages: [{ url: '/', canonical: 'https://dikini.github.io/', markdown: '/index.md', markdownSha256: 'old' }] }));
-    await writeFile(join(source, 'build-manifest.json'), JSON.stringify({ discovery: {} }));
+    const originalManifest = JSON.stringify({ discovery: {} });
+    await writeFile(join(source, 'build-manifest.json'), originalManifest);
+    await writeFile(join(source, 'refresh-report.json'), JSON.stringify({ buildManifestSha256: hash(originalManifest), artifactSha256: await hashPagesArtifact(source), checks: ['check', 'build', 'test', 'test:browser'] }));
     const output = await preparePages({ source, destination: join(root, 'pages'), url: 'https://dikini.github.io/ash/' });
     const result = await readFile(join(output, 'index.html'), 'utf8');
     assert.match(result, /href="\/ash\/docs\/#start"/);
@@ -46,7 +48,14 @@ test('Pages artifact serves links and metadata under the project path without ch
     assert.equal(catalogue.pages[0].url, '/ash/');
     const manifest = JSON.parse(await readFile(join(output, 'build-manifest.json'), 'utf8'));
     assert.equal(manifest.discovery.catalogueSha256, hash(catalogueBytes));
+    const receipt = JSON.parse(await readFile(join(output, 'refresh-report.json'), 'utf8'));
+    assert.equal(receipt.sourceBuildManifestSha256, hash(originalManifest));
+    assert.equal(receipt.buildManifestSha256, hash(await readFile(join(output, 'build-manifest.json'))));
+    assert.equal(receipt.artifactSha256, await hashPagesArtifact(output));
+    assert.ok(receipt.checks.includes('prepare:pages'));
     assert.match(await readFile(join(output, 'sitemap.xml'), 'utf8'), /https:\/\/dikini.github.io\/ash\//);
+    await writeFile(join(source, 'index.html'), html + '<p>Untested edit</p>');
+    await assert.rejects(preparePages({ source, destination: join(root, 'other-pages'), url: 'https://dikini.github.io/ash/' }), /changed after verification/i);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

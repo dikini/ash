@@ -131,8 +131,15 @@ timestamps or output on every operating system.
 
 The local commands are the future workflow entry points: regenerate `main`,
 optionally propose an explicit pin change, run verification, then open a draft
-PR containing the reviewed diff and build artifacts. No command currently
-creates a PR, configures a remote, merges, or deploys.
+PR containing the reviewed diff and build artifacts. The refresh command does
+not create a PR, configure a remote, merge, or deploy.
+
+Publication is a separate explicit local action: `npm run publish:pages` runs
+the refresh with browser checks, prepares the Pages artifact, and pushes the
+verified static output to `gh-pages`. `--prepared` skips rebuilding only when
+the current clean source commit, manifest, verification receipt, and all
+artifact file hashes still match. GitHub's branch deployment serves those files
+without fetching upstream content or running tests.
 
 After a website remote is configured, an upstream milestone/release job can
 invoke a workflow through GitHub's

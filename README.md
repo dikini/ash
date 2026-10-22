@@ -80,10 +80,37 @@ Node; automatic Quarto provisioning currently targets Linux x86-64. See the
 
 ## GitHub Pages
 
-The site is published at <https://dikini.github.io/ash/>. Pushes to `main`
-build and deploy through `.github/workflows/check.yml`, after website, browser,
-and compiler-example checks pass. Pull requests run checks without deploying.
-The workflow can also be started manually from GitHub Actions.
+The site is published at <https://dikini.github.io/ash/> from the `gh-pages`
+branch. Build and verify locally when you decide to publish an update:
+
+```sh
+npm run publish:pages
+```
+
+Start from a clean, committed source checkout. The command runs the local
+documentation refresh with Astro checks, the full build, content/token tests,
+and browser checks. Pending compiler checkpoints also require example
+verification, following the normal refresh policy. It prepares the `/ash/`
+artifact, records its verification receipt and file hashes, and pushes only
+those static files to `origin/gh-pages`. The source branch stays checked out.
+Publishing commits preserve branch history and use ordinary, non-forced pushes.
+
+To publish an already prepared and verified artifact without rebuilding:
+
+```sh
+npm run publish:pages -- --prepared
+```
+
+This requires the artifact to match the current clean source commit and its
+verification receipt, including a hash of every published file. Changed or
+unverified output is rejected. `build-manifest.json` records source revisions;
+`refresh-report.json` records completed checks and artifact integrity.
+
+GitHub Pages is configured to **Deploy from a branch**, using `gh-pages` and
+`/(root)`. The branch includes `.nojekyll`, so GitHub's built-in lightweight
+deployment serves the prebuilt files without rebuilding or running tests.
+Ordinary pushes to `main` do not publish. The expensive verification workflow
+in `.github/workflows/check.yml` remains available only through a manual run.
 
 To review the Pages artifact locally:
 
@@ -95,9 +122,9 @@ python3 -m http.server 8000 --directory .cache/github-pages
 
 Open <http://localhost:8000/ash/>. Preparation copies `dist/` to
 `.cache/github-pages/ash/`, adapts site links and metadata to `/ash/`, updates
-discovery hashes, and checks links at that mounted path. The workflow uploads
-the contents of that directory; GitHub Pages supplies the `/ash/` mount.
-Repository Settings → Pages must use **GitHub Actions** as its build source.
+discovery hashes, and checks links at that mounted path. This preview alone does
+not create a verification receipt. The publishing command pushes the contents
+of that directory; GitHub Pages supplies the `/ash/` mount.
 
 The specification at `/spec/`, tool documentation at `/docs/tools/`, design
 notes at `/docs/design/`, and architectural decisions at `/docs/decisions/`

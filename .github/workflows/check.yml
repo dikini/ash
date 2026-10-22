@@ -1,8 +1,6 @@
-name: Check website
+name: Check website manually
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -57,16 +55,6 @@ jobs:
           name: browser-failure-diagnostics
           path: test-results/
           if-no-files-found: ignore
-      - name: Prepare GitHub Pages artifact
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: npm run prepare:pages
-        env:
-          PAGES_URL: https://dikini.github.io/ash/
-      - name: Upload GitHub Pages artifact
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: .cache/github-pages/ash/
       - uses: actions/upload-artifact@v4
         with:
           name: ash-site-preview
@@ -96,22 +84,3 @@ jobs:
       - run: npm run verify:examples
         env:
           ASH_SOURCE: ${{ github.workspace }}/.compiler
-
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [website, examples]
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    concurrency:
-      group: github-pages
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/configure-pages@v5
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

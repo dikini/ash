@@ -1,21 +1,14 @@
 import assert from 'node:assert/strict';
-import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { markdownParser } from './content-metadata.mjs';
 import { sha256 } from './source-config.mjs';
 import { checkSite } from './check-links.mjs';
+import { artifactFiles as filesIn, hashArtifact as hashPagesArtifact } from './artifact-integrity.mjs';
 
-async function filesIn(directory) {
-  const files = [];
-  for (const item of await readdir(directory, { withFileTypes: true })) {
-    const file = join(directory, item.name);
-    if (item.isDirectory()) files.push(...await filesIn(file));
-    else files.push(file);
-  }
-  return files;
-}
+export { hashPagesArtifact };
 
 function rewriteMarkdown(input, rewriteUrl) {
   const edits = [];
@@ -61,6 +54,10 @@ export async function preparePages({ source = 'dist', destination = '.cache/gith
   const mount = resolve(destination);
   const output = join(mount, prefix);
   assert.ok(sourceRoot !== mount && !mount.startsWith(sourceRoot + sep) && !sourceRoot.startsWith(mount + sep), 'Pages staging directory must be separate from the build');
+  let sourceReceipt;
+  try { sourceReceipt = JSON.parse(await readFile(join(sourceRoot, 'refresh-report.json'), 'utf8')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (sourceReceipt) assert.equal(sourceReceipt.artifactSha256, await hashPagesArtifact(sourceRoot), 'Source output changed after verification; run a new local refresh');
   const rewriteUrl = value => {
     if (value === site.origin) return site.origin + prefix;
     if (value.startsWith(site.origin + '/')) return site.origin + prefix + value.slice(site.origin.length);
@@ -115,7 +112,8 @@ export async function preparePages({ source = 'dist', destination = '.cache/gith
   const catalogueBytes = JSON.stringify(catalogue, null, 2) + '\n';
   await writeFile(catalogueFile, catalogueBytes);
   const manifestFile = join(output, 'build-manifest.json');
-  const manifest = JSON.parse(await readFile(manifestFile, 'utf8'));
+  const originalManifest = await readFile(manifestFile);
+  const manifest = JSON.parse(originalManifest);
   manifest.hosting = { provider: 'github-pages', url: site.href, basePath: prefix };
   Object.assign(manifest.discovery, {
     baseUrl: catalogue.baseUrl,
@@ -124,8 +122,22 @@ export async function preparePages({ source = 'dist', destination = '.cache/gith
     markdownSetSha256: sha256(JSON.stringify(catalogue.pages.map(page => [page.url, page.markdown, page.markdownSha256]))),
   });
   await writeFile(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
+  await writeFile(join(output, '.nojekyll'), '');
   const errors = await checkSite(mount);
   assert.deepEqual(errors, [], 'Pages links must resolve under the project path');
+  const receiptFile = join(output, 'refresh-report.json');
+  let receipt;
+  try { receipt = JSON.parse(await readFile(receiptFile, 'utf8')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (receipt) {
+    assert.equal(receipt.buildManifestSha256, sha256(originalManifest), 'Refresh receipt does not match the source build manifest');
+    receipt.sourceBuildManifestSha256 = receipt.buildManifestSha256;
+    receipt.buildManifestSha256 = sha256(await readFile(manifestFile));
+    receipt.checks = [...new Set([...receipt.checks, 'prepare:pages'])];
+    receipt.preparedAt = new Date().toISOString();
+    receipt.artifactSha256 = await hashPagesArtifact(output);
+    await writeFile(receiptFile, JSON.stringify(receipt, null, 2) + '\n');
+  }
   console.log(`Prepared GitHub Pages artifact at ${relative(resolve('.'), output)} for ${site.href}; mounted links verified.`);
   return output;
 }

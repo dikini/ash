@@ -4,6 +4,7 @@ import { mkdir, readFile, rm, writeFile, rename } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readSourceConfig, sha256 } from './source-config.mjs';
+import { hashArtifact } from './artifact-integrity.mjs';
 
 export function parseRefreshOptions(args) {
   const options = { event: 'manual', reason: 'Local documentation refresh', browser: false, verifyExamples: false };
@@ -61,7 +62,7 @@ async function main() {
   assert.equal(readSourceConfig().configHash, configHash, 'Source config changed during refresh');
   const manifestBytes = await readFile('dist/build-manifest.json');
   assert.equal(JSON.parse(manifestBytes).inputs.sourceConfigSha256, configHash, 'Stale build manifest');
-  const receipt = { version: 1, completedAt: new Date().toISOString(), event: options.event, reason: options.reason, checks: verified, buildManifestSha256: sha256(manifestBytes) };
+  const receipt = { version: 1, completedAt: new Date().toISOString(), event: options.event, reason: options.reason, checks: verified, buildManifestSha256: sha256(manifestBytes), artifactSha256: await hashArtifact(resolve('dist')) };
   const staged = resolve(`dist/.refresh-report-${process.pid}.json`);
   await writeFile(staged, JSON.stringify(receipt, null, 2) + '\n');
   await rename(staged, resolve('dist/refresh-report.json'));

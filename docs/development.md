@@ -133,6 +133,10 @@ results out of Git.
 ## Automation and current evidence
 
 `.github/workflows/check.yml` defines independent website and example jobs.
+It runs only when explicitly started with **Run workflow**. Publication uses
+the locally verified `gh-pages` branch described in the
+[publishing instructions](../README.md#github-pages); it does not wait for this
+optional runner workflow.
 The website job builds and checks static output, runs browser checks, and
 uploads a preview artifact. The example job checks out the exact compiler
 revision and runs the canonical example verifier. No job deploys the site.

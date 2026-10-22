@@ -76,7 +76,28 @@ Quarto HTML renderer, and serves a labeled development snapshot under
 `/study/latest/`. The exact source and Ash target are recorded with the output.
 The first build needs network access, Git, Python 3.11+, and tar in addition to
 Node; automatic Quarto provisioning currently targets Linux x86-64. See the
-[integration guide](docs/ash-doc-integration.md). Production hosting is not configured.
+[integration guide](docs/ash-doc-integration.md).
+
+## GitHub Pages
+
+The site is published at <https://dikini.github.io/ash/>. Pushes to `main`
+build and deploy through `.github/workflows/check.yml`, after website, browser,
+and compiler-example checks pass. Pull requests run checks without deploying.
+The workflow can also be started manually from GitHub Actions.
+
+To review the Pages artifact locally:
+
+```sh
+SITE_URL=https://dikini.github.io npm run build
+PAGES_URL=https://dikini.github.io/ash/ npm run prepare:pages
+python3 -m http.server 8000 --directory .cache/github-pages
+```
+
+Open <http://localhost:8000/ash/>. Preparation copies `dist/` to
+`.cache/github-pages/ash/`, adapts site links and metadata to `/ash/`, updates
+discovery hashes, and checks links at that mounted path. The workflow uploads
+the contents of that directory; GitHub Pages supplies the `/ash/` mount.
+Repository Settings → Pages must use **GitHub Actions** as its build source.
 
 The specification at `/spec/`, tool documentation at `/docs/tools/`, design
 notes at `/docs/design/`, and architectural decisions at `/docs/decisions/`

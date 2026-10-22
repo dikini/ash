@@ -3,6 +3,7 @@ name: Check website
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,6 +11,8 @@ permissions:
 jobs:
   website:
     runs-on: ubuntu-latest
+    env:
+      SITE_URL: https://dikini.github.io
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +23,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install browser and study diagram system dependencies
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
       - uses: actions/cache@v4
         with:
           path: |
@@ -30,8 +38,17 @@ jobs:
       - run: npm run check
       - run: npm run build
       - run: npm test
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - name: Prepare GitHub Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: npm run prepare:pages
+        env:
+          PAGES_URL: https://dikini.github.io/ash/
+      - name: Upload GitHub Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .cache/github-pages/ash/
       - uses: actions/upload-artifact@v4
         with:
           name: ash-site-preview
@@ -61,3 +78,22 @@ jobs:
       - run: npm run verify:examples
         env:
           ASH_SOURCE: ${{ github.workspace }}/.compiler
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [website, examples]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

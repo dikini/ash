@@ -35,8 +35,11 @@ Do not add a guessed production origin. Once a real domain is chosen,
 and a sitemap. Builds always emit a content catalogue, `llms.txt`, and Markdown
 alternates with source provenance. See [search and agent discovery](discovery.md)
 for metadata support, source preservation, and origin configuration.
-Replace that illustrative origin with the selected domain. Sitemap, updates
-feed, and provider deployment configuration remain publication work.
+Replace that illustrative origin with the selected domain. GitHub Pages uses
+`SITE_URL=https://dikini.github.io` during the build and a separate
+`prepare:pages` step to adapt the artifact to `/ash/`; see the
+[deployment instructions](../README.md#github-pages). The updates feed remains
+publication work.
 
 ## Content and examples
 

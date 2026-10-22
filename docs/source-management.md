@@ -40,6 +40,14 @@ a new success report is written only after every requested check passes.
 Plain `npm run build` also emits a build manifest, without claiming that the
 separate test commands ran.
 
+Fresh study renders prepare the diagram renderers required by the book's
+diagram jobs from the book's own `rendering/specimen.json` pins. Their bundles
+are checked against the book's hashes. The book's checksum-verified npm lockfile
+installs Mermaid, Puppeteer, and its pinned Chrome into the ignored tool cache.
+Linux builds also need Poppler (`pdftocairo`) and Chrome system libraries; the
+GitHub workflow installs these before building. Study renderer pins remain
+independent of the website's packaged renderer pins.
+
 ## Advance the compiler checkpoint
 
 Choose the milestone tag, release tag, or significant commit explicitly. First

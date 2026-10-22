@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { integrateStudyHtml } from './study-html.mjs';
 import { readSourceConfig, selectDocumentationSource, sha256 } from './source-config.mjs';
 import { readMarkdown } from './content-metadata.mjs';
+import { prepareStudyTools } from './study-tools.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = join(root, '.cache/ash-doc');
@@ -67,7 +68,11 @@ let previous;
 try { previous = await readJson(join(rendered, 'build.json')); } catch { /* first build */ }
 if (previous?.source_commit !== sourceRevision || !await exists(join(rendered, 'output/index.html'))) {
   await rm(rendered, { recursive: true, force: true });
-  await run('python3', [join(source, 'rendering/build.py'), '--whole-book', '--formats', 'html', '--quarto', quarto, '--output', rendered]);
+  const buildArgs = [join(source, 'rendering/build.py'), '--whole-book', '--formats', 'html', '--quarto', quarto, '--output', rendered];
+  await run('python3', [...buildArgs, '--prepare-only']);
+  const jobs = await readJson(join(rendered, 'diagram-jobs.json'));
+  const rendererArgs = await prepareStudyTools({ source, cache, specimen, manifest, kinds: [...new Set(jobs.diagrams.map(job => job.kind))] });
+  await run('python3', [...buildArgs, ...rendererArgs]);
 } else console.log(`Reusing HTML for unchanged ash-doc ${sourceRevision.slice(0, 7)}.`);
 await run('python3', [join(source, 'rendering/checks/verify.py'), rendered]);
 const identity = await readJson(join(rendered, 'build.json'));

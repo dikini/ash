@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "completedAt": "2026-10-22T19:33:12.928Z",
+  "completedAt": "2026-10-22T19:42:39.173Z",
   "event": "manual",
   "reason": "Publish website update",
   "checks": [
@@ -10,8 +10,8 @@
     "test:browser",
     "prepare:pages"
   ],
-  "buildManifestSha256": "667b2d12372596e493a5dc342d8010c3b3a2dbcaa315ce7e9e8a7013848f3982",
-  "artifactSha256": "040f9b86b95e70cc729057db90ebcd7b3a998c2addc4ac7f7ed93eefee1d1b48",
-  "sourceBuildManifestSha256": "450cc2174ac249d3856bb84c70fd9d849b358f8485d1ecb6d7c7db7a0164d08c",
-  "preparedAt": "2026-10-22T19:33:18.962Z"
+  "buildManifestSha256": "b4e24483dd1f0564943237827be15c46eb4ba817a5715dbbc097185c47615eaf",
+  "artifactSha256": "3ceda0a8716a2eaa83af51ac4712fb0aaa77c0fee4a6cb161451897b40ec2ffd",
+  "sourceBuildManifestSha256": "8566e748e5335f77a89ca7111926ba6d223132c519f05861c13a568ebd7189bc",
+  "preparedAt": "2026-10-22T19:42:44.747Z"
 }

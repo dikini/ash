@@ -28,17 +28,33 @@ jobs:
           npx playwright install --with-deps chromium
           sudo apt-get update
           sudo apt-get install -y poppler-utils
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: publications
         with:
           path: |
             .cache/ash-doc
             .cache/ash-spec/source
-          key: ${{ runner.os }}-publications-${{ hashFiles('scripts/prepare-study.mjs', 'scripts/prepare-spec.mjs') }}
+          key: ${{ runner.os }}-publications-${{ hashFiles('scripts/prepare-study.mjs', 'scripts/study-tools.mjs', 'scripts/prepare-spec.mjs') }}
           restore-keys: ${{ runner.os }}-publications-
       - run: npm run check
       - run: npm run build
+      - name: Cache prepared publications after a successful build
+        if: steps.publications.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .cache/ash-doc
+            .cache/ash-spec/source
+          key: ${{ steps.publications.outputs.cache-primary-key }}
       - run: npm test
       - run: npm run test:browser
+      - name: Upload browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
       - name: Prepare GitHub Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: npm run prepare:pages

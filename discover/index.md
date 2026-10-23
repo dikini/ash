@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/discover/  
 Authority: website-guidance  
-Source revision: bf8bc187f70efe844d02028d5761f381ca630bff  
+Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af  
 Updated: 2026-10-18
 
 Ash starts with functions and nominal data. It adds generics, interfaces, effect rows, lexical handlers, and scoped resources. The language is under active development.

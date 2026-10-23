@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/updates/first-version/  
 Authority: website-guidance  
-Source revision: bf8bc187f70efe844d02028d5761f381ca630bff  
+Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af  
 Updated: 2026-10-18
 
 This first local website version establishes a public-facing structure for Ash: a concise introduction, runnable tour programs, practical documentation entry points, language status, and routes for learning and contribution.

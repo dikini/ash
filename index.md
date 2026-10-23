@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/  
 Authority: website-guidance  
-Source revision: bf8bc187f70efe844d02028d5761f381ca630bff
+Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af
 
 The Ash programming language
 

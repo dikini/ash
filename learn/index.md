@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/learn/  
 Authority: website-guidance  
-Source revision: bf8bc187f70efe844d02028d5761f381ca630bff  
+Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af  
 Updated: 2026-10-18
 
 Different readers arrive with different questions. Start with the route that matches yours, then follow the examples into deeper material.

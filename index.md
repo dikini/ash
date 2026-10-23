@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/  
 Authority: website-guidance  
-Source revision: c3f17060693478cb52ff73acc0568a51fb6337fa
+Source revision: bf8bc187f70efe844d02028d5761f381ca630bff
 
 The Ash programming language
 
@@ -182,7 +182,11 @@ Diaries
 
 
 
-Experiments, implementation questions, and work in progress between milestones.
+[23 October 2026 ### Exploring verification in Ash An introduction to propositions, evidence, and compile-time proof construction in Ash's emerging verification design.](/ash/diaries/exploring-verification/)
+
+By [Vlado](https://github.com/dikini)
+
+
 
 [Read developer diaries](/ash/diaries/)
 

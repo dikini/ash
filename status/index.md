@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/status/  
 Authority: website-guidance  
-Source revision: c3f17060693478cb52ff73acc0568a51fb6337fa  
+Source revision: bf8bc187f70efe844d02028d5761f381ca630bff  
 Updated: 2026-10-18
 
 Ash is an evolving language with an executable implementation and a normative specification. This page is a reviewed snapshot, not a live view of every branch.

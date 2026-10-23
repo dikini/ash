@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/docs/  
 Authority: website-guidance  
-Source revision: c3f17060693478cb52ff73acc0568a51fb6337fa  
+Source revision: bf8bc187f70efe844d02028d5761f381ca630bff  
 Updated: 2026-10-19
 
 Use these entry points to move from an introduction to a working program or a precise language rule.

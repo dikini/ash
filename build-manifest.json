@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-23T08:18:25.946Z",
+  "generatedAt": "2026-10-23T09:59:19.045Z",
   "site": {
-    "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
+    "revision": "bf8bc187f70efe844d02028d5761f381ca630bff",
     "dirty": false
   },
   "trigger": {
@@ -115,11 +115,11 @@
   },
   "discovery": {
     "baseUrl": "https://dikini.github.io/ash",
-    "pageCount": 233,
-    "generatedMarkdownCount": 12,
-    "catalogueSha256": "73ab652216d2d02e73fd79036b57e28e302ea769dff71a44e13ffe3d42f8de50",
+    "pageCount": 234,
+    "generatedMarkdownCount": 13,
+    "catalogueSha256": "c94602e56915cf3f5deb05383f76c0ffaa29a8a19f13208b538c996ad31cbb74",
     "llmsSha256": "fdb42027ee73a15edcf742508c94bd638788e1deb7f6e38b97b948f131ed973b",
-    "markdownSetSha256": "6b1571695fe0158db9aeca20118c9d5e335c3ea41f975b2eb48341ec61ef5cae"
+    "markdownSetSha256": "09af6678d5fe32b7a7047f42b3749c4476d939e7bb44ef4a025e46933b58fd79"
   },
   "hosting": {
     "provider": "github-pages",

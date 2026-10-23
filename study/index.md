@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/study/  
 Authority: website-guidance  
-Source revision: c3f17060693478cb52ff73acc0568a51fb6337fa
+Source revision: bf8bc187f70efe844d02028d5761f381ca630bff
 
 Ash-doc is the study companion to this website. It remains a separate project, while each site build pulls its latest documentation and renders its indexed learning material here.
 

@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/diaries/  
 Authority: website-guidance  
-Source revision: c3f17060693478cb52ff73acc0568a51fb6337fa
+Source revision: bf8bc187f70efe844d02028d5761f381ca630bff
 
 A place for work in progress: small experiments, design questions, implementation detours, and the thinking behind the changes. Entries describe a moment in development; an idea here may change as the work continues.
 
@@ -16,8 +16,12 @@ For releases and project milestones, read [Updates](/ash/updates/). For implemen
 
 
 
-## No diary entries published yet
+23 October 2026
+
+## [Exploring verification in Ash](/ash/diaries/exploring-verification/)
 
 
 
-Published entries will appear here, newest first.
+An introduction to propositions, evidence, and compile-time proof construction in Ash's emerging verification design.
+
+By [Vlado](https://github.com/dikini) · [Read the diary →](/ash/diaries/exploring-verification/)

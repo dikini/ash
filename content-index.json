@@ -17,7 +17,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "src/pages/index.astro",
         "sha256": "76084c4f95d7e51c9b46a8d86e192756fb449178f76624874799eedbe2609436"
@@ -25,7 +25,7 @@
       "url": "/ash/",
       "canonical": "https://dikini.github.io/ash/",
       "markdown": "/ash/index.md",
-      "markdownSha256": "9f21839e12db415956863aca01e8b4c3dcc71be2aac0408a7725a426f023e6b6"
+      "markdownSha256": "3fdc0be71df17f452e04f9808d623b9d7c4026501b70b3cb6ee0c8288ca01e60"
     },
     {
       "title": "Contribute to Ash",
@@ -47,7 +47,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "content/contribute.md",
         "sha256": "fabf1bc8893400c90e52fccc7c30604c9ac934c7f9ea402fe6a57e1cc2c90b1c"
@@ -55,7 +55,7 @@
       "url": "/ash/contribute/",
       "canonical": "https://dikini.github.io/ash/contribute/",
       "markdown": "/ash/contribute/index.md",
-      "markdownSha256": "7a3fbc81dd5ee273d31acb0058017e56ee94a0027eef4df8650a2d87aa282135"
+      "markdownSha256": "ce96d951d2555eb4d0792a4bf74cfca526edeae40e6d63aadd7b32dab93d3ea8"
     },
     {
       "title": "Developer diaries",
@@ -70,7 +70,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "src/pages/diaries/index.astro",
         "sha256": "7c70d4ba5cdaff79b1a4af4c41370da724a7dc4c4c2101f7a214f09a2ffbd845"
@@ -78,7 +78,7 @@
       "url": "/ash/diaries/",
       "canonical": "https://dikini.github.io/ash/diaries/",
       "markdown": "/ash/diaries/index.md",
-      "markdownSha256": "174cce15403477c02f295d5d4852bd4ff5da6315a641c74935a9f717dc8db37b"
+      "markdownSha256": "9407a3523cb87074a042850b99273694ee3028d6bcd9c70f31b05b0af57cf2e3"
     },
     {
       "title": "Meet Ash",
@@ -100,7 +100,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "content/discover.md",
         "sha256": "f7028868469152a7df908afe1b7a5a8cc72aabc5e28b6db9fff256eae02485da"
@@ -108,7 +108,7 @@
       "url": "/ash/discover/",
       "canonical": "https://dikini.github.io/ash/discover/",
       "markdown": "/ash/discover/index.md",
-      "markdownSha256": "43b75b211027e4c316d9a7d79f92a9b7184bf2b8c3d3b804338115663cfaeabc"
+      "markdownSha256": "d775b7f0f28f03de8cc118e188d730f6f8685e91653f28bf93d669c1d61f7427"
     },
     {
       "title": "Documentation",
@@ -130,7 +130,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "content/docs.md",
         "sha256": "cd180c5d64a928cc0e1b6fe22879a8b064713ce3c20478ec1d6eb9a5c8a342dd"
@@ -138,7 +138,7 @@
       "url": "/ash/docs/",
       "canonical": "https://dikini.github.io/ash/docs/",
       "markdown": "/ash/docs/index.md",
-      "markdownSha256": "d1277f6547fd89e1ba018252fc676fd8616a9d1bc5c70ebbef337b0a48d21417"
+      "markdownSha256": "464d641388bdfd2f2dadd0cfd8a8459b6c360345a7f3eb0ad697751307c8ee27"
     },
     {
       "title": "Architectural decisions",
@@ -4677,7 +4677,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "content/docs/install.md",
         "sha256": "97c28dc4e132c8ba1c403a4e866079af8fadbad33d9ffbe88c2371596df2a377"
@@ -4685,7 +4685,7 @@
       "url": "/ash/docs/install/",
       "canonical": "https://dikini.github.io/ash/docs/install/",
       "markdown": "/ash/docs/install/index.md",
-      "markdownSha256": "98f514f443bcc36fb099e4fd812cb3d1c83bc4764e9217a4beca1cfdbdd7e868"
+      "markdownSha256": "6c9a9e8cc5ea33bc97521836e844e6b899cf5cf15a0e34f1e8b88c99b6a7f714"
     },
     {
       "title": "Ash Tools",
@@ -4757,7 +4757,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "content/learn.md",
         "sha256": "7d9abcdf7595c5876ca8cee4ff52a18f947c2e143505c21dc3de22ebab985282"
@@ -4765,7 +4765,7 @@
       "url": "/ash/learn/",
       "canonical": "https://dikini.github.io/ash/learn/",
       "markdown": "/ash/learn/index.md",
-      "markdownSha256": "93a9db508e80e9a84408416aee6220f514dc6a92d702585f0fab95ed491d4bad"
+      "markdownSha256": "829d0fd9aff641d89855f27f06c69c84ca2c2fbb17521de81a99b4f710b161d3"
     },
     {
       "title": "A short tour of Ash",
@@ -4780,7 +4780,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "src/pages/learn/tour.astro",
         "sha256": "d4ed1fdd47ff1602169e00e9d707c44e9cab05ec01e2ccf5a3613ee2571675b6"
@@ -4788,7 +4788,7 @@
       "url": "/ash/learn/tour/",
       "canonical": "https://dikini.github.io/ash/learn/tour/",
       "markdown": "/ash/learn/tour/index.md",
-      "markdownSha256": "26fffd97a3ce110743aaef9ddff7560fedf6ccf0550fa10225e1ffdddf373b17"
+      "markdownSha256": "caf3b58b5f13a97dce94eb062382d3e1130954cc90f063695bb3e3af3a20ed83"
     },
     {
       "title": "Ash Specification",
@@ -4985,7 +4985,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "content/status.md",
         "sha256": "d83d742d0588ab82928fc86a7c158dac1d0a1a9294eebe53b913bbff7863fa28"
@@ -4993,7 +4993,7 @@
       "url": "/ash/status/",
       "canonical": "https://dikini.github.io/ash/status/",
       "markdown": "/ash/status/index.md",
-      "markdownSha256": "0308ca44b9dd914b4b382ef934f2fdcb687c8fc62c217044f5352af613b866da"
+      "markdownSha256": "e071b7a2b99312a73c09cc6bb676c50aadbfc51812bfa74291c209c19366724b"
     },
     {
       "title": "Take time to understand the program",
@@ -5008,7 +5008,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "src/pages/study/index.astro",
         "sha256": "dce3e24e7e104acd766c24838da8031f7c121299177712130b1f4fb94abc472b"
@@ -5016,7 +5016,7 @@
       "url": "/ash/study/",
       "canonical": "https://dikini.github.io/ash/study/",
       "markdown": "/ash/study/index.md",
-      "markdownSha256": "12e509fd0e321ccefb25ac148be386664cedffcaa260ae954fab48c997912e33"
+      "markdownSha256": "b2365e7ebfef68aff5ebf73ee2de6f9b68063eec6c5fd52dc8121f46be3987b2"
     },
     {
       "title": "Ash documentation",
@@ -5032,11 +5032,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "925431abae30025674de3838336ba007ec5e3c5c31331bae3c503f622425ccb0",
         "publicMarkdown": false,
         "generated": true,
-        "url": "https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "url": "https://github.com/dikini/ash-doc/tree/be12daac0e84523519708ba7037aac752a4eeba0",
         "generatedBy": "rendering/build.py"
       },
       "section": "Study",
@@ -5058,11 +5058,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "8de65f54bdc6c5790ad0d17b5459d1d4f6a98feead2ccdf031b8ff4847811ea3",
         "publicMarkdown": false,
         "path": "content/cases/abstracting-key-order/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/abstracting-key-order/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/abstracting-key-order/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5083,11 +5083,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "de4c402a30dbd8e04849c00fcb0efb77625e509b477d4550fdb6b3a381963742",
         "publicMarkdown": false,
         "path": "content/cases/accumulating-list-results/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/accumulating-list-results/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/accumulating-list-results/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5108,11 +5108,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "c1d562e7f3932d883ecfd3d4fbfd21210f392c231889b5126bc101dbd4af8d82",
         "publicMarkdown": false,
         "path": "content/cases/bounding-search-work/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/bounding-search-work/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/bounding-search-work/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5133,11 +5133,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "9b80b30df43cca43732d63cdb195aeb985511e186af51a2464a71ac6c525975a",
         "publicMarkdown": false,
         "path": "content/cases/building-finite-lists/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/building-finite-lists/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/building-finite-lists/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5158,11 +5158,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "a093be4ecab9e6ebc6bee30574f54a764c7d0250f3c258566bec78a161111d1f",
         "publicMarkdown": false,
         "path": "content/cases/cancelling-a-stable-sort/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/cancelling-a-stable-sort/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/cancelling-a-stable-sort/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5183,11 +5183,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "34ff709a1182a42897f4e1820c1944245800ad208f485292ba39ad9201b7e0fe",
         "publicMarkdown": false,
         "path": "content/cases/checking-proposed-edits/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/checking-proposed-edits/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/checking-proposed-edits/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5208,11 +5208,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "1c26f68e0703af409b14f52eeb4bea9fceee4d92d712b23c502a77dfbcef202d",
         "publicMarkdown": false,
         "path": "content/cases/choosing-a-search-frontier/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/choosing-a-search-frontier/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/choosing-a-search-frontier/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5233,11 +5233,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "12a293dd6f91c2e48f0b7bfc87d8839c7825febd4b1753e74fa19d6b05603d1a",
         "publicMarkdown": false,
         "path": "content/cases/compressing-parent-paths/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/compressing-parent-paths/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/compressing-parent-paths/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5258,11 +5258,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "303ce002d46aca4b1cd8bb6ce041a4a72126508a0de658a287951991cfcf2980",
         "publicMarkdown": false,
         "path": "content/cases/controlling-a-hook-pipeline/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/controlling-a-hook-pipeline/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/controlling-a-hook-pipeline/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5283,11 +5283,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "464abe8bacebb2c334f10973fbc9933193e0cbda1cd5d9490d9b1b47caa710e3",
         "publicMarkdown": false,
         "path": "content/cases/dictionary-as-list/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/dictionary-as-list/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/dictionary-as-list/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5308,11 +5308,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "afaee9a8f2f9b9b94ab7a29499cafb37d3deb93525199362adfbca9c4582c5dc",
         "publicMarkdown": false,
         "path": "content/cases/folding-branching-data/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/folding-branching-data/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/folding-branching-data/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5333,11 +5333,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "d5a0f69e973fb0a3732a59d5db4ad22c0671e4eeef08621fb625e950ee7dec97",
         "publicMarkdown": false,
         "path": "content/cases/folding-recursive-lists/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/folding-recursive-lists/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/folding-recursive-lists/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5391,11 +5391,11 @@
       },
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "64cdceb56c413cd3602122e747b84380d0b5ac2c6eea9de6aff3b645cdae0ad8",
         "publicMarkdown": false,
         "path": "content/cases/guaranteeing-logarithmic-retrieval/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/guaranteeing-logarithmic-retrieval/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/guaranteeing-logarithmic-retrieval/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5416,11 +5416,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "2e35a83ffe8c15c91f450460e79be7162672b98f78482b05ac14a77842a49907",
         "publicMarkdown": false,
         "path": "content/cases/implementing-persistent-fifo-frontier/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/implementing-persistent-fifo-frontier/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/implementing-persistent-fifo-frontier/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5441,11 +5441,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "2777ec6922c75e852c63d4bf7cabb1d70fedea7a623fd25958d0706d5ec5e843",
         "publicMarkdown": false,
         "path": "content/cases/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5466,11 +5466,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "4df6b412fa994099b6377f33dcdb20a01a09f5e497bd2c0449ca43640a7c457e",
         "publicMarkdown": false,
         "path": "content/cases/measuring-tree-search/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/measuring-tree-search/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/measuring-tree-search/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5491,11 +5491,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "2fd84ad91b1bed40b2625b0078d14fbb0af6d8ddcd005f81273aa7bcd5785868",
         "publicMarkdown": false,
         "path": "content/cases/numbering-tree-leaves/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/numbering-tree-leaves/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/numbering-tree-leaves/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5516,11 +5516,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "642663f664054267b4ad253b93596cd9c6de0dc737eb90c95cbb61522fab2ade",
         "publicMarkdown": false,
         "path": "content/cases/preserving-outcomes-through-cleanup/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/preserving-outcomes-through-cleanup/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/preserving-outcomes-through-cleanup/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5541,11 +5541,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "7c2a37c079bb03a2d5ba63e0593150ce02c779a64b00bae00ef7e8ff182fc7b4",
         "publicMarkdown": false,
         "path": "content/cases/protecting-dictionary-invariant/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/protecting-dictionary-invariant/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/protecting-dictionary-invariant/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5566,11 +5566,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "40ab9b6cd2186eece7bd8a06de088f70714a89cafb596173474f0009c4fda60e",
         "publicMarkdown": false,
         "path": "content/cases/querying-an-immutable-world/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/querying-an-immutable-world/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/querying-an-immutable-world/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5591,11 +5591,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "4adb0a87444929065cd9cc0ffe072346a581db88a84863062c484269e92ab12d",
         "publicMarkdown": false,
         "path": "content/cases/reading-a-bounded-message/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/reading-a-bounded-message/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/reading-a-bounded-message/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5616,11 +5616,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "65c89b3eb6046992e2a60470531e4f89c837edef3a57c8ea28bdb960aa053d52",
         "publicMarkdown": false,
         "path": "content/cases/redacting-before-publication/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/redacting-before-publication/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/redacting-before-publication/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5641,11 +5641,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "454e924bdbb8659093019e55ba3c739b9b3cc19b6f7d22bd0084904200fe5419",
         "publicMarkdown": false,
         "path": "content/cases/resuming-tree-traversal/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/resuming-tree-traversal/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/resuming-tree-traversal/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5666,11 +5666,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "a96f85c1cbacb19d26523b5608c7f7991908ba46d79cd2447bf9cc3f6eb43c9b",
         "publicMarkdown": false,
         "path": "content/cases/rolling-back-a-cancellable-journal/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/rolling-back-a-cancellable-journal/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/rolling-back-a-cancellable-journal/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5691,11 +5691,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "d15fb2aa2f2b91e53c90f667aa33bfdbde958d1078269bb5913ab7f68b8c789c",
         "publicMarkdown": false,
         "path": "content/cases/round-tripping-tagged-frames/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/round-tripping-tagged-frames/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/round-tripping-tagged-frames/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5716,11 +5716,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "ad69a8be5080fdda0f36c93a6695244516286d557bfac3cb9a628888afe376d5",
         "publicMarkdown": false,
         "path": "content/cases/running-a-scripted-session/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/running-a-scripted-session/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/running-a-scripted-session/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5741,11 +5741,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "13cf93d31d9f4986f23b9d9b925832bb512cf6976aed0da74e59eb8aae66abe1",
         "publicMarkdown": false,
         "path": "content/cases/searching-ordered-tree/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/searching-ordered-tree/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/searching-ordered-tree/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5766,11 +5766,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "aaf504be40f451f97a813382ada9e0d636b32b0e6001dfca59b3f93326d5aa12",
         "publicMarkdown": false,
         "path": "content/cases/supplying-a-local-pricing-policy/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/supplying-a-local-pricing-policy/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/supplying-a-local-pricing-policy/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5791,11 +5791,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "0e21e5ddd3f4244501cd00b9c81e4278a0a5f5398d47eec8fd6dea6a19b1e84a",
         "publicMarkdown": false,
         "path": "content/cases/supplying-order-prices/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/cases/supplying-order-prices/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/cases/supplying-order-prices/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5816,11 +5816,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "63ddd2e41c234de71364b440d2fc309c4d23f862828a5af5eecb404c55ca25c1",
         "publicMarkdown": false,
         "path": "content/effects/acquiring-a-buffer/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/acquiring-a-buffer/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/acquiring-a-buffer/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5841,11 +5841,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "a57f83ec6f1c23c1e3bd09932583397189ad74d230d694725bbfd16bc0fee577",
         "publicMarkdown": false,
         "path": "content/effects/choosing-a-handler/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/choosing-a-handler/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/choosing-a-handler/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5866,11 +5866,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "bdd26d3e359c0b30566aad2a96b06368dd4bb6dbbfe744fa961481abcf3d0852",
         "publicMarkdown": false,
         "path": "content/effects/combining-effects-and-scopes/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/combining-effects-and-scopes/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/combining-effects-and-scopes/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5891,11 +5891,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "95c97fca6d665f7a88616e059bea03ae8d9c42c9917c677821aeeea31d93552d",
         "publicMarkdown": false,
         "path": "content/effects/counting-with-a-cell/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/counting-with-a-cell/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/counting-with-a-cell/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5916,11 +5916,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "2bc435a3e347eefaf304ca933c41d8b9e7d483f1b4cca2fcbab2562227929c87",
         "publicMarkdown": false,
         "path": "content/effects/following-effect-contracts/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/following-effect-contracts/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/following-effect-contracts/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5941,11 +5941,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "ec81dbd7029cbfdb1624df6dea36a1c36c278d7b6cd5c5a4426fe1bea2dbe100",
         "publicMarkdown": false,
         "path": "content/effects/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5966,11 +5966,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "0b0ecdab5f4b82d3cac1e19daf34a3c9eeaf142c191e00d0469e33a992991dec",
         "publicMarkdown": false,
         "path": "content/effects/keeping-access-in-scope/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/keeping-access-in-scope/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/keeping-access-in-scope/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -5991,11 +5991,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "a5042d057d4a1cb70a67d2f2acb4a35098136474efd25608af54e3b36a22fecd",
         "publicMarkdown": false,
         "path": "content/effects/preserving-callback-effects/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/preserving-callback-effects/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/preserving-callback-effects/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6016,11 +6016,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "afeb72e1fbce344c665c51dd2a0329246f280fde945ab2d109ad0db8d54c74dc",
         "publicMarkdown": false,
         "path": "content/effects/requesting-a-value/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/requesting-a-value/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/requesting-a-value/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6041,11 +6041,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "8f5eaae3f8b9c114dbd4118840c4ea6478e702d04655d85314b3402f7cfa75e6",
         "publicMarkdown": false,
         "path": "content/effects/resuming-a-calculation/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/resuming-a-calculation/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/resuming-a-calculation/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6066,11 +6066,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "0b62896a74808dcde10edf9d6f8a1bc24482418e04ffd2bce5f8f71742e6501f",
         "publicMarkdown": false,
         "path": "content/effects/running-cleanup/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/running-cleanup/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/running-cleanup/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6091,11 +6091,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "0716291619ed505df20d9bb0c737040c975aff5c42ad315e6b9d357c658a5091",
         "publicMarkdown": false,
         "path": "content/effects/stopping-a-calculation/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/stopping-a-calculation/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/stopping-a-calculation/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6116,11 +6116,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "963a0d3b4f177806d918e36f4b0b0daaac3c60fc154392408280684343cf5f90",
         "publicMarkdown": false,
         "path": "content/effects/transforming-publications/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/effects/transforming-publications/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/effects/transforming-publications/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6141,11 +6141,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "58fa9909212a9f81728cf6c1d7fe9c28d0be1965163c7641caa9cbfa09d76ee8",
         "publicMarkdown": false,
         "path": "content/learn/choosing-a-result/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/choosing-a-result/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/choosing-a-result/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6166,11 +6166,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "6842a5c5c172345d056c9b9351031946b8d40777ccba800fc74c766e780f017c",
         "publicMarkdown": false,
         "path": "content/learn/defining-data/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/defining-data/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/defining-data/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6191,11 +6191,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "d56d8aaa98a99ed457ded37f25bcc4145aa7476b9f21485074a7b3177efebc47",
         "publicMarkdown": false,
         "path": "content/learn/defining-local-recursion/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/defining-local-recursion/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/defining-local-recursion/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6216,11 +6216,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "693d4e7d461bdfe72d19f8e0edbfc83317fb7c67ed231eb70dfd88de2a7baa4e",
         "publicMarkdown": false,
         "path": "content/learn/definitions-for-many-types/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/definitions-for-many-types/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/definitions-for-many-types/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6241,11 +6241,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "8666d3abe7d1a0a653da0cc38a604d1d57936483f17be4a9966de3a6dced9afe",
         "publicMarkdown": false,
         "path": "content/learn/edges-of-the-language/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/edges-of-the-language/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/edges-of-the-language/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6266,11 +6266,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "123b2504e4945f2929fd2e6697a45ad839c6f082a2286cc2639287972d495779",
         "publicMarkdown": false,
         "path": "content/learn/following-recursive-data/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/following-recursive-data/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/following-recursive-data/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6291,11 +6291,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "b1b81cd5f965355782573695fca6489e60cefe6705a7a5273a9c98e8a1e5bfbc",
         "publicMarkdown": false,
         "path": "content/learn/functions-as-values/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/functions-as-values/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/functions-as-values/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6316,11 +6316,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "60a09c01ea4f691a8a56fcb58d26deea51e85e28ccefcc3ea33a92b08913db6b",
         "publicMarkdown": false,
         "path": "content/learn/generalizing-local-functions/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/generalizing-local-functions/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/generalizing-local-functions/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6341,11 +6341,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "3a972c18cc2a0990836c854a296c349ccb807ca3a48098b1e5bedc79578bba66",
         "publicMarkdown": false,
         "path": "content/learn/handling-data-forms/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/handling-data-forms/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/handling-data-forms/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6366,11 +6366,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "04ad4d6c96ea3d6b73826841f06ae243c28eb41046e0d631888bec007088e49e",
         "publicMarkdown": false,
         "path": "content/learn/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6391,11 +6391,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "f341fffc9e483ce53040b13df6ef903dadc94a7a39bf95418c3a548f30a81b6a",
         "publicMarkdown": false,
         "path": "content/learn/module-channels/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/module-channels/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/module-channels/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6416,11 +6416,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "bdfc7ff1314dc18828ab40c30091405dfe6a97b1f61b658fc55c1ae4d58a5bce",
         "publicMarkdown": false,
         "path": "content/learn/naming-intermediate-values/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/naming-intermediate-values/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/naming-intermediate-values/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6441,11 +6441,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "8ea7438f167d3af2832cd89e16cccacba085ce752a60508d5fcd5771cca1eac8",
         "publicMarkdown": false,
         "path": "content/learn/opaque-types/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/opaque-types/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/opaque-types/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6466,11 +6466,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "2cb6fded17d901679692d560d428a2fa1bdc0d2d745a36e283bb34f516ad330d",
         "publicMarkdown": false,
         "path": "content/learn/ordering-from-data/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/ordering-from-data/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/ordering-from-data/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6491,11 +6491,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "8f620e6e2d30e5e71fffea6dd372c14d6ff59c6bfa8165152cffc4fea38f692b",
         "publicMarkdown": false,
         "path": "content/learn/patterns-in-depth/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/patterns-in-depth/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/patterns-in-depth/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6516,11 +6516,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "efa8e6d3fce7fafedf045423f3c521e633d03d15c965b7f0312f77a5f409dec2",
         "publicMarkdown": false,
         "path": "content/learn/using-another-source-file/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/using-another-source-file/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/using-another-source-file/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6562,11 +6562,11 @@
       },
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "06dc83684c225ea73e6e660ed1b2ad5010c7b8061899e0d42f52374bd11e1beb",
         "publicMarkdown": false,
         "path": "content/learn/using-more-than-one-input/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/using-more-than-one-input/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/using-more-than-one-input/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6587,11 +6587,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "a552423768de8829fda21ae7644b331fc213aa8083a92f39d5f9cb79ea25b1fb",
         "publicMarkdown": false,
         "path": "content/learn/values-travel-together/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/values-travel-together/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/values-travel-together/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6612,11 +6612,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "7976a0534b6093b19a76a022162e47afed86b08557750ee5c44bd10851088c3c",
         "publicMarkdown": false,
         "path": "content/learn/what-is-an-ash-program/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/what-is-an-ash-program/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/what-is-an-ash-program/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6637,11 +6637,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "f5653487309a967e0708a06a4d43ff8d11da61d2045821aecbf7a318127b4ec4",
         "publicMarkdown": false,
         "path": "content/learn/where-ash-goes-next/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/where-ash-goes-next/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/where-ash-goes-next/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6664,11 +6664,11 @@
       },
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "83d0fc5fa5a228a79ef3e87d081bf32fc86dc480155e752c4add50a27276d999",
         "publicMarkdown": false,
         "path": "content/learn/working-with-text/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/learn/working-with-text/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/learn/working-with-text/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6689,11 +6689,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "5a831f3826f256d1da760d0abd76640f45ec82320f0a72ef4c8e0825294a9537",
         "publicMarkdown": false,
         "path": "content/libraries/accepting-type-constructors/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/accepting-type-constructors/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/accepting-type-constructors/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6714,11 +6714,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "c80aa217db1acdaf5e8aba59570efbf2341c3105566ea5d167c045bd903f751c",
         "publicMarkdown": false,
         "path": "content/libraries/choosing-implementation-evidence/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/choosing-implementation-evidence/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/choosing-implementation-evidence/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6739,11 +6739,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "542e596efbf3c70976d1970325a995a9f5da247ce8b9cd1620ffe3b5558ee21d",
         "publicMarkdown": false,
         "path": "content/libraries/determining-interface-results/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/determining-interface-results/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/determining-interface-results/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6764,11 +6764,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "3ac566854fb1694d2d99427847b3e63e430bf3675785e0ed3ff98e9dd734ac9e",
         "publicMarkdown": false,
         "path": "content/libraries/forwarding-capability-evidence/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/forwarding-capability-evidence/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/forwarding-capability-evidence/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6789,11 +6789,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "43735464697d7e3388f14159da8d7b5d0001527d783a692ff1f69b0a43092f59",
         "publicMarkdown": false,
         "path": "content/libraries/giving-method-local-type-parameters/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/giving-method-local-type-parameters/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/giving-method-local-type-parameters/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6814,11 +6814,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "6a452c2146d5e9fe9804fefb29addc6e166a9d9559dc74ca2c4f36fc10f52fb2",
         "publicMarkdown": false,
         "path": "content/libraries/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6839,11 +6839,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "660d6088d141e07e8b6955ae74c4bbcadde70519c594e11f28899b6be73355c8",
         "publicMarkdown": false,
         "path": "content/libraries/requiring-element-behavior/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/requiring-element-behavior/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/requiring-element-behavior/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6864,11 +6864,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "2ba3ce7fe9ae5047986f28552d3ef17a1684ec8dcb47f285d9f1af73c6d8aa1c",
         "publicMarkdown": false,
         "path": "content/libraries/supplying-scoped-evidence/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/supplying-scoped-evidence/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/supplying-scoped-evidence/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6889,11 +6889,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "9df99fa6119eaecdfb23c292d8769ce8631667a27401d6447bcdeeecdb0e0b6d",
         "publicMarkdown": false,
         "path": "content/libraries/wrapping-a-representation/README.md",
-        "url": "https://github.com/dikini/ash-doc/blob/c3c29b1da1d48605d7a9c94e213c3a18477ef549/content/libraries/wrapping-a-representation/README.md"
+        "url": "https://github.com/dikini/ash-doc/blob/be12daac0e84523519708ba7037aac752a4eeba0/content/libraries/wrapping-a-representation/README.md"
       },
       "section": "Study",
       "authority": "study-material",
@@ -6914,11 +6914,11 @@
       "sourceMetadata": {},
       "source": {
         "repository": "https://github.com/dikini/ash-doc.git",
-        "revision": "c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "revision": "be12daac0e84523519708ba7037aac752a4eeba0",
         "sha256": "b925a93e1e561a2e2d28e5c884fd36369fb7a1733c0e42e0c1890a480fa1813a",
         "publicMarkdown": false,
         "generated": true,
-        "url": "https://github.com/dikini/ash-doc/tree/c3c29b1da1d48605d7a9c94e213c3a18477ef549",
+        "url": "https://github.com/dikini/ash-doc/tree/be12daac0e84523519708ba7037aac752a4eeba0",
         "generatedBy": "rendering/build.py"
       },
       "section": "Study",
@@ -6943,7 +6943,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "src/pages/updates/index.astro",
         "sha256": "77d2f14236f969eeedc15be05dd52c9834d850aaf1a01151358c3e04dcefbec4"
@@ -6951,7 +6951,7 @@
       "url": "/ash/updates/",
       "canonical": "https://dikini.github.io/ash/updates/",
       "markdown": "/ash/updates/index.md",
-      "markdownSha256": "aa09509d99eae08133bfdf830ef337038c33eb64122a68bab208c47feb159b10"
+      "markdownSha256": "dec451b1c63b1abbde6fdb9a862e5e33b352040860e761cbe28c6a4c22deddb6"
     },
     {
       "title": "A public home for an evolving language",
@@ -6973,7 +6973,7 @@
       "type": "Article",
       "source": {
         "kind": "website",
-        "revision": "bc2f8c99b1b53a2504bac9a54e6ba6a3cf147ddb",
+        "revision": "c3f17060693478cb52ff73acc0568a51fb6337fa",
         "dirty": false,
         "path": "content/updates/first-version.md",
         "sha256": "89f17c8582ca5f544491c75a58e0995997ff75fcea9c6d0e7a6c9ae4ebc65d03"
@@ -6981,7 +6981,7 @@
       "url": "/ash/updates/first-version/",
       "canonical": "https://dikini.github.io/ash/updates/first-version/",
       "markdown": "/ash/updates/first-version/index.md",
-      "markdownSha256": "e9f5124616f8c72f34836a78258cb088d61ff7c86013e15b388e7750096e2eaa"
+      "markdownSha256": "122e571331a35d1d129899e3c9e6237b621836b72cbbda3d9a544e4d3456afb2"
     }
   ]
 }

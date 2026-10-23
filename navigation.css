@@ -1,0 +1,66 @@
+/* Location markers: outline for reading navigation; solid retained as a theme asset. */
+:root {
+  --ash-leaf-outline: url('/ash/marks/ash-leaf-outline.svg');
+  --ash-leaf-solid: url('/ash/marks/ash-leaf-solid.svg');
+}
+:is(.ash-contents, .on-this-page, .ash-page-menu, #TOC, #quarto-sidebar .sidebar-menu-container) a[href] {
+  position: relative;
+  padding-inline-start: calc(var(--space-6) + var(--ash-nav-depth, 0) * var(--space-4));
+}
+:is(.ash-contents, .on-this-page, #TOC) a[data-current-ancestor],
+.ash-page-menu a[aria-current="true"],
+#quarto-sidebar .sidebar-item:has(.sidebar-link.active) > .sidebar-item-container > .sidebar-item-text:not(.active) {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
+}
+:is(.ash-contents, .on-this-page, #TOC) a[aria-current="location"],
+.ash-page-menu a[aria-current="page"],
+#quarto-sidebar .sidebar-link.active {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-bold, 700);
+  border-inline-start-color: transparent;
+}
+:is(.ash-contents, .on-this-page, #TOC) a[aria-current="location"]::before,
+.ash-page-menu a[aria-current="page"]::before,
+#quarto-sidebar .sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: calc(var(--space-1) + var(--ash-nav-depth, 0) * var(--space-4));
+  top: .95em;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  background: var(--color-accent);
+  mask: var(--ash-leaf-outline) center / contain no-repeat;
+  -webkit-mask: var(--ash-leaf-outline) center / contain no-repeat;
+}
+/* Give nested contents their own inset: Quarto normally indents its anchors,
+   whose padding is now reserved for the marker gutter. */
+#TOC ul ul { padding-inline-start: var(--space-4); }
+/* Quarto owns its active class; our location attributes provide one exact section. */
+#TOC a.nav-link { border-inline-start: 0; }
+#TOC a.nav-link.active:not([aria-current="location"]):not([data-current-ancestor]) {
+  color: var(--color-text-navigation);
+  font-weight: var(--weight-regular, 400);
+}
+@media (forced-colors: active) {
+  :is(.ash-contents, .on-this-page, #TOC) a[aria-current="location"]::before,
+  .ash-page-menu a[aria-current="page"]::before,
+  #quarto-sidebar .sidebar-link.active::before {
+    mask: none;
+    -webkit-mask: none;
+    background: none;
+    width: 10px;
+    height: 6px;
+    border: 1px solid CanvasText;
+    border-radius: 100% 0;
+  }
+}
+
+.mobile-nav nav.ash-page-menu a[aria-current] { color: var(--color-text-primary); text-decoration: none; }
+
+/* The book clones its TOC into a disclosure below tablet width. Restore the
+   marker gutter and heading depth because that clone flattens the source list. */
+details.on-this-page a[href] {
+  display: block;
+}

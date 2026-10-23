@@ -1,4 +1,6 @@
 ---
+import { routeCacheKey } from '../../scripts/update-build.mjs';
+import sources from '../../sources.json';
 import { getCollection, render } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import Article from '../layouts/Article.astro';
@@ -11,10 +13,11 @@ export async function getStaticPaths() {
   const publication = await loadReferencePublication();
   const groups = { spec: publication, tools: publication.tools, design: publication.design, decisions: publication.decisions };
   const paths = [
-    ...pages.map(page => ({ params: { path: page.data.route }, props: { page } })),
+    ...pages.map(page => ({ params: { path: page.data.route }, props: { page }, cacheKey: routeCacheKey({ body: page.body, data: page.data }, sources) })),
     ...Object.entries(groups).flatMap(([kind, group]) => group.pages.map((page, index) => ({
       params: { path: page.route.slice(1, -1) },
       props: { reference: { page, group, revision: publication.revision, index, kind } },
+      cacheKey: routeCacheKey({ page, navigation: group.pages.map(({ file, route, title }) => ({ file, route, title })), directory: group.directory, revision: publication.revision, index, kind }, sources),
     }))),
   ];
   const routes = paths.map(path => path.params.path);

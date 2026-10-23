@@ -7,6 +7,7 @@ const site = normalizeOrigin(process.env.SITE_URL);
 
 export default defineConfig({
   output: 'static',
+  experimental: { incrementalBuild: true },
   trailingSlash: 'always',
   ...(site ? { site } : {}),
   markdown: { processor: sourceMarkdown({ config: sources }), shikiConfig: { theme: 'github-dark' } },

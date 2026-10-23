@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
     "check": "astro check",
-    "build": "node scripts/prepare-spec.mjs && node scripts/prepare-study.mjs && astro build && node scripts/write-token-manifest.mjs && node scripts/prepare-discovery.mjs && pagefind --site dist && node scripts/check-links.mjs && node scripts/write-build-manifest.mjs",
+    "build": "node scripts/update-build.mjs",
     "docs:refresh": "node scripts/refresh-docs.mjs",
     "sources:pin": "node scripts/update-source-pin.mjs",
     "prepare:spec": "node scripts/prepare-spec.mjs",
@@ -28,7 +28,8 @@
     "predev": "npm run tokens:sync && npm run prepare:spec",
     "prebuild": "npm run tokens:sync",
     "precheck": "npm run tokens:check",
-    "test:tokens": "python3 tests/token_sync_test.py"
+    "test:tokens": "python3 tests/token_sync_test.py",
+    "update": "node scripts/update-build.mjs --update"
   },
   "dependencies": {
     "@astrojs/markdown-satteri": "0.4.4",

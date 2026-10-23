@@ -147,3 +147,49 @@ invoke a workflow through GitHub's
 That workflow and its credentials must be configured in the destination
 repository. Keep docs-only regeneration separate from advancing a reviewed
 compiler or renderer pin.
+
+## Routine website updates
+
+Use `npm run update` after editing local Markdown in `content/`. It produces a
+complete `dist/` artifact while reusing unchanged work:
+
+- Verified reference publication and integrated study output are reused without
+  fetching upstream. Missing caches, changed preparation inputs, changed source
+  overrides, or altered output trigger preparation again.
+- Astro's experimental incremental static build cache reuses dynamic pages whose
+  body, metadata, source configuration and render dependencies are unchanged.
+  Reference keys include group navigation and source revision. Static landing
+  pages and collection listings still render each time, including additions,
+  removals and changes in ordering.
+- Pagefind output is restored only when the complete HTML set and indexing tool
+  inputs match. Changed searchable pages currently trigger a full search index.
+- Every update runs complete local link/anchor validation. Changed inputs run
+  Astro diagnostics; unchanged inputs reuse the previous diagnostics and tests
+  only when the publication and build context also match.
+  Changes confined to local Markdown run page, discovery, link and release tests.
+  The first update, shared code/configuration changes, and unknown inputs run the
+  complete unit/content suite. Browser checks remain a separate explicit command.
+
+The last successfully validated input snapshot determines the test scope;
+failed updates do not advance it. Updates remove any existing full-refresh
+receipt and never issue one. Publication still uses the full verified refresh
+and its existing artifact-integrity checks.
+
+`npm run build` continues fetching upstream and preparing both publications.
+`npm run docs:refresh` and publication retain their full validation semantics.
+Routine updates reuse the last prepared upstream revisions; they do not check
+whether remote `main` moved. Use a full build/refresh when new upstream material
+is intended. Explicit upstream environment overrides invalidate preparation;
+a local `ASH_SPEC_SOURCE` disables publication reuse.
+
+Stage timings and reuse decisions are printed and saved in
+`.cache/update-build/last-run.json`. Publication and search receipts are kept in
+`.cache/update-build/`; Astro's page cache is under `node_modules/.astro/`.
+Preserve these directories in CI to obtain warm-build savings. Deleting either
+cache is safe: the missing work is rebuilt. A full build still benefits from
+Astro's page cache; `npx astro build --force` bypasses that page cache when
+investigating rendering problems (it does not run the other pipeline stages).
+
+The first implementation deliberately keeps discovery generation and global
+link checking. These cover reverse references and removed fragment targets,
+including links on unchanged pages, without maintaining a second link graph.

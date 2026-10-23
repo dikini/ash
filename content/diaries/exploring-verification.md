@@ -13,17 +13,17 @@ section: "Developer Diaries"
 route: "diaries/exploring-verification"
 ---
 
-<!-- Imported from https://github.com/dikini/ash-blog/blob/a534f9d9abe0b63ba17896e0e729df8acdfcbd0f/entries/exploring-verification/index.md; publication metadata set for ash-site. -->
+<!-- Imported from https://github.com/dikini/ash-blog/blob/97e3234cde95bab275db20e3bc3d4926f92e50ed/entries/exploring-verification/index.md; section and route supplied by ash-site. -->
 
-Ash grew out of the conviction that program verification is central for future development when the team consists of both humans and AI. Agents are far more productive, in raw terms than humans, but often produce churn. For various reasons, ranging from innate capabilities and knowledge through misinterpreted specification, to incomplete or wrongfull specs. One of the avenues to improve the results is verification - not just QA of the resulting code, but of the specs themselves.
+Ash grew out of the conviction that program verification is central for future development when the team consists of both humans and AI. Agents are far more productive, in raw terms than humans, but often produce churn. For various reasons, ranging from innate capabilities and knowledge through misinterpreted specification, to incomplete or wrongful specs. One of the avenues to improve the results is verification - not just QA of the resulting code, but of the specs themselves.
 
-Traditionally this has lead to type driven design and sufficiently strong type systems. Another, complementary avenue is proof assistants and dependntly typed languages. They are capable of expressing most of the problems, but, from experience, they make life difficult in  how you express, prove, check. If you want to solve real worlf problems. They are focused on proofs, not so much on execution of computations.
+Traditionally this has led to type-driven design and sufficiently strong type systems. Another, complementary avenue is proof assistants and dependently typed languages. They are capable of expressing most of the problems, but, from experience, they make life difficult in how you express, prove, check. If you want to solve real-world problems. They are focused on proofs, not so much on execution of computations.
 
-We also have examples like rust. Practical languages, whose type system is strong enough to express and verify the correctness of real-life concerns, not just the fabled memory safety.
+We also have examples like Rust. Practical languages, whose type system is strong enough to express and verify the correctness of real-life concerns, not just the fabled memory safety.
 
 So how do we do it?
 
-There is no single good answer. At the moment ash is being developed to reach a stage where we can play with these concepts. It has some basic primitive types, ADTs, parametric and ad-hoc polymorphism whic help with the expressiveness of the language. It has effect and resource typing, with the intent to open up the visibility into the hidden world of the machine, without descending into assembly, but lifting them up a notch. The aim is to make machine behaviour visible enough to reason about. These gives a basis from which to speculate, explore, play and eventually settle on a design.
+There is no single good answer. At the moment Ash is being developed to reach a stage where we can play with these concepts. It has some basic primitive types, ADTs, parametric and ad hoc polymorphism which help with the expressiveness of the language. It has effect and resource typing, with the intent to open up the visibility into the hidden world of the machine, without descending into assembly, but lifting them up a notch. The aim is to make machine behaviour visible enough to reason about. These give a basis from which to speculate, explore, play and eventually settle on a design.
 
 To start exploring, we can take one small claim about a program and ask what it would mean to verify it.
 

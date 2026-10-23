@@ -25,3 +25,13 @@ test('study integration rejects unsupported output instead of publishing an empt
 test('study integration rejects valid HTML if required integration cannot be applied', () => {
   assert.throws(() => integrateStudyHtml("<html><head></head><body><main id='quarto-document-content'><p>Chapter</p></main></body></html>", snapshot), /unsupported.*format/i);
 });
+
+
+test('study integration exposes shared navigation and static current-page semantics', () => {
+  const original = '<html><head></head><body><nav id="quarto-sidebar"><a class="sidebar-link active" href="./chapter.html">Chapter</a><a class="sidebar-link" href="./other.html">Other</a></nav><main id="quarto-document-content"><p>Chapter</p></main></body></html>';
+  const { document } = parseHTML(integrateStudyHtml(original, snapshot));
+  assert.ok(document.querySelector('link[href="/navigation.css"]'));
+  assert.ok(document.querySelector('script[type="module"][src="/navigation.js"]'));
+  assert.equal(document.querySelector('.active').getAttribute('aria-current'), 'page');
+  assert.equal(document.querySelector('a[href="./other.html"]').hasAttribute('aria-current'), false);
+});

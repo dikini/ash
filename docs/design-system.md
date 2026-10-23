@@ -196,3 +196,57 @@ panel beside the open reading rows; the hairline keeps the band visible where
 the wash alone falls below the perceptual threshold. The type distinction the
 frames carry stays: definition terms are semibold sans labels, route titles
 use serif.
+
+### Location and context in vertical navigation
+
+The primary job of reading navigation is to answer two questions at a glance:
+where am I, and where does this page or section sit in the surrounding material?
+Represent exact location and its context with different levels of emphasis.
+
+- Current page or section: strongest neutral text and one small beni outline
+  ash leaflet beside the label, pointing toward it. Use `--color-accent` from
+  the existing beni palette, not a new red or the brighter dark-surface accent.
+- Ancestors on the active branch: semibold primary neutral text. They are
+  more prominent than unrelated items, without colored markers. Preserve
+  indentation, disclosure controls, and expanded current-page ancestors.
+- Other items: regular navigation text. Hover and visible keyboard focus
+  retain their own treatments and never impersonate the current-location mark.
+
+The outline leaf was selected over a bar, dot, and solid leaf. Its light visual
+weight suits repeated consultation while reading, while its silhouette relates
+to the Ash tree and eyebrow branches. It is a pointer, not a decorative branch,
+a progress meter, a completion symbol, or an animation. The current label stays
+strong enough to carry the state without relying on the accent color alone.
+A fixed gutter prevents text from shifting as the marker changes, and the marker
+aligns with the first line of a wrapped label. Ancestors supply the context;
+repeating the same marker on them would weaken the exact-location signal.
+
+Both variants are maintained as reusable assets:
+`public/marks/ash-leaf-outline.svg` and `public/marks/ash-leaf-solid.svg`.
+They use `currentColor`; shared CSS exposes `--ash-leaf-outline` and
+`--ash-leaf-solid` as mask sources. Use the outline by default for navigation.
+Retain the solid variant for future contexts that need a stronger visual
+signal; its presence is not a recommendation to place it on every selected
+control. Choose by the attention a state deserves relative to its surroundings,
+and recheck legibility at the actual size and contrast on the actual surface.
+Do not replace unrelated symbols or disclosure chevrons with a leaf.
+
+`public/navigation.css` and `public/navigation.js` apply this treatment to Astro
+article contents, the vertical mobile menu, and hosted Quarto study navigation. Contents track the section
+being read with `aria-current="location"`; chapter links use
+`aria-current="page"`. Quarto keeps its native collapse controls and nesting;
+CSS emphasizes the current chapter's ancestors and preserves its expanded path.
+The imported source is integrated through `scripts/study-html.mjs`, never by
+editing generated chapters. Static chapter selection works without JavaScript;
+scroll-following contents is progressive enhancement. The book's tablet/mobile
+`details.on-this-page` disclosure is a separate list cloned after the DOM loads;
+initialize its tracking after those handlers and apply the same marker and
+ancestor treatment. Restore depth from its target headings because the clone
+flattens the original nested lists. Cover this disclosure explicitly at the
+820 × 1180 iPad viewport, rather than assuming desktop contents tests cover it.
+Markers are decorative,
+stationary, do not move focus, and have a forced-colors shape fallback.
+
+Apply the same location/context distinction when designing other navigation:
+flat menus need only a current item; nested menus also need ancestor emphasis.
+Use hierarchy, contrast, and type before adding more color or ornament.

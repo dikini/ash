@@ -27,3 +27,10 @@ how content is sourced.
   preparation scripts instead.
 - Verify with the commands above before committing; `git diff --check` for
   whitespace.
+
+- **Navigation changes**: follow the location/context rationale in
+  `docs/design-system.md`. The outline leaf marks the exact current item;
+  ancestors use stronger neutral text. Keep both outline and solid leaf assets;
+  the solid variant is reserved for deliberate stronger-emphasis contexts.
+  Reuse the shared navigation treatment and preserve keyboard focus and native
+  study disclosure behavior rather than inventing another selection marker.

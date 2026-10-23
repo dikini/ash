@@ -68,7 +68,7 @@ const chapterTitle = (chapter: ReferencePage) => chapter.file === 'README.md' ? 
         </details>}
       </article>
       <aside class="article-aside">
-        {page.headings.some(heading => heading.depth === 2) && <nav aria-label="On this page">
+        {page.headings.some(heading => heading.depth === 2) && <nav class="ash-contents" aria-label="On this page">
           <p class="eyebrow">On this page</p>
           {page.headings.filter(heading => heading.depth === 2).map(heading => <a href={`#${heading.slug}`}>{heading.text}</a>)}
         </nav>}

@@ -360,7 +360,7 @@ main:focus { outline: none; }
 .diary-reading .prose { font: var(--text-reading)/var(--leading-reading) var(--serif); }
 .diary-reading .review-date, .diary-reading .update-list time, .diary-reading .update-list span { font-family: var(--sans); }
 .diary-empty { margin-top: var(--space-8); padding-top: var(--space-1); border-top: 1px solid var(--line); }
-.update-list > a { display: block; padding-block: var(--space-8); border-bottom: 1px solid var(--line); text-decoration: none; }
+.update-list > a, .update-list > article { display: block; padding-block: var(--space-8); border-bottom: 1px solid var(--line); text-decoration: none; }
 .update-list time { color: var(--color-text-navigation); font: var(--text-sm)/1.6 var(--sans); }
 .update-list h2 { margin-block: var(--space-3); font-size: 30px; color: var(--ink); }
 .update-list p { margin-bottom: var(--space-3); color: var(--muted); font: var(--text-base)/1.7 var(--sans); }

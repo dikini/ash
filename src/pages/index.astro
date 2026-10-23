@@ -6,6 +6,9 @@ import source from '../../examples/effects.ash?raw';
 import project from '../data/project';
 const latest = (await getCollection('pages', ({ data }) => data.section === 'Updates' && !data.draft))
   .sort((a, b) => b.data.updated.localeCompare(a.data.updated))[0];
+const diaryPreviewLimit = 3;
+const recentDiaries = (await getCollection('pages', ({ data }) => data.section === 'Developer Diaries' && !data.draft))
+  .sort((a, b) => b.data.published!.localeCompare(a.data.published!) || a.data.route.localeCompare(b.data.route)).slice(0, diaryPreviewLimit);
 const formatDate = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 ---
 <Site title="Ash" description="A statically typed functional language where types, effects, and resources are declared in the program. Read a complete program, take the tour, and explore the current implementation.">
@@ -88,7 +91,14 @@ const formatDate = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateS
       <div class="diary-invitation">
         <p class="eyebrow">Diaries</p>
         <h2 id="diaries-title">Developer diaries</h2>
-        <p>Experiments, implementation questions, and work in progress between milestones.</p>
+        {recentDiaries.length ? recentDiaries.map(({ data }) => <div class="diary-preview">
+          <a class="update-preview" href={`/${data.route}/`}>
+            <time datetime={data.published}>{formatDate(data.published!)}</time>
+            <h3>{data.title}</h3>
+            <p>{data.description}</p>
+          </a>
+          <p>By {data.author_uri ? <a href={data.author_uri} rel="author">{data.author}</a> : data.author}</p>
+        </div>) : <p>Experiments, implementation questions, and work in progress between milestones.</p>}
         <a class="text-link" href="/diaries/">Read developer diaries</a>
       </div>
       <div class="latest-update">

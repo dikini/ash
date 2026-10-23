@@ -1,16 +1,16 @@
 ---
 import Site from './Site.astro';
 interface Props {
-  title: string; description: string; section: string; updated?: string; published?: string; author?: string;
+  title: string; description: string; section: string; updated?: string; published?: string; author?: string; author_uri?: string;
   headings?: { depth: number; slug: string; text: string }[];
 }
-const { title, description, section, updated, published, author, headings = [] } = Astro.props;
+const { title, description, section, updated, published, author, author_uri, headings = [] } = Astro.props;
 const links = headings.filter(h => h.depth === 2);
 const formatDate = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 ---
 <Site title={title} description={description}>
   <div class:list={['article-shell', { 'diary-reading': section === 'Developer Diaries' }]}>
-    <header class="article-heading"><p class="eyebrow">{section}</p><h1 data-pagefind-meta="title">{title}</h1><p class="article-deck">{description}</p>{published ? <p class="review-date">{author && <span>By {author} · </span>}Published <time datetime={published}>{formatDate(published)}</time>{updated && updated !== published && <span> · Updated <time datetime={updated}>{formatDate(updated)}</time></span>}</p> : updated && <p class="review-date">Reviewed <time datetime={updated}>{formatDate(updated)}</time></p>}</header>
+    <header class="article-heading"><p class="eyebrow">{section}</p><h1 data-pagefind-meta="title">{title}</h1><p class="article-deck">{description}</p>{published ? <p class="review-date">{author && <span>By {author_uri ? <a href={author_uri} rel="author">{author}</a> : author} · </span>}Published <time datetime={published}>{formatDate(published)}</time>{updated && updated !== published && <span> · Updated <time datetime={updated}>{formatDate(updated)}</time></span>}</p> : updated && <p class="review-date">Reviewed <time datetime={updated}>{formatDate(updated)}</time></p>}</header>
     <div class="article-grid"><article class="prose" data-pagefind-body><slot /></article><aside class="article-aside">{links.length > 0 && <nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p>{links.map(h => <a href={`#${h.slug}`}>{h.text}</a>)}</nav>}<div class="aside-note"><p>Ash is under active development.</p><a href="/status/">Capabilities and limitations</a></div></aside></div>
   </div>
 </Site>

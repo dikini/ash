@@ -21,6 +21,7 @@ const pages = defineCollection({
     updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     published: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     author: z.string().trim().min(1).optional(),
+    author_uri: z.url({ protocol: /^https?$/ }).optional(),
     draft: z.boolean().default(false),
   }).superRefine((page, ctx) => {
     if (page.section !== "Developer Diaries") return;

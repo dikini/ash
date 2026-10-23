@@ -69,7 +69,9 @@ successful refresh receipt. Add `--browser` for browser verification.
 
 Write diary entries in `content/diaries/` with section `Developer Diaries` and a
 route under `diaries/`. In addition to normal page metadata, provide `author`
-and `published` (YYYY-MM-DD). Keep `updated` at or after publication. The index
+and `published` (YYYY-MM-DD). Supply `author_uri` when available to link the
+author name on the article and listings. The home page shows up to three
+recent published diaries. Keep `updated` at or after publication. The index
 sorts published entries by publication date, newest first; editing an entry
 does not move it to the top. Draft entries are omitted from pages, listings,
 and search. `content/diaries/first-entry.md` is an unpublished authoring starter;

@@ -19,9 +19,12 @@ test('site search finds imported study chapters', async ({ page }) => {
 
 test("front page leads directly to developer diaries", async ({ page }) => {
   await page.goto('/');
+  await expect(page.locator('.diary-invitation').getByRole('link', { name: /Exploring verification in Ash/ })).toBeVisible();
   await page.getByRole('main').getByRole('link', { name: 'Read developer diaries' }).click();
   await expect(page.getByRole('heading', { name: 'Developer diaries', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'No diary entries published yet' })).toBeVisible();
+  await page.getByRole('link', { name: 'Exploring verification in Ash', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Exploring verification in Ash', exact: true })).toBeVisible();
+  await expect(page.locator('.review-date').getByRole('link', { name: 'Vlado' })).toHaveAttribute('href', 'https://github.com/dikini');
 });
 
 test("experienced programmer can explore the tour and reach setup", async ({

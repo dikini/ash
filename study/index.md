@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/study/  
 Authority: website-guidance  
-Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af
+Source revision: ceecbe838e306d461f75d8e60658bb4b2e4649d9
 
 Ash-doc is the study companion to this website. It remains a separate project, while each site build pulls its latest documentation and renders its indexed learning material here.
 
@@ -16,7 +16,7 @@ This is working documentation, not a published book edition. These 68 lessons ta
 
 
 
-Documentation source: [be12daa](https://github.com/dikini/ash-doc/tree/be12daac0e84523519708ba7037aac752a4eeba0). Retrieved 23 October 2026.
+Documentation source: [c7884d3](https://github.com/dikini/ash-doc/tree/c7884d38a8f839fe155eb2a89da5121543808117). Retrieved 29 October 2026.
 
 
 

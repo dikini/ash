@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Minimal FFI ABI profile for the worked SQLite cases · Ash</title><meta name="description" content="This design refinement belongs to DN-0057 and the worked contract cases. It supplies only concrete target representations and native entry realization. The SQLite policy owns signatures, constants, input/output roles…"><meta name="robots" content="index, follow"><meta property="og:title" content="Minimal FFI ABI profile for the worked SQLite cases · Ash"><meta property="og:description" content="This design refinement belongs to DN-0057 and the worked contract cases. It supplies only concrete target representations and native entry realization. The SQLite policy owns signatures, constants, input/output roles…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Minimal FFI ABI profile for the worked SQLite cases · Ash"><meta name="twitter:description" content="This design refinement belongs to DN-0057 and the worked contract cases. It supplies only concrete target representations and native entry realization. The SQLite policy owns signatures, constants, input/output roles…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-abi-profile.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Minimal FFI ABI profile for the worked SQLite cases","headline":"Minimal FFI ABI profile for the worked SQLite cases","description":"This design refinement belongs to DN-0057 and the worked contract cases. It supplies only concrete target representations and native entry realization. The SQLite policy owns signatures, constants, input/output roles…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-abi-profile.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="minimal-ffi-abi-profile-for-the-worked-sqlite-cases" data-pagefind-meta="title">Minimal FFI ABI profile for the worked SQLite cases</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-abi-profile.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This design refinement belongs to
+<a href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057</a> and the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/">worked contract cases</a>. It supplies only concrete
+target representations and native entry realization.
+The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/">SQLite policy</a> owns signatures, constants,
+input/output roles and native assumptions; the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/">canonical transition table</a> owns lifecycle and
+failure behavior in both modes. This profile defines no current Ash semantics
+or source syntax and authorizes no implementation.</p>
+<h2 id="target-and-representation">Target and representation</h2>
+<p>Select Linux x86-64, System V AMD64 C calling convention, LP64, little-endian,
+fixed-signature calls. Reject x32 and other data models for this profile.
+Generated native code uses the target C compiler's calling convention; Ash
+values are marshalled rather than passed using their internal representation.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Native role</th>
+<th>Required representation</th>
+<th>Conversion and access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C <code>int</code></td>
+<td>Signed 32-bit, size/alignment 4 bytes</td>
+<td>Checked conversion from Ash integers; exact widening on return.</td>
+</tr>
+<tr>
+<td><code>unsigned char</code></td>
+<td>Unsigned 8-bit, size/alignment 1 byte</td>
+<td>A byte, without character decoding.</td>
+</tr>
+<tr>
+<td>C <code>char</code></td>
+<td>8-bit, size/alignment 1 byte</td>
+<td>String storage is treated as octets; plain-char signedness grants no numeric conversion.</td>
+</tr>
+<tr>
+<td>Object pointer</td>
+<td>Size/alignment 8 bytes</td>
+<td>Native typed address confined to bridge/owner records; never an Ash integer or wire handle.</td>
+</tr>
+<tr>
+<td><code>sqlite3*</code>, <code>sqlite3_stmt*</code></td>
+<td>Distinct opaque incomplete C types</td>
+<td>Only the correct live owner supplies access; no layout inspection or cross-cast.</td>
+</tr>
+<tr>
+<td><code>T**</code> output</td>
+<td>Writable, aligned pointer-sized slot</td>
+<td>Initialize with typed C null; do not infer initialization from untyped zeroed storage.</td>
+</tr>
+<tr>
+<td><code>const char*</code> input</td>
+<td>UTF-8 byte storage</td>
+<td>Call-specific length/termination contract; temporary storage remains stable through return.</td>
+</tr>
+<tr>
+<td><code>const unsigned char*</code> result</td>
+<td>Native-owned byte interval</td>
+<td>Copy only within the admitted validity window; never free it.</td>
+</tr>
+<tr>
+<td><code>sqlite3_destructor_type</code></td>
+<td>Native <code>void (*)(void*)</code>, size/alignment 8 bytes</td>
+<td>Only the declared transient sentinel is admitted here; no callable value is exposed.</td>
+</tr>
+</tbody>
+</table>
+<p>The bridge build checks sizes, alignments, integer bounds, exact function
+prototypes and required constant values against its selected headers. The
+repository's <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/foreign-adapter/vendor/sqlite3.h">SQLite header</a> supplies
+the reference inventory; delivery must identify its actual headers and binary.
+Compilation against headers does not prove the binary matches them.
+Function-pointer sentinels use typed native C expressions, not a guessed
+object-pointer representation. Structures, native enums by value, floating
+point, variadic calls, callbacks and integer/opaque-address interchange are
+outside these two cases.</p>
+<p>All byte counts and indices are checked before narrowing. For C <code>int</code>, admit
+only -2147483648 through 2147483647; call-specific lengths and indices have
+stricter nonnegative bounds. Check allocation arithmetic and configured limits
+before allocation. The SQLite input policy's payload-plus-terminator length
+must fit
+both the C argument and host allocation limits. These checks do not prove a
+returned native address is readable.</p>
+<h2 id="native-entry-and-output-realization">Native entry and output realization</h2>
+<p>Realize every C prototype and constant role from the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/">SQLite policy</a> through the target C compiler.
+Reject a missing or incompatible prototype/constant before associated
+acquisition. Use the selected library's typed <code>SQLITE_TRANSIENT</code> expression
+in its declared destructor slot, never an Ash integer or guessed object
+pointer. This role grants no callback support.</p>
+<p>Output slots use the required native alignment, size and typed null
+initialization. Direct returns retain exact native types before conversion.
+Initialized storage alone establishes no successful output. Outcome-dependent
+publication/disposal follows the common and SQLite transition tables, rather
+than a second target-specific ownership table.</p>
+<p>In-process calls execute this ABI in the host; isolated calls execute it only
+inside the worker. Native pointers, slots and sentinels never enter protocol
+messages. Parent admission uses logical contract identities and values, not
+this target's address representation. Wire encoding is separate from the C ABI.</p>
+<h2 id="target-evidence">Target evidence</h2>
+<p>Check target/header sizes, alignments, prototypes, integer limits and constant
+materialization, plus exact generated-entry association. Apply the canonical
+acquisition, copy and completion cases without changing their meanings.
+Demonstrate typed null slots, checked narrowing and rejection of unsupported
+shapes. Native address validity and adherence to declared ownership/retention
+remain explicit assumptions, not consequences of successful compilation.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#target-and-representation">Target and representation</a><a href="#native-entry-and-output-realization">Native entry and output realization</a><a href="#target-evidence">Target evidence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

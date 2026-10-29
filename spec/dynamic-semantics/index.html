@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>Dynamic Semantics · Ash</title><meta name="description" content="Ash evaluation is defined by one deterministic small-step relation over configurations CONFIG(heap, environment, control, continuation). The heap is fresh for one evaluation and maps numeric locations to tuples,…"><meta name="robots" content="index, follow"><meta property="og:title" content="Dynamic Semantics · Ash"><meta property="og:description" content="Ash evaluation is defined by one deterministic small-step relation over configurations CONFIG(heap, environment, control, continuation). The heap is fresh for one evaluation and maps numeric locations to tuples,…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Dynamic Semantics · Ash"><meta name="twitter:description" content="Ash evaluation is defined by one deterministic small-step relation over configurations CONFIG(heap, environment, control, continuation). The heap is fresh for one evaluation and maps numeric locations to tuples,…"><meta property="og:url" content="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="canonical" href="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/dynamic-semantics.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Dynamic Semantics","headline":"Dynamic Semantics","description":"Ash evaluation is defined by one deterministic small-step relation over configurations CONFIG(heap, environment, control, continuation). The heap is fresh for one evaluation and maps numeric locations to tuples,…","inLanguage":"en","url":"https://dikini.github.io/ash/spec/dynamic-semantics/","@id":"https://dikini.github.io/ash/spec/dynamic-semantics/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/dynamic-semantics.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+</style><title>Dynamic Semantics · Ash</title><meta name="description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…"><meta name="robots" content="index, follow"><meta property="og:title" content="Dynamic Semantics · Ash"><meta property="og:description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Dynamic Semantics · Ash"><meta name="twitter:description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…"><meta property="og:url" content="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="canonical" href="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/spec/dynamic-semantics.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Dynamic Semantics","headline":"Dynamic Semantics","description":"Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…","inLanguage":"en","url":"https://dikini.github.io/ash/spec/dynamic-semantics/","@id":"https://dikini.github.io/ash/spec/dynamic-semantics/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/spec/dynamic-semantics.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,57 +13,174 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Specification</p><h1 id="dynamic-semantics" data-pagefind-meta="title">Dynamic Semantics</h1><p class="spec-source">Development specification · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/spec/dynamic-semantics.md">ash-lang <code>7949b6d</code></a></p></header><nav class="spec-chapters" aria-label="Specification chapters"><a href="/ash/spec/">Overview</a><a href="/ash/spec/lexical-structure/">Lexical Structure</a><a href="/ash/spec/syntax/">Syntax</a><a href="/ash/spec/name-resolution/">Name Resolution</a><a href="/ash/spec/static-semantics/">Static Semantics</a><a href="/ash/spec/elaboration/">Elaboration</a><a href="/ash/spec/dynamic-semantics/" aria-current="page">Dynamic Semantics</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
-<p>Ash evaluation is defined by one deterministic small-step relation over
-configurations <code>CONFIG(heap, environment, control, continuation)</code>. The heap is
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Specification</p><h1 id="dynamic-semantics" data-pagefind-meta="title">Dynamic Semantics</h1><p class="spec-source">Development specification · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/spec/dynamic-semantics.md">ash-lang <code>67c79dd</code></a></p></header><nav class="spec-chapters" aria-label="Specification chapters"><a href="/ash/spec/">Overview</a><a href="/ash/spec/lexical-structure/">Lexical Structure</a><a href="/ash/spec/syntax/">Syntax</a><a href="/ash/spec/name-resolution/">Name Resolution</a><a href="/ash/spec/static-semantics/">Static Semantics</a><a href="/ash/spec/elaboration/">Elaboration</a><a href="/ash/spec/dynamic-semantics/" aria-current="page">Dynamic Semantics</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>Ash evaluation is defined by one small-step relation over configurations
+<code>CONFIG(heap, environment, control, continuation)</code>. Its Ash control transitions
+are deterministic relative to fixed admitted native bindings and the outcomes
+of their external calls; it does not determine or guarantee those outcomes.
+The heap is
 fresh for one evaluation and maps numeric locations to tuples, completed
-constructors, uninitialized slots for recursive data or native reports, or
-aliases. Tuple elements
-and constructor payloads are runtime values. The environment maps resolved term
+constructors, uninitialized slots for recursive data, or
+aliases. It also retains region-owned allocation records with pending or
+initialized disposition, backing locator, extent/alignment and actual residency.
+Tuple elements and constructor payloads are runtime values. The environment maps resolved term
 identities to runtime values. Effect execution also retains lexical type/row
 instantiation in the environment, separately from term bindings. This metadata
 is not a source value. The continuation records the remaining strict
-work, including ordered lexical handler boundaries. A selected operation moves
+work, including ordered lexical handler boundaries, selected allocation views,
+prospective/live/closing region activations, pending initialization and saved
+paired completion. These extend the same configuration, not another machine. A selected operation moves
 one suffix of that continuation into a clause-owned captured continuation. The
 suffix is moved, not copied. Its clause boundary records whether the unique
-resume capability still owns that captured control or has consumed it.</p>
-<p>Runtime values are arbitrary-precision integers, Booleans, unit, independent
-immutable byte sequences, validated UTF-8 strings, lexical
-functions, internal lexical polymorphic functions, payload-constructor
-functions, opaque non-owning resource handles, or heap locations. A function
-template becomes a lexical function with the recursive environment when its
-binder is looked up. A location is an internal handle, not source-level
+resume capability still owns that captured control or has consumed it. A
+checked private clause may instead move that control into its scoped Store;
+the continuation itself never becomes a source value.</p>
+<p>Runtime values are arbitrary-precision integers, Booleans, unit, immutable
+byte sequences, validated UTF-8 strings, lexical
+functions, canonical builtin functions, internal lexical polymorphic functions,
+payload-constructor functions, opaque data-pointer Address values, opaque
+non-owning resource handles and retained keys, or heap locations. A function
+template is code metadata. Effect execution stores the lexical callable once
+when its function expression or recursive member is materialized; lookup returns
+that stored callable. Pure execution retains its allocation-free template lookup. A location is an internal handle, not source-level
 identity or observable mutation.</p>
 <p>Pure Core type abstractions and applications erase without extending the
 environment or allocating heap cells. Effect execution retains lexical
 polymorphic functions and their validated instantiation so exact operation
 identities remain meaningful across generic calls. No type or kind becomes a
-source-inspectable value, and instantiation allocates no ordinary heap cell.
+source-inspectable value, and type/row instantiation alone allocates no ordinary
+heap cell.
 Validated newtype conversions and local nominal scopes are likewise erased
 static operations rather than values.</p>
 <h2 id="initial-configuration">Initial configuration</h2>
-<p>Elaboration produces one validated linked Core expression: dependency-ordered
-recursive global groups around the generated application of the entry module's
-local <code>main</code> to unit. The final linked expression has an empty outward effect
-row after mandatory owner-free native interpretation and exact discharge by
-admitted source resource scopes. Evaluation starts
+<p>Elaboration produces one validated linked Core expression: an explicit host-backed
+root outside dependency-ordered recursive global groups and the generated
+application of local main to unit, with required native interpretation. Root
+establishment precedes every module closure record. Host startup/control storage
+prepares the initial provider; no arbitrary Source computation runs without a
+selection and no alternate Source heap supplies fallback storage. The final
+outer expression has an empty row; the inner main application retains its row. Evaluation starts
 with that expression as control, a fresh empty heap and environment, and an
 empty continuation:</p>
-<div class="sequent-document"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">elaborate(modules, entry) = linked_program</span><span class="sequent-formula">validate(linked_program) = success</span><span class="sequent-formula">required_source_native_bindings(linked_program) are admitted</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Program-Start</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">INITIAL(modules, entry) = CONFIG(empty_heap, empty_environment, linked_program, empty_continuation)</span></figcaption></figure></div></div>
-<p><code>linked_program</code> is the dependency-ordered groups around <code>main ()</code> described in
+<div class="sequent-document"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">elaborate(modules, entry) = linked_program</span><span class="sequent-formula">validate(linked_program) = success</span><span class="sequent-formula">supplied native bindings are admitted against the original symbols of linked_program</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Program-Start</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">INITIAL(modules, entry) = CONFIG(empty_heap, empty_environment, linked_program, empty_continuation)</span></figcaption></figure></div></div>
+<p><code>linked_program</code> includes the generated root around the dependency-ordered groups
+and <code>main ()</code> described in
 <a href="/ash/spec/elaboration/">Elaboration</a>. The second premise requires independent
 whole-program validation before evaluation. Neither premise performs module
 loading at runtime. The ordinary recursive-binding and application rules enter
 the linked groups and call <code>main</code>. Imports have no initialization step, and
 modules are not runtime values.</p>
-<p>For a program with owner-free source-native effects, the linked expression
-includes the mandatory native interpretation described below. A source resource
-scope instead retains its exact acquisition and teardown interpretations. Both
-forms require their executable bindings before any Ash expression runs. The
-binding premise is vacuous for a program requiring none. Binding admission
-retains the exact original checked symbol and bridge authority, independently checked against
-the validated program; a missing or changed binding is an internal failure.
-It performs no Ash evaluation or implicit native compilation/linkage.</p>
+<p>Native-binding admission checks the entries actually supplied against the
+original symbol facts of validated Core before Ash execution. It does not check
+that every possible native request has a binding; the empty supplied table
+satisfies this association check. When a native boundary is selected, invocation
+requires the entry for that exact original symbol. A missing selected entry is
+a terminal runtime failure after operand evaluation and boundary selection,
+before the callback is called. A nearer ordinary source handler requires no
+callback lookup. Admission performs no implicit native compilation or linking.</p>
+<h2 id="region-construction-and-close-steps">Region construction and close steps</h2>
+<p>Write <code>CONFIG(H, E, c, K)</code> for the same configuration above. H retains region
+allocation records and K retains selection, pending construction and completion.
+The following named steps refine that relation. A prospective activation is not
+live access; a pending record exposes no readable initialized object. Allocate
+and release remain the fixed ordinary pair of one successful region setup.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Step</th>
+<th>Preconditions and state change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EnterPrepare</td>
+<td>Reserve fresh prospective a; bind R to a for provider/body lexical instantiation. Evaluate the provider once under the preceding selection. Failure publishes no live access or completion owner.</td>
+</tr>
+<tr>
+<td>EnterLive</td>
+<td>Complete preparation, publish that same a with its fixed pair/discipline and one completion owner, then bind body access r.</td>
+</tr>
+<tr>
+<td>SelectEnter/Return</td>
+<td>Require live actual access, install explicit default forwarding to that owner and restore preceding selection on return. Acquire no owner and relocate no value.</td>
+</tr>
+<tr>
+<td>ContextQuery</td>
+<td>A Unit request returns the selected dependency-bearing view. Cleanup retains it beside its once-evaluated action; the action/payload does not cross that query.</td>
+</tr>
+<tr>
+<td>RegionAllocate</td>
+<td>Evaluate explicit context/request operands. Keep the serviced segment separate from outside control. At the actual live/closing owner's structural interpretation position, call its saved allocate member with lexical instantiation and saved preceding allocation selection. Body-local handlers do not move into callback control.</td>
+</tr>
+<tr>
+<td>Request</td>
+<td>After required children evaluate in order, retain fields/captures/layout locally, form an independent immediate usable-bytes/alignment descriptor, and perform the exact explicit request. Existing one-shot handler selection moves its captured segment.</td>
+</tr>
+<tr>
+<td>Supply/Register</td>
+<td>Under the native/module contract, obtain fresh disjoint backing; check actual owner, requested layout and stated extent/alignment; register one pending record. Refusal creates no successful record or initialized access.</td>
+</tr>
+<tr>
+<td>ResumeStorage</td>
+<td>Consume the ordinary continuation capability once; restore same activations, selections, serviced segment and pending construction. Check owner/record/layout compatibility without replaying operands.</td>
+</tr>
+<tr>
+<td>Initialize/Publish</td>
+<td>Write through compatible fresh pending storage using retained local fields/captures and their actual dependencies. After complete initialization/reply preparation, mark initialized once and return access with residency/dependency facts. Reused/mismatched records fail construction.</td>
+</tr>
+<tr>
+<td>Project/Use</td>
+<td>Require initialized storage and valid dependencies. An independent outer referenced value can shed its container dependency; an inline view retains it. Aliases/views never relocate values.</td>
+</tr>
+<tr>
+<td>Capture/Resume</td>
+<td>Move/restore the segment and its pending progress once above the saved clause continuation. Preserve outside frames and original owner enclosure; do not recompute activation identities or reset completed construction.</td>
+</tr>
+<tr>
+<td>Discard</td>
+<td>Check structural owned close and surviving interpreters, consume the capture once, revoke unpublished access and account/dispose pending records under their allocator contract. Close inner obligations in order without replaying abandoned code.</td>
+</tr>
+<tr>
+<td>CloseBegin</td>
+<td>Require that an ordinary result does not depend on the closing region; finish inner cleanup/dependent uses while backing is live. Root observation completes before root close. Begin the saved original release once; its unfinished completion remains required.</td>
+</tr>
+<tr>
+<td>CloseFinish</td>
+<td>After successful release completion, revoke access and bulk-retire that region's records; restore enclosing control. Other regions/shared allocator state remain valid. Copies of access own no close.</td>
+</tr>
+</tbody>
+</table>
+<p>A successful supplied layout includes the object's complete persistent
+representation: tuple fields, nominal discriminant/payload, actual closure
+captures, and persistent Bytes/String/large-Int backing where applicable.
+Charging capacity while retaining that representation elsewhere is not supplied
+storage. Request size arithmetic is checked; alignment is nonzero and supported,
+and stated extent/alignment must satisfy the request. A zero-byte success grants
+no readable bytes and initializes only a genuinely zero-readable-storage layout;
+it still has its own allocation record/accounting. The backing adapter checks
+association/layout and creates pending storage; a raw Address or phantom R alone
+proves neither native validity nor initialized access.</p>
+<p>The owner service remains available through required cleanup and release, at its
+original position and preceding allocation selection. It does not restore a
+removed public backend handler. Action-local handlers or surviving interpreters
+must discharge the actual backend requirements; the existing cleanup-context and
+running-completion restrictions still apply.</p>
+<p>An ordinary function expression requests its record/captures once at creation.
+Calls retain its lexical values/type context but use the caller's selection for
+fresh construction. Integer results retain the conservative residency required
+by static admission even when their runtime representation is immediate.</p>
+<p>Refusal uses ordinary effects: a clause may resume only with valid successful
+storage or, when checked, discard and return its ordinary result. Old objects and
+performed effects are not rolled back. Reporting uses pre-existing/surrounding
+storage or host entry reporting, not construction in a failed region. Internal
+work/control/storage exhaustion remains terminal and has no source-cleanup
+guarantee. At root entry, declared allocation refusal uses checked disposal and
+the existing host observation/reporting foundation, distinguishing it from
+internal exhaustion without constructing an error in the failed root. If required
+close fails, report that actual failure rather than a clean refusal. Physical validity, freshness/disjointness and successful reclamation
+remain native/module contract assumptions; returning from a broken native
+release does not prove its physical promise. No fallback, source unwind or
+quarantine protocol is introduced.</p>
 <h2 id="type-instantiation-and-erasure">Type instantiation and erasure</h2>
 <p>In Pure execution, entering either explicit Core type operation takes one step
 to its retained term. Validation has already checked parameter scope, argument
@@ -84,18 +201,23 @@ closure whose exposed computation is identity-free may retain ordinary erased
 representation values and execute its lexical code after this step's body
 returns; no runtime scope authority needs to survive with it.</p>
 <p>Effect execution instead retains a type abstraction as a lexical polymorphic
-function. Independent Core validation admits only inert values or variables,
-transparent type operations, and authenticated generated evidence adapters
+function. Independent Core validation admits ordinary function materialization,
+inert constructor values or variables, transparent type operations, and
+authenticated generated evidence adapters
 inside that abstraction, as described in <a href="/ash/spec/elaboration/#explicit-rank-1-operations">Elaboration</a>.
 Retaining these forms does not delay a source effect or source function body.</p>
-<p>A type application evaluates its function before entering the retained body.
-It saves the caller's instantiation, substitutes all ordinary type and complete
-row arguments under that caller context, and simultaneously binds the retained
-parameters in the function's definition environment. Ordinary function creation
-then captures that environment. A later call uses the closure's context, not
-the caller's current type bindings. Recursive lookup likewise materializes a
-polymorphic function from the definition context, rather than specializing a
-shared template in place. Parameterized ordinary constructors retain their
+<p>Evaluating an admitted abstraction that directly materializes a function creates
+its generic record once, with actual term captures and lexical metadata but its
+generalized parameters unbound. Authenticated deferred captures are retained
+without eagerly executing evidence adapter spines. Transparent aliases/variables
+and constructors forward without copying.</p>
+<p>A type application evaluates its function, saves caller instantiation, substitutes
+ordinary type and complete row arguments under that caller context, and binds
+them simultaneously in an immutable view of the retained definition context.
+Direct-callable instantiation does not recreate the record, enter a source
+function body or mutate sibling views. A later call uses that lexical type/term context while fresh construction
+uses the caller's allocation selection. Recursive lookup returns the stored
+generic callable. Parameterized ordinary constructors retain their
 existing constructor behavior; their type application needs no effect context.</p>
 <p>The same lexical context travels with handlers and captured control. Request
 selection compares exact effect instances after instantiating each side under
@@ -104,13 +226,27 @@ machine-global mutable substitution. Types nested inside effect arguments,
 including higher-kinded applications and function effect rows, participate in
 the same validated substitution. Pure execution keeps the erasure rules above.</p>
 <p>These Effect-only steps make retention and instantiation explicit.
-<code>POLYMORPHIC</code> is an internal lexical function, not a type value.
+<code>POLYMORPHIC</code> retains the stored generic callable, not a type value.
+<code>prepare_generic</code> follows the admitted body shape. It materializes a direct
+generic function or a capture-bearing deferred record once through the
+selected-region path, retaining pending progress, actual captures and definition
+metadata with generalized parameters unbound. Forwarding an existing callable
+reuses its record; code-only constructors need no callable record. An
+authenticated deferred body remains unevaluated at creation. In
+<code>POLYMORPHIC(parameters, stored, definition_environment)</code>, <code>stored</code> distinguishes
+a direct callable from an authenticated deferred body, and the retained
+environment includes its captured term values. <code>direct_callable(stored)</code> selects
+the first case; <code>authenticated_deferred_body(stored)</code> yields the second case's
+retained body. <code>instantiate_view</code> changes only immutable lexical instantiation
+metadata. Instantiating a deferred body instead evaluates its ordinary term
+computation under the bound capture environment; any genuinely new Function
+result materializes there in the existing prerequisite order.
 <code>arguments</code> contains the ordered ordinary type and complete row arguments.
 <code>instantiate_arguments</code> uses the saved caller context, and <code>bind_parameters</code>
 extends the definition context simultaneously without changing term bindings.
 <code>constructor_value</code> recognizes an ordinary payload-constructor function or
 nullary constructor value; these need no retained effect instantiation.</p>
-<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-effect-type-steps"><h3 id="sequent-family-effect-type-steps">effect-type-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">execution uses Effect Core</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Type-Abstraction</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, TypeAbstraction(parameters, body), continuation) → CONFIG(heap, environment, POLYMORPHIC(parameters, body, environment), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">execution uses Effect Core</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Type-Application</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, TypeApplication(function, arguments), continuation) → CONFIG(heap, environment, function, TYPE-ARGUMENTS(arguments, instantiation(environment)) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">instantiated = instantiate_arguments(arguments, caller_instantiation)</span><span class="sequent-formula">body_environment = bind_parameters(definition_environment, parameters, instantiated)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Type-Instantiate</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, POLYMORPHIC(parameters, body, definition_environment), TYPE-ARGUMENTS(arguments, caller_instantiation) :: continuation) → CONFIG(heap, body_environment, body, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">constructor_value(value)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Constructor-Instantiate</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value, TYPE-ARGUMENTS(arguments, caller_instantiation) :: continuation) → CONFIG(heap, environment_value, value, continuation)</span></figcaption></figure></div></div></section></div>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-effect-type-steps"><h3 id="sequent-family-effect-type-steps">effect-type-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">execution uses Effect Core</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Type-Abstraction</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, TypeAbstraction(parameters, body), continuation) → CONFIG(heap, environment, prepare_generic(parameters, body, environment), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">execution uses Effect Core</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Type-Application</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, TypeApplication(function, arguments), continuation) → CONFIG(heap, environment, function, TYPE-ARGUMENTS(arguments, instantiation(environment)) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">direct_callable(stored)</span><span class="sequent-formula">instantiated = instantiate_arguments(arguments, caller_instantiation)</span><span class="sequent-formula">body_environment = bind_parameters(definition_environment, parameters, instantiated)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Type-Instantiate</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, POLYMORPHIC(parameters, stored, definition_environment), TYPE-ARGUMENTS(arguments, caller_instantiation) :: continuation) → CONFIG(heap, environment_value, instantiate_view(stored, body_environment), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">authenticated_deferred_body(stored) = body</span><span class="sequent-formula">instantiated = instantiate_arguments(arguments, caller_instantiation)</span><span class="sequent-formula">body_environment = bind_parameters(definition_environment, parameters, instantiated)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Deferred-Instantiate</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, POLYMORPHIC(parameters, stored, definition_environment), TYPE-ARGUMENTS(arguments, caller_instantiation) :: continuation) → CONFIG(heap, body_environment, body, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">constructor_value(value)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Constructor-Instantiate</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value, TYPE-ARGUMENTS(arguments, caller_instantiation) :: continuation) → CONFIG(heap, environment_value, value, continuation)</span></figcaption></figure></div></div></section></div>
 <h2 id="generated-interface-evidence">Generated interface evidence</h2>
 <p>Linking preserves each checked interface selection. Linked interface-evidence
 validation authenticates it, and Core synthesis lowers it before evaluation.
@@ -121,15 +257,15 @@ already been substituted into authenticated method types, and the evaluator
 does not inspect those relationships or make them control or state.
 An abstract evidence method becomes an ordinary function parameter. A
 polymorphic occurrence type-applies that parameter to its retained method-local
-arguments; entering the Core application uses the type-instantiation behavior
-above. A monomorphic concrete evidence method becomes a binder occurrence for the
-implementation method in its defining module's recursive group. A polymorphic
-concrete or exact-current method first enters its generated adapter type
-abstraction and then the implementation method's complete type application.
-Pure execution erases both operations; Effect execution retains the lexical
-instantiation needed by operation identities. Looking up
-the recursive function binder materializes a lexical closure under the existing
-recursive-binding behavior.</p>
+arguments; an entered Core application uses the type-instantiation behavior
+above. A monomorphic concrete evidence method becomes a binder occurrence for
+the implementation method in its defining module's recursive group. A polymorphic
+concrete or exact-current method retains a generated adapter over the
+implementation method's complete type application. Pure execution erases these
+operations; Effect execution preserves their validated arguments in lexical
+instantiation, including authenticated forwarding without executing the retained
+adapter spine. Effect lookup returns the once-materialized recursive callable;
+Pure lookup retains its allocation-free template behavior.</p>
 <p>A supplied lexical method uses ordinary nonrecursive binding, function closure,
 and binder lookup. Its closure captures the preceding ordinary values required
 by its body. A checked closure may retain that method after the evidence block
@@ -137,14 +273,16 @@ returns; a new occurrence outside the block cannot acquire its static evidence.
 The lexical source identity and selection scope create no runtime value,
 registry, scope frame, revocation check, or transition family.</p>
 <p>The validated Core program may retain method authentication records and method
-schemes as static authority, and a Core type application carries its retained
-method arguments in control until the type application is entered.
+schemes as static authority. A retained Core type application records its complete
+method arguments; Effect execution preserves their validated instantiation in
+lexical metadata, including when an authenticated adapter forwards an existing
+callable without entering that application node.
 The evaluator does not inspect method authentication records or method schemes.
-It does not turn an interface identity, selection record, implementation
-authorization route, method scheme, or method argument into a runtime value,
-term binding, heap cell, interface lookup, or interface-specific transition.
-Effect type applications retain instantiation as described above; this does
-not turn method authentication or selection into runtime authority.</p>
+It does not turn an interface identity, selection record, implementation authorization route, method scheme,
+or method argument into a runtime value, term binding, heap cell, interface
+lookup, or interface-specific transition. Effect type applications retain
+instantiation as described above; this does not turn method authentication or
+selection into runtime authority.</p>
 <p>For a generic implementation method, lowering uses the recorded head
 substitution to form an ordinary Core type application. When evaluation enters
 that Core node, Pure execution erases it while Effect execution preserves its
@@ -157,7 +295,8 @@ a constrained-global call, the same transitions apply its evidence functions
 before the surrounding source arguments because elaboration nested the
 applications in that order. Abstract prerequisite evidence uses ordinary
 environment lookup; concrete prerequisite evidence uses ordinary recursive
-function lookup and closure materialization.</p>
+function lookup. A genuinely new Function result from a prerequisite term
+application materializes at that ordered creation site.</p>
 <p>There is no runtime interface value, dictionary, interface or implementation
 registry, implementation lookup, interface dispatch, registration step, or
 interface-specific failure mode. Polymorphic method evidence uses the dialect's
@@ -195,11 +334,10 @@ generic method's type application, and the variable occurrences for the
 generic implementation method and concrete prerequisite method in that order.
 A trace event enters an occurrence node, not a binder identity. The trace enters
 the prerequisite occurrence before the source <code>Wrap(42)</code> argument and produces
-<code>42</code>. It contains at most 32 node-entry events, and the machine reaches at most
-six continuation frames. These bounds describe this fixed program. They follow
-from the existing erasure, lookup, recursive-binding, and application
-transitions; they are not a new transition or a bound on arbitrary prerequisite
-chains.</p>
+<code>42</code>. Root startup and once-created capture records add ordinary construction
+work around this named ordering. The test's fixed-program resource ceilings do
+not define allocation budgets, semantic limits or a bound on arbitrary
+prerequisite chains.</p>
 <h2 id="bindings">Bindings</h2>
 <p>A binding evaluates its initializer before matching the resulting value and
 extending the environment for its body. Its pattern binders are not in scope in
@@ -209,15 +347,19 @@ the initializer. Static irrefutability makes match failure unreachable.</p>
 <code>E-Let-Continue</code> uses that environment plus the pattern bindings. Semicolons
 separate semantic fields; Ash source does not contain semicolons.</p>
 <h2 id="recursive-bindings">Recursive bindings</h2>
-<p>Entering a recursive group allocates one uninitialized slot per data member.
-It then installs all direct-function templates and data locations in one
-recursive environment entry. Constructor-guarded data initializers evaluate in
+<p>In Effect execution, entering a recursive group reserves its recursive identities
+and uninitialized data slots. It materializes direct ordinary function members
+once in source member order, retaining their recursive environment and selected
+residency, before guarded data initialization. Lookup returns stored callables.
+In Pure execution, the existing allocation-free templates and data locations
+are installed together as follows. Constructor-guarded data initializers evaluate in
 source order. Completing a data member stores an alias from its slot to the
 initializer's constructed location. Lookup of a recursive data member returns
-its slot without forcing the alias; lookup of a function member materializes a
-lexical function from its template and the recursive environment.</p>
-<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-recursive-binding-steps"><h3 id="sequent-family-recursive-binding-steps">recursive-binding-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">allocate_uninitialized(heap, data_members) = heap_1, data_bindings, pending</span><span class="sequent-formula">environment_1 = extend_recursive(environment, function_templates, data_bindings)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Allocate</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, let rec members; body, continuation) → CONFIG(heap_1, environment_1, initialize(pending, body), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Initialize</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, recursive_environment, initialize((initializer, member_location) :: rest, body), continuation) → CONFIG(heap, recursive_environment, initializer, INITIALIZE_MEMBER(member_location, rest, body, recursive_environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">heap_1 = store_alias(heap, member_location, value_location)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Store</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value_location, INITIALIZE_MEMBER(member_location, rest, body, recursive_environment) :: continuation) → CONFIG(heap_1, recursive_environment, initialize(rest, body), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Body</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, recursive_environment, initialize(empty, body), continuation) → CONFIG(heap, recursive_environment, body, continuation)</span></figcaption></figure></div></div></section></div>
-<p>Function templates and data locations enter scope before data initialization.
+its slot without forcing the alias. Only Pure lookup materializes a lexical
+function from its template and the recursive environment.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-recursive-binding-steps"><h3 id="sequent-family-recursive-binding-steps">recursive-binding-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">execution uses Pure Core</span><span class="sequent-formula">allocate_uninitialized(heap, data_members) = heap_1, data_bindings, pending</span><span class="sequent-formula">environment_1 = extend_recursive(environment, function_templates, data_bindings)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Allocate</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, let rec members; body, continuation) → CONFIG(heap_1, environment_1, initialize(pending, body), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Initialize</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, recursive_environment, initialize((initializer, member_location) :: rest, body), continuation) → CONFIG(heap, recursive_environment, initializer, INITIALIZE_MEMBER(member_location, rest, body, recursive_environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">heap_1 = store_alias(heap, member_location, value_location)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Store</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value_location, INITIALIZE_MEMBER(member_location, rest, body, recursive_environment) :: continuation) → CONFIG(heap_1, recursive_environment, initialize(rest, body), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Let-Rec-Body</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, recursive_environment, initialize(empty, body), continuation) → CONFIG(heap, recursive_environment, body, continuation)</span></figcaption></figure></div></div></section></div>
+<p>In the Pure rules, function templates and data locations enter scope before
+data initialization.
 <code>data_bindings</code> maps every data member's binder identity to its preallocated
 location. <code>pending</code> separately pairs each guarded data initializer with that
 member's location in source order. <code>E-Let-Rec-Initialize</code> enters only the first
@@ -229,13 +371,21 @@ these two one-step rules makes every intermediate heap and control state, and
 therefore source order, explicit. A function-only group has an empty <code>pending</code>
 sequence and proceeds through <code>E-Let-Rec-Body</code>; its templates were installed by
 <code>E-Let-Rec-Allocate</code>.</p>
+<p>Effect function materialization uses these steps in the same configuration.
+<code>reserve_recursive</code> publishes only internal recursive identities/data slots;
+<code>functions</code> lists direct function initializers in source order. The existing
+<code>initialize</code> control below runs guarded data only after all stored callables are
+ready. Completed materialization and pending data state survive capture/resume
+without replay. Abandonment accounts for unpublished construction but does not
+roll back previous effects or initialized records.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-effect-recursive-materialization"><h3 id="sequent-family-effect-recursive-materialization">effect-recursive-materialization</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">execution uses Effect Core</span><span class="sequent-formula">reserve_recursive(heap, environment, members) = heap_1, environment_1, functions, data</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Rec-Reserve</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, let rec members; body, continuation) → CONFIG(heap_1, environment_1, materialize(functions, data, body), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Rec-Function</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, materialize((binder, initializer) :: rest, data, body), continuation) → CONFIG(heap, environment, initializer, STORE_FUNCTION(binder, rest, data, body, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">environment_1 = store_recursive_callable(recursive_environment, binder, callable)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Rec-Store</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, callable, STORE_FUNCTION(binder, rest, data, body, recursive_environment) :: continuation) → CONFIG(heap, environment_1, materialize(rest, data, body), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Effect-Rec-Data</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, materialize(empty, data, body), continuation) → CONFIG(heap, environment, initialize(data, body), continuation)</span></figcaption></figure></div></div></section></div>
 <p>A polymorphic function member has one outer <code>TypeAbstraction</code> node whose
 nonempty parameter sequence contains all generalized parameters. Allocation
 in Pure execution follows that wrapper to install the same function template;
-ordinary evaluation still uses <code>E-Type-Abstraction</code>. Effect execution retains
-the abstraction and definition instantiation with the template. Each lookup
-materializes its own lexical polymorphic function; instantiating one occurrence
-does not mutate the template or a sibling occurrence.</p>
+ordinary Pure evaluation still uses <code>E-Type-Abstraction</code>. Effect execution
+materializes and retains the generic record once with its lexical captures.
+Lookup and type application reuse that record; instantiated views do not mutate
+it or a sibling view.</p>
 <p>Reaching an uninitialized cell, an alias loop, or an invalid location is an
 internal runtime failure. The static guardedness judgment makes those states
 unreachable from accepted source. These rules provide allocation for explicit
@@ -248,7 +398,7 @@ main () = {
         second ()
     }
     and second : Unit -&gt; Int = fn(ignored) {
-        let retain : Unit -&gt; Int = fn(value) {
+        let saved : Unit -&gt; Int = fn(value) {
             first value
         }
         42
@@ -259,17 +409,25 @@ main () = {
 <h2 id="application">Application</h2>
 <p>Application evaluates the function before the argument. Once both are runtime
 values, a lexical function matches its domain pattern, extends its captured
-environment, and enters its body. A payload constructor allocates one
-constructor cell with the argument value as its payload.</p>
-<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-application-steps"><h3 id="sequent-family-application-steps">application-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Apply-Function</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, function argument, continuation) → CONFIG(heap, environment, function, APPLY_FUNCTION(argument, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Apply-Argument</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, function_value, APPLY_FUNCTION(argument, environment) :: continuation) → CONFIG(heap, environment, argument, APPLY_ARGUMENT(function_value) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">function_value = closure(pattern, body, captured_environment)</span><span class="sequent-formula">match(heap, argument_value, pattern) = bindings</span><span class="sequent-formula">body_environment = extend(captured_environment, bindings)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Beta</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, argument_value, APPLY_ARGUMENT(function_value) :: continuation) → CONFIG(heap, body_environment, body, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">function_value = constructor_function(constructor)</span><span class="sequent-formula">heap_1, result_location = allocate(heap, constructor(constructor, argument_value))</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Constructor-Apply</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, argument_value, APPLY_ARGUMENT(function_value) :: continuation) → CONFIG(heap_1, environment, result_location, continuation)</span></figcaption></figure></div></div></section></div>
+environment, and enters its body. Its lexical instantiation remains fixed while
+fresh body construction uses the caller's selected allocation context. The
+callable record and captures do not move or reinitialize. A payload constructor
+initializes a supplied nominal record with the argument as payload in Effect
+execution; the direct allocation rule below applies to Pure Core.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-application-steps"><h3 id="sequent-family-application-steps">application-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Apply-Function</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, function argument, continuation) → CONFIG(heap, environment, function, APPLY_FUNCTION(argument, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Apply-Argument</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, function_value, APPLY_FUNCTION(argument, environment) :: continuation) → CONFIG(heap, environment, argument, APPLY_ARGUMENT(function_value) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">function_value = closure(pattern, body, captured_environment)</span><span class="sequent-formula">match(heap, argument_value, pattern) = bindings</span><span class="sequent-formula">body_environment = extend(captured_environment, bindings)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Beta</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, argument_value, APPLY_ARGUMENT(function_value) :: continuation) → CONFIG(heap, body_environment, body, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">execution uses Pure Core</span><span class="sequent-formula">function_value = constructor_function(constructor)</span><span class="sequent-formula">heap_1, result_location = allocate(heap, constructor(constructor, argument_value))</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Constructor-Apply</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, argument_value, APPLY_ARGUMENT(function_value) :: continuation) → CONFIG(heap_1, environment, result_location, continuation)</span></figcaption></figure></div></div></section></div>
 <p>The continuation frames make the left-to-right order explicit. A closed,
 well-typed program cannot apply an integer, Boolean, unit, tuple, or completed
 constructor value.</p>
 <h2 id="tuples-constructors-and-matches">Tuples, constructors, and matches</h2>
-<p>Tuple elements evaluate strictly from left to right, after which one tuple cell
-stores their runtime values. A nullary constructor occurrence allocates its completed
-constructor cell. A payload constructor occurrence produces the callable value
-used by <code>E-Constructor-Apply</code>.</p>
+<p>Tuple elements evaluate strictly from left to right before their completed
+record is published. Effect construction requests the selected owner's supplied
+storage and initializes it locally with these retained operands; Pure Core uses
+its ordinary tuple cell. Effect nullary constructors use the same supplied
+nominal-record path. Code-only payload-constructor values allocate no closure
+record; generated wrappers do so only when lowered to ordinary Function.
+Persistent Bytes/String backing, large Int digits and actual closure captures
+follow the same selected-owner request, initialization and publication discipline.
+Known immediate values need no backing record.</p>
 <p>Those allocation and tag-inspection rules apply to ordinary data constructors.
 A newtype constructor and pattern have already lowered to validated wrap and
 unwrap conversions. <code>E-Newtype-Conversion</code> enters their child without a heap
@@ -298,374 +456,79 @@ heap unchanged.</p>
 over Boolean values. The left rules propagate a step in the left operand. The
 right rules apply only after the left operand is an integer value. The value
 rules compute the primitive result.</p>
-<h2 id="owner-free-scalar-native-execution">Owner-free scalar native execution</h2>
-<p>This section describes source-native scalar operands/results and zero-operand
-<code>void</code> calls in the admitted Linux x86-64 GNU profile. Supported integer
-representations are signed/unsigned 8-, 32- and 64-bit scalars and 64-bit
-<code>size_t</code>. These calls create no resource activation or owning source value.
-The ordinary source buffer library behavior remains described separately.</p>
-<p><code>NativeInterpret(S, body)</code> is a checked Core boundary installed for the program's
-required owner-free native effects. It is not a source expression. Independent
-validation checks its exact symbol identities, complete ordered Type/EffectRow
-instances and row discharge; it removes only the listed native instances.
-Ordinary outward effects still require their own interpretation.</p>
-<p>Entering this boundary evaluates <code>body</code> with a continuation boundary retaining
-<code>S</code> and the current lexical instantiation. Ordinary return removes that boundary
-and passes the value outward. A source-native request evaluates its operand once,
-then authenticates its original operation and checked symbol against the admitted
-binding. Its complete actual vector must match a listed instance under the
-request's and boundary's saved lexical instantiations. Every argument retains
-its declared kind and position, including unused row arguments. The native
-Type-only projection does not replace this complete source authority.
-A source-native request never selects an ordinary source handler or a legacy
-manifest binding. The native boundary and remaining continuation stay in place
-through the synchronous call and its report.</p>
-<p>Before calling native code, the machine traverses the checked operand paths,
-charges mathematical-integer magnitude work, and narrows each borrowed <code>Int</code>
-exactly into its declared representation. A value outside that representation's
-range produces canonical <code>Foreign.ConversionFailed(error)</code> before invocation.
-The error belongs to the original opaque <code>Foreign.ConversionError</code> type.
-Constructing this refusal report also requires work and storage admission; an
-internal refusal terminates without invoking native code.</p>
-<p>Successful preparation retains stable native operands in ABI order. It prepays
-bounded reply conversion and recording work and reserves the ordinary
-<code>Foreign.Returned</code> constructor slot before publishing <code>CallReady</code>. Binding,
-conversion, work or storage refusal before readiness invokes no native function.
-These checks do not establish that the external binary obeys its authored
-signature or foreign assumptions.</p>
-<p>The following three steps separate invocation, recording and reporting.
-<code>d</code> retains the exact admitted symbol/bridge and complete instantiated source
-arguments. <code>p</code> retains the prepaid recording/report allowance and reserved
-constructor slot. <code>native</code> denotes one synchronous external invocation under the
-contract's assumptions; <code>raw</code> is a native scalar or a void reply. <code>report</code>
-authenticates its expected representation, widens a scalar exactly to
-mathematical <code>Int</code>, or supplies <code>Unit</code> for void, and initializes the reserved
-constructor with canonical <code>Foreign.Returned</code>.</p>
-<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-scalar-native-call-steps"><h3 id="sequent-family-scalar-native-call-steps">scalar-native-call-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">native(d, operands) = raw</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Scalar-Native-Call</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, CallReady(d, operands, p), continuation) → CONFIG(heap, environment, CallReturned(d, raw, p), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Scalar-Native-Record</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, CallReturned(d, raw, p), continuation) → CONFIG(heap, environment, CallRecorded(d, raw, p), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">report(heap, d, raw, p) = heap_1, value</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Scalar-Native-Report</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, CallRecorded(d, raw, p), continuation) → CONFIG(heap_1, environment, value, continuation)</span></figcaption></figure></div></div></section></div>
-<p>Only <code>CallReady</code> can invoke the function, and that step consumes readiness.
-<code>CallReturned</code> retains no invocation capability. Recording is the next machine
-step: it retains the raw reply and its admitted report slot without charging
-work, allocating an Ash result, or performing a fallible check. No disposal,
-reporting or continuation failure can precede this recording step.</p>
-<p>Reporting consumes the allowance already deducted before invocation; it does
-not charge the caller's ledger again. Unsigned 64-bit replies preserve their
-full mathematical value. A <code>void</code> call reads no native result and reports
-<code>Foreign.Returned(())</code>. Integer construction retains the runtime's existing
-internal allocation limitations; a reserved constructor slot does not reserve
-all physical storage inside mathematical integers.</p>
-<p>A detectable internal failure after recording terminates evaluation without
-returning to readiness, publishing a final result or retrying the external call.
-This applies to report construction and later ordinary continuation work.
-Already performed native side effects remain performed. A new evaluation has
-fresh machine state and may make its own calls. Internal work/storage failures
-are not <code>Foreign.ConversionFailed</code> outcomes.</p>
-<p>An ordinary library may map an explicit bounded-copy <code>ConversionFailed</code> to a
-diagnostic-unavailable result while retaining the captured native status. In
-particular, absence of NUL within an admitted <code>copy_nul</code> bound does not require
-truncation or an empty diagnostic. This source policy cannot catch internal
-work/storage exhaustion or terminal post-call extraction failure, undo ownership
-disposition, retry the native call or retain its owner in an ordinary result.</p>
-<h2 id="common-scalar-preflight">Common scalar preflight</h2>
-<p>The pure common scalar checks invoke no native symbol. On a supported GNU64
-host, a successful check reports <code>Foreign.Returned</code> containing the original
-mathematical integer; only an out-of-range input reports
-<code>Foreign.ConversionFailed</code> with the canonical opaque error. Work or storage
-exhaustion and an unsupported host are terminal evaluator failures. The machine
-prices the check and reserves its complete report before publishing any
-constructor cell. A terminal refusal publishes no partial result. These checks
-create no resource activation, state token, native readiness or destructor
-obligation.</p>
-<p><code>Foreign.checked_nul</code> prepays a scan of the input's full UTF-8 byte length and
-its complete ordinary reply. No NUL byte, including for the empty string,
-produces <code>Returned(())</code>; any NUL produces <code>ConversionFailed</code> with the opaque
-error. Work or storage exhaustion is terminal and publishes no partial result.
-The pure scan performs no C call, prepares no pointer or owner, and leaves every
-later native-call conversion mandatory.</p>
-<p>A fixed non-callable sentinel is admitted from its original checked member and
-representation before native invocation. The GNU64 bridge passes all-one
-function-address bits as data in the declared ABI position, never forming or
-invoking a Rust function value. This target ABI is a foreign assumption; the
-declaration does not prove
-external C behavior. Work, operand storage and the
-complete ordinary reply remain admitted before C. Admission refusal publishes no sentinel
-value, grants no callable permission and makes no native call. Scalar reply and
-owner-disposition rules are unchanged.</p>
-<h2 id="source-resource-execution-with-native-owners">Source resource execution with native owners</h2>
-<p>The admitted product source resource scope combines an Ash initializer, acquire
-and finish functions, private data <code>D</code>, and an associated ordinary effect handler.
-This checkpoint supports opaque and initialized byte foreign owners with declared
-dependencies and complete ordered Type/Row owner formals, with a Type-kind owned
-identity. Acquisition admits scalar and NUL <code>String</code> inputs and exact declared
-enclosing-State operands. Its owner comes from a direct pointer result or an
-initialized opaque output slot alongside a scalar status and optional
-input-relative offset. Canonical report fields retain ABI order. Finish and host
-destruction contracts use the exact Current State and declared Enclosing pointer
-operands, with checked original scalar constants at declared scalar ABI positions
-and fixed non-callable sentinels at their exact function-address ABI positions.
-The machine narrows these fixed operands and admits the complete call before
-entering C. A <code>void</code> result has one unconditional disposition; a scalar result
-selects consumed or retained from the original total status alternatives. Each
-foreign symbol still retains its complete ordered Type and EffectRow arguments;
-the native Type-only projection does not replace them. Source-projected scalar
-teardown operands use the producer's explicit mappings to that owner's original
-destructor ABI positions.
-Exact borrowed scalar queries and lexical access/copy windows use the source
-provider's authenticated phase and owner.</p>
-<p>Ordinary pure module-global helpers transform only independent payloads inside
-these lifecycle computations. Same-module and imported calls use the ordinary
-function application rules and their complete Type/Row instances. Calling a
-helper neither transfers native State nor changes the selected source phase,
-owner or guard, and supplies no native-call permission.</p>
-<p>Before any Ash expression runs, program admission checks both acquisition and
-teardown bindings for every source resource scope against their exact original
-checked symbols. Reconstructed executable images must independently admit the
-original headers and defining acquire, finish and handler forests, then validate
-each final scope's copied occurrences, substitutions and fresh identities.
-Ordinary <code>NativeInterpret</code> grants no owner-call permission. An owner request
-requires the matching validated source scope, its current acquire or finish
-phase, exact copied request membership, and the complete effect instance under
-that scope's saved lexical instantiation.</p>
-<p>For an initialized byte owner, preflight projects the exact source leaf selected
-by its original <code>initialized_bytes</code> fact and checks the mathematical value in
-the GNU64 nonnegative <code>size_t</code> range. The path need not select a native ABI
-operand. A negative or unrepresentable extent returns <code>Foreign.ConversionFailed</code>
-before acquisition; work or storage refusal remains terminal. Readiness retains
-the checked extent without creating memory access or an owner. Infallible
-recording attaches that extent to the unique non-null guard under the declared
-initialization and writability assumption. A null return establishes no region.
-The resource's private payload cannot replace or enlarge this recorded extent.</p>
-<p>The initializer evaluates once in the preceding environment. Before native
-acquisition, the machine authenticates the original destructor and its total
-outcome contract, specializes its complete source domain using the full Type/Row
-owner and symbol mappings, and reserves
-scope and guard storage, checks each scalar conversion, and reserves the native
-report slots and recording/report work. A representable operand supplies its
-stable ABI scalar; a conversion refusal produces canonical
-<code>Foreign.ConversionFailed(error)</code> without invoking the native function. Missing
-bindings, malformed authority, unsupported representations and internal work or
-storage refusal cannot invoke acquisition.
-Full domain specialization precedes operand selection even for an address-only
-or fixed-operand destructor. Enclosing dependency selection compares complete
-State applications, including inherited phantom Rows.</p>
-<p>For acquisition, <code>d</code> retains the exact symbol, complete instance and sealed
-destructor. <code>p</code> retains the admitted inline guard and prepaid report storage.
-<code>g</code> is a unique guarded native address or the absence of an owner for a null
-reply. The generated typed bridge arms <code>g</code> immediately when the native call
-returns, before constructing an Ash result. The pointer remains inside that
-guard and is never an ordinary Ash value. The following steps consume readiness,
-record ownership, and publish the prepared report:</p>
-<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-native-owner-native-call-steps"><h3 id="sequent-family-native-owner-native-call-steps">native-owner-native-call-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">native(d, operands) = raw</span><span class="sequent-formula">arm(p, raw) = g</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Native-Owner-Call</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, CallReady(d, operands, p), continuation) → CONFIG(heap, environment, CallReturned(d, g, p), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Native-Owner-Record</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, CallReturned(d, g, p), continuation) → CONFIG(heap, environment, CallRecorded(d, g, p), continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">report_and_place(heap, continuation, d, g, p) = heap_1, continuation_1, value</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Native-Owner-Report</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, CallRecorded(d, g, p), continuation) → CONFIG(heap_1, environment, CallReported(value), continuation_1)</span></figcaption></figure></div></div></section></div>
-<p>Only <code>CallReady</code> invokes the native function. Its return retains no invocation
-capability. Recording is infallible, allocates no Ash result, and charges no
-additional work; it precedes disposal, reporting and continuation failure.
-Reporting uses the prepaid allowance and reserved constructor slots. For this
-owner-address result it produces the checked roles corresponding to
-<code>Foreign.Returned(Foreign.Readable(Foreign.Null))</code> or
-<code>Foreign.Returned(Foreign.Readable(Foreign.NonNull(state)))</code>. A non-null state
-contains the scope's activation key, not its address. The scope receives the
-unique guard before the state report becomes available to Ash evaluation.</p>
-<p>Ash acquisition policy then selects the resource codec's <code>Acquired(state, data)</code>
-or <code>Refused(error)</code> role. Publication requires the recorded owner of this exact
-activation; ordinary constructor creation cannot create ownership authority.
-A successful publication binds a non-owning access handle for the body and
-retains <code>D</code> in the scope. The body receives neither an owning value nor direct
-access to <code>D</code>; the admitted Ash handler uses its saved state and private data.
-Private <code>D</code> contains no native State token or view. A local enclosing State used
-by admitted acquisition or finish is separate from ordinary stored payloads;
-the runtime's sealed dependency and destruction operands also remain separate.
-Ordinary declared-dependency access handles in <code>D</code> retain their original
-identity, liveness and revocation obligations.
-Acquisition refusal executes no body. If native acquisition already returned a
-non-null owner, refusal destroys that unpublished owner once before delivering
-<code>NotAcquired(error)</code> under <code>scope</code> or <code>Failure(error)</code> under <code>acquired_only</code>.
-Null acquisition creates no destructor obligation.</p>
-<p>Associated ordinary operations preserve the nearest exact handler rule. A nearer
-ordinary source handler takes precedence over the resource handler. The resource
-publishes checked lexical forwarding for all associated methods; ordinary calls
-and constrained helpers request the corresponding operation with its unchanged
-operand and complete effect arguments.</p>
-<p>After selecting a source resource handler and before entering its clause, the
-machine authenticates the exact activation, unique live guard and original owner.
-It instantiates the request's value domain under the caller and traverses every
-typed position containing this resource's access family, including tuple and
-nominal constructor payloads. Each such value must be the non-owning access key of
-that selected activation; a state view, stale or donor key cannot replace it.
-The recorded private data does not authorize access. Work or storage refusal
-enters no resource clause. This check does not add an outer resource requirement
-to a nearer ordinary handler.</p>
-<p>Quarantine denies ordinary resource operations. An already running admitted
-dependent finish can obtain the exact local native State of its declared direct
-dependency while that owner is physically live. The selected source handler,
-typed State result, finishing guard and dependency slot must all agree. This
-exception cannot recover an ordinary scalar read, create another owner or grant
-a transitive native operand merely from membership in the lifetime closure.</p>
-<p>The admitted resource clause uses its lexical state/data and ordinary
-clause-owned <code>resume</code>; resumption continues the same activation without repeating
-acquisition. Repeated executions allocate distinct activation keys. Nested source
-resource scopes complete their own finish before their enclosing scope finishes.
-Outward capture moves the source boundary and its same unique owner into the
-continuation; resume restores that activation without acquisition or byte
-reinitialization. Ordinary outward rows survive exact native interpretation.</p>
-<p>A lexical copy window retains the exact selected provider, owner guard, family
-and fresh window key. Its sealed native interpretation covers only the original
-family's preserving operations with complete ordered actuals. A produced view
-retains its exact originating call and scalar keys. Before an extent query
-enters C, evaluated keys must equal the producing keys; a mismatch returns
-ordinary <code>ConversionFailed</code> and invokes no extent callback. Missing, stale or
-donor view/window/owner authority remains an admission failure. No window can
-survive suspension, owner completion or escape.</p>
-<p><code>copy_bytes</code> prepays the exact matching initialized extent and complete reply
-before reading. <code>copy_nul</code> admits both replies before scanning and pays before
-each address read, examining at most the nonnegative bound plus one terminator
-byte. It admits exact observed copy storage before publishing independent
-<code>Bytes</code>. Missing termination returns <code>ConversionFailed</code>, never truncation.
-Work/storage exhaustion is terminal and publishes no partial fallback. Null,
-unreadable and non-null empty views remain distinct. UTF-8 decoding is separate.
-Each native address read still relies on its original foreign validity contract.</p>
-<p>Output slots start at zero/null before C. Raw outcomes are recorded and any
-readable non-null owner enters its pending guard before fallible extraction,
-diagnostics or result publication. Invalid post-call <code>offset_into</code> extraction
-preserves that native outcome, disposes the unpublished partial owner and
-terminates; it cannot become ordinary pre-call <code>ConversionFailed</code> or replay C.
-A retained finish permits its listed completing diagnostics; a blocked owner
-permits no native access, including ordinary scalar Borrow. Consumed owners
-invalidate all same-owner aliases/views. A still-live enclosing owner remains
-available under its own exact permission.</p>
-<p>Before native acquisition, complete declared dependency arguments select exact
-preceding activation slots. All dependency metadata, destruction operands,
-counters and result storage are admitted before the callback. Consuming a child
-removes its lifetime edges once and restores its enclosing owners' close
-readiness. A live retained child blocks a consuming enclosing call before C
-entry, independently of aliases or report values. Retention quarantines the same
-owner and its transitive dependency closure, revoking ordinary source access.</p>
-<p>After ordinary producer-input validation and before entering C, mapped scalar
-inputs are projected and narrowed in original destructor ABI order. The complete
-native destruction vector and invocation/report storage are reserved before the
-call. An out-of-range capture returns ordinary <code>Foreign.ConversionFailed</code> with
-no native call or fallback owner; work or storage exhaustion remains terminal.
-Cleanup-only input leaves need not be operands of the producer's C ABI.</p>
-<p>The guard retains immutable native scalar copies, separately from <code>D</code>, source
-handlers and ordinary Finish arguments. A readable non-null direct result or
-typed output owner is guarded immediately on return, including an error outcome.
-Every host fallback uses the same reserved vector without Ash evaluation,
-scalar conversion, allocation or admission work. Ordinary Finish uses its own
-explicit arguments and latest <code>D</code>; it cannot replace the fallback snapshot.
-A consumed Finish prevents an additional host destructor call.</p>
-<p>Owned discard replaces abandoned source-body frames with their admitted finish
-computations, from inner to outer, retaining required outer resource handlers and
-live guards. It saves no abandoned body value and builds no <code>Scope</code> or <code>Success</code>
-wrapper for it. Source finish can request an ordinary outside interpreter and
-resume its own running computation; neither that running finish nor its required
-outside interpreter may be skipped by discard. Internal admission and storage
-refusals precede capture consumption and ownership transfer.</p>
-<p>An acquisition discarded before publication revokes its pending guard once; it
-does not manufacture <code>D</code> or invoke source finish. If capture preceded native
-allocation, there is no destructor obligation. Normal acquisition refusal keeps
-its existing independent report.</p>
-<p>Normal body return saves its value and invokes the admitted Ash finish once.
-Before the Current teardown, the machine authenticates the state token's exact
-live activation and reserves its report storage while the scope still owns the
-guard. Only successful preflight can detach that guard for consumption. The
-consuming unconditional native <code>void</code> call destroys the address once and produces
-a non-owning consumed receipt with the original authority, before Ash report
-construction. Its returned-to-recorded transition is infallible. The prepaid
-report supplies <code>Foreign.Returned(Foreign.Consumed(()))</code>; source finish maps it
-to the resource codec's consumed completion. The scope records consumption
-before publishing its report. Under <code>scope</code>, the source result remains
-<code>Completed(body_value, completion)</code>. Under <code>acquired_only</code>, normal consumed
-completion produces <code>Success(body_value)</code>; neither codec flattens a nested body
-result. A witnessed consumed completion mapped to <code>ConsumedFailure(error)</code> is
-terminal under <code>acquired_only</code>, reported as <code>runtime.resource-completion</code>, and
-publishes no success or acquisition failure. Recorded consumption still prevents
-a second native release. On owned discard, a consumed finish returning
-<code>ConsumedFailure(error)</code> is terminal <code>runtime.resource-completion</code> under either
-codec and publishes no abandoned scope report. Normal <code>scope</code> completion instead
-retains <code>ConsumedError(error)</code> alongside the saved body result. An admitted
-native retained disposition records the same owner before report
-construction and revokes its ordinary source access. Normal <code>scope</code> completion
-reports <code>Completed(body_value, RetainedError(error))</code>. On owned discard, witnessed
-<code>Retained(state, error)</code> is terminal <code>runtime.resource-completion</code>; it publishes
-no abandoned body or scope report and does not continue the discarding clause.
-The owner's separately admitted host destructor may later consume that same
-owner once. That host release cannot turn failed source completion into success.
-Host destruction attempts dependents before their enclosing owners. A successful
-host consumption removes the same recorded edges; a retained host disposition
-keeps those edges and blocks enclosing destruction. That incomplete destruction
-is terminal, is not retried and supplies no successful source cleanup report.
-Unresolved native objects remain protected until process termination.</p>
-<p>For scalar-status teardown, readiness prepays the complete raw-status
-traversal, reply conversion and recording/report work, and reserves both the
-successful report cells before C. The typed
-callback returns a raw scalar; only the original finite alternatives select
-consumed or retained. The machine records that disposition and dependency-edge
-changes before converting or reporting the result. A readable result produces
-<code>Foreign.Returned(Foreign.Consumed(status))</code> or
-<code>Foreign.Returned(Foreign.Retained(status))</code>. Raw scalar results must always be
-readable; a contract declaring an unreadable scalar rejects before execution.
-A post-call extraction failure preserves the witnessed disposition and
-terminates without a raw reply, <code>ConversionFailed</code>, or source continuation.
-It cannot restore consumed State or replay teardown. The same retained owner
-remains subject to its separately admitted safe host destruction. Pre-call
-conversion refusal remains an ordinary <code>Foreign.ConversionFailed</code> with no C
-entry. Complete reply storage is admitted before entry;
-converting the admitted GNU64 scalar to mathematical <code>Int</code> requires no later
-allocation. Work or storage exhaustion remains terminal.</p>
-<p>A retained dependent blocks any Current teardown before C. Its report is
-<code>Foreign.Returned(Foreign.BlockedDependent)</code> with no scalar payload or
-fabricated native status. Host destruction selects its disposition from the
-same original contract, records it without an Ash result, and preserves the
-existing one-attempt dependency order and incomplete-destruction protection.
-Successful later host consumption cannot change an earlier source
-<code>RetainedError</code> or failed discard.</p>
-<p>An internal failure after a native return never retries the call or recreates
-readiness. A live guard, including one not yet published to the body, invokes its
-sealed original destructor once during host destruction. A consumed receipt
-has no destructor callback, so failure during finish reporting cannot repeat
-teardown. Host destruction allocates no Ash result and runs no source finish or
-handler. Foreign side effects remain performed; internal exhaustion is not a
-source conversion or completion outcome. A fresh evaluation has fresh machine
-state and may perform its own acquisition. These rules assume the authored
-foreign contract holds; linking and checked Core do not prove external binary
-validity, and divergence or external process termination provides no eventual
-release guarantee.</p>
-<h2 id="common-initialized-byte-access">Common initialized byte access</h2>
-<p><code>Foreign.byte_read&lt;S&gt;</code> and <code>Foreign.byte_write&lt;S&gt;</code> borrow an initialized live
-state from the admitted source acquire, handler or finish phase. The call retains
-its selected original canonical occurrence and complete ordered caller and
-defining declaration Type/Row instances. Runtime admission authenticates that
-correspondence, the exact activation and original owner, and the unique live
-guard. A compatible state type, stale or donor token, consumed state, or private
-data cannot replace any of these facts. Borrowing does not consume the guard or
-change ordinary handler selection and precedence.</p>
-<p>The original guard supplies the initialized writable extent. After ordinary
-strict argument evaluation, admission checks the index in the GNU64 <code>size_t</code>
-range and against that extent before inspecting or charging conversion of a
-write's byte value. A valid byte is an integer in <code>[0, 255]</code>. An invalid index or
-byte returns canonical <code>Foreign.ConversionFailed(error)</code> without reading or
-writing native memory. A zero extent remains owned and refuses every index.
-Internal work or storage exhaustion is terminal and supplies no conversion
-result. A valid index with insufficient byte-conversion work therefore differs
-from an invalid index whose complete refusal report is affordable.</p>
-<p>Before a read or write callback, the machine disposes owned call-specialization
-metadata, charges bounded operation and result work, and fallibly reserves and
-initializes the complete reply cell. Readiness retains only that unpublished
-cell and a borrowed guard with the checked index. A read returns an unsigned byte;
-converting <code>[0, 255]</code> to the mathematical <code>Int</code> uses existing inline integer
-storage and cannot allocate or refuse. A write has an already checked byte and
-an initialized Unit reply. Both callbacks fill or preserve the prepared payload
-and publish its location without further charging, reservation or allocation.
-Rejected write admission leaves native memory unchanged.</p>
-<p>In the following steps, <code>ready(g, index, slot)</code> already authenticates the original
-call and live guard and prepays the complete reply. <code>slot</code> belongs exclusively to
-readiness; these steps have no fallible admission premise after native access.</p>
-<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-initialized-byte-access-steps"><h3 id="sequent-family-initialized-byte-access-steps">initialized-byte-access-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">read_byte(g, index) = byte</span><span class="sequent-formula">fill_returned(slot, Int(byte)) = heap_1, value</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Byte-Read</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, ByteReadReady(g, index, slot), continuation) → CONFIG(heap_1, environment, value, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">write_byte(g, index, byte) = ()</span><span class="sequent-formula">publish_returned_unit(slot) = value</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Byte-Write</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, ByteWriteReady(g, index, byte, slot), continuation) → CONFIG(heap, environment, value, continuation)</span></figcaption></figure></div></div></section></div>
-<p>The returned value is ordinary <code>Foreign.Returned(Int)</code> or
-<code>Foreign.Returned(())</code>; neither reply owns or exposes the state. Later continuation
-failure cannot replay the callback. The scope still owns exactly one release
-obligation until teardown consumes it. External initialization and writability
-remain foreign-contract assumptions; checked source, binding and image admission
-do not prove the external binary's memory validity. These byte primitives do
-not grant separate copy-window, dependency or outward-control permission.</p>
+<h2 id="native-symbol-execution">Native symbol execution</h2>
+<p>Write <code>a_p</code> for an Address value whose private data pointer is <code>p</code>, and <code>a_null</code>
+for the null Address. These are metavariables for existing opaque runtime values,
+not Ash constructors, literals, integers or image constants. Pointer equality
+here means data-pointer equality, including null; it establishes neither
+allocation identity nor validity. Address copies preserve the pointer and
+create no allocation, release or resource dependency.</p>
+<p>Let <code>f_null</code>, <code>f_is_null</code> and <code>f_equal</code> denote the canonical builtin function
+values exported as <code>null</code>, <code>is_null</code> and <code>equal</code> by <code>@builtin.foreign</code>. Ordinary
+application evaluates the function and its one argument before these rules use
+the existing <code>APPLY_ARGUMENT</code> frame. <code>tuple_fields(heap, value)</code> follows only
+ordinary heap aliases and reads an ordinary tuple cell in source order; it does
+not inspect memory behind an Address. The three value rules leave the Ash heap
+and continuation below the application unchanged and perform no foreign call.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-address-value-steps"><h3 id="sequent-family-address-value-steps">address-value-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Address-Null</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, (), APPLY_ARGUMENT(f_null) :: continuation) → CONFIG(heap, environment, a_null, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">b is true exactly when p is the null data pointer</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Address-Is-Null</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, a_p, APPLY_ARGUMENT(f_is_null) :: continuation) → CONFIG(heap, environment, b, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">tuple_fields(heap, pair_value) = (a_p, a_q)</span><span class="sequent-formula">b is true exactly when p and q are equal data pointers</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Address-Equal</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, pair_value, APPLY_ARGUMENT(f_equal) :: continuation) → CONFIG(heap, environment, b, continuation)</span></figcaption></figure></div></div></section></div>
+<p>The internal term <code>NativeInterpret(body, interpretations)</code> denotes the validated
+Effect Core boundary described in <a href="/ash/spec/elaboration/#surface-erasure">Elaboration</a>.
+Its entries retain exact original symbols and their effect instances.
+<code>NATIVE(interpretations, boundary_environment)</code> is a lexical continuation
+boundary, not a source value, host token or resource owner. Entering it preserves
+the body environment; ordinary body completion removes only that boundary.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-native-boundary-steps"><h3 id="sequent-family-native-boundary-steps">native-boundary-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Native-Enter</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, NativeInterpret(body, interpretations), continuation) → CONFIG(heap, environment, body, NATIVE(interpretations, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Native-Body-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value, NATIVE(interpretations, boundary_environment) :: continuation) → CONFIG(heap, environment_value, value, continuation)</span></figcaption></figure></div></div></section></div>
+<p>A symbol request evaluates its operand with <code>E-Perform-Operand</code> below. Boundary
+selection uses the same innermost-first order as ordinary handlers and cells.
+In the rules below, <code>prefix</code> contains exactly the continuation entries nearer
+than the displayed native boundary. No entry in it may accept the requested
+instance. Thus a nearer matching source handler uses <code>E-Request-Select</code> instead,
+without looking up or invoking a native binding. An unrelated nearer boundary
+is crossed by the search but remains in the continuation.</p>
+<p><code>entry</code> retrieves the exact original symbol for the operation from the selected
+boundary, together with its handled effect instance. That instance is compared
+under the boundary's saved lexical instantiation, while the request uses its own
+saved instantiation. <code>linked_binding(symbol)</code> retrieves the generated host's typed bridge callback,
+not a C callback argument or an Ash function pointer. It is associated
+with that same original symbol; equal display names or operation coordinates
+alone do not authenticate a replacement binding.</p>
+<p><code>marshal(heap, domain, operand_value) = arguments, keepalive</code> is metanotation
+for the supported source-to-C mapping, not a source operation or a new memory
+interface. For whole Unit and <code>()</code>, the pointer vector and <code>keepalive</code> are empty.
+For whole Address and <code>a_p</code>, they are <code>[p]</code> and empty. For whole Bytes and <code>bytes</code>,
+they are <code>[backing(bytes)]</code> and <code>[bytes]</code>. For a flat Address/Bytes tuple,
+<code>tuple_fields</code> supplies its fields and these pointer vectors and retained Bytes
+values concatenate in source order. <code>backing(bytes)</code> denotes its existing
+readonly backing pointer; retaining that Bytes value keeps this backing alive.
+No length, terminator, encoding conversion, copying or mutable view is added.
+Empty Bytes promises no readable byte, and its pointer does not encode emptiness.
+Unsupported source domains have already been rejected statically.</p>
+<p>The callback-outcome premise describes one synchronous external invocation, not
+a pure query or a retryable test. Its Bytes <code>keepalive</code> values remain retained
+from marshaling through callback return and result conversion. An Address reply
+preserves its pointer, including null; a C void reply becomes <code>()</code> without
+reading a C result. Both rules consume only the request frame and return to the
+same continuation, including every crossed and selected boundary. They create
+no clause owner, captured continuation, resume or discard capability.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-native-request-steps"><h3 id="sequent-family-native-request-steps">native-request-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">requested = instantiate(instance(operation), request_instantiation)</span><span class="sequent-formula">continuation = prefix ++ NATIVE(interpretations, boundary_environment) :: outer</span><span class="sequent-formula">no boundary in prefix accepts requested</span><span class="sequent-formula">entry(interpretations, operation) = symbol, handled</span><span class="sequent-formula">instantiate(handled, instantiation(boundary_environment)) = requested</span><span class="sequent-formula">linked_binding(symbol) = callback</span><span class="sequent-formula">marshal(heap, domain(symbol), operand_value) = arguments, keepalive</span><span class="sequent-formula">result_type(symbol) = Address</span><span class="sequent-formula">callback(arguments) returns data pointer p while keepalive is retained</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Native-Address-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, operand_value, REQUEST(operation, request_instantiation) :: continuation) → CONFIG(heap, environment_value, a_p, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">requested = instantiate(instance(operation), request_instantiation)</span><span class="sequent-formula">continuation = prefix ++ NATIVE(interpretations, boundary_environment) :: outer</span><span class="sequent-formula">no boundary in prefix accepts requested</span><span class="sequent-formula">entry(interpretations, operation) = symbol, handled</span><span class="sequent-formula">instantiate(handled, instantiation(boundary_environment)) = requested</span><span class="sequent-formula">linked_binding(symbol) = callback</span><span class="sequent-formula">marshal(heap, domain(symbol), operand_value) = arguments, keepalive</span><span class="sequent-formula">result_type(symbol) = Unit</span><span class="sequent-formula">callback(arguments) returns C void while keepalive is retained</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Native-Void-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, operand_value, REQUEST(operation, request_instantiation) :: continuation) → CONFIG(heap, environment_value, (), continuation)</span></figcaption></figure></div></div></section></div>
+<p>These transitions apply under the declaration's assumed native signature and
+readonly backing contract. The compiler does not verify foreign correctness or
+termination. For fixed bindings and a fixed external outcome sequence, each
+returning invocation determines one result and one continuation step. A callback
+that does not return supplies no return step; the rules promise no progress of
+foreign code. External effects are not represented by an additional Ash heap or
+foreign-world object, and Unit-returning calls may still have external effects.</p>
+<p>Internal work/storage, binding or callback-interface failures are terminal
+runtime failures, not source error constructors or alternative successful
+transitions. Failure after an invocation does not retry it or undo its external
+effects. Bindings express ordinary error results and scoped cleanup in Ash; an
+Address result alone triggers no release. Native code must not mutate or free
+managed Bytes. Retained or returned backing pointers require the binding module
+to keep the original Bytes alive for every later native use; producing <code>a_p</code>
+does not capture or infer this relation.</p>
+<p>No arbitrary memory read/write, Address-to-Bytes/String conversion, numeric ABI,
+out-pointer storage or compiler-managed foreign lifecycle is supplied. Ordinary
+cleanup and resource completion rules below continue to govern Ash control.</p>
 <h2 id="effect-handlers-and-completion">Effect handlers and completion</h2>
 <p><code>HANDLER(handler, instance, clauses, environment)</code> is an ordered lexical
 continuation boundary. <code>REQUEST(operation, instantiation)</code> and
@@ -673,24 +536,25 @@ continuation boundary. <code>REQUEST(operation, instantiation)</code> and
 request retains its lexical instantiation. <code>CLAUSE(handler, owner, state)</code> is
 the selected clause boundary; its state is either <code>live(captured)</code> or
 <code>consumed</code>. The captured value owns the selected handler boundary and all
-intervening continuation entries up to the request. It contains no source
-value and cannot escape the clause.</p>
-<p>Entering a handler evaluates its body with a new innermost boundary. Ordinary
-completion removes that boundary and passes the value outward:</p>
+intervening continuation entries up to the request. The captured continuation
+is not a source value. Except for the checked Store transfer below, its owner
+remains in the clause until consumed.</p>
+<p>Entering an ordinary handler evaluates its body with a new innermost boundary.
+Ordinary completion removes that boundary and passes the value outward:</p>
 <div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-handler-boundary-steps"><h3 id="sequent-family-handler-boundary-steps">handler-boundary-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Handle-Enter</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, handle body &amp; instance { clauses }, continuation) → CONFIG(heap, environment, body, HANDLER(handler, instance, clauses, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Handle-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value, HANDLER(handler, instance, clauses, handler_environment) :: continuation) → CONFIG(heap, environment_value, value, continuation)</span></figcaption></figure></div></div></section></div>
 <p>The static handler identity determines <code>handler</code>. Its clauses are exhaustive
 for <code>instance</code>, so ordinary body return and operation selection are the only
 reachable ways to leave the boundary.</p>
-<p>A request first evaluates its one operand. For a non-source-native operation,
-once that operand is a value, <code>select_nearest</code> searches outward for the innermost accepting source-handler
-or cell boundary. The source-handler branch below requires its exact effect
+<p>A request first evaluates its one operand. Once that operand is a value,
+<code>select_nearest</code> searches outward for the innermost accepting source-handler,
+cell or native interpretation boundary. The source-handler branch below requires its exact effect
 identity and instantiated type arguments to equal the operation's instance,
-with no nearer accepting cell boundary. The request saves its lexical instantiation
+with no nearer accepting cell or native interpretation boundary. The request saves its lexical instantiation
 before operand evaluation; each candidate uses its own saved handler context.
 It returns the matching clause, the handler's saved
 environment, an owner identity, the moved segment through that boundary, and
 the continuation outside it:</p>
-<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-request-steps"><h3 id="sequent-family-request-steps">request-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Perform-Operand</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, perform operation operand, continuation) → CONFIG(heap, environment, operand, REQUEST(operation, instantiation(environment)) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">operation is not a source-native symbol</span><span class="sequent-formula">requested = instantiate(instance(operation), request_instantiation)</span><span class="sequent-formula">select_nearest(continuation, requested) = clause, handler_environment, handler, owner, captured, outer</span><span class="sequent-formula">no nearer cell boundary accepts requested</span><span class="sequent-formula">clause = operation pattern =&gt; body</span><span class="sequent-formula">match(heap, operand_value, pattern) = bindings</span><span class="sequent-formula">clause_environment = extend(handler_environment, bindings)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Request-Select</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, operand_value, REQUEST(operation, request_instantiation) :: continuation) → CONFIG(heap, clause_environment, body, CLAUSE(handler, owner, live(captured)) :: outer)</span></figcaption></figure></div></div></section></div>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-request-steps"><h3 id="sequent-family-request-steps">request-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Perform-Operand</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, perform operation operand, continuation) → CONFIG(heap, environment, operand, REQUEST(operation, instantiation(environment)) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">requested = instantiate(instance(operation), request_instantiation)</span><span class="sequent-formula">select_nearest(continuation, requested) = clause, handler_environment, handler, owner, captured, outer</span><span class="sequent-formula">no nearer cell or native interpretation boundary accepts requested</span><span class="sequent-formula">clause = operation pattern =&gt; body</span><span class="sequent-formula">match(heap, operand_value, pattern) = bindings</span><span class="sequent-formula">clause_environment = extend(handler_environment, bindings)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Request-Select</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, operand_value, REQUEST(operation, request_instantiation) :: continuation) → CONFIG(heap, clause_environment, body, CLAUSE(handler, owner, live(captured)) :: outer)</span></figcaption></figure></div></div></section></div>
 <p>The move performed by <code>E-Request-Select</code> removes the selected handler and every
 intervening nonmatching boundary while the clause runs. An operation requested
 directly by that clause therefore reaches only handlers in <code>outer</code>. Row order
@@ -714,9 +578,10 @@ segment as executable body control. It has no operand. Checked discard retains
 the clause continuation and its surrounding control, closes owned abandoned
 scopes, then returns unit at the discard expression:</p>
 <div class="sequent-document"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">split_owner(continuation, handler, owner) = clause_prefix, live(captured), outer</span><span class="sequent-formula">closing = owned_close_control(captured)</span><span class="sequent-formula">ownership validation and fallible initial preparation succeed</span><span class="sequent-formula">remaining = clause_prefix ++ CLAUSE(handler, owner, consumed) :: outer</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Discard</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, discard(handler, owner), continuation) → CONFIG(heap, environment, (), closing ++ CLOSE :: remaining)</span></figcaption></figure></div></div>
-<p>Here <code>owned_close_control</code> retains cell, registration and armed cleanup owners
-in structural innermost-to-outermost order. A contained live clause contributes
-its capture recursively at that clause's position and is consumed once;
+<p>Here <code>owned_close_control</code> retains cell, Store, registration and armed cleanup
+owners in structural innermost-to-outermost order. A contained live clause
+contributes its capture recursively at that clause's position and is consumed
+once;
 consumed clauses contribute no capture. Non-owning associations do not add
 owners. <code>CLOSE</code> denotes required completion of this close operation: after the
 last owner closes it returns <code>()</code> into the unchanged clause continuation.
@@ -742,6 +607,79 @@ boundary unreachable from accepted source. If one appears after successful
 validation, evaluation reports an internal malformed-Core or machine failure.
 Ash has no source-level
 unhandled-operation, abort, exception, cancellation, or unwind result.</p>
+<h2 id="scoped-retained-control-execution">Scoped retained-control execution</h2>
+<p>A Store acquisition evaluates its <code>Unit</code> initializer once in the preceding
+environment. Successful preparation creates a fresh activation <code>a</code>, its opaque
+non-owning handle, an initially empty slot collection and its lexical identity
+binding. The Store boundary owns the slots and release; copying a handle or a
+key does not copy either owner. Failed preparation publishes no activation or
+handle. As with a cell, the body runs only after acquisition succeeds.</p>
+<p>For a private handler, the Store operand is evaluated once before its body.
+The actual handle must name the live authenticated Store and the driver must
+be outside every active root for that activation. After fallible preparation,
+the machine registers a root completion and enters the ordinary handler with
+that root immediately outside it. The handler association is non-owning. The
+root remains until the branch's actual clause suffix, cleanup and other required
+completion have returned; removing the selected handler while its clause runs
+does not remove the root.</p>
+<p>The following rules describe successful moves. <code>STORE(a, S)</code> is the unique
+live Store boundary for activation <code>a</code>; <code>S</code> contains its slots and active-root
+state. <code>STORE_INIT</code> saves the descriptor, body and preceding environment while
+the initializer runs. <code>bind_store</code> binds the fresh identity and handle without
+placing ownership in the ordinary value heap. <code>ROOT_INIT</code> saves the handler
+and its lexical environment while its Store operand is evaluated; <code>ROOT(a)</code> is
+its branch-completion marker. The handler identity is supplied by the static
+handler just as in <code>E-Handle-Enter</code>. A key
+<code>k</code> names <code>a</code>, a slot and a generation, without owning the slot. <code>store_at</code>
+finds the actual boundary in the continuation, and <code>replace_store</code> changes only
+that boundary's state.
+The helpers authenticate the selected private handler, owner, activation and
+interpreter context and perform all fallible preparation before the indicated
+commit. <code>register_root</code> adds one active root; <code>spend</code> empties the selected slot
+and registers the restored root; <code>retire_root</code> removes the matching active root.
+<code>restore</code> reinstalls the moved control in its original order. The
+<code>SOME_ADAPTER</code> frame and <code>none_adapter</code> control denote the ordinary result
+construction retained for the current consumer; they are not source values.</p>
+<div class="sequent-document"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Store-Initialize</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, resource Store&lt;N,D&gt; store = initializer { body }, continuation) → CONFIG(heap, environment, initializer, STORE_INIT(N, D, store, body, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">acquisition preparation succeeds &amp; fresh activation a and empty state S</span><span class="sequent-formula">bind_store(store_environment, N, store, a) = body_environment</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Store-Acquire</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, (), STORE_INIT(N, D, store, body, store_environment) :: continuation) → CONFIG(heap, body_environment, body, STORE(a, S) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Private-Operand</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, handle body &amp; instance using store { clauses }, continuation) → CONFIG(heap, environment, store, ROOT_INIT(handler, instance, clauses, body, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">value is the authenticated handle for activation a</span><span class="sequent-formula">store_at(continuation, a) = STORE(a, S)</span><span class="sequent-formula">driver admission and root preparation succeed</span><span class="sequent-formula">remaining = replace_store(continuation, a, register_root(S))</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Private-Enter</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value, ROOT_INIT(handler, instance, clauses, body, handler_environment) :: continuation) → CONFIG(heap, handler_environment, body, HANDLER(handler, instance, clauses, handler_environment) :: ROOT(a) :: remaining)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">split_owner(continuation, handler, owner) = prefix, live(captured), outer</span><span class="sequent-formula">owner belongs to the nearest private root for activation a</span><span class="sequent-formula">store_at(outer, a) = STORE(a, S)</span><span class="sequent-formula">reserve_slot_and_transfer(S, captured) = reserved, k</span><span class="sequent-formula">committed = commit_retention(reserved, captured)</span><span class="sequent-formula">remaining = prefix ++ CLAUSE(handler, owner, consumed) :: replace_store(outer, a, committed)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Retain-Commit</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, retain(handler, owner), continuation) → CONFIG(heap, environment, k, remaining)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">store_at(continuation, a) = STORE(a, S)</span><span class="sequent-formula">lookup(S, k) = live(captured)</span><span class="sequent-formula">driver and current interpreter are admitted for a</span><span class="sequent-formula">prepare_restore(S, k, captured) succeeds</span><span class="sequent-formula">remaining = replace_store(continuation, a, spend(S, k))</span><span class="sequent-formula">restored = restore(captured, ROOT(a) :: SOME_ADAPTER :: remaining)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Continue-Live</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, continue(a, k), continuation) → CONFIG(heap, environment, (), restored)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">store_at(continuation, a) = STORE(a, S)</span><span class="sequent-formula">driver is admitted for a</span><span class="sequent-formula">lookup(S, k) = absent⊸r-spent</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Continue-Absent</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, continue(a, k), continuation) → CONFIG(heap, environment, none_adapter, continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">retire_root(continuation, a) = remaining</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Retained-Root-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, value, ROOT(a) :: continuation) → CONFIG(heap, environment, value, remaining)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">active_roots(S) = 0</span><span class="sequent-formula">every slot in S is empty</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Store-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, value, STORE(a, S) :: continuation) → CONFIG(heap, environment, value, continuation)</span></figcaption></figure></div></div>
+<p>In <code>E-Retain-Commit</code>, the selected clause continues with <code>k</code> and its consumed
+owner; its suffix has not been skipped. The slot uniquely owns the captured
+control and its nested live or consumed owners. A failed reservation or move
+preparation leaves the clause's original owner intact and publishes no key.
+Slot reuse assigns a generation that cannot alias a previous key; exhaustion
+fails rather than wrapping into a live generation.</p>
+<p>Both source continue callables evaluate their Store operand before their key.
+For a live generation, the machine prepares every fallible part of restoration
+before spending the slot. It then installs the captured segment above a fresh
+<code>ROOT(a)</code>, the <code>SOME_ADAPTER</code> and the actual current consumer. The restored
+segment receives <code>()</code> as the checkpoint reply. When it returns an answer A,
+the adapter constructs <code>Some(A)</code> and delivers it to that consumer, including
+when A is an answer from a later checkpoint. It does not return to the earlier
+transferring clause. An absent or spent key runs the ordinary <code>None</code> adapter
+without executing captured control. Adapter allocation occurs on the selected
+path, after restored control returns on the live path, not during preparation.
+Failure before a live move commits leaves the slot intact.</p>
+<p>A checkpoint before an inner <code>resume</code> moves its live nested clause owner; one
+after <code>resume</code> preserves that owner's consumed state and remaining suffix. A
+checkpoint in running cleanup moves its saved body value and unfinished action
+completion without making the action eligible for another invocation. A
+subsequent checkpoint may move that same running completion again. A restored
+branch that yields returns its fresh key to the current consumer, which may
+continue it again.</p>
+<p>The Store-selected <code>Probe&lt;N&gt;.quiescent</code> returns <code>true</code> exactly when its active
+root count is zero and every slot is empty; otherwise it returns <code>false</code>.
+Driver admission is checked before ordinary nearest-handler selection, so an
+intercepting source handler does not authorize a branch to drive its own Store.
+At normal Store return, the boundary checks the same empty condition before
+release. A checked outer discard closes an owned Store only after its required
+actions and other closing control establish that condition. Empty library
+queues and answer constructors do not change the Store's ownership state.</p>
+<p>Internal failure disposal follows actual owned active and stored control
+iteratively, without releasing an owner twice. If teardown cannot obtain its
+required working storage, it reports incomplete teardown and may leave residual
+owners unreleased. It does not promise source cleanup or roll back already
+performed effects. Missing owners, forged associations or a nonempty normal
+close after successful validation are internal failures, not source recovery
+branches.</p>
 <h2 id="scoped-cell-execution">Scoped cell execution</h2>
 <p>A cell scope owns one current payload root. Legacy <code>resource cell&lt;R&gt;</code> scopes
 retain integer payloads and their unary API. Generic <code>Cell.Cell&lt;R,T&gt;</code> scopes
@@ -801,10 +739,9 @@ terminates execution with incomplete teardown; it is neither a preparation
 refusal nor a source cleanup transition.</p>
 <p>An exact source handler's intercepted read returns its actual reply, and an
 intercepted write performs no builtin replacement. Clause, other-handler and
-resumed-computation writes still update the slot in control order. Merely
-reading, replacing or dropping a payload containing native access neither
-consumes its native owner nor restores quarantined authority. A subsequent
-native operation must pass the ordinary native liveness checks.</p>
+resumed-computation writes still update the slot in control order. Reading,
+replacing or dropping an Address payload performs no native memory operation
+and creates no release obligation.</p>
 <p>An outward resource-free request may capture a cell boundary. Capture moves
 the owned scope into the continuation; resume moves it back in its original
 order. Neither movement changes live-cell usage or duplicates a payload.
@@ -821,54 +758,6 @@ Internal disposal is not a source cleanup transition. Divergence remains
 divergence, and no abort, destructor callback, cancellation or foreign cleanup
 path is added. Resource-free Pure execution allocates no resource registry,
 resource frame or live cell.</p>
-<h2 id="scoped-native-buffer-execution">Scoped native-buffer execution</h2>
-<p>The passive Ash library <code>libraries/native_buffer.ash</code> supplies buffer policy.
-<code>resource Buffer.Buffer&lt;R&gt; b = length { body }</code> uses the common declared-source
-resource machine and the checked <code>acquired_only</code> codec, not a fixed evaluator
-adapter. The current generated bridge profile is <code>x86_64-unknown-linux-gnu</code>.
-Native execution requires the generated linked host; ordinary interpreted
-execution refuses the missing binding before running Ash.</p>
-<p>The initializer runs once before acquisition. Length must be positive and at
-most <code>2^63 - 1</code>, within the selected host size/pointer-offset bounds. The
-library's checked conversions and native operand preflight return
-<code>Failure(InvalidLength)</code> without entering C for an invalid length. For a valid
-initialized extent <code>n</code>, common readiness charges its proportional <code>n + 2</code>
-initialization/fixed-release work before calling C, in addition to ordinary
-extent validation and complete guard/report/publication admission. Arithmetic
-overflow or insufficient internal work/storage is terminal, with no native
-entry, publication, retry or limit increase. Earlier initializer effects remain
-committed.</p>
-<p><code>calloc(n, 1)</code> returning null yields <code>Failure(AllocationFailed)</code> without a body
-or access activation. Its checked successful outcome promises initialized,
-writable zeroed bytes; this is a foreign assumption tested with real libc, not
-an allocator guarantee inferred by the compiler. The admitted guard owns the
-same native allocation through acquisition, body and finish until consumption.
-Original source header, copied call/Type/Row correspondence, live activation and
-the selected exact guard remain separate authorities. Address reuse or a
-same-shaped donor never revives access.</p>
-<p>Ordinary exact operation overrides retain precedence. The selected associated
-source handler obtains local authenticated State; common byte primitives check
-extent, initialization and write permission. <code>length</code> returns the stored <code>Int</code>.
-<code>read</code> returns <code>Success(byte)</code> in <code>[0, 255]</code> or <code>Failure(InvalidIndex)</code>.
-<code>write</code> checks the index before byte conversion, returning <code>InvalidIndex</code> or
-<code>InvalidByte</code> inside <code>Failure</code> as appropriate. It prepares the ordinary success
-value and the common complete reply before mutation. Refusal leaves bytes
-unchanged; success returns <code>Success(())</code>. Invalid Core/activation authority and
-internal exhaustion are terminal, never ordinary library errors.</p>
-<p>Normal completion runs inner cleanup with required outer resources live, then
-calls the checked <code>free</code> finish once and returns <code>Success(body_value)</code>. A body
-error or nested <code>Outcome</code> remains inside that success. Capture/resume moves the
-same owner. Owned discard skips the abandoned suffix and wrapper, runs admitted
-finish in structural order, then continues the discarding clause. An acquisition
-inside running cleanup completes normally with its own wrapper. Neither running
-cleanup nor required outside completion may be abandoned.</p>
-<p>Internal failure uses the common safe host-destruction/dependency rules without
-replaying source finish or undoing earlier writes. A destruction failure
-preserves the primary error and reports incomplete cleanup. Fixed release
-reservation does not promise eventual release under divergence, process death
-or a dishonest foreign contract. Common runtime guards remain; the former
-handwritten native-buffer adapter and special dispatch are absent. Cell behavior
-is unchanged.</p>
 <h2 id="synchronous-hook-execution">Synchronous hook execution</h2>
 <p><code>hook H { body }</code> enters an exact identity handler for the qualifying hook API.
 Its <code>publish</code> clause resumes with the incoming payload unchanged. An inner root
@@ -976,18 +865,24 @@ errors <code>22, 11</code>, yielding <code>72211</code>. The corresponding norma
 dependency checks, promise native release, or convert internal failure into a
 source outcome.</p>
 <h2 id="observation">Observation</h2>
-<p>Successful evaluation of the generated entry application retains the heap
-with the result value. The observation pairs that value with the closed result
+<p>Successful evaluation retains root backing through result observation and
+required completion. The existing host observation foundation retains the
+observed root storage after successful ownership transfer and releases it with
+its last observation owner; no closed custom region remains live and no value
+is relocated. This is distinct from source region access or a source finalizer.
+The result value remains paired with its heap. The observation pairs that value with the closed result
 type established for <code>main</code>. Observation renders tuples and constructors
 structurally. A constructor with a tuple
 payload renders its components as constructor fields. A location already on
 the active rendering path renders as <code>&lt;cycle&gt;</code>. Removing a location from the
 active path after its subtree means shared acyclic data renders in full at each
-occurrence. Function values render as <code>&lt;function&gt;</code>.</p>
+occurrence. Function values render as <code>&lt;function&gt;</code>. Address values render as <code>&lt;address&gt;</code>
+without disclosing or dereferencing the pointer.</p>
 <p>Successful observation retains no live resource scope, registration owner,
 cleanup obligation or captured continuation.
 The observed heap may retain copied values and unused non-owning handle
-entries, but owns no released cell payload.</p>
+entries, but owns no released cell payload.
+No live Store slot or branch-completion owner survives successful observation.</p>
 <p>A completed <code>newtype</code> value renders exactly as its representation value because
 no wrapper or constructor tag reaches the heap. The observation's separately
 retained closed result type still renders the nominal newtype spelling and its
@@ -1161,4 +1056,4 @@ and restores <code>Mark</code> inside it. The resumed <code>Mark.mark 2</code> r
 selects <code>Mark</code>; its clause resumes with <code>12</code>. <code>E-Clause-Return</code> first returns
 from the <code>Mark</code> clause and then from the <code>Ask</code> clause after the final addition,
 producing <code>112</code>. The executable trace asserts this exact selection,
-restoration, request, resume, and clause-return order.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#initial-configuration">Initial configuration</a><a href="#type-instantiation-and-erasure">Type instantiation and erasure</a><a href="#generated-interface-evidence">Generated interface evidence</a><a href="#bindings">Bindings</a><a href="#recursive-bindings">Recursive bindings</a><a href="#application">Application</a><a href="#tuples-constructors-and-matches">Tuples, constructors, and matches</a><a href="#primitive-operations">Primitive operations</a><a href="#owner-free-scalar-native-execution">Owner-free scalar native execution</a><a href="#common-scalar-preflight">Common scalar preflight</a><a href="#source-resource-execution-with-native-owners">Source resource execution with native owners</a><a href="#common-initialized-byte-access">Common initialized byte access</a><a href="#effect-handlers-and-completion">Effect handlers and completion</a><a href="#scoped-cell-execution">Scoped cell execution</a><a href="#scoped-native-buffer-execution">Scoped native-buffer execution</a><a href="#synchronous-hook-execution">Synchronous hook execution</a><a href="#scoped-cleanup-actions">Scoped cleanup actions</a><a href="#observation">Observation</a><a href="#derived-multi-step-notation">Derived multi-step notation</a><a href="#representative-derivations">Representative derivations</a></nav><div class="aside-note"><p>These rules describe the source revision linked above.</p><a href="/ash/docs/tools/ash/">Read the ash tool guide ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent specification chapters"><a rel="prev" href="/ash/spec/elaboration/">← Elaboration</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>
+restoration, request, resume, and clause-return order.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#initial-configuration">Initial configuration</a><a href="#region-construction-and-close-steps">Region construction and close steps</a><a href="#type-instantiation-and-erasure">Type instantiation and erasure</a><a href="#generated-interface-evidence">Generated interface evidence</a><a href="#bindings">Bindings</a><a href="#recursive-bindings">Recursive bindings</a><a href="#application">Application</a><a href="#tuples-constructors-and-matches">Tuples, constructors, and matches</a><a href="#primitive-operations">Primitive operations</a><a href="#native-symbol-execution">Native symbol execution</a><a href="#effect-handlers-and-completion">Effect handlers and completion</a><a href="#scoped-retained-control-execution">Scoped retained-control execution</a><a href="#scoped-cell-execution">Scoped cell execution</a><a href="#synchronous-hook-execution">Synchronous hook execution</a><a href="#scoped-cleanup-actions">Scoped cleanup actions</a><a href="#observation">Observation</a><a href="#derived-multi-step-notation">Derived multi-step notation</a><a href="#representative-derivations">Representative derivations</a></nav><div class="aside-note"><p>These rules describe the source revision linked above.</p><a href="/ash/docs/tools/ash/">Read the ash tool guide ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent specification chapters"><a rel="prev" href="/ash/spec/elaboration/">← Elaboration</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

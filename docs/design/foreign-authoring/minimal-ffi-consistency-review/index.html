@@ -1,0 +1,156 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Minimal FFI contract consistency review · Ash</title><meta name="description" content="This review belongs to DN-0057. It concerns the copied-text and connection/statement cases before source syntax. Earlier and revised-table findings now have proposed canonical resolutions. This record is not…"><meta name="robots" content="index, follow"><meta property="og:title" content="Minimal FFI contract consistency review · Ash"><meta property="og:description" content="This review belongs to DN-0057. It concerns the copied-text and connection/statement cases before source syntax. Earlier and revised-table findings now have proposed canonical resolutions. This record is not…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Minimal FFI contract consistency review · Ash"><meta name="twitter:description" content="This review belongs to DN-0057. It concerns the copied-text and connection/statement cases before source syntax. Earlier and revised-table findings now have proposed canonical resolutions. This record is not…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-consistency-review/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-consistency-review/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-consistency-review.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Minimal FFI contract consistency review","headline":"Minimal FFI contract consistency review","description":"This review belongs to DN-0057. It concerns the copied-text and connection/statement cases before source syntax. Earlier and revised-table findings now have proposed canonical resolutions. This record is not…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-consistency-review/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-consistency-review/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-consistency-review.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="minimal-ffi-contract-consistency-review" data-pagefind-meta="title">Minimal FFI contract consistency review</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-consistency-review.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This review belongs to <a href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057</a>.
+It concerns the copied-text and connection/statement cases before source
+syntax. Earlier and revised-table findings now have proposed canonical
+resolutions. This record is not implementation verification or independent
+acceptance evidence.</p>
+<h2 id="assessment">Assessment</h2>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/">canonical transition tables</a> now own combined
+outcome, exhaustion-domain and lifecycle behavior. Supporting documents refer
+to those rules. Common FFI guarantees, SQLite library policy and target/executor
+profiles have separate owners. Linux profile acceptance remains open.</p>
+<p>The canonical tables now distinguish entry admission, pending observations,
+result delivery, failure events, local completion and physical reclamation.
+R1–R3 have explicit proposed rules below. Linux-specific acceptance is unchanged
+and remains a separate gate; no syntax or implementation is selected here.</p>
+<p>The final consistency pass confirms the earlier phase, outcome, exhaustion,
+encoding and ownership distinctions. F1's local-close precedence was approved
+and is now recorded in the canonical table, with exclusive fallback guards
+and distinguishing traces. No common-contract finding remains open in this
+review's two-case scope. Implementation evidence and Linux acceptance remain
+separate; this is not an approval of current language semantics or architecture.</p>
+<h2 id="common-and-library-findings-addressed-at-design-level">Common and library findings addressed at design level</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Finding</th>
+<th>Resolution and owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1: Transport loss could erase an admitted disposition.</td>
+<td>O1–O10 preserve admitted control independently of payload delivery and session loss.</td>
+</tr>
+<tr>
+<td>C2: Worker exhaustion could be mistaken for parent exhaustion.</td>
+<td>X1–X5 name the evaluator, native, operation-limit, worker and supervisor domains. Worker reports cannot establish parent exhaustion.</td>
+</tr>
+<tr>
+<td>C3: Portable SQLite semantics were mixed into the Linux ABI profile.</td>
+<td><a href="/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/">SQLite policy</a> owns C signatures, constant roles, inputs and assumptions; <a href="/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/">ABI profile</a> owns concrete target mapping; common transitions are separate.</td>
+</tr>
+<tr>
+<td>S1: Reset could erase binding uncertainty or other access restrictions.</td>
+<td>L1–L23 keep execution, bindings, access, disposition and session coordinates separate, with conjunctive preconditions. Physical quarantine retains executor backing beyond source scope closure.</td>
+</tr>
+<tr>
+<td>S2: Original kind was not retained across repeated column reads.</td>
+<td>T1–T16 use a bounded lazy classification cache keyed by row generation and column, established before conversion and invalidated on native row-changing entry or access loss.</td>
+</tr>
+</tbody>
+</table>
+<p>SQLite's original-kind restrictions derive from
+<a href="https://www.sqlite.org/c3ref/column_blob.html">column access</a>. Reset and
+binding behavior derive from <a href="https://www.sqlite.org/c3ref/reset.html">reset</a>
+and <a href="https://www.sqlite.org/c3ref/bind_blob.html">binding values</a>; the wrapper's
+uncertainty policy is deliberately conservative. Canonical rows and their
+acceptance traces are proposed Ash binding behavior, not additional promises
+made by SQLite.</p>
+<p>The trace table covers bind-error/reset/step, finalize-error/diagnostic-loss,
+worker exhaustion with a healthy parent, repeated copies after refusal, close
+refusal followed by source-host closure, failed acquisition publication and
+reset error after a row. These are stated obligations, not executed results.</p>
+<h2 id="revised-table-findings-addressed-at-design-level">Revised-table findings addressed at design level</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Finding</th>
+<th>Canonical resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1: Entry guards excluded failure events and mixed phases.</td>
+<td>The phase/guard table and O/L phase columns separate Admission, Entry, Observation, Delivery, Failure, Local close and Reclamation. Pending-return validation uses the saved admission state; processing loss requires no live executor or usable source access.</td>
+</tr>
+<tr>
+<td>R2: Local completion after loss/quarantine was absent.</td>
+<td>K1–K9 distinguish source completion from native disposition. Pending scopes close at their structural positions; Closing scopes settle locally on loss; admitted finish discharges K before reporting. K7 prevents a second attempt/report; K8 transfers on terminal evaluator failure without claiming source cleanup.</td>
+</tr>
+<tr>
+<td>R3: Invalid native bytes and malformed worker success were conflated.</td>
+<td>T10 is native conversion refusal, T14 admits a valid worker refusal, T15 loses the session on invalid success payload, and T13 keeps parent capacity exhaustion terminal. T16 alone publishes an admitted parent success.</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#phases-and-event-guards">phase guards</a>,
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#common-exact-once-local-completion">local completion</a>
+and <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#sqlite-copied-text-table">copied-text transitions</a>.</p>
+<p>The group processes events in one order. Failure selection prevents a late
+success response, while previously admitted native disposition remains intact.
+Late frames cannot reopen a lost session. An unpublished guard or worker-native
+guard has executor disposal authority, not another source K obligation.
+Physical reclamation does not itself discharge a Pending source owner or
+claim native completion.</p>
+<p>Required traces include worker death before control, close blocked before
+entry, handled loss followed by S/C scope exit, finalize acknowledgement before
+diagnostic loss, and conversion refusal versus malformed success versus parent
+validation exhaustion. Existing capture/resume/discard constraints still apply;
+local bookkeeping discharge does not permit skipping an executing source action.
+These are acceptance obligations, not executed verification evidence.</p>
+<h2 id="final-review-finding-resolved">Final review finding resolved</h2>
+<h3 id="f1-order-overlapping-local-close-reasons">F1: Order overlapping local-close reasons</h3>
+<p>The approved selection rule is recorded in the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#common-exact-once-local-completion">local completion table</a>:
+already discharged/transferred owners stay unchanged; terminal evaluator
+failure transfers unfinished obligations; healthy Pending scopes wait for
+their closing position; healthy Closing scopes select session loss, then
+quarantine/contract violation, then blocked dependency, before native entry.</p>
+<p>K4–K6 have corresponding fallback guards. One primary completion record retains
+other conditions as secondary facts without another report or native call.
+Atomic O4/K3 still protects an already admitted finish. The trace table covers
+loss plus dependency, quarantine plus unresolved child, terminal failure plus
+loss, and already discharged consumption followed by failure.</p>
+<p>F1 is resolved at approved design level. The traces remain implementation
+acceptance obligations, not executed verification results.</p>
+<h2 id="linux-profile-acceptance-gaps">Linux profile acceptance gaps</h2>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/#trusted-launch-sequence">launch sequence</a>
+specifies namespace mappings and dropping capabilities before exec, but does
+not fix the post-exec UID/capability state. No host-root mapping is not the
+same as non-root credentials inside the namespace. Linux recalculates
+capabilities on exec; see
+<a href="https://man7.org/linux/man-pages/man7/user_namespaces.7.html">user namespaces</a>.
+Require verified post-exec credentials/capability invariants, including
+re-execution of the admitted image, with an explicit launcher configuration.</p>
+<p>The exact syscall allowlist, root/volume construction and resource enforcement
+need a tested deployment realization. Startup, SQLite journal/locking and
+forced termination must work under those restrictions. A second platform is
+not a prerequisite for common syntax design, but the Linux realization cannot
+be called accepted or production-ready from its policy description alone.</p>
+<h2 id="remaining-acceptance-boundary">Remaining acceptance boundary</h2>
+<p>The earlier findings and R1–R3 have explicit proposed design resolutions.
+F1 now has its approved canonical selection rule. No common finding remains
+open within this review's two-case scope. This record
+does not substitute for independent acceptance or implementation evidence. Linux
+credential/syscall/deployment acceptance remains separate. Check
+source/module/Core/runtime correspondence and negative cases during semantic
+adoption. Exact runtime structs, versioned wire/receipt encoding and platform
+API implementations remain constrained implementation choices. General
+borrowing, callbacks, asynchronous native APIs, more platform profiles and
+formal proof machinery remain outside these two cases.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#assessment">Assessment</a><a href="#common-and-library-findings-addressed-at-design-level">Common and library findings addressed at design level</a><a href="#revised-table-findings-addressed-at-design-level">Revised-table findings addressed at design level</a><a href="#final-review-finding-resolved">Final review finding resolved</a><a href="#linux-profile-acceptance-gaps">Linux profile acceptance gaps</a><a href="#remaining-acceptance-boundary">Remaining acceptance boundary</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

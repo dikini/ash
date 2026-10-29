@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/  
 Authority: website-guidance  
-Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af
+Source revision: ceecbe838e306d461f75d8e60658bb4b2e4649d9
 
 The Ash programming language
 
@@ -179,6 +179,14 @@ Diaries
 
 
 ## Developer diaries
+
+
+
+[29 October 2026 ### Working on FFI in Ash Why FFI became the next development target, what it should enable, and why the work reaches into resources, effects, and type checking.](/ash/diaries/working-on-ffi/)
+
+By [Vlado](https://github.com/dikini)
+
+
 
 
 

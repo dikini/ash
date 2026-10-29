@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/updates/  
 Authority: website-guidance  
-Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af
+Source revision: ceecbe838e306d461f75d8e60658bb4b2e4649d9
 
 These are dated accounts of the project. For what the language supports now, read [language status](/ash/status/).
 

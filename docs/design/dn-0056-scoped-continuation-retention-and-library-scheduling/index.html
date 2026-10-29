@@ -1,0 +1,2286 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0056: Scoped Continuation Retention and Library Scheduling · Ash</title><meta name="description" content="The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0056: Scoped Continuation Retention and Library Scheduling · Ash"><meta property="og:description" content="The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0056: Scoped Continuation Retention and Library Scheduling · Ash"><meta name="twitter:description" content="The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0056: Scoped Continuation Retention and Library Scheduling","headline":"DN-0056: Scoped Continuation Retention and Library Scheduling","description":"The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/","@id":"https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0056-scoped-continuation-retention-and-library-scheduling" data-pagefind-meta="title">DN-0056: Scoped Continuation Retention and Library Scheduling</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0056</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a>,
+<a href="/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/">DN-0051</a>,
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053</a>,
+<a href="/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/">DN-0055</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It defines no current Ash semantics,
+accepts no architecture, and authorizes no product implementation. The
+bounded proof assignment below is experimental evidence. The rules below are
+candidate obligations, not an established soundness result.</p>
+</blockquote>
+<p>The local sequential subset is implemented and specified on the M3 milestone.
+The <a href="/ash/docs/design/retained-control/">retained product evidence</a> records its bounded
+proofs and tests. The worker, migration and network discussions in this note
+remain design exploration, not implemented language contracts. Main delivery is
+separate from the retained milestone.</p>
+<h2 id="question">Question</h2>
+<p>Can existing resource scopes and cleanup express the lifetime and completion
+gate of an executor-owned continuation store? What additional typed Core
+machinery is necessary to retain and restore control, while leaving scheduling
+and optional checkpoint policies in libraries?</p>
+<p>The comparison must still express coroutines, cooperative multitasking, and
+preemption at safe points. It must account for nested handlers, work after
+<code>resume</code>, suspended cleanup, and a parent that waits for P while Q continues.
+Kernel-thread composition must preserve local ownership with pinned workers
+as its baseline. Migration is a separate ownership-transfer extension.</p>
+<h2 id="findings">Findings</h2>
+<ul>
+<li>Resource ownership supplies the lifetime envelope. Cleanup can invoke a
+library drain loop before the store and its support are released. A separate
+task scope or runtime scheduling loop is not required by this derivation.</li>
+<li>Cleanup alone proves neither quiescence nor eventual completion. Its
+ordinary <code>Unit -&gt; Unit</code> callback type cannot certify that the callback drained
+retained control. A finite-execution induction proves quiescence on normal
+return for the simple recursive drain below. A candidate finite analysis uses
+recursive normal-return summaries and authenticated, fresh probe facts,
+without a new gate primitive.</li>
+<li>At the start of this study, Ash could not put its hidden continuation
+capability in storage. The retained local extension transfers owned control
+into a Store and restores it to an admitted current consumer without exposing
+that capability as a source value.</li>
+<li>Branch authority, external support, exact interpretation, and completion
+must be checked through these transitions. Existing analyses provide the
+basis; they do not already establish concurrent isolation.</li>
+<li>All three execution styles can use the same mechanism. They differ in who
+requests suspension and who chooses the next continuation. Safe-point
+preemption additionally depends on checkpoint coverage and admitted foreign
+boundaries; it is not arbitrary instruction interruption.</li>
+<li>Several pinned kernel-thread workers can each own a local executor and store.
+Parallelism then occurs across workers, with synchronization at admitted
+channels and host boundaries. Migration and shared-store scheduling require
+separate ownership, interpretation, and completion contracts.</li>
+<li>For two workers joined by a one-way FIFO, stable end-of-input links channel
+delivery to local completion. Network quiescence additionally requires both
+endpoint owners to finish and all remaining backing users to settle. Existing
+cleanup supplies release ordering; the channel protocol facts remain new.</li>
+<li>Bidirectional feedback needs causal completion accounting before endpoint
+shutdown. Closed root admission and discharged application obligations can
+establish stable application quiescence while passive receive loops remain
+suspended. Endpoint and backing settlement then complete network cleanup.
+Candidate protocol facts and recursive summaries check library orchestration
+against verified or admitted ledger and transport laws. The local store-state
+analysis cannot infer arbitrary accounting representation invariants. This
+derivation requires no new gate Core construct.</li>
+<li>A private functional ledger gives a concrete representation for registration,
+retirement, and emptiness proofs by induction. Subject to checked proof
+integration and the source driver/control obligations, its bookkeeping laws
+need no native admission. Transport and backing behavior remain external
+contracts; the derivation below is not a mechanically checked implementation.</li>
+<li>Untrusted proof plans and restricted induction are a candidate integration
+mechanism. The validator reconstructs claims against actual Core, checks
+transition preservation and current-state flow, and revalidates after
+transformations. No general proof search or executable proof primitive is
+required; the restricted checking rules still need a soundness argument.</li>
+</ul>
+<p>These are design findings. They do not make a source library implementable
+using only today's public Ash APIs.</p>
+<h2 id="context">Context</h2>
+<p>Current <a href="/ash/spec/dynamic-semantics/#effect-handlers-and-completion">handler execution</a>
+moves the selected continuation segment, including the selected handler, into
+one clause-owned capture. Resumption restores that segment without replaying
+its preceding computation. When it returns, the original clause suffix runs.
+The <a href="/ash/spec/static-semantics/#effects">static rules</a> require exactly one
+resume or checked discard on each normally completing clause path. The hidden
+capability cannot enter an ordinary closure, argument, result, or queue.</p>
+<p>Capture analysis follows latent requests through helpers and caller control.
+A checkpoint helper can therefore request an effect while its caller is in a
+handler clause without obtaining that clause's hidden capability. Handler
+placement still determines the captured extent. A selected handler and crossed
+boundaries are absent while its clause runs; a request there searches outward.</p>
+<p>Current <a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">resource rules</a>
+separate duplicable access from scope-owned release. They track dependencies
+through values, closures, evidence, operation metadata, and actual calls.
+Captured resource owners keep their completion obligations. Current integer
+cells and native buffers do not supply an owning continuation store or a
+general source-defined resource facility.</p>
+<p>Current <a href="/ash/spec/static-semantics/#scoped-cleanup-actions">cleanup</a>
+initializes an ordinary callback before entering its body, saves the body's
+result, and invokes the callback once before returning that result. Starting
+the callback consumes invocation eligibility while preserving unfinished
+completion. A running cleanup can be captured and resumed but cannot be
+abandoned. It may use still-enclosing resources.</p>
+<p><a href="/ash/spec/elaboration/#effect-core-lowering">Effect Core</a> already has
+<code>Resource</code>, <code>Cleanup</code>, <code>Handler</code>, <code>Request</code>, and clause-scoped completion
+operations. Its <a href="/ash/spec/elaboration/#validation-boundary">independent validator</a>
+reconstructs actual dependencies and completion relationships after transforms.
+Adding a library name or a matching callback type does not authenticate an
+ownership contract.</p>
+<p>The bounded inbox in <a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/#suspension-and-escape">DN-0033</a>
+is the closest prior candidate: fix continuation ports, support, interpretation,
+and completion at an owning destination. Its sequential proof evidence does
+not establish retained execution. <a href="/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/">DN-0051</a>
+records broader task, wait, cancellation, and parallel execution questions.
+This note tests a smaller mechanism without adopting a primitive task model.</p>
+<p>The generic cell candidate in <a href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053</a>
+stores reusable, discardable ordinary values. It explicitly excludes restricted
+payload ownership. Replacing its payload type with a continuation does not
+establish the transfer or completion rules required here.</p>
+<h2 id="constraints">Constraints</h2>
+<p>The first fragment has one local executor, two isolated sequential computations
+P and Q, and an enclosing network owner. A retention store has its own lexical
+identity N. There is no simultaneous execution or worker migration.
+The kernel-thread baseline composes several such local executors, with one
+owning worker per store. Computations on different workers may execute in
+parallel; their local stores remain exclusive and their continuations pinned.</p>
+<ul>
+<li>Start fresh computations by ordinary function calls under admitted handler
+roots. Do not clone the caller's continuation or assume a <code>Task</code> Core node.</li>
+<li>Give each ordinary resource authority to one concurrent process. Suspension
+does not relinquish that authority. Read-only grants and polarized endpoints
+may permit access according to their own checked contracts.</li>
+<li>Keep storage lifetime, access authority, completion ownership, and scheduling
+separate. Lexical visibility alone establishes none of the required sharing.</li>
+<li>Begin communication comparisons with one dedicated buffered channel carrying
+copied, resource-free messages. The bidirectional case adds a second channel
+in the opposite direction. Endpoints partition authority; each backing store
+has one owner. Channel ordering and readiness remain library/provider work.</li>
+<li>Keep every required owner and interpreter valid through the last admitted
+use and cleanup. Source results and operation operands retain existing escape
+checks; a locator must not launder a younger resource dependency.</li>
+<li>Begin with resumption-based completion. No queue operation implicitly cancels
+work, disposes a running cleanup, or supplies a dummy result.</li>
+<li>Keep scheduling, admission limits, gas accounting, readiness, and queue policy
+in libraries. No fairness, deadlock freedom, termination, latency, or performance
+guarantee follows from safe retention alone.</li>
+<li>Treat source sugar, macros, compiler insertion, general continuation packaging,
+and arbitrary foreign-stack suspension separately. Pinned worker composition
+needs the host and channel contracts below; continuation migration and direct
+shared-store scheduling remain separate extensions.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dedicated scope and runtime closing loop</td>
+<td>Duplicates lifetime/invocation.</td>
+</tr>
+<tr>
+<td>Owning resource, cleanup, checked drain</td>
+<td>Preferred candidate.</td>
+</tr>
+<tr>
+<td>Cell of functions or explicit states</td>
+<td>Cannot retain arbitrary control.</td>
+</tr>
+</tbody>
+</table>
+<p>The study's preferred direction reused resource and cleanup structure. At that
+point, the Store representation and operation family were not selected here;
+the retained local implementation is described by the specification and product
+evidence linked above.</p>
+<h3 id="resource-and-cleanup-composition">Resource and cleanup composition</h3>
+<p>The following is schematic composition, not executable current Ash syntax.
+External support surrounds the store. Cleanup's callback is created after
+store acquisition and before the body; it captures ordinary store access,
+never a hidden resume capability.</p>
+<pre tabindex="0"><code class="language-text">external support {
+    resource RetainedStore&lt;N&gt; store = empty {
+        cleanup (fn () =&gt; drain(store, policy)) {
+            p = run_segment(store, P)
+            q = run_segment(store, Q)
+            wait_for_P(store, p, q)
+            R_after_P()
+        }
+    }
+}
+</code></pre>
+<p>R can continue after P while Q remains retained. Only exit from the store's
+enclosing lifetime requires its remaining work to complete. A library can also
+wait for both computations, or let R proceed after launching both, while keeping
+the same enclosing owner. Launch parent and lifetime owner are distinct roles.</p>
+<p>On normal body return, existing cleanup saves R's result and invokes <code>drain</code>
+once. The drain loops in ordinary library code. It returns only after the
+store has no retained work or other required completion. Cleanup then returns
+the saved result, followed by resource release. The runtime need not repeatedly
+invoke a scheduler callback or choose any queue entry itself.</p>
+<p>The library loop can have this shape, where <code>probe</code> observes the owning store,
+not merely a ready queue:</p>
+<pre tabindex="0"><code class="language-text">drain(store, policy) =
+    match probe(store) {
+        Quiescent =&gt; ()
+        Pending =&gt; {
+            advance(store, policy)
+            drain(store, policy)
+        }
+    }
+</code></pre>
+<p><code>advance</code> may select and restore ready control. A wider asynchronous library
+could also wait for admitted notifications. An empty ready queue is not proof
+of quiescence when blocked computations or unsettled operations still exist.
+The initial ready-checkpoint fragment needs no external notification protocol.</p>
+<p>Cleanup invokes the whole drain once; repeated <code>advance</code> calls are ordinary
+calls inside that invocation. If a branch yields during drain, its fresh slot
+keeps the drain pending. A running branch cleanup can do the same. Disabling
+retention merely because draining has begun would break this case.</p>
+<p>Outer abandonment requires its own proof. Existing discard can invoke an armed
+cleanup in its owned closure, but the extended analysis must prove that the
+store's drain and every restored computation retain their required interpreter
+context. Otherwise that discard is rejected. Host failure disposal is not a
+substitute for completing the drain.</p>
+<h3 id="quiescence-proof-for-the-recursive-drain">Quiescence proof for the recursive drain</h3>
+<p>Existing cleanup guarantees invocation and preservation of unfinished
+completion. The recursive drain above has this partial-correctness contract:</p>
+<pre tabindex="0"><code class="language-text">normal return of drain(N) implies Quiescent(N)
+</code></pre>
+<p>For the first local fragment, define W(N) as outstanding branch work: retained
+captures, active restored control, and unfinished branch cleanup or close work.
+<code>Quiescent(N)</code> means W(N) is empty. The store owner and the drain's own running
+cleanup completion are outside W(N). Including that cleanup in the observed
+work would make the condition circular: it completes only after drain returns.
+A wider asynchronous contract must also account for unsettled operations.</p>
+<p>The proof has four premises:</p>
+<ol>
+<li><code>probe(N)</code> reports the genuine owning store state. Its <code>Quiescent</code> result
+establishes that W(N) is empty, rather than that a ready queue is empty.</li>
+<li>The executor has exclusive control. No other producer can create work
+between that observation and return. Probing occurs between <code>Continue</code>
+calls, after active restored control has returned to the driver.</li>
+<li><code>advance(N)</code> preserves ownership, authority, and completion invariants.
+Admitted control cannot bypass the recursive suffix and publish an ordinary
+return from drain. Divergence and suspension remain possible.</li>
+<li>Neither return arm creates work after its established quiescence fact. In
+particular, the recursive call is followed only by its ordinary return.</li>
+</ol>
+<p>Induct on the height of a finite normally returning evaluation of drain:</p>
+<ul>
+<li>In the <code>Quiescent</code> arm, the genuine observation establishes the postcondition.
+No later operation changes the work state before the arm returns.</li>
+<li>In the <code>Pending</code> arm, a normal return requires <code>advance</code> and then the recursive
+drain to return. The recursive evaluation is a smaller subderivation, so the
+induction hypothesis establishes <code>Quiescent(N)</code> at its return. The enclosing
+call performs no later operation that invalidates the fact.</li>
+</ul>
+<p>This proves the stated implication under the premises. It requires no decreasing
+work count: <code>advance</code> may resume P and cause it to yield into a fresh slot.
+If this continues forever, drain never returns. The proof establishes no
+termination, fairness, or eventual release guarantee.</p>
+<h3 id="composition-with-cleanup-and-resource-release">Composition with cleanup and resource release</h3>
+<p>On a normal path, existing cleanup invokes drain once and retains its own
+completion until drain returns. The resulting order is:</p>
+<pre tabindex="0"><code class="language-text">W(N) becomes empty
+    -&gt; drain returns
+    -&gt; the drain's cleanup completion finishes
+    -&gt; the store releases
+</code></pre>
+<p>The store's admission check must establish that every normal path to release
+passes through this cleanup, or otherwise establishes the same quiescence
+postcondition. No new runtime gate or scheduling loop is needed for this case.
+Outer abandonment still needs the interpreter and completion proof described
+above; normal-return partial correctness alone does not admit that path.</p>
+<h3 id="required-analysis-extension">Required analysis extension</h3>
+<p>The mathematical proof does not make quiescence a fact that today's checker
+already knows. Current structural capability states describe available and
+consumed continuation owners. Current cleanup analysis does not infer arbitrary
+facts about resource contents from ordinary returned constructors.</p>
+<p>The following candidate extends inferred completion summaries over existing
+Core control. It is not an implemented analysis or a proved soundness result.
+Its scope is the first local store fragment, with exclusive executor control.
+The later <a href="#protocol-aware-completion-analysis">protocol analysis</a> adds the
+facts needed to compose those local proofs across the two-worker network.</p>
+<h4 id="store-state-and-normal-return-summaries">Store-state and normal-return summaries</h4>
+<p>For each relevant store identity N, distinguish two states:</p>
+<pre tabindex="0"><code class="language-text">E = W(N) is empty
+W = W(N) is nonempty
+</code></pre>
+<p>Uncertainty is the set <code>{E, W}</code>. These states do not count work or include the
+drain's own running cleanup. Identity and alias relationships come from the
+resource analysis; a function or variable name does not identify an acquisition.</p>
+<p>A function's summary, under its admitted interpretation context, is a relation
+between input state, observable result case, and state at normal return:</p>
+<pre tabindex="0"><code class="language-text">R_f subset-of InputState x ResultCase x OutputState
+</code></pre>
+<p>For a <code>Unit</code> drain, the result has one case. A summary establishing quiescence
+permits <code>(E, Unit, E)</code> and <code>(W, Unit, E)</code>, with no output W. A missing input case
+means the analysis has found no possible normal return for that input; the
+summary never promises termination.</p>
+<p>The result case is necessary for an observation. The genuine store probe has
+this admitted relationship:</p>
+<pre tabindex="0"><code class="language-text">R_probe = {
+    (E, Quiescent, E),
+    (W, Pending,   W)
+}
+</code></pre>
+<p>A match on its result can establish E in the <code>Quiescent</code> arm. Ordinary
+construction of that same result case does not establish the relationship.
+For the minimal analysis, retain finite cases needed by the store protocol;
+other result information can be conservatively merged.</p>
+<h4 id="recursive-inference">Recursive inference</h4>
+<p>Analyse each recursive call group together, using relations for normal returns:</p>
+<ol>
+<li>Initialize summaries for members of that group to the empty relation: no
+finite returns have yet been discovered through recursive calls.</li>
+<li>Analyse each actual body using current group summaries, admitted operation
+contracts, and already checked summaries for other callees.</li>
+<li>Add newly discovered possible return triples and repeat until the relations
+stop changing. For the fixed finite state and result abstractions, this is
+an ascending computation of a least fixed point.</li>
+<li>Publish a completion guarantee only after convergence, when every possible
+normal output for the relevant inputs is E.</li>
+</ol>
+<p>In the simple drain, the first iteration discovers the direct <code>(E, Unit, E)</code>
+return. Later iterations discover returning paths through <code>advance</code> and the
+recursive call. Even if <code>advance</code> may leave either E or W, each discovered
+recursive return ends in E. No iteration introduces an output W.</p>
+<p>The finite-execution induction above justifies adding returns by unfolding
+recursive calls. A recursive cycle without a returning path contributes no
+normal return, rather than a termination guarantee. Unknown external callees
+must have conservative possible-return behavior; they cannot inherit the empty
+initialization used for the recursive group being solved. A pending arm that
+executes <code>advance; ()</code> introduces a possible W output and fails the check.</p>
+<p>Relations compose through calls and sequential control. Matches retain the
+correlation between an actual result case and store state. Joining control paths
+unions possible returns, so an unsafe returning path cannot disappear because
+another arm establishes E. Aliases and specialization must preserve the correct
+store identity; unknown possible aliases require conservative invalidation.</p>
+<h4 id="probe-authentication">Probe authentication</h4>
+<p>The probe relationship belongs to the admitted owning store provider. It must
+be justified by its trusted or verified implementation, like the store's
+ownership-transfer contract. An ordinary source declaration cannot assert it.</p>
+<p>At a request, analysis authenticates the acquisition and activation relation,
+sealed provider evidence, exact operation identity and arguments, and the
+interpreter actually selected. An authenticated operation declaration alone
+does not suffice: current source handlers retain precedence over a builtin
+interpreter.</p>
+<ul>
+<li>If the genuine store interpreter is selected, apply its observation contract.</li>
+<li>If a source handler intercepts the request, analyse that handler's complete
+behavior. Its result type grants no automatic quiescence fact.</li>
+<li>A forwarding wrapper may retain the relationship if its actual control,
+including work after <code>resume</code>, establishes the same result/state summary.</li>
+</ul>
+<p>The analysis therefore follows existing exact handler selection and lexical
+instantiation. Generic identities may coincide after specialization; a proof
+cannot assume them distinct. The authenticated contract is about the owning
+store's work, not merely a same-typed counter or ready queue.</p>
+<p>A helper making an outward probe request cannot export an unconditional
+guarantee for every caller. Its summary must retain interpretation requirements
+or deferred requests, checked against actual handler selection at use. If that
+selection is uncertain, include all possible interpreter behavior rather than
+assuming the genuine store provider. Imports preserve these conditions.</p>
+<h4 id="observation-freshness">Observation freshness</h4>
+<p>The fact supplied by an observation is conditional and belongs to its returned
+value at that point in execution:</p>
+<pre tabindex="0"><code class="language-text">result is Quiescent implies N is E
+</code></pre>
+<p>Ordinary aliases and code proved to preserve N can preserve that relationship.
+An operation that may change N's work state invalidates the old relationship
+and any current E fact. So does a call that may change an alias of N, or loss of
+the exclusive-control assumption needed for stability. Such a call must leave
+both states possible unless another checked summary establishes a stronger fact.</p>
+<p>For example, this observation cannot certify quiescence after <code>advance</code>:</p>
+<pre tabindex="0"><code class="language-text">result = probe(store)
+advance(store)
+match result {
+    Quiescent =&gt; ()
+    Pending =&gt; ...
+}
+</code></pre>
+<p>The value remains ordinary usable data, but its implication about the current
+store state has expired. Copying the value cannot renew that implication.
+A fresh probe or a verified drain can establish a new fact.</p>
+<p>These are static provenance and validity facts. This derivation needs no
+runtime epoch, source refinement type, or first-class proof token. Slot
+generations for one-shot restoration remain a separate store mechanism.
+Effects alone do not establish preservation; use actual inferred call and
+control relationships, including handled requests and callable dependencies.</p>
+<h4 id="actual-return-paths-and-independent-validation">Actual return paths and independent validation</h4>
+<p>Compute summaries at actual normal returns, after all intervening handler and
+cleanup control. A syntax walk that sees a tail call is insufficient. A handler
+suffix after <code>resume</code>, or cleanup that creates new work after drain returns,
+can change the enclosing expression's output state back to W or uncertainty.</p>
+<p>For example, this enclosing expression does not inherit drain's guarantee:</p>
+<pre tabindex="0"><code class="language-text">cleanup (fn () =&gt; create_work(store)) {
+    drain(store)
+}
+</code></pre>
+<p>The resource admission obligation is that every reachable normal predecessor
+of release(N) establishes E. A verified recursive drain is one way to establish
+that fact, rather than a mandatory function name or syntactic wrapper. Existing
+cleanup supplies invocation and protected completion; extended analysis checks
+the actual callback's postcondition and its preservation up to release.</p>
+<p>For example, this same-typed callback fails that obligation:</p>
+<pre tabindex="0"><code class="language-text">bad_drain(store, policy) =
+    match probe(store) {
+        Quiescent =&gt; ()
+        Pending =&gt; {
+            advance(store, policy)
+            ()
+        }
+    }
+</code></pre>
+<p>Its pending arm returns without establishing quiescence. Creating work after
+a successful recursive drain would likewise invalidate the postcondition.</p>
+<p>The independent Core validator must reconstruct return summaries, probe
+interpretation, and freshness from actual linked control. Imported summaries
+remain authenticated to their definitions and hidden identities; they cannot
+replace linked reconstruction. Callback substitution and Core transforms must
+re-establish the proof, including handler and cleanup suffixes. Normal-return
+quiescence does not by itself prove the separate abandonment obligations.</p>
+<p>The extension consists of the store-state domain, result-case relationships,
+freshness invalidation, recursive normal-return summaries, an authenticated
+probe contract, and the check at the existing resource-release boundary.
+These are new semantic analysis rules. An arbitrary <code>Unit</code> cleanup remains
+insufficient, but no new gate node or runtime scheduling loop is required by
+this derivation. The owning store and transfer/restore semantics themselves
+remain the extensions identified elsewhere in this note.</p>
+<h3 id="candidate-typed-core-contract">Candidate typed Core contract</h3>
+<p>One store activation fixes input <code>Unit</code>, answer A, resumed row rho, and required
+external interpretation I. <code>Key&lt;N&gt;</code> is an ordinary opaque locator qualified by
+the store activation and a slot generation. It carries no independent ownership.
+A library answer can be <code>Finished | Suspended(Key&lt;N&gt;, Reason)</code>.</p>
+<p>Let DELTA track structural capability states, sigma summarize possible captured
+control, and chiN denote the store's exact resource effects. These are analysis
+facts, not general source linear types or first-class continuation values.</p>
+<p>Retention refers to the selected checkpoint clause's hidden owner c. The rule
+consumes that capability by moving its capture into the store. It does not run
+the retained computation, so its immediate row is the store operation's row.</p>
+<div class="sequent-document"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">Ω(N) = Store(Unit, A, ρ, I)</span><span class="sequent-formula">Δ(c) = available[Unit, A, ρ, σ]</span><span class="sequent-formula">current control has executor authority for N</span><span class="sequent-formula">Admit(N, σ)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">T-Retain</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">Γ; Ω; Δ ⊢ Retain(N, c)
+  ⇒ Key&lt;N&gt; ! {chiN}; Δ[c := consumed]</span></figcaption></figure></div></div>
+<p><code>Admit(N, sigma)</code> checks every reachable capture represented by sigma:</p>
+<ol>
+<li>Its owned closure includes all nested live clause captures and resource or
+cleanup owners at their structural positions. Transfer neither duplicates
+them nor moves N's own owning boundary into N.</li>
+<li>Dependencies outside that closure remain protected through completion.
+Actual values, evidence, operation identities, saved results, and callable
+captures all contribute. External support can surround the store or have a
+separately proved completion order under the network owner.</li>
+<li>Exact interpretation remains available at the admitted consumer. A matching
+type or effect row cannot justify replacing a missing provider or handler.</li>
+<li>Branch resource authority remains compatible with all other live control,
+including suspended captures and executor code. Fresh root admission must
+check ordinary function captures too; retention alone cannot establish this.</li>
+<li>Finishing the transferring clause skips no required completion outside the
+moved closure. All user handler suffixes belonging to the branch lie inside
+its suspension boundary, or have separately protected completion.</li>
+<li>The answer and outward payloads obey existing escape restrictions.</li>
+</ol>
+<p>Only the selected checkpoint owner becomes consumed. Nested source owners keep
+their available or consumed state. Retention preparation precedes the committed
+move; capacity failure cannot publish an ownerless or duplicated capture.</p>
+<p>Restoration accepts a key and unit reply. It requires executor authority and
+an actual consumer context satisfying I. Its row includes execution of the
+retained computation, including future checkpoints and cleanup.</p>
+<div class="sequent-document"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">Ω(N) = Store(Unit, A, ρ, I)</span><span class="sequent-formula">Γ ⊢ key : Key&lt;N&gt;</span><span class="sequent-formula">current control has executor authority for N</span><span class="sequent-formula">current consumer satisfies I</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">T-Continue</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">Γ; Ω; Δ ⊢ Continue(N, key, ())
+  ⇒ Option&lt;A&gt; ! ({chiN} ∪ ρ); Δ</span></figcaption></figure></div></div>
+<p>On a live generation, the store marks the slot spent and moves its capture C
+into active control. Restoration plugs C above an ordinary <code>Some</code> return
+adapter and the current consumer D. Its answer goes to D, not into the finished
+original checkpoint clause. A spent generation returns <code>None</code> without executing
+C. Slot consumption does not mean branch completion.</p>
+<p>The store owns the opaque control and responsibility for its completion. This
+does not grant executor code ordinary access to branch resources. Private
+checkpoint-handler associations with N are administrative, non-owning links;
+they do not copy the store owner or grant P and Q shared mutable store authority.
+Admitting those links requires the store protocol, not a general exception to
+ordinary cell dependency-cycle checks.</p>
+<p>The store's lifetime and closing contract can use existing <code>Resource</code> and
+<code>Cleanup</code> structure. New validation must account for owned control in slots,
+active restorations, the drain's quiescence proof, escape, and abandonment.
+The derivation does not require separate <code>Closing</code>, <code>Drive</code>, or <code>Task</code> Core
+constructs. It also does not establish that adding only two node variants to
+today's Core would be sufficient.</p>
+<h3 id="root-placement-and-a-checkpoint-helper">Root placement and a checkpoint helper</h3>
+<p>A private handler surrounds all branch-local source work, including handler
+clauses, suffixes after <code>resume</code>, and cleanup. N and the executor's drain lie
+outside that capture boundary. Its clause transfers the current capture and
+returns <code>Suspended(key, reason)</code> through ordinary library control. It has no
+unfinished source suffix that must survive after that return.</p>
+<p>Checkpoint is an ordinary operation request with reply type <code>Unit</code>. The helper
+below uses ordinary application, bindings, and conditional control. It returns
+updated gas so a local binding does not lose the accounting update.</p>
+<pre tabindex="0"><code class="language-text">check(policy, gas, site_cost) =
+    (gas1, decision) = policy.charge(gas, site_cost)
+    if decision == Yield:
+        checkpoint(BudgetEmpty)
+    gas1
+</code></pre>
+<p>Its latent row includes the exact checkpoint instance and the policy's effects.
+The false path captures nothing dynamically; the static row still includes
+the possible request. Restoration continues after the request, without charging
+the same site again. Gas, refill, site costs, and decisions are library data and
+policy. No <code>Gas</code>, <code>Poll</code>, or conditional-checkpoint Core node follows.</p>
+<p>An outer private handler can capture a helper called from an unrelated handler
+clause. A selected handler cannot handle a request from its own clause unless
+another matching boundary is installed. An inner local checkpoint handler also
+limits capture to its own boundary; it cannot be assumed to suspend the whole
+branch. The helper never captures or invokes its caller's hidden <code>resume</code>.</p>
+<h3 id="p-and-q-through-handler-and-cleanup-suspension">P and Q through handler and cleanup suspension</h3>
+<p>Suppose N owns slots kP and kQ. Restoring kP spends that generation and leaves
+kQ unchanged. The retained P control before a source clause's <code>resume</code> includes
+the clause boundary with its live nested capture. After <code>resume</code> returns, the
+boundary is consumed and the completed nested control is absent. A later
+checkpoint preserves whichever state actually exists; it cannot reactivate
+the consumed source owner.</p>
+<p>For a checkpoint during cleanup, the retained P segment includes the saved
+result, the running cleanup completion owner, and the cleanup suffix. Starting
+cleanup has already consumed invocation eligibility. Retention invokes nothing
+and acknowledges no completion. The executor can run Q under its independent
+authority, then restore P to execute only the remaining cleanup suffix.</p>
+<p>If P yields while N's drain is running, P's capture stops at its private root.
+The drain's own running-cleanup completion remains outside that capture. The
+checkpoint clause returns to the current <code>Continue</code> consumer in the drain,
+which keeps running. Capturing N or transferring that drain into its own store
+would create an invalid ownership/completion dependency and must reject.</p>
+<p>Copied channel messages become receiver-owned ordinary data. P's local
+resources do not move to Q through scheduling or through those messages. The
+channel implementation must supply the synchronization its endpoint protocol
+requires; the owning store does not imply synchronization on every local
+object. Multicore notification, visibility, and transport need separate rules.</p>
+<h3 id="execution-styles">Execution styles</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Style</th>
+<th>Suspension request</th>
+<th>Selection policy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coroutines</td>
+<td>Explicit yield/adapter.</td>
+<td>Caller or coroutine library.</td>
+</tr>
+<tr>
+<td>Cooperative multitasking</td>
+<td>Library yield/wait.</td>
+<td>Executor library.</td>
+</tr>
+<tr>
+<td>Safe-point preemption</td>
+<td>Enabled policy guard.</td>
+<td>Executor library.</td>
+</tr>
+</tbody>
+</table>
+<p>Coroutines retain and restore direct-style control. The unit-reply fragment
+can exchange copied data through channels; other reply ports require a
+separately fixed homogeneous contract. Cooperative multitasking starts fresh
+roots through ordinary calls and overlaps their retained lifetimes. Waiting
+adapters still need readiness and settlement contracts.</p>
+<p>For the third case, the program need not explicitly choose to yield at each
+site: a producer can supply guarded checkpoints at safe points. Optionality
+means that a producer or library can omit or disable them. A concrete enabled
+checkpoint must pass ordinary typing and the retention admission checks.
+Macro expansion and compiler insertion are separate producers of the same
+typed Core; neither is a prerequisite for defining the contract.</p>
+<p>Site legality and coverage are separate obligations. A valid checkpoint does
+not prove that every loop, recursion cycle, or foreign call reaches one within
+a bounded cost. Gas reaching zero only causes a yield when a check is reached.
+There is no fairness or bounded-latency claim without additional coverage,
+cost, scheduling, and host assumptions.</p>
+<p>Coroutine abandonment and task cancellation are also separate. A resumption-only
+store can hold a coroutine until it completes, but cannot implement arbitrary
+drop-to-cancel semantics without an admitted disposal or cancellation protocol.
+Session types can constrain channel progress; they do not establish network-wide
+deadlock freedom in the presence of joins and other waits by themselves.</p>
+<h3 id="kernel-thread-baseline-pinned-workers">Kernel-thread baseline: pinned workers</h3>
+<p>Kernel threads supply execution for library executors. The baseline gives each
+worker exclusive control of its own store and keeps its computations on that
+worker. Pinning here does not require CPU affinity. This is a candidate host
+composition, not a capability implemented by current Ash.</p>
+<p>The following tree shows ownership and placement, rather than Ash syntax:</p>
+<pre tabindex="0"><code class="language-text">network owner
+    kernel thread K1
+        executor E1, store N1: P and Q
+    kernel thread K2
+        executor E2, store N2: U and V
+
+polarized channels connect the workers
+</code></pre>
+<p>P and Q interleave on K1; U and V interleave on K2. Different workers can execute
+simultaneously. The kernel chooses runnable kernel threads, while each library
+executor chooses its next Ash continuation. See the host scheduling boundary
+in <a href="https://man7.org/linux/man-pages/man7/sched.7.html">Linux scheduling documentation</a>.</p>
+<p>Kernel preemption pauses the worker's existing execution state. It performs no
+Ash capture, ownership transfer, cleanup invocation, or completion transition.
+The worker later continues with the same authority. Ash safe points are needed
+when detaching language control for library scheduling, rather than when the
+kernel preserves the carrier thread's execution. Kernel preemption of K1 does
+not select Q inside E1: P must return or suspend for E1 to choose Q.</p>
+<p>All three execution styles remain available within each worker. Coroutine
+selection, cooperative yielding, and optional gas-guarded safe-point preemption
+use the same local retention contract. OS scheduling supplies the independent
+outer level of preemption and parallel execution.</p>
+<h4 id="worker-entry-and-channel-boundaries">Worker entry and channel boundaries</h4>
+<p>An admitted thread entry can invoke an ordinary function to run its executor.
+Admission checks the function's transitive captures, storage, handlers, provider
+state, resource authority, and cleanup support. A simple initial arrangement
+constructs worker-local resources on that worker and exchanges copied messages
+through polarized endpoints. Shared read-only data also needs a valid lifetime
+and a representation admitted for concurrent access.</p>
+<p>Only E1 claims, retains, or restores N1's slots. Other workers publish messages
+or notifications through an admitted channel; E1 processes them itself. A
+notification may identify a continuation without granting its sender authority
+to resume it. Sharing the host address space grants no Ash resource authority.</p>
+<p>The channel/provider contract must establish publication and receiver visibility,
+safe waiter registration, stale-notification handling, and backing protection
+through the last possible access. The baseline does not require synchronization
+on ordinary worker-local store operations. It does require synchronization at
+these cross-thread boundaries and for any runtime representation actually shared
+between workers. No concurrent memory model or channel algorithm is established
+by this note.</p>
+<p>A blocking host call occupies its worker, preventing that executor from running
+its other computations until the call returns. An admitted adapter can instead
+retain the waiter locally and submit fresh blocking work to another thread.
+Its inputs and resource obligations remain live through actual completion;
+notification returns to the owning executor for restoration. This requires its
+own host-operation contract, rather than arbitrary transfer of an active Ash
+or native stack.</p>
+<h4 id="local-quiescence-and-network-completion">Local quiescence and network completion</h4>
+<p>The recursive drain proof applies to each local store while its exclusive-control
+and observation-stability premises hold. Notifications for existing pending
+computations do not erase those computations' work obligations. If an external
+producer can admit fresh work, a local empty observation does not establish that
+the scope can release before that producer is settled.</p>
+<p>A candidate network completion protocol must therefore:</p>
+<ol>
+<li>Close fresh-work admission for the scope being drained.</li>
+<li>Allow its existing computations to finish, including repeated retention.</li>
+<li>Account for operations, notifications, and handoffs that can still create
+work or access the scope's support.</li>
+<li>Drain each owned store and establish stable completion of its owned scope.</li>
+<li>Release shared support only after the relevant completion acknowledgements
+and channel obligations have settled.</li>
+</ol>
+<p>These are additional protocol obligations, not a general network termination
+proof. The one-way FIFO and bidirectional derivations below specialize these
+requirements. Closing fresh root admission must still allow existing work to
+create accounted descendants until application quiescence is established.
+An acknowledgement must be justified by the admitted completion protocol;
+ordinary data labelled <code>Done</code> is insufficient. A transient E snapshot from each
+worker cannot replace that protocol. Results must not export closed store
+handles or dependency-bearing keys.</p>
+<p>Completion of an owned Ash scope need not terminate its carrier thread. A
+persistent pool can keep a worker alive after reporting scope completion. If
+the network owner also owns the threads, their completion is another obligation.</p>
+<h3 id="network-wide-quiescence-for-two-pinned-workers">Network-wide quiescence for two pinned workers</h3>
+<p>Take one buffered FIFO channel C. Worker A owns the send polarity; worker B
+owns the receive polarity; enclosing network owner R owns the channel backing.
+There is no external producer or transfer of endpoint authority in this
+fragment. Messages are copied, resource-free values. The chosen closing policy
+processes all accepted messages; copied payloads alone do not imply that policy.</p>
+<p>The following is a conditional normal-completion derivation using admitted
+channel and worker contracts. It establishes neither a channel implementation
+nor a general distributed termination algorithm.</p>
+<h4 id="in-flight-message-accounting">In-flight message accounting</h4>
+<p>The message's passage must remain accounted for throughout these phases:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Phase</th>
+<th>Required accounting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Send preparation</td>
+<td>A's active operation and access to C.</td>
+</tr>
+<tr>
+<td>Accepted, unpublished</td>
+<td>C's pending-publication obligation.</td>
+</tr>
+<tr>
+<td>Published, queued</td>
+<td>C's owned queue entry.</td>
+</tr>
+<tr>
+<td>Receiving or copying</td>
+<td>Receive operation and its backing access.</td>
+</tr>
+<tr>
+<td>Processing incomplete</td>
+<td>B's active or retained work, including cleanup.</td>
+</tr>
+</tbody>
+</table>
+<p>Before a send can report acceptance, the provider must account for its pending
+publication and protect the copied payload. Publication moves that obligation
+into queued state. Receipt cannot forget the queued work before receiver control
+accounts for its processing. Backing access remains protected until copying is
+complete. No transition may leave an interval in which neither side accounts
+for unfinished work or access.</p>
+<p>In the sequential receive loop below, B's existing continuation covers receipt
+and handling. Separate dispatch would need to register the receiver work before
+retiring the delivery obligation. The value itself remains ordinary duplicable
+data; the provider's delivery and backing obligations are not duplicated by
+copying it.</p>
+<p>For the proof, let I(C) denote accepted but unpublished sends, Q(C) queued
+entries, and U(C) remaining provider operations or notifications that may access
+the backing. Active or suspended message handling belongs to B's local work.
+These are semantic sets, not a requirement for central atomic counters. The
+provider must establish their coverage and publication/visibility relationships.</p>
+<h4 id="completing-the-send-polarity">Completing the send polarity</h4>
+<p>A's completion ordering is:</p>
+<pre tabindex="0"><code class="language-text">finish admitted computations that can send, including cleanup
+    -&gt; drain A's local store
+    -&gt; finish_send(tx)
+    -&gt; complete A's owned scope
+</code></pre>
+<p>Normal return of <code>finish_send</code> establishes that no more sends can be accepted
+through this polarity and that every earlier accepted send remains accounted
+for. Any publication still pending belongs to C's protected provider state.
+An operation retaining access to A-local memory must finish before A's scope
+can complete; acceptance cannot silently leave an unprotected borrow behind.</p>
+<p>The implementation may settle publication before <code>finish_send</code> returns or leave
+an accounted publication for the provider to finish. In either case, completing
+the send polarity does not release C's backing or discard queued messages.
+The sealed send authority cannot reopen the same channel activation.</p>
+<h4 id="stable-end-of-input-and-receiver-completion">Stable end-of-input and receiver completion</h4>
+<p>B can use this ordinary recursive receive loop:</p>
+<pre tabindex="0"><code class="language-text">receive_loop(rx) =
+    match receive(rx) {
+        Message(m) =&gt; {
+            handle(m)
+            receive_loop(rx)
+        }
+        End =&gt; ()
+    }
+</code></pre>
+<p>The admitted receive contract must establish:</p>
+<pre tabindex="0"><code class="language-text">receive(C) returns End
+    implies the send polarity is sealed
+        and I(C) is empty
+        and all earlier queued messages have been received
+</code></pre>
+<p>A FIFO implementation can justify this with an ordered end marker or a final
+publication watermark, provided it cannot overtake an accepted publication.
+A temporarily empty queue while sending remains possible supplies no <code>End</code>
+fact. An ordinary payload labelled <code>End</code> does not supply it either.</p>
+<p>This observation is stable: the finished send authority cannot create later
+input in this activation. The compiler need not prove the queue algorithm or
+watermark arithmetic from an ordinary method type; those laws belong to the
+admitted provider contract. Actual handler selection and result authentication
+remain necessary, as for the store probe.</p>
+<p>The receive loop returns through <code>End</code>, after preceding sequential handlers
+return. That does not establish that all B-owned work is finished. Any separately
+admitted work, handler suffixes, and cleanup must also complete through B's local
+drain before its endpoint and scope report completion. The receiver endpoint's
+closing contract must account for genuine input completion; a local empty store
+alone cannot justify early receiver completion under this drain policy.</p>
+<h4 id="joint-completion-condition-and-backing-settlement">Joint completion condition and backing settlement</h4>
+<p>Define three distinct facts:</p>
+<pre tabindex="0"><code class="language-text">DoneA = A's admitted work and cleanup completed
+        and its send endpoint completed
+
+DoneB = B observed genuine end-of-input
+        and B's admitted work and cleanup completed
+        and its receive endpoint completed
+
+SettledC = no remaining operation or notification can access C's backing
+</code></pre>
+<p>A sufficient network condition is:</p>
+<pre tabindex="0"><code class="language-text">NetworkQuiescent = no external admission remains
+                   and DoneA and DoneB and SettledC
+</code></pre>
+<p>For this fixed network, admission can be closed by construction. A dynamic
+variant must establish that phase explicitly. Stable input completion accounts
+for I(C) and Q(C); endpoint and provider settlement must also account for U(C).
+Queue emptiness alone cannot establish that wake registrations, callbacks, or
+partially completed accesses have relinquished the backing.</p>
+<p>A synchronous implementation may derive <code>SettledC</code> from endpoint completion.
+An asynchronous implementation needs its additional settlement acknowledgement.
+The fact concerns actual access, not the absence of currently runnable code.
+Completion of these scopes does not require persistent carrier threads to exit.</p>
+<p>The normal-return summaries needed by analysis include send completion, the
+authenticated <code>End</code> case, each worker scope's completion, and provider settlement.
+Ordinary data labelled <code>Done</code> cannot establish them. A completion notification
+must follow an admitted protocol whose actual control proves its relationship
+to the completed scope. Probe freshness and interpretation checks still apply.</p>
+<h4 id="cleanup-ordering-and-premature-release-trace">Cleanup ordering and premature-release trace</h4>
+<p>The network composition can retain existing resource and cleanup structure:</p>
+<pre tabindex="0"><code class="language-text">resource Channel&lt;C&gt; channel {
+    cleanup (fn () =&gt; finish_network(channel, A, B)) {
+        run_network_body()
+    }
+}
+</code></pre>
+<p>This is schematic composition. The library <code>finish_network</code> drives or awaits
+both owned scopes and settles the channel. It must establish <code>NetworkQuiescent</code>
+on normal return. The owner coordinates endpoint completion through its admitted
+protocol; it does not acquire the workers' ordinary resource authority.</p>
+<p>Existing cleanup saves the body result, invokes this finishing computation once,
+and preserves its unfinished completion until return. Only afterward can the
+channel resource release and the saved result return. Channel-dependent results
+remain subject to ordinary escape checking. Later control cannot invalidate
+the completion facts before release.</p>
+<p>Both workers must remain able to service the channel while draining. In a
+bounded FIFO, B may need to receive before A can finish sending. The closing
+order must not defer B's service until after A finishes. Scheduling progress
+remains a separate library and host assumption.</p>
+<p>One possible execution exposes each premature-release hazard:</p>
+<ol>
+<li>A's last send is accepted; C owns its pending publication.</li>
+<li>A begins finishing; that publication remains protected and accounted for.</li>
+<li>The message becomes queued. A can complete its send polarity while C remains
+live for delivery.</li>
+<li>B receives the copy and yields during handling. Its retained continuation
+keeps receiver work unfinished even though the queue may now be empty.</li>
+<li>B resumes, finishes handling, observes <code>End</code>, and drains remaining cleanup.</li>
+<li>Both endpoints complete and any remaining backing users settle. R's finishing
+cleanup can then return, permitting C's release.</li>
+</ol>
+<p>R may wait only for A and continue inside the enclosing channel lifetime while
+B remains unfinished. It cannot complete that enclosing lifetime on A's behalf
+alone. Normal-return analysis must establish the joint condition at every
+channel release predecessor. No new network gate Core construct follows from
+this derivation; endpoint phases, delivery coverage, and settlement are the
+additional provider and completion contracts. Outer abandonment needs its own
+completion and interpreter proof. Eventual completion is not established here.</p>
+<h3 id="bidirectional-quiescence-with-causal-completion-accounting">Bidirectional quiescence with causal completion accounting</h3>
+<p>Now take two buffered channels, C_AB from A to B and C_BA from B to A. Each
+worker owns one send and one receive polarity; R owns both backing resources
+and their enclosing lifetime. Each worker processes messages sequentially, and
+handling a message may send further messages through its send endpoint. Messages
+still carry copied, resource-free application data.
+There is no endpoint migration or shared ordinary application resource authority.</p>
+<p>This is a candidate normal-completion protocol. Its accounting laws must be
+verified or admitted; current Ash does not already implement or check them.
+An application activation below means an ordinary invocation of message-handling
+code, not a new task value or Core control form.</p>
+<h4 id="why-local-emptiness-and-end-of-input-are-insufficient">Why local emptiness and end-of-input are insufficient</h4>
+<p>A locally idle A may receive work from B and send another message in response.
+Two empty-queue observations can miss an accepted publication or an intervening
+activation. Sealing both send polarities at that point could reject required
+descendant work. Conversely, waiting for both receive loops to observe <code>End</code>
+before sealing either send polarity makes shutdown circular.</p>
+<p>The derivation therefore separates application quiescence from final worker,
+endpoint, and backing completion. Application quiescence establishes that no
+application work can still be generated. It does not require passive receive
+loops or all provider notifications to have completed.</p>
+<h4 id="causal-coverage-and-resource-authority">Causal coverage and resource authority</h4>
+<p>R accounts for initial application work as root obligations. Every unfinished
+activation and every remaining independent producer must have a completion path
+to one of those roots. Before an activation publishes a message that creates
+further work, the library registers a child obligation under its existing path:</p>
+<pre tabindex="0"><code class="language-text">register child obligation
+    -&gt; publish message
+    -&gt; receive and process message
+    -&gt; finish local processing, cleanup, and descendants
+    -&gt; acknowledge completion
+</code></pre>
+<p>The coverage invariant is:</p>
+<blockquote>
+<p>Every unfinished application computation, accepted application message, and
+remaining authority to generate application work has an outstanding completion
+path to R.</p>
+</blockquote>
+<p>Call this invariant <code>Covered(R)</code>. It is a property to establish and preserve,
+not an ordinary Boolean that the library may assert.</p>
+<p>Registration precedes any visibility of the message and remains accounted for
+through pending publication, buffering, and receiver processing. Receipt must
+establish receiver responsibility before retiring transport responsibility.
+Suspension preserves the processing obligation, including handler suffixes and
+running cleanup. A failed send can retire its reservation only after establishing
+that no accepted or deliverable message remains.</p>
+<p>An activation's completion entry can acknowledge its parent only after its own
+application code and producing cleanup have finished and all child obligations
+have completed. An acknowledgement in flight leaves the parent's child entry
+outstanding. The protocol matches each acknowledgement to a live entry and
+retires that entry once; stale or duplicate acknowledgements cannot discharge
+other work. Copied identifiers name entries but confer no accounting authority.</p>
+<p>Completion dependencies do not transfer ordinary resource access between workers.
+There remains one owner of each executable continuation and its branch authority.
+A parent's outstanding dependency is not a second owner of the child's control.
+Where local application code has finished, its administrative entry can remain
+without retaining that code's ordinary access authority. Any support actually
+used by the entry remains protected by its own enclosing owner.</p>
+<p>The causal parent is not a lexical release owner for remote processing. A remote
+dependency on A's local resource would need a separate authority and lifetime
+proof; the copied-message fragment supplies none.</p>
+<p>The completion structure need not mirror the physical communication graph.
+Logical parent links can remain acyclic under R even when messages travel around
+a cycle. They are administrative relationships, not resource ownership from A
+to B and back to A. Each worker still mutates only its own store and accounting
+records. Polarized operations convey data and completion notifications; the
+proof does not require a shared atomic counter on every store operation.</p>
+<h4 id="a-round-trip-while-both-workers-remain-available">A round trip while both workers remain available</h4>
+<p>Suppose R starts activation a on A. It sends m to B, creating b. B's processing
+of m sends n back to A, creating c. The causal paths are:</p>
+<pre tabindex="0"><code class="language-text">R -&gt; a on A -&gt; b on B -&gt; c on A
+</code></pre>
+<p>The execution can proceed as follows:</p>
+<ol>
+<li>R registers a before starting its ordinary invocation on A.</li>
+<li>A registers b before publishing m. After a's local code and cleanup finish,
+A may return to its receive loop. Its administrative entry for a remains
+outstanding because b has not completed.</li>
+<li>B receives m under b's coverage, registers c, and publishes n. B may finish
+its local processing and continue servicing its channels while c remains
+outstanding. Waiting for c must not block the entire worker's executor.</li>
+<li>A receives n and processes c. This is subsequent sequential work on A, not
+simultaneous access by a and c to one ordinary resource. If c suspends, its
+continuation and authority remain owned by A's local store.</li>
+<li>If c produces no more work, it finishes code and cleanup, then acknowledges
+completion. B can retire c and acknowledge b after b's own local completion.
+A can then retire b and acknowledge a to R.</li>
+</ol>
+<p>The accounting entries need not retain completed application frames. A genuinely
+suspended computation, such as one awaiting a reply, does retain its frames and
+completion responsibility until it resumes and finishes.</p>
+<p>A reply delivered to an already-covered continuation needs a distinct handoff
+rule: establish coverage in that existing continuation before retiring delivery.
+Do not make the reply sender depend on completion of the receiving ancestor's
+entire activation. That would introduce an artificial completion cycle. The
+existing activation remains accounted for through its later work; delivery does
+not create another owner or reparent an ancestor beneath its descendant.</p>
+<h4 id="passive-service-and-producing-cleanup">Passive service and producing cleanup</h4>
+<p>Both receive loops may still be suspended when application obligations disappear.
+They remain lifetime and completion obligations, but their parked existence need
+not count as application work if the library establishes that they can activate
+application code only upon receiving an already-accounted message.</p>
+<p>This restriction does not apply automatically to arbitrary blocked user code.
+An independent timer, callback, producer, or retained computation that can
+generate application work needs a root or descendant obligation. Worker resources
+remain owned while service loops are suspended; classifying a loop as passive
+does not release its authority or permit concurrent sharing.</p>
+<p>Cleanup that can send application messages belongs to the accounted application
+phase. It must finish before its producer obligation retires. Service teardown
+after application quiescence must be proved unable to generate application work;
+otherwise retain its producer obligation and run that cleanup before declaring
+application quiescence. No running cleanup is discarded or silently skipped.</p>
+<h4 id="two-phase-shutdown-and-stability-proof">Two-phase shutdown and stability proof</h4>
+<p>Let G(R) be the outstanding root obligations, including independent producers.
+Their descendant coverage is established by <code>Covered(R)</code>. Define:</p>
+<pre tabindex="0"><code class="language-text">RootsClosed(R) = no further independent application work can be admitted
+RootsEmpty(R) = G(R) is empty
+AppQuiet(R) = Covered(R) and RootsClosed(R) and RootsEmpty(R)
+</code></pre>
+<p>The first phase establishes application quiescence:</p>
+<ol>
+<li>Seal fresh root admission, including admission by R or external sources.
+This does not seal internal sends by existing accounted computations.</li>
+<li>Continue servicing both workers, application channels, and completion
+notifications. Existing work may generate descendants and suspend repeatedly.</li>
+<li>Establish through the authenticated protocol that G(R) is empty.</li>
+</ol>
+<p>To show stability, suppose application work could appear afterward. A new root
+would contradict <code>RootsClosed</code>. An existing producer, unfinished processing,
+producing cleanup, or accepted message would require an outstanding root by the
+coverage invariant. A passive receive loop could activate only from such an
+accounted message. Each possibility contradicts <code>AppQuiet</code>. This is stronger
+than combining observations taken from separate local stores.</p>
+<p>The second phase completes service and settles backing access:</p>
+<ol>
+<li>Seal both application send polarities. No legitimate application sender
+remains, so this cannot prevent required descendant work.</li>
+<li>Let the receive loops observe genuine end-of-input and finish normally.
+Drive all remaining retained service control and non-producing cleanup.</li>
+<li>Complete both workers' owned scopes and all their endpoints. Settle every
+remaining channel operation, wake registration, and completion notification.
+Private control-channel support, if separate, has the same settlement duty.</li>
+<li>Return from network cleanup, permitting the enclosing backing owners to
+release and the saved body result to return.</li>
+</ol>
+<p>Both directions must remain serviceable during this protocol, including with
+bounded queues. Serially blocking one worker until the other completes can
+prevent the messages or acknowledgements needed for completion. Scheduling and
+notification delivery remain separate library and host assumptions.
+Sealing application sends must not prematurely close the control support needed
+to finish the protocol and establish settlement.</p>
+<p>A sufficient final condition is:</p>
+<pre tabindex="0"><code class="language-text">NetworkQuiescent(R) = AppQuiet(R)
+                     and both owned worker scopes completed
+                     and all endpoints completed
+                     and all channel support settled
+</code></pre>
+<p><code>AppQuiet</code> does not imply that the local stores are E: passive receive captures
+may remain until the second phase. The local recursive drain proof applies at
+final store completion. Application quiescence alone cannot authorize backing
+release while any provider or notification can still access it.</p>
+<p>The enclosing ordinary cleanup can implement both phases. It retains its own
+unfinished completion until the finishing function returns. Resource nesting
+keeps channel support live throughout; every normal release predecessor must
+establish the final condition and preserve it up to release. These phases are
+library protocol states, not new Core gate or task constructs.</p>
+<p>Ownership supplies responsibility and support validity; cleanup supplies
+invocation and the release boundary; the protocol supplies stable completion
+evidence. This conditional derivation requires no new gate primitive. It does
+not establish that today's analysis, or the local candidate analysis alone,
+can validate arbitrary library implementations of the protocol. The owning
+continuation store and transfer/restore extensions remain necessary.</p>
+<p>An infinite exchange never reaches <code>AppQuiet</code>; an application deadlock may also
+prevent return. Eventual completion requires additional assumptions about finite
+application work, scheduling, delivery, and failure handling. Outer abandonment
+and cancellation still need separate completion and interpreter proofs.</p>
+<h3 id="protocol-aware-completion-analysis">Protocol-aware completion analysis</h3>
+<p>The smallest candidate extension adds identity-indexed protocol facts to the
+normal-return summaries already derived for local stores. It checks library
+orchestration against small accounting and transport contracts. It does not
+infer that an arbitrary map or counter represents all unfinished work.</p>
+<p>This is an analysis design, not an implemented checker or soundness result.
+The current <a href="/ash/spec/elaboration/#effect-core-lowering">control summaries</a>
+and <a href="/ash/spec/elaboration/#validation-boundary">independent validation</a>
+provide the basis. They do not already establish these protocol facts or admit
+general source declarations of provider laws.</p>
+<h4 id="protocol-facts-and-relational-summaries">Protocol facts and relational summaries</h4>
+<p>For the fixed two-worker fragment, distinguish these facts:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Fact</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Covered(R)</code></td>
+<td>Every application obligation has a completion path to R.</td>
+</tr>
+<tr>
+<td><code>RootsClosed(R)</code></td>
+<td>Independent admission is closed and earlier work covered.</td>
+</tr>
+<tr>
+<td><code>RootsEmpty(R)</code></td>
+<td>The actual root ledger has no outstanding obligations.</td>
+</tr>
+<tr>
+<td><code>Completed(x)</code></td>
+<td>An identified worker scope or endpoint completed.</td>
+</tr>
+<tr>
+<td><code>Settled(c)</code></td>
+<td>No operation or notification can access c's backing again.</td>
+</tr>
+</tbody>
+</table>
+<p><code>RootsClosed</code> must account for admissions already in progress; rejecting future
+calls while leaving an earlier accepted root unregistered is insufficient.
+<code>Completed</code> refers to actual structural completion, or its authenticated remote
+notification, rather than a user-maintained done flag. <code>Settled</code> concerns future
+access as well as current inactivity. Existing local facts E(N) and W(N) remain
+separate. <code>AppQuiet</code> is derived from the three network facts above, not stored
+as another independently writable protocol flag.</p>
+<p>Facts identify the actual acquisition, protocol, and runtime activation. A
+same-typed counter, constructor, or different acquisition supplies no substitute.
+The candidate return relation extends the earlier form:</p>
+<pre tabindex="0"><code class="language-text">R_f subset-of ProtocolInputFacts x ResultCase x ProtocolOutputFacts
+</code></pre>
+<p>It is qualified by actual resource identities and interpretation requirements.
+It also retains relationships such as <code>q identifies a live child of p in R</code>.
+Separate Booleans saying that q and p exist cannot establish that relationship.
+Aliases, projections, and calls must preserve it, or a successful admitted
+lookup must establish it before use. Copying q does not copy completion authority.</p>
+<p>Record parameters are instantiated per invocation; analysis does not enumerate
+all records created at runtime. A finite summary abstraction for those parameters
+and their aliases still needs a sound definition. Static acquisition identities
+must not be confused with fresh runtime record keys or their reuse protection.</p>
+<h4 id="accounting-and-transport-operation-contracts">Accounting and transport operation contracts</h4>
+<p>The operation laws needed at the abstraction boundary are:</p>
+<ul>
+<li>Child registration attaches a fresh outstanding obligation to a covered
+producer before publication is possible. The parent's responsibility cannot
+disappear while that child remains unfinished. Closing direct-child admission
+is permanent for that record; later registration cannot succeed.</li>
+<li>Publication associates accepted work with the registered obligation. A
+reservation covers one accepted dispatch; copied keys cannot reuse it for
+another. A failed-send path can retire a reservation only after establishing
+that no accepted or deliverable message remains.</li>
+<li>Receipt establishes covered processing before delivery responsibility ends.
+A reply may hand off to an already-covered continuation without creating
+a completion dependency back to its own ancestor.</li>
+<li>A child-empty observation describes the actual children of the identified
+live record. Retirement matches a completed child and occurs once; stale or
+duplicate acknowledgements cannot discharge another obligation.</li>
+<li>Root admission closure accounts for earlier accepted roots and prevents new
+independent admissions in that network activation.</li>
+<li>Channel closure, genuine end-of-input, and settlement establish the endpoint,
+publication, notification, and backing properties used by the second phase.</li>
+</ul>
+<p>These laws provide conservation of accounting and backing responsibility.
+They are contracts for operations, not new Core instructions. An operation
+can itself be an ordinary library function whose summary follows from smaller
+operations. Native publication, visibility, callback, and backing behavior
+needs a provider contract wherever its implementation is outside checked Core.</p>
+<p>The ledger's representation laws also need proof or admission. Its empty probe
+must describe the actual outstanding records, registration must retain the
+required dependency, and retirement must preserve all other obligations.
+Ordinary method types, integer arithmetic, or a function named <code>acknowledge</code>
+cannot establish those properties.</p>
+<h4 id="facts-inferred-from-actual-library-control">Facts inferred from actual library control</h4>
+<p>Relative to those operation contracts, analysis can infer that:</p>
+<ol>
+<li>Every publication follows registration of its matching obligation in the
+same network; receiver dispatch uses the corresponding covered record.</li>
+<li>Retention preserves the link between an outstanding obligation and its
+executable continuation. Resumption finishes under the same responsibility.</li>
+<li>Local completion reporting follows all required application control,
+handler suffixes, and cleanup, and acknowledgement follows checked child
+completion.</li>
+<li>Application code has no unaccounted publication path through captured raw
+endpoints, closures, evidence methods, or imported helpers.</li>
+<li>Passive service and finishing code introduce no independent application
+producers. Producing cleanup remains within an outstanding obligation.</li>
+</ol>
+<p>These are properties of actual transitive control and authority, not effect rows
+alone. A receive-loop name or callback type cannot certify passivity. External
+callbacks and timers need contracts identifying their admission and completion
+relationships when their behavior is not available as checked Core.</p>
+<p>A suspension wrapper's return is not local application completion. The
+<code>Suspended</code> path keeps the record outstanding together with the retained capture.
+Only the path on which the application really finishes can report local
+completion. A result constructor named <code>Finished</code> supplies no proof without
+the inferred relationship to actual branch control. A same-typed substitution
+must re-establish that relationship.</p>
+<h4 id="closure-and-freshness-at-both-levels">Closure and freshness at both levels</h4>
+<p>For an activation record p, <code>LocalDone(p)</code> means its local application control
+and cleanup finished and admission of new direct children under p is closed.
+A remaining producer must already have its own outstanding obligation. Under
+the coverage and retirement laws:</p>
+<pre tabindex="0"><code class="language-text">LocalDone(p) and ChildrenEmpty(p)
+    permits completion acknowledgement for p
+</code></pre>
+<p>Before local production closes, a child-empty observation may become stale when
+p sends another message. After <code>LocalDone</code>, authenticated emptiness can justify
+retirement because no new direct child can be admitted. Existing children may
+still produce descendants, keeping their own obligations outstanding. A local
+done flag alone does not prove either actual completion or admission closure.</p>
+<p>The same reasoning applies at the root: <code>RootsEmpty</code> becomes stable application
+quiescence only with <code>RootsClosed</code> and <code>Covered</code>. Root closure must not be
+assumed to preserve an earlier empty snapshot if pending admission can still
+register earlier accepted work. A fresh observation or a checked preservation
+summary is needed.</p>
+<p>Ordinary aliases and proved state-preserving code may retain an observation's
+result/state relationship. A relevant mutation, unknown possible alias, or call
+whose preservation is unknown invalidates it. Parallel interference requires
+more than a local absence of writes: the admitted transitions of the other
+worker must preserve the invariant and any claimed stable fact. A transient
+local E or empty queue is not stable under message arrival.</p>
+<p>Once <code>AppQuiet</code> is established, protocol-preserving steps cannot generate new
+application work: new roots are closed and every possible remaining producer
+would contradict coverage and root emptiness. Acknowledgements may settle
+administrative work without reopening application admission. Terminal endpoint
+and backing facts likewise require contracts preventing later use.</p>
+<p>All observations still require the actual selected interpreter and matching
+network identity. An intercepted request or ordinary returned constructor does
+not inherit the genuine provider's contract. Forwarding wrappers, imports,
+specialization, and handler suffixes retain the earlier probe-authentication
+checks. Runtime key matching and generation checks remain provider obligations;
+these static facts introduce no first-class proof token or required runtime epoch.</p>
+<h4 id="recursive-application-drain-summaries">Recursive application-drain summaries</h4>
+<p>The network can use this schematic library recursion:</p>
+<pre tabindex="0"><code class="language-text">drain_application(R) =
+    match probe_roots(R) {
+        Empty =&gt; ()
+        Pending =&gt; {
+            service_network(R)
+            drain_application(R)
+        }
+    }
+</code></pre>
+<p>The input facts are <code>Covered(R)</code> and <code>RootsClosed(R)</code>. The genuine <code>Empty</code>
+result establishes <code>RootsEmpty(R)</code>. The service function must preserve coverage
+and root closure while permitting accounted descendant work and suspension.
+Each returning pending arm passes through the recursive call, and no later
+handler or cleanup suffix may invalidate its postcondition.</p>
+<p>Use the earlier least-fixed-point inference for recursive groups. Start the
+group's possible-normal-return relations empty, add returns discovered from
+actual bodies, and publish a guarantee only after convergence in the selected
+finite abstraction. The empty arm supplies the base return with <code>AppQuiet</code>.
+Returns through the pending arm inherit that fact from smaller finite returning
+evaluations. Service may increase outstanding work; no decreasing count is used.</p>
+<p>The resulting candidate summary is:</p>
+<pre tabindex="0"><code class="language-text">Covered(R) and RootsClosed(R) at entry
+    implies AppQuiet(R) on normal return of drain_application(R)
+</code></pre>
+<p>Unknown callees receive conservative possible-return behavior, not the empty
+initialization used for the recursive group being solved. A recursive cycle
+with no return establishes no progress guarantee. This inference composes
+operation laws and coverage-preservation summaries; it does not prove ledger
+representation laws merely by encountering recursion.</p>
+<h4 id="composing-the-shutdown-summary-at-release">Composing the shutdown summary at release</h4>
+<p>A schematic finishing function keeps policy and orchestration in library Core:</p>
+<pre tabindex="0"><code class="language-text">close_root_admission(R)
+drain_application(R)
+seal_application_sends(R)
+finish_worker_scopes(R)
+settle_channel_support(R)
+</code></pre>
+<p>Root closure establishes <code>RootsClosed</code> while preserving coverage. Application
+drain establishes <code>AppQuiet</code> on normal return. Sealing application sends requires
+that fact under the chosen process-all-accepted-work policy and must leave
+required control communication usable. Worker finishing drives passive receive
+loops through genuine end-of-input and completes their stores, cleanup, scopes,
+and endpoints. Settlement accounts for the final operations and notifications.</p>
+<p>The composed normal-return summary must establish <code>NetworkQuiescent</code>, including
+<code>Completed</code> for each owned worker scope and endpoint and <code>Settled</code> for every
+channel support owner. <code>AppQuiet</code> alone is not a summary of final local E states.
+Every reachable normal predecessor of release must establish the final facts
+and preserve them through intervening control. The network drain's own running
+cleanup remains outside the work it must finish, as in the local proof.</p>
+<p>Existing resource nesting and cleanup supply invocation and protected completion.
+The independent validator must reconstruct protocol relationships, actual
+callback summaries, interpretation, and freshness from linked Core after
+transforms. Imported or source summaries do not replace this reconstruction.
+Outer abandonment still requires its separate completion and interpreter proof.</p>
+<h4 id="boundary-between-inference-and-admission">Boundary between inference and admission</h4>
+<p>The division of responsibility is:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Property</th>
+<th>Inferred from library Core</th>
+<th>Verified or admitted law</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Register/publish</td>
+<td>Order and matching record.</td>
+<td>Ledger coverage.</td>
+</tr>
+<tr>
+<td>Completion report</td>
+<td>Local finish and child-empty arm.</td>
+<td>Lookup/retirement.</td>
+</tr>
+<tr>
+<td>Producer coverage</td>
+<td>Authority and actual call paths.</td>
+<td>External admission.</td>
+</tr>
+<tr>
+<td>Message handoff</td>
+<td>Dispatch under the matching record.</td>
+<td>Transport coverage.</td>
+</tr>
+<tr>
+<td>Shutdown phases</td>
+<td>Calls, recursion, and preservation.</td>
+<td>Closure/settlement.</td>
+</tr>
+</tbody>
+</table>
+<p>The <a href="#minimal-library-core-ledger-and-inductive-invariant">minimal ledger</a>
+below supplies a paper representation proof over arbitrarily many records.
+The minimal completion analyser consumes checked laws; it does not invent them
+from an arbitrary map, counter, or collection traversal. Until proof integration
+authenticates those laws against actual Core, their use by a checker still
+requires explicit admission. Writing the paper proof does not close that gap.</p>
+<p>Admission concerns authenticated defining operations, identities, and their
+semantic relationships. It is not granted by an ordinary source declaration,
+interface evidence alone, a matching type, or a callback's name. The mechanism
+for admitting these laws and the sound finite abstraction for record parameters
+remain design questions. Admitting a contract does not require implementing
+the whole accounting algorithm or scheduling policy as a runtime primitive.</p>
+<p>The extension is protocol facts, relational normal-return summaries, freshness
+and interference checks, and validation at existing release boundaries. It adds
+neither a general invariant prover nor a gate or task Core construct in this
+derivation. The owning continuation store and consuming transfer/restore
+semantics remain the separate required extensions identified above.</p>
+<h3 id="minimal-library-core-ledger-and-inductive-invariant">Minimal library Core ledger and inductive invariant</h3>
+<p>Use a private functional representation to discharge the ledger-specific laws.
+The following data and algorithms are schematic Core-level descriptions, not
+executable source examples or a selected implementation. They give conditional
+paper proofs. Mechanical authentication and the previously identified
+continuation-retention extension remain separate work; this note authorizes
+neither implementation nor a prototype.</p>
+<h4 id="representation-and-the-current-state-stream">Representation and the current state stream</h4>
+<p>Each worker keeps ordinary data with these roles:</p>
+<pre tabindex="0"><code class="language-text">Ledger = (next: Int, records: List&lt;Record&gt;, pending_outputs: List&lt;Output&gt;)
+Record = (id: Id, parent: Option&lt;Address&gt;, production: Phase,
+          children: List&lt;(Id, Worker)&gt;)
+Phase = Open | Closed
+Id = Root | WorkId(Allocator, Int)
+Address = (Worker, Id)
+</code></pre>
+<p>The distinguished root record lives on one worker and has no parent. R is still
+the enclosing ownership scope, not an additional required thread. All other
+records have a parent address. Its worker identifies the parent ledger's owner,
+which need not be the allocator named in the record's identifier.</p>
+<p>Within one network activation, each allocator has a distinct fixed label and
+a private serial, initially zero. Allocation uses that serial and increments
+it without reuse, including after retirement. Current
+<a href="/ash/spec/dynamic-semantics/#primitive-operations">integer operations</a>
+operate on mathematical integers, so this freshness argument needs no overflow
+case. Network activations and their dedicated channels remain distinct; copied
+old identifiers do not acquire authority in another activation.</p>
+<p>Records and pending output envelopes contain ordinary metadata and copied,
+resource-free payloads. Actual continuations remain in their owning stores.
+An explicit child list makes emptiness structural; there is no separate cached
+count to relate to that list. This is a proof baseline, not a performance result.</p>
+<p>The worker threads ledger state through one owning event loop:</p>
+<pre tabindex="0"><code class="language-text">drive(ledger) =
+    event = next_event(...)
+    successor = transition(ledger, event)
+    drive(successor)
+</code></pre>
+<p>The driver also dispatches computation and submits pending outputs. Its proof
+must establish that subsequent transitions use the successor, with reservations
+and outputs installed before publication or application dispatch. No callback
+may reenter an update using the previous state. Application code receives
+identifiers and messages, not authority to select a ledger version for updates.</p>
+<p>The ledger value is ordinary duplicable data, not a linear value. Privacy alone
+does not prove which copy is current. The actual driver must never roll back to
+an obsolete version or use it to certify current emptiness. These are source
+control obligations for this loop; no generic mutable cell is required.
+If an update checkpoints, its exclusive updating continuation remains retained;
+another update cannot start from its old input. Kernel preemption preserves that
+execution state without changing ledger ownership.</p>
+<h4 id="collection-lemmas-and-transition-definitions">Collection lemmas and transition definitions</h4>
+<p>Implement lookup, insertion, update, and removal by recursion over private
+finite lists. For example, removal returns whether a matching entry existed:</p>
+<pre tabindex="0"><code class="language-text">remove(q, Nil) = (Nil, Missing)
+remove(q, Cons(x, xs)) =
+    if x.id == q:
+        (xs, Found)
+    else:
+        (ys, result) = remove(q, xs)
+        (Cons(x, ys), result)
+</code></pre>
+<p>Induction on the input list, assuming distinct identifiers, establishes:</p>
+<pre tabindex="0"><code class="language-text">lookup returns exactly the matching entry
+remove(q) returns Found exactly when q was present
+ids(remove(q, xs).list) = ids(xs) minus {q}
+remove(q) preserves every other entry and identifier distinctness
+xs is Nil exactly when ids(xs) is empty
+</code></pre>
+<p>Insertion and update have the corresponding frame property: entries other than
+the selected one remain unchanged. Finiteness is a representation invariant,
+not a consequence of the list type alone. Current
+<a href="/ash/spec/static-semantics/#recursive-block-groups">recursive data rules</a>
+admit cyclic data. The ledger starts with finite lists and these private
+functions preserve acyclicity; it accepts no arbitrary application-built list
+as ledger state.</p>
+<p>Registration updates a local parent record and queues one work envelope:</p>
+<pre tabindex="0"><code class="language-text">register(L, p, destination, payload) =
+    match lookup(p, L.records) {
+        Missing =&gt; (L, Rejected)
+        record with production Closed =&gt; (L, Rejected)
+        record with production Open =&gt; {
+            q = WorkId(this_allocator, L.next)
+            successor = L with
+                next incremented
+                (q, destination) inserted into p.children
+                Work(q, parent_address(p), payload) queued for destination
+            (successor, Registered(q))
+        }
+    }
+</code></pre>
+<p>This is one pure state transformation. The driver makes the successor current
+before submitting the envelope. Receipt establishes the corresponding local
+record before executing its application code. The baseline permits one accepted
+dispatch for each work envelope; transport redelivery would need a separate
+deduplication proof and is not assumed here.</p>
+<p>Local completion closes a record's production only after the actual application
+control, handler suffixes, and cleanup finish. A suspension wrapper returning
+does not qualify. Root closure instead closes fresh independent admission after
+earlier admissions and remaining producer authorities have been accounted for.</p>
+<p>Local retirement is:</p>
+<pre tabindex="0"><code class="language-text">retire(L, p) =
+    match lookup(p, L.records) {
+        non-root record with production Closed and children Nil =&gt;
+            remove p and queue Ack(record.parent, p)
+        otherwise =&gt; L
+    }
+</code></pre>
+<p>Acknowledgement processing finds the named parent and removes the child whose
+identifier and destination match that completion envelope. Unknown parents,
+unknown children, and redundant acknowledgements leave the ledger unchanged.
+The destination match uses the sending peer established by the polarized
+endpoint. The root record remains available for observation.</p>
+<p>These functions are private protocol implementation. Application payloads cannot
+be injected as completion envelopes, and application code cannot bypass the
+driver to close arbitrary records or publish through raw control endpoints.
+Those authority and emission properties need proof from the actual Core.</p>
+<h4 id="local-and-network-inductive-invariants">Local and network inductive invariants</h4>
+<p>The local representation invariant states:</p>
+<ol>
+<li>Record and child lists are finite, acyclic, and have distinct identifiers.</li>
+<li>Each allocator's serial is beyond every serial it has issued; none is reused.</li>
+<li>A record's parent and each child's destination remain fixed.</li>
+<li>Closed production cannot reopen or accept another direct child.</li>
+<li>The single current state stream accounts for pending outputs before they
+become visible, and submission does not replay an already accepted output.</li>
+</ol>
+<p>The network invariant additionally relates all workers' ledgers, pending
+outputs, native transport state, and active or retained application control:</p>
+<ol>
+<li>Every unfinished application computation has its corresponding outstanding
+record and completion path to the root, including through suspension.</li>
+<li>Every pending or accepted work envelope has an outstanding parent dependency;
+receiver dispatch continues responsibility for that same obligation.</li>
+<li>Each logical non-root obligation has one parent, and every live non-root
+record is connected to the root through outstanding dependencies. There is
+at most one executing or retained owner of its application control.
+Registration introduces a fresh child beneath an existing record, so these
+logical paths have no cycles.</li>
+<li>A closed application record has finished its own control and cleanup and
+cannot admit another direct child. Any remaining producer has a separately
+registered obligation.</li>
+<li>A completion acknowledgement originates only from retirement of a closed,
+childless record. Its parent dependency stays outstanding until the matching
+acknowledgement is processed.</li>
+</ol>
+<p>Completed records awaiting acknowledgement can be represented by their parent
+dependency and pending or in-flight acknowledgement rather than a live local
+record. Already processed duplicate acknowledgements are harmless redundant
+control traffic. The invariant does not require that traffic to keep a completed
+application obligation live, but its backing access still needs settlement.</p>
+<p>These logical edges are administrative dependencies, not duplicated executable
+ownership or permission for one worker to access another's ordinary resources.
+The network invariant includes source control properties: the pure function
+that writes <code>Closed</code> cannot itself prove the caller's computation finished.</p>
+<p>Initially, only the open root record exists. Its child list, the other workers'
+record lists, and all pending-output lists are empty. It represents fresh
+admission authority; no application branch or work envelope has started. This
+establishes the base case. Each legal transition must preserve the local and
+network invariants under the native contracts stated below.</p>
+<h4 id="registration-preservation-proof">Registration preservation proof</h4>
+<p>For a missing or closed parent, registration returns the unchanged ledger.
+For an open parent p, allocator freshness gives a child q that has never been
+issued. The insertion and update lemmas preserve identifier distinctness and
+all unrelated entries. Incrementing the serial preserves freshness.</p>
+<p>The new dependency p to q and q's pending work envelope appear together in
+the successor. Since p already has a path to the root, q acquires one before
+publication or execution. No previous obligation disappears. Because q is new,
+adding that edge cannot create a cycle. A proof may order births by transition
+history; no shared runtime birth counter is needed.</p>
+<p>The driver and transport handoff then preserve coverage from pending output
+through accepted publication and receiver processing. The receiver establishes
+its record before dispatch. This proves registration preservation relative to
+the current-state, dispatch, and native handoff premises, rather than from the
+insertion lemma alone.</p>
+<h4 id="retirement-and-acknowledgement-preservation-proof">Retirement and acknowledgement preservation proof</h4>
+<p>Retirement has two distinct stages:</p>
+<ol>
+<li>Local retirement checks <code>Closed</code> and <code>children Nil</code>. The control invariant
+establishes that the record's own application code and cleanup finished.
+Child-list emptiness and the network invariant establish that no descendant
+application obligation remains. Closed admission prevents new direct
+children. Remove the record and queue its acknowledgement in the successor;
+the parent dependency remains outstanding during this handoff.</li>
+<li>Matching acknowledgement processing removes that parent dependency. Source
+emission proves that the acknowledged subtree finished, and faithful transport
+relates the received envelope to that emission. The removal lemma preserves
+all other children and records. The logical tree loses only a completed leaf.</li>
+</ol>
+<p>After local removal, repeating retirement finds no record. After dependency
+removal, repeating the acknowledgement finds no matching child. Neither action
+can discharge unrelated work, and non-reuse prevents a late acknowledgement
+from matching a newly allocated child with the same identifier.</p>
+<p>The source protocol proves the relationship between acknowledgement and actual
+completion; transport need only preserve the submitted envelope and origin.
+No separate native law saying that an arbitrary <code>Ack</code> means completion is needed.
+If source code can forge that envelope or close a live computation's record,
+the network invariant fails even though the list operations remain correct.</p>
+<h4 id="emptiness-and-stable-application-quiescence-proof">Emptiness and stable application-quiescence proof</h4>
+<p>The root probe is a pure lookup and pattern match over the current state:</p>
+<pre tabindex="0"><code class="language-text">probe_root(L) =
+    match root_record(L) {
+        production Closed and children Nil =&gt; Quiet
+        otherwise =&gt; Pending
+    }
+</code></pre>
+<p>The collection lemma establishes that <code>children Nil</code> means no outstanding root
+dependencies. By the network invariant, every unfinished application computation
+or work envelope requires such a dependency. None therefore remains. Root
+closure prevents new independent work, and there is no remaining covered
+producer that could create descendant work. This establishes stable <code>AppQuiet</code>.</p>
+<p>An open root with no children cannot report <code>Quiet</code>. An old ledger snapshot
+cannot certify current emptiness; the driver and freshness proof must establish
+the argument's relationship to current state. The observation law comes from
+this actual pure function and its invariant, not a native emptiness probe or
+an ordinary constructor named <code>Quiet</code>.</p>
+<p>Passive receive loops and remaining notifications may still exist. Empty
+pending outputs do not prove that accepted publications or native backing users
+have settled. The second shutdown phase must still finish worker scopes and
+endpoints and establish <code>Settled</code> before the enclosing cleanup can return.</p>
+<h4 id="proof-integration-and-remaining-native-contracts">Proof integration and remaining native contracts</h4>
+<p>The paper argument gives concrete lemmas to validate, not an automatic capability
+of the candidate finite completion analysis. Checked use must authenticate:</p>
+<ol>
+<li>Collection and freshness lemmas against their actual Core definitions.</li>
+<li>Initialization and transition preservation of the representation invariant.</li>
+<li>The driver's current-state flow, publication ordering, and absence of stale
+reentrant updates.</li>
+<li>The correspondence between record closure and actual branch completion,
+retained control, cleanup, dispatch, and private acknowledgement emission.</li>
+<li>Composition of those results into the protocol and release summaries, with
+reconstruction after imports, specialization, and Core transformations.</li>
+</ol>
+<p>Ordinary privacy, callback types, or source assertions cannot supply those
+proofs. The <a href="#restricted-proof-integration-at-the-core-validation-boundary">restricted integration mechanism</a>
+below is a candidate for checking them against Core. Its exact rule set and
+soundness remain open; the paper proof cannot yet replace admission in a
+checked program. A transform that changes removal, dispatch, or state flow
+must re-establish the affected lemmas and completion facts.</p>
+<p>With that integration, ledger-specific admission can be removed. The remaining
+external contracts concern:</p>
+<ul>
+<li>Faithful submission and delivery: native transport does not invent or alter
+protocol envelopes and delivers each accepted work envelope at most once.
+Source dispatch preserves that uniqueness. Application data cannot impersonate
+protocol origin.</li>
+<li>Acceptance and failure: a definitely unaccepted submission has no deliverable
+message; acceptance transfers publication responsibility to protected native
+state. An uncertain outcome remains outstanding and cannot be blindly retried
+or retired as unaccepted.</li>
+<li>Publication, receipt, and readiness: copies become visible with a continuous
+handoff of delivery responsibility; waiter registration and notifications do
+not lose required work or retain unprotected access.</li>
+<li>Native closure and settlement: genuine end-of-input follows accepted work,
+and completed endpoints plus settlement account for every possible future
+callback, wake, or backing access before release.</li>
+</ul>
+<p>Eventual delivery and scheduling progress are additional liveness assumptions,
+not consequences of the ledger proof. Internal failure still supplies no source
+cleanup guarantee. The previously required owning continuation store and its
+transfer/restore semantics remain foundational obligations. Removing admission
+of bookkeeping laws does not remove those extensions or make application
+quiescence sufficient for final resource release.</p>
+<h3 id="restricted-proof-integration-at-the-core-validation-boundary">Restricted proof integration at the Core validation boundary</h3>
+<p>The candidate mechanism checks restricted inductive summaries using untrusted
+proof plans. It reconstructs a derivation against the actual Core body, rather
+than searching for arbitrary invariants or accepting an earlier permission.
+It is intended for the finite-list ledger above, not arbitrary representations
+or all behavior-preserving transformations.</p>
+<p>This would extend the current
+<a href="/ash/spec/elaboration/#validation-boundary">independent validator</a> and the
+boundary accepted in <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>.
+It adds verification rules and metadata, not executable Core operations or
+source proof values. No checker, proof certificate, or soundness result is
+implemented by this note.</p>
+<h4 id="untrusted-proof-plans-and-claim-binding">Untrusted proof plans and claim binding</h4>
+<p>A helper can carry metadata with these schematic roles:</p>
+<pre tabindex="0"><code class="language-text">target:       actual Core function binder
+claim:        RemoveById for these types and key projection
+induction:    list argument xs
+dependencies: verified key equality
+</code></pre>
+<p><code>RemoveById</code> selects a restricted claim schema: membership and result-case
+relationships, preservation of whole retained entries, and identifier
+uniqueness. Its <a href="#removebyid-claim-and-checking-rules">precise contract</a>
+preserves their order and contents, including parent, phase, and children
+fields. The plan nominates what to check; it grants none of those facts.</p>
+<p>Validation binds the claim to actual function and nominal identities, argument
+positions, projections, instantiations, and the current body. A matching type,
+function name, source origin, or copied node identifier is insufficient.
+Schema preconditions must be established at every use that relies on its
+postcondition. An ordinary source assertion cannot discharge them.</p>
+<p>The metadata can remain outside executable Core and is not passed to functions
+at runtime. How a library or frontend supplies plans is separate from this
+typed Core contract; no source syntax is selected here.</p>
+<h4 id="restricted-vocabulary-and-structural-induction">Restricted vocabulary and structural induction</h4>
+<p>For the initial ledger, the checker needs facts about finite lists, membership,
+absence, uniqueness, preservation of unrelated entries, fixed record fields,
+counter freshness, current state, production closure, and actual completion.
+These predicates have defined meanings. A function returning <code>true</code> cannot
+introduce <code>Unique</code>, <code>Current</code>, or <code>Covered</code>.</p>
+<p>Constructor equations include:</p>
+<pre tabindex="0"><code class="language-text">Finite(Nil)
+Finite(Cons(x, xs)) exactly when Finite(xs)
+Unique(Cons(x, xs)) exactly when Unique(xs) and x.id is absent from xs
+</code></pre>
+<p>The checker follows actual Core matches, equality branches, substitutions,
+constructor reconstruction, and calls to verified helpers. Identifier equality
+must use actual integer/constructor semantics or a checked equality helper;
+an arbitrary Boolean-returning method supplies no equality fact.</p>
+<p>Representation lemmas initially admit only ordinary data computation and
+certified pure callees. An empty outward effect row does not establish that
+fragment: handled requests still introduce control behavior. Unsupported
+effectful helper bodies cannot silently inherit pure collection lemmas.</p>
+<p>A recursive postcondition is available as an induction hypothesis only for a
+call on a checked proper constructor subterm of the finite induction argument.
+The call's actual arguments must match the hypothesis's instantiation. The
+whole input cannot assume its own postcondition. Finiteness comes from the
+private representation invariant, not from the ordinary data type alone.</p>
+<p>Ordinary lemma dependencies can form an acyclic graph. The first fragment
+need not support arbitrary mutually recursive induction. This is distinct
+from the earlier fixed-point analysis of possibly nonterminating drain loops.</p>
+<p>Fresh allocation needs only the checked counter pattern:</p>
+<pre tabindex="0"><code class="language-text">allocated_id = WorkId(owner, next)
+successor.next = next + 1
+</code></pre>
+<p>Initialization and current-state preservation establish that the counter does
+not reset or reuse an earlier value. Together with mathematical integer
+semantics, this proves non-reuse without a general arithmetic solver or a
+stored history of retired identifiers. More complicated arithmetic need not
+be accepted by the initial proof fragment.</p>
+<h4 id="removebyid-claim-and-checking-rules">RemoveById claim and checking rules</h4>
+<p>Bind the claim to actual Core function f, its list and status constructors,
+and its key projection. Let <code>UniqueKeys</code> name the earlier uniqueness predicate
+specialized to those projected keys. The contract is:</p>
+<pre tabindex="0"><code class="language-text">Precondition:
+    Finite(xs)
+    UniqueKeys(xs)
+
+Normal-return postcondition for f(q, xs) = (ys, status):
+    ys = erase(q, xs)
+    status is Found exactly when q occurs among the input keys
+    status is Missing exactly when q is absent from the input keys
+    Finite(ys)
+    UniqueKeys(ys)
+</code></pre>
+<p>Define the expected sequence mathematically:</p>
+<pre tabindex="0"><code class="language-text">erase(q, Nil) = Nil
+erase(q, Cons(x, xs)) =
+    if key(x) == q:
+        xs
+    else:
+        Cons(x, erase(q, xs))
+</code></pre>
+<p>This is a logical definition of the claim, not an executable helper or a new
+Core primitive. Input uniqueness makes removal of the matching head removal
+of the only matching entry. Sequence equality permits different list-node
+allocations but preserves the same retained entries in the same order. Merely
+preserving their identifier set would allow a retained record's phase or parent
+to change. The checker can track original entry binders to establish preservation
+without deciding equality of arbitrary payloads.</p>
+<p>The initial rule families are:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Rule family</th>
+<th>Established relationship</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Constructor cases</td>
+<td>Actual Nil/Cons cases and bound components.</td>
+</tr>
+<tr>
+<td>Predicate unfolding</td>
+<td>Finiteness, uniqueness, membership, and absence.</td>
+</tr>
+<tr>
+<td>Key equality</td>
+<td>Equality or inequality from a verified comparison.</td>
+</tr>
+<tr>
+<td>Tail induction</td>
+<td>The claim for a checked smaller input.</td>
+</tr>
+<tr>
+<td>Result reconstruction</td>
+<td>Actual entries, sequence order, and result tag.</td>
+</tr>
+<tr>
+<td>Checked helper calls</td>
+<td>Verified claims with established preconditions.</td>
+</tr>
+</tbody>
+</table>
+<p>Each reachable branch must satisfy the contract. A proof plan cannot omit a
+difficult arm. Facts refer to actual binders and constructor identities, not
+their source spellings. An induction call must target the function being
+checked, pass an actual constructor tail of the finite induction input,
+establish its preconditions, and instantiate the remaining arguments correctly.</p>
+<p>A tail binding alone does not establish well-founded descent: for cyclic data,
+the tail can lead back to the whole input. The <code>Finite</code> premise excludes that
+case. Calls on the unchanged input, unverified callees, and circular ordinary
+lemma dependencies cannot assume the claim being checked.</p>
+<h4 id="reconstructing-the-removal-lemma">Reconstructing the removal lemma</h4>
+<p>The validator checks three cases of the actual <code>remove</code> body. Let tail denote
+the actual pattern-bound tail, independently of its binder's source name.</p>
+<ol>
+<li><strong>Empty input.</strong> <code>Nil</code> contains no requested entry. The returned <code>Nil</code> and
+<code>Missing</code> establish the sequence, status, finiteness, and uniqueness clauses.</li>
+<li><strong>Matching head.</strong> Verified comparison establishes <code>key(x) = q</code>. Input
+uniqueness establishes q's absence from tail. Returning tail therefore
+removes exactly the requested entry, preserves every other entry, and
+correctly reports <code>Found</code>.</li>
+<li><strong>Nonmatching head.</strong> Verified comparison establishes <code>key(x) != q</code>.
+Constructor decomposition supplies <code>Finite(tail)</code>, <code>UniqueKeys(tail)</code>, and
+absence of <code>key(x)</code> from tail. The actual call on tail may use the induction
+hypothesis. Its returned ys is <code>erase(q, tail)</code> and introduces no new entry,
+so <code>key(x)</code> remains absent from ys. The actual result <code>Cons(x, ys)</code> preserves
+the original head and sequence order, retains uniqueness, and has the required
+status: membership of q in the original input equals membership in tail.</li>
+</ol>
+<p>The reconstruction checks returned values, not just that a suitable constructor
+appears somewhere in the body. Replacing a retained entry with a same-key entry
+whose phase changed fails whole-entry preservation. Returning the wrong status
+fails the result/membership relationship even if the list itself is correct.</p>
+<h4 id="removebyid-soundness-obligation">RemoveById soundness obligation</h4>
+<p>The required checker theorem is:</p>
+<blockquote>
+<p>If the checker accepts <code>RemoveById</code> for the actual linked Core definition of
+f, every normally returning execution of f(q, xs), from a well-formed runtime
+input with a finite list and unique keys, satisfies the stated postcondition.</p>
+</blockquote>
+<p>The argument must establish local rule soundness under Core evaluation and
+justify recursive-hypothesis use by induction on the finite input list.
+Symbolic constructor and branch facts must describe the actual
+<a href="/ash/spec/dynamic-semantics/#tuples-constructors-and-matches">matching semantics</a>,
+including nominal identities and the actual selected branch. All callee claims
+and key-comparison facts used by the derivation need their own checked basis.
+This is a normal-return guarantee, not a network termination or scheduling
+guarantee. The theorem is a proof obligation, not an established result.</p>
+<p>The following changes must invalidate the affected derivation:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Changed body</th>
+<th>Missing justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nonmatching result becomes Nil</td>
+<td>Unrelated-entry preservation.</td>
+</tr>
+<tr>
+<td>Retained record changes phase</td>
+<td>Whole-entry preservation.</td>
+</tr>
+<tr>
+<td>Every result reports Found</td>
+<td>Membership/result correlation.</td>
+</tr>
+<tr>
+<td>Recursive call uses whole input</td>
+<td>Proper-subterm induction.</td>
+</tr>
+<tr>
+<td>Comparison is arbitrary Boolean code</td>
+<td>Verified equality semantics.</td>
+</tr>
+</tbody>
+</table>
+<p>A valid alternative algorithm may also fall outside the initial rule fragment.
+It needs another checkable derivation; recognizing arbitrary equivalence is
+not required. The theorem binds to the current linked definition, so any Core
+transformation must reconstruct the derivation before reusing its summary.
+Only a complete, budgeted check may publish the claim.</p>
+<p>The checked summary remains a data-operation fact. <code>Found</code> establishes that the
+child existed in the input list; it does not establish that the child finished.
+An empty resulting child list still needs current-state provenance and closed
+production before acknowledgement is permitted. The proof chain is:</p>
+<pre tabindex="0"><code class="language-text">checked removal definition
+    -&gt; exact data-preservation summary
+    -&gt; ledger transition preservation
+    -&gt; completion and current-state checks
+    -&gt; shutdown and release justification
+</code></pre>
+<p>This identifies a first concrete claim and rule-soundness obligation for the
+restricted checker. It supplies no implementation or mechanically checked proof.</p>
+<h4 id="transition-preservation-and-protocol-composition">Transition preservation and protocol composition</h4>
+<p>Collection lemmas establish data-operation meaning. A restricted preservation
+check then relates actual ledger updates to permitted protocol transitions.
+For registration it reconstructs:</p>
+<pre tabindex="0"><code class="language-text">check the parent is open
+    -&gt; construct a fresh child identifier
+    -&gt; insert the matching dependency
+    -&gt; queue the matching work envelope
+    -&gt; return the successor state
+</code></pre>
+<p>The relationships use actual values and fields. Naming an expression
+<code>registration</code> supplies no evidence. Under the defined ledger invariant,
+adding a fresh child beneath a covered parent preserves rooted coverage.</p>
+<p>The retirement check requires actual local completion, closed child admission,
+and actual child-list emptiness before record removal and acknowledgement
+enqueueing. Matching acknowledgement processing uses the verified removal
+lemma and the peer established by the polarized endpoint. Source emission and
+faithful transport establish its relationship to the completed subtree.</p>
+<p>This is a restricted simulation check: Core transitions must implement the
+permitted steps of the ledger model. Checked initialization supplies the base
+case; transition preservation establishes the invariant for every finite
+execution prefix, including interleaved worker steps under the admitted native
+contracts. <code>Covered</code> is not an uninterpreted assertion attached to a callback.</p>
+<p>The model's preservation rules become part of the validator's trusted logic
+and need a soundness argument. They are verification rules, not generated
+runtime events. Library code still chooses scheduling, service order, and
+shutdown policy within those checked relationships.</p>
+<h4 id="current-state-tracking-and-actual-completion">Current-state tracking and actual completion</h4>
+<p>Collection induction does not prove that a caller uses the current ledger.
+Track a fact with this schematic meaning:</p>
+<pre tabindex="0"><code class="language-text">Current(R, L)
+</code></pre>
+<p>A verified transition returning L1 establishes the successor relationship.
+Subsequent updates and observations must use that successor or a value proved
+equivalent to it. This call pattern therefore fails when the transition may
+change authoritative state:</p>
+<pre tabindex="0"><code class="language-text">L1 = transition(L, event)
+drive(L)
+</code></pre>
+<p>Copies of L remain ordinary data. They do not retain a permission to update or
+certify the current ledger after that relationship expires. On a branch proved
+to leave state unchanged, the analysis can preserve the corresponding equality.
+This adds neither a source linear type nor a runtime version counter.</p>
+<p>Actual completion is a separate control fact. Writing <code>Closed</code>, returning
+<code>Finished</code>, or giving a callback the right type cannot establish it. Analysis
+must reconstruct the relationship to branch control, handler suffixes, retained
+continuations, and cleanup. A suspension wrapper's <code>Suspended</code> return keeps its
+obligation outstanding. Captures, resumptions, and callback calls must preserve
+the state and completion relationships they actually carry.</p>
+<p>The normal-return analysis then composes verified transitions into recursive
+drain and shutdown summaries. All relevant transitive calls and interpreted
+requests need checked preservation or conservative treatment; an unknown
+callee cannot inherit a protocol guarantee merely from its outward row.
+Structural list induction does not replace this control analysis.</p>
+<h4 id="independent-revalidation-after-transformations">Independent revalidation after transformations</h4>
+<p>Ordinary Core validation checks types, scope, identities, and control first.
+The candidate proof pass checks helper claims against those actual bodies,
+reconstructs initialization and transition preservation together with the
+required control relationships, and supplies only checked facts to completion
+summaries and release checks. It must run again at each validation boundary
+after transformation.</p>
+<p>The transform obligations are:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Change</th>
+<th>Required treatment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Renaming or supported simplification</td>
+<td>Replay the derivation on changed Core.</td>
+</tr>
+<tr>
+<td>Inlining or specialization</td>
+<td>Instantiate or regenerate a checked derivation.</td>
+</tr>
+<tr>
+<td>Algorithm or representation replacement</td>
+<td>Establish the replacement's lemmas.</td>
+</tr>
+</tbody>
+</table>
+<p>Normalization can be bounded and limited to supported forms. The checker need
+not recognize every equivalent program. A valid optimization can produce Core
+outside the proof fragment; the compiler must preserve a checkable form or
+produce a supported derivation. It cannot retain an old permission based only
+on the transform's equivalence claim.</p>
+<p>Imports likewise need their actual linked definitions and checkable derivations
+at this boundary. An interface claim alone supplies no representation proof.
+Binding a plan to an old body by name, origin, or identifier cannot authenticate
+the current body. If a needed release fact cannot be reconstructed, validation
+fails before execution; no stale permission authorizes release.</p>
+<h4 id="bounded-checking-and-remaining-soundness-work">Bounded checking and remaining soundness work</h4>
+<p>The candidate adds restricted claim schemas, structural-induction checking,
+ledger-transition preservation checks, and current-state/completion composition.
+It adds no general invariant discovery or unbounded proof search. Attempts,
+instantiations, traversals, and retained facts must charge the existing
+cumulative validator resource budget. Exhaustion yields no partially checked
+claim or release permission; there is no separate unlimited proof allowance.</p>
+<p>The rules still need a soundness argument relating accepted derivations to
+actual Core evaluation and protocol steps. The exact supported schemas,
+normalization limits, proof-plan representation, and treatment of unsupported
+transforms remain open. This note proposes the checking boundary rather than
+claiming to have implemented or proved it.</p>
+<p>With sound rules and successful revalidation, ledger registration, retirement,
+and emptiness can rely on checked source definitions. The native transport and
+backing premises above remain external contracts, and continuation retention
+still needs its previously identified semantic extension. There is no new task,
+gate, proof value, or executable Core primitive in this derivation.</p>
+<h3 id="migration-as-a-separate-ownership-transfer-extension">Migration as a separate ownership-transfer extension</h3>
+<p>Pinned workers already provide parallel execution. Moving a suspended computation
+to another worker requires a separately admitted handoff of unique execution
+authority and completion responsibility. It is not enabled by sending an
+ordinary copied <code>Key&lt;N1&gt;</code> to K2.</p>
+<p>The migration contract must check the entire owned capture forest, including
+environments, nested captures, provider state, storage, saved results, and
+cleanup. External support must remain valid and required exact interpretation
+must be available at the destination. Thread-affine resources and native or
+cleanup requirements can prevent a move. Publication must establish receiver
+visibility and one consumer of the handed-off authority.</p>
+<p>The contract must also say whether N remains the logical owner during a checked
+execution handoff or work is rehomed into another store. Rehoming requires
+rechecking fixed input/answer ports, administrative store associations, and the
+completion return path. In particular, <code>Key&lt;N1&gt;</code> cannot become <code>Key&lt;N2&gt;</code> by
+copying or changing a label. This note derives no such rehoming operation.</p>
+<p>Work stealing can later choose among admitted transferable computations. It
+does not establish their transferability. Moving a whole executor domain would
+likewise require a contract for all of its owned control and support.</p>
+<p>Direct concurrent access to one store by several workers is another extension.
+It would need synchronized claims and a concurrent observation/closing protocol;
+atomic slot claims alone do not preserve the single-owner quiescence proof.
+Neither migration nor shared-store scheduling is required by the baseline.</p>
+<h3 id="erlang-comparison">Erlang comparison</h3>
+<p>Erlang provides an execution-model comparison: lightweight processes execute on
+multiple scheduler threads, and processes communicate by asynchronous signals.
+See its <a href="https://www.erlang.org/doc/system/eff_guide_processes.html#smp-run-time-system">scheduler-thread overview</a>
+and <a href="https://www.erlang.org/doc/system/ref_man_processes.html">process communication rules</a>.
+The following correspondences are design analogies, not Ash implementation or
+performance claims:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Erlang concept</th>
+<th>Proposed Ash counterpart</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lightweight process</td>
+<td>Computation with owned control and resource authority.</td>
+</tr>
+<tr>
+<td>Scheduler thread</td>
+<td>Library executor on a kernel-thread worker.</td>
+</tr>
+<tr>
+<td>Reduction budget</td>
+<td>Library gas policy evaluated at checkpoints.</td>
+</tr>
+<tr>
+<td>Message communication</td>
+<td>Polarized channels.</td>
+</tr>
+<tr>
+<td>Runnable process queue</td>
+<td>Library queue of continuation keys.</td>
+</tr>
+</tbody>
+</table>
+<p>Erlang uses reduction allowances before scheduling a process out; its
+<a href="https://www.erlang.org/doc/apps/erts/erl_cmd.html">runtime flags</a> describe that
+budgeting. The Ash proposal makes checkpoint accounting and scheduling policy
+library-defined and optional, subject to site legality and coverage. The
+analogy does not equate a reduction with a particular Ash cost unit.</p>
+<p>Erlang's scheduler implementation includes process migration and work stealing
+between run queues, as described in its
+<a href="https://www.erlang.org/doc/apps/erts/processmanagementoptimizations.html">process-management documentation</a>.
+Our pinned-worker baseline deliberately leaves that behavior to the separate
+ownership-transfer extension above. Erlang is evidence that scheduler-local
+queues and migration can coexist, not proof of Ash's transfer contract.</p>
+<p>Erlang also provides links, monitors, and supervision for process relationships
+and failure handling; see its
+<a href="https://www.erlang.org/doc/system/ref_man_processes.html#links">process relationship rules</a>.
+Those mechanisms address different obligations from the proposed lexical
+resource ownership, retained running cleanup, and checked completion of Ash
+scopes. No supervision or termination policy is adopted by this comparison.</p>
+<h3 id="boundary-of-the-required-extension">Boundary of the required extension</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Concern</th>
+<th>Reused machinery/library</th>
+<th>Additional obligation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lifetime</td>
+<td>Resource scope.</td>
+<td>Admit owned-control payloads.</td>
+</tr>
+<tr>
+<td>Completion</td>
+<td>Cleanup and library drain.</td>
+<td>Prove quiescence on return.</td>
+</tr>
+<tr>
+<td>Retention</td>
+<td>Exact capture.</td>
+<td>Consuming transfer to the store.</td>
+</tr>
+<tr>
+<td>Restoration</td>
+<td>Ordered restore.</td>
+<td>One claim, current consumer.</td>
+</tr>
+<tr>
+<td>Authority</td>
+<td>Dependency/completion analysis.</td>
+<td>Check branch isolation.</td>
+</tr>
+<tr>
+<td>Checkpoints</td>
+<td>Calls, data, matches, requests.</td>
+<td>Admit supplied sites.</td>
+</tr>
+<tr>
+<td>Scheduling</td>
+<td>Queues, recursion, joins.</td>
+<td>Wider wait/notify contracts.</td>
+</tr>
+<tr>
+<td>Representation</td>
+<td>Explicit control.</td>
+<td>Stable slots and checked generations.</td>
+</tr>
+<tr>
+<td>Pinned workers</td>
+<td>Local executors/stores.</td>
+<td>Thread entry and channels.</td>
+</tr>
+<tr>
+<td>Network finish</td>
+<td>Cleanup and channels.</td>
+<td>Causal coverage and settlement.</td>
+</tr>
+<tr>
+<td>Migration</td>
+<td>Separately admitted handoff.</td>
+<td>Whole-capture transfer checks.</td>
+</tr>
+</tbody>
+</table>
+<p>Storage must also account for capacity before committing transfers, preserve
+failure ownership, and survive lowering. No native continuation representation
+is selected. The completion and authority obligations apply after transformations
+and during abandonment as well as on the ordinary return path.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<h3 id="c1-bounded-ownership-and-completion-proof-assignment">C1 bounded ownership and completion proof assignment</h3>
+<p><a href="https://github.com/dikini/ash-lang/issues/71">C1 #71</a> asked whether the local
+Store transitions could preserve one owner and its completion obligations. The
+assignment authorized a finite Lean model, not an evaluator implementation.
+The historical <a href="https://github.com/dikini/ash-lang/blob/ea2a7ffadefb0f485a9c8e0009975a47db5c6865/docs/proposals/CP-0026-scoped-owned-continuation-storage.md">CP-0026</a>
+records the transition compared with that model. The <a href="https://github.com/dikini/ash-lang/issues/75#issuecomment-6476014597">C5 handoff</a>
+and <a href="https://github.com/dikini/ash-lang/issues/54#issuecomment-6476014971">Main handoff</a>
+track the remaining separate gates.</p>
+<p>Model a single store activation, finite branches and slots, and one executor.
+Include an active selected-clause capture, nested live and consumed owners,
+owned resource and cleanup completion, external support, exact consumer
+interpretation, slot generations, reserve refusal, committed transfer, restore,
+normal branch return and failure disposal. The model must represent the
+current consumer separately from the clause that transferred a capture. It
+must state how the store's owning boundary and outside completion relate to
+each capture, rather than assuming a successor is safe.</p>
+<p>Compare successful paths with self-capture, skipped outside completion,
+duplicate/stale keys, incompatible interpretation, branch-local dependency
+escape, and preparation failure. Check both armed and already-running cleanup
+and a second yield during drain. Show the actual premise that excludes each unsafe
+path. Include a finite trace where restored control returns to its current
+consumer, and an unrelated live slot remains unchanged. For this sequential
+fragment, compare shared access to a still-live outer cell with a branch-local
+owner; one scope/completion owner persists in each case. The earlier concurrent
+process isolation constraint remains future parallel pressure, not an added
+local disjoint-footprint requirement.</p>
+<p>Prove preservation of the selected ownership and completion invariants for
+each admitted transition and finite traces, no second restoration of the same
+generation, and no release with unfinished owned work. Preparation refusal
+must leave the original owner intact; post-commit teardown must distinguish
+successful disposal from reported incomplete teardown without double release
+or a claim that source cleanup ran. Prove these from local step
+premises, not by taking the successor invariant as a premise. State any
+provider, scheduler, runtime or admission assumptions explicitly. A separate
+proof of C3's recursive normal-return analysis is required before its release
+facts are used; this assignment does not prove it.</p>
+<p>Retain the model and a correspondence map only if the named examples and
+proof obligations are independently reviewed and pass the frozen scoped
+<a href="/ash/docs/decisions/ad-0012-proof-development-feedback-and-build-reuse/">AD-0012</a>
+integration gate. Otherwise retain the finding in this note and discard the
+prototype; revise the proposed contract if the comparison exposes a semantic
+gap. Neither outcome establishes compiler or runtime correctness, external
+provider laws, termination, or the wider network claims in this note.</p>
+<p>The <a href="/ash/docs/design/retained-control/">C1 model</a> checks its selected ownership
+transitions under explicit premises; it does not prove the compiler or
+evaluator correspondence. This
+note's recursive drain argument remains a paper derivation against the linked
+current specification, with no checked drain proof, executable retention
+implementation, benchmark, or new current-language example. Existing one-shot,
+cleanup, and resource evidence transfers only to the sequential invariants it
+actually tests.</p>
+<p>The bidirectional accounting comparison draws on Dijkstra and Scholten's
+<a href="https://www.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD687a.html">termination detection for diffusing computations</a>.
+Their signalling scheme accounts for delegated work across a network that may
+contain cycles, while maintaining a rooted completion relationship. This is
+conceptual evidence for separating physical communication from completion
+dependencies. It is not a transferred proof of Ash's retained continuations,
+resource authority, cleanup, passivity restrictions, or provider contracts.</p>
+<p>The next comparison should exercise the same control under coroutine selection,
+cooperative queue selection, and guarded gas selection. It should use an
+owning resource plus existing cleanup as the baseline against a dedicated
+runtime closing loop. Compare semantic obligations and required Core/runtime
+changes before comparing performance.</p>
+<p>Required positive cases include:</p>
+<ul>
+<li>R waits for P, continues with Q retained, and exits only after the enclosing
+drain completes Q.</li>
+<li>P checkpoints before and after an inner clause's <code>resume</code>, preserving the
+appropriate nested owner state and returning to the current consumer.</li>
+<li>P checkpoints in cleanup, Q runs, and P completes the remaining cleanup once.</li>
+<li>P checkpoints again during store drain; the outer drain remains protected.</li>
+<li>A false gas guard performs no request, while the true guard preserves its
+committed accounting update through restoration.</li>
+<li>Copied keys can be stale without restoring control twice; lost ready-queue
+entries cannot make the owning store appear quiescent.</li>
+<li>Drain returns after finitely many repeated yields only through a final
+genuine quiescence observation; no decreasing work count is assumed.</li>
+<li>Mutually recursive drains and forwarding wrappers preserve the checked
+result/state relationship through their actual normal-return paths.</li>
+<li>A probe result can pass through aliases and proven state-preserving code
+before its case is matched, without losing its authenticated relationship.</li>
+<li>Two pinned workers retain separate stores and communicate through copied
+messages; neither sender claims the recipient's continuation slots.</li>
+<li>Kernel preemption leaves the paused worker's Ash ownership unchanged while
+another worker progresses. Local yielding still selects among its own branches.</li>
+<li>Network scope completion settles producers and required channel work before
+releasing support; a persistent worker can remain alive afterward.</li>
+<li>An accepted publication remains accounted for after A begins finishing, and
+B's retained handling keeps completion pending after the queue becomes empty.</li>
+<li>Genuine end-of-input follows every accepted publication. The network cleanup
+returns only after receiver cleanup and any backing-access settlement finish.</li>
+<li>A bounded channel continues servicing B while A finishes its sends, rather
+than imposing a closing order that prevents the necessary receive.</li>
+<li>A sends to B and B sends back to A; completion follows the rooted causal
+obligations while both workers continue servicing messages and notifications.</li>
+<li>Child registration covers a message before publication, and parent accounting
+remains outstanding until the authentic completion acknowledgement arrives.</li>
+<li>A reply resumes an already-covered continuation without creating a completion
+dependency from a descendant back to its ancestor.</li>
+<li>Application quiescence is established while passive receive captures remain;
+only subsequent endpoint and backing settlement permits network cleanup return.</li>
+<li>Cleanup that produces a final message retains its producer obligation until
+that cleanup and its descendants finish.</li>
+<li>A recursive application drain preserves coverage and root closure, and its
+checked normal returns establish root emptiness without a decreasing count.</li>
+<li>Aliases and forwarding helpers preserve the matching record/network relation
+and authenticated result facts through their actual control.</li>
+<li>Child emptiness after local production closes justifies acknowledgement;
+root emptiness after root admission closes establishes stable application quiet.</li>
+<li>Shutdown summaries compose application quiet with actual worker and endpoint
+completion and channel settlement at the enclosing release boundary.</li>
+<li>Pure ledger registration queues one covered child before publication, and
+allocation remains fresh after earlier records retire.</li>
+<li>A closed, childless record retires locally while its parent dependency stays
+outstanding until the matching acknowledgement arrives. Duplicate retirement
+and acknowledgement leave unrelated work unchanged.</li>
+<li>The closed-root probe derives stable application quiescence from the current
+lists and invariant while remaining native notifications keep backing live.</li>
+<li>A proof plan for removal is reconstructed through its actual match branches,
+equality helper, proper-subterm recursive call, and returned constructor.</li>
+<li><code>RemoveById</code> preserves whole retained entries and sequence order, including
+unchanged parent, phase, and children fields, on both result cases.</li>
+<li>Renaming, supported simplification, inlining, and specialization preserve or
+regenerate checkable derivations against the transformed linked Core.</li>
+<li>Transition preservation and current-state tracking compose the checked ledger
+lemmas with actual completion and the final resource-release summary.</li>
+</ul>
+<p>Required negative cases include:</p>
+<ul>
+<li>A callback returns <code>Unit</code> with live slots and is presented as a valid drain.</li>
+<li>A pending arm advances and returns without recursively draining, or a suffix
+creates new work after the recursive drain has established quiescence.</li>
+<li>A forged or overridden quiescence result is used to authorize release.</li>
+<li>An old probe result is matched after a work-changing call, or an unanalysed
+external callee is incorrectly assigned no possible normal returns.</li>
+<li>A handler suffix or cleanup creates work after a successful drain, and an
+enclosing expression incorrectly retains the drain's postcondition.</li>
+<li>A retained capture depends on support that closes before its consumer, or
+restores under a different required exact interpreter.</li>
+<li>P and Q retain ordinary authority to the same resource without an admitted
+sharing contract, including through closures or evidence.</li>
+<li>A capture contains its destination's owning boundary, skips an outside
+completion, or abandons running cleanup.</li>
+<li>A transform substitutes a same-typed callback and reuses an obsolete drain,
+dependency, or interpreter proof.</li>
+<li>A remote worker attempts direct restoration with a copied key, or a proposed
+migration omits thread-affine support or duplicates execution authority.</li>
+<li>A local E snapshot is used to release network support while an external
+producer or an in-flight operation can still create work or access it.</li>
+<li>A send reports acceptance before acquiring delivery coverage, or receipt
+retires queued work before receiver control accounts for its handling.</li>
+<li>A temporary empty queue or a user payload is treated as genuine <code>End</code>, or
+an end marker overtakes an accepted but unpublished message.</li>
+<li>Channel backing is released after send completion or queue exhaustion while
+receiver cleanup, wake registrations, or another backing user remains active.</li>
+<li>Two local-empty observations certify shutdown despite bidirectional feedback,
+or both receive loops wait for <code>End</code> before either send polarity can close.</li>
+<li>A child message becomes visible before registration, or a stale, duplicated,
+or ordinary user-produced acknowledgement retires unrelated work.</li>
+<li>An independently productive callback or cleanup is classified as passive,
+or <code>AppQuiet</code> is incorrectly treated as final local-store completion.</li>
+<li>A finishing function's summary assumes causal coverage from a recursive call
+without establishing or admitting the channel and accounting invariants.</li>
+<li>A suspension wrapper's ordinary return or a forged <code>Finished</code> constructor
+is treated as actual local application completion.</li>
+<li>A stale child-empty result is used after another child is registered, or an
+old root-empty result survives closure that registers earlier accepted work.</li>
+<li>A publication uses a different record or network from the preceding
+registration, or application code bypasses accounting through a raw endpoint.</li>
+<li>An arbitrary ledger counter or done flag is treated as an admitted invariant,
+or unknown external control incorrectly preserves a protocol fact.</li>
+<li>A driver updates or probes from an obsolete ledger version, reenters an
+in-progress update from its old input, or replays an accepted output.</li>
+<li>Arbitrary cyclic or application-built lists are assumed to satisfy the finite
+private-ledger invariant, or changed collection code reuses an old proof.</li>
+<li>Application data is interpreted as a private completion envelope, or an empty
+pending-output list is treated as native transport settlement.</li>
+<li>A forged plan, arbitrary Boolean equality helper, or same-typed replacement
+receives a collection lemma without checking its actual definition.</li>
+<li>Removal keeps the correct identifier set but changes a retained record's phase
+or parent, reports <code>Found</code> for an absent key, or omits a reachable proof arm.</li>
+<li>An induction hypothesis is applied to the unchanged input, a possibly cyclic
+argument lacks the finite precondition, or lemma dependencies justify each
+other without an admitted induction rule.</li>
+<li>A transform drops an unrelated entry or changes the returned state but retains
+an old proof because its name, source origin, or node identifier survived.</li>
+<li>An interface-only claim, unsupported transform, or exhausted proof check
+supplies a release permission without a reconstructed derivation.</li>
+</ul>
+<p>Preservation must relate typed Core, the active control stack, the resource's
+owned capture forest, slot generations, branch authority, and closing execution.
+Each move must preserve unique ownership and completion phase. A progress result
+must state its library/host assumptions rather than infer termination from
+these safety properties.</p>
+<p>Any later disposable prototype needs separate authorization. Its question is
+whether resource-plus-cleanup composition can validate these cases with less
+new machinery than a dedicated task or closing-scope node. Retain a bounded
+comparison and counterexamples as design evidence; discard experimental runtime
+machinery unless a later proposal explicitly selects it for product delivery.</p>
+<h2 id="open-questions">Open questions</h2>
+<ol>
+<li>Is the candidate finite return relation sound and sufficiently precise for
+store aliases, mutual recursion, imported control, and handler reinstatement?
+How should validation bound its state space and retain probe freshness facts
+through callback substitution and specialization?</li>
+<li>How should fresh root admission and retained control carry branch authority
+without adding a general task primitive or assuming that duplicable resource
+handles are safe to share between concurrent processes?</li>
+<li>Which external interpreter contexts can remain protected during normal drain
+and outer abandonment, and what restrictions give the smallest useful case?</li>
+<li>What authenticated resource payload and operations admit owned captures while
+preserving slot capacity, failure atomicity, administrative back-references,
+and nonescape? Generic cell semantics do not answer this question.</li>
+<li>Which typed checkpoint coverage contracts would justify stronger gas or
+latency bounds, independently of source syntax and insertion machinery?</li>
+<li>Which wait, channel, and host-operation settlement contracts are needed
+beyond the initial ready-checkpoint fragment? How should the two-worker FIFO
+provider establish publication, stable end-of-input, and backing settlement,
+and how should their summaries compose under independent validation?</li>
+<li>Which captures can admit migration, and how should a handoff preserve store
+identity, fixed ports, external interpretation, and completion responsibility?
+Rehoming and whole-executor movement need their own comparisons.</li>
+<li>Is the candidate protocol-fact abstraction sound and sufficiently precise
+for record parameters, aliases, dynamic key reuse, imported control, and
+parallel interference? How should it compose checked ledger lemmas with
+provider laws that still need admission? Relating descendant coverage,
+reply handoffs, passive service, and backing settlement
+must not assume that the local E/W domain proves representation invariants.
+Larger topologies, cancellation, and failing workers remain separate.</li>
+<li>Are the restricted claim schemas and induction rules sound and sufficient
+for the concrete ledger? Can the stated <code>RemoveById</code> normal-return soundness
+theorem be established from the local checking rules and structural induction?
+How should bounded normalization, plan dependencies, and transformations
+preserve checkability without general proof search? The candidate needs an
+implemented checker; its metadata and remaining claim schemas stay open.</li>
+</ol></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#findings">Findings</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/">← DN-0055: Algebra of Regions, Lifetimes, and Ownership</a><a rel="next" href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057: Checked FFI Module Boundaries →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

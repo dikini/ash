@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>DN-0054: Base Lexical Region Memory Contracts · Ash</title><meta name="description" content="What minimum region rules settle allocation, value validity, sharing, closure capture, publication, and completion without changing the resource-scope lifetime or cycle restrictions of Cell<R,T>?"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0054: Base Lexical Region Memory Contracts · Ash"><meta property="og:description" content="What minimum region rules settle allocation, value validity, sharing, closure capture, publication, and completion without changing the resource-scope lifetime or cycle restrictions of Cell<R,T>?"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0054: Base Lexical Region Memory Contracts · Ash"><meta name="twitter:description" content="What minimum region rules settle allocation, value validity, sharing, closure capture, publication, and completion without changing the resource-scope lifetime or cycle restrictions of Cell<R,T>?"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0054-base-lexical-region-memory-contracts.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0054: Base Lexical Region Memory Contracts","headline":"DN-0054: Base Lexical Region Memory Contracts","description":"What minimum region rules settle allocation, value validity, sharing, closure capture, publication, and completion without changing the resource-scope lifetime or cycle restrictions of Cell\u003cR,T>?","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/","@id":"https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0054-base-lexical-region-memory-contracts.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+</style><title>DN-0054: Region Allocation and Lexical Ownership Contracts · Ash</title><meta name="description" content="What minimum placement and allocation contract can compose first with lexical ownership, and later with other ownership schemes and reclamation policies? How do those compositions establish value validity, sharing,…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0054: Region Allocation and Lexical Ownership Contracts · Ash"><meta property="og:description" content="What minimum placement and allocation contract can compose first with lexical ownership, and later with other ownership schemes and reclamation policies? How do those compositions establish value validity, sharing,…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0054: Region Allocation and Lexical Ownership Contracts · Ash"><meta name="twitter:description" content="What minimum placement and allocation contract can compose first with lexical ownership, and later with other ownership schemes and reclamation policies? How do those compositions establish value validity, sharing,…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0054-base-lexical-region-memory-contracts.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0054: Region Allocation and Lexical Ownership Contracts","headline":"DN-0054: Region Allocation and Lexical Ownership Contracts","description":"What minimum placement and allocation contract can compose first with lexical ownership, and later with other ownership schemes and reclamation policies? How do those compositions establish value validity, sharing,…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/","@id":"https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0054-base-lexical-region-memory-contracts.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,7 +13,7 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0054-base-lexical-region-memory-contracts" data-pagefind-meta="title">DN-0054: Base Lexical Region Memory Contracts</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/design/DN-0054-base-lexical-region-memory-contracts.md">ash-lang <code>7949b6d</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0054-region-allocation-and-lexical-ownership-contracts" data-pagefind-meta="title">DN-0054: Region Allocation and Lexical Ownership Contracts</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0054-base-lexical-region-memory-contracts.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
 <ul>
 <li>ID: <code>DN-0054</code></li>
 <li>Status: exploring</li>
@@ -24,68 +24,145 @@
 <a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
 <a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a>,
 <a href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053</a>,
+<a href="/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/">DN-0055</a>,
 <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a></li>
 </ul>
 <blockquote>
-<p>This note proposes a base region contract compatible with the agreed scoped
-Cell candidate. Explicit region access is the agreed initial call boundary;
-the remaining refinements are proposed design rules. This note defines no
-current Ash semantics, selects no source grammar or implementation
-architecture, and authorizes no product implementation or prototype.</p>
+<p>This informative note separates placement/allocation from ownership,
+lifetimes and reclamation, and retains questions about broader compositions.
+The lexical base is described by the <a href="/ash/spec/">specification</a>.
+Earlier candidate descriptions below explain the design boundary; they do not
+override current syntax/semantics or authorize another implementation,
+architecture or prototype. Nonlexical ownership, collection and transport
+remain exploratory.</p>
 </blockquote>
 <h2 id="question">Question</h2>
-<p>What minimum region rules settle allocation, value validity, sharing, closure
-capture, publication, and completion without changing the resource-scope
-lifetime or cycle restrictions of <code>Cell&lt;R,T&gt;</code>?</p>
+<p>What minimum placement and allocation contract can compose first with lexical
+ownership, and later with other ownership schemes and reclamation policies?
+How do those compositions establish value validity, sharing, closure capture,
+publication, and completion without changing the resource-scope lifetime or
+cycle restrictions of <code>Cell&lt;R,T&gt;</code>?</p>
 <h2 id="context">Context</h2>
-<p>The target is a possible extension after the ash-ffi checkpoint <code>ffi-base</code>,
-commit <code>354c76b391fe4af665cf6a03479a9874a57cb3e3</code>. Its implemented
-<a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#scoped-cells-and-resource-dependencies">resource dependencies</a>
-and <a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#scoped-cell-execution">execution rules</a>
-provide scoped access and completion, but no selectable storage policy for
-ordinary construction. The current ordinary heap, mathematical integers,
-immutable sharing, recursive data, and lexical closures remain the baseline.</p>
-<p><a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a> proposes
-regions as storage-providing resources, with nearest applicable allocation as
-a future default and separate policies for reclamation.
+<p>The completed slim FFI M1 was
+<a href="https://github.com/dikini/ash-lang/pull/143">integrated into Main by PR #143</a>.
+The lexical-region product adds selectable construction to the existing
+<a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">resource dependencies</a>
+and <a href="/ash/spec/dynamic-semantics/#region-construction-and-close-steps">execution rules</a>.
+Its <a href="/ash/spec/static-semantics/#lexical-regions-and-construction-dependencies">construction rules</a>
+are the implemented baseline for the broader composition questions here;
+mathematical integers, immutable sharing, recursive data and lexical closures
+retain their specified contracts.
+The <a href="/ash/spec/static-semantics/#source-foreign-declarations">FFI boundary</a>
+aligns Bytes and opaque pointers; ordinary Ash binding modules express lifetime
+interpretation and cleanup, while native behavior remains an assumption.</p>
+<p><a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a> assigns
+placement and allocation to regions, with ownership, lifetimes, and reclamation
+as separate concepts composed with them. Lexical ownership comes first. M2
+must supply default placement as well as explicit selection under the agreed
+closest-live-context rule below.
 <a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a> separates application policy selection,
 state acquisition, construction lowering, and service requirements.
 <a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a> distinguishes
-foreign ABI facts from checked storage and access authority. None implements
-this base.</p>
+foreign ABI facts from library policy. Neither the slim FFI nor earlier
+experiments implement this region base.</p>
 <p>The <a href="/ash/docs/design/provider-experiments/arena-results/">scalar Arena evidence</a> transfers
 capacity, publication, activation, and completion cases. It establishes neither
 general graph layouts nor borrowing. Partial wider experiments are not accepted
 capabilities. The generic Cell candidate in
 <a href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053</a> needs only valid
 payload dependencies, not successful completion of all this region work.</p>
+<p><a href="/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/">DN-0055</a> develops the
+candidate algebra and proof obligations behind the placement, ownership,
+lifetime, and reclamation relationships explored here.</p>
+<h2 id="agreed-m2-delivery-scope">Agreed M2 delivery scope</h2>
+<p><a href="https://github.com/dikini/ash-lang/issues/53">M2 #53</a> includes default placement
+for ordinary construction alongside explicit region selection, lexical
+ownership, bulk reclamation, closures, and recursive immutable graphs. A
+data-only or explicit-allocation-only product does not complete that scope.
+Usage- or lifetime-based automatic placement inference is deferred as an
+optimization; default placement itself is required.</p>
+<p>The <a href="/ash/spec/">specification</a> defines the implemented lexical base;
+the <a href="/ash/docs/design/lexical-regions/evidence/">bounded model evidence</a> records the separate
+matched R1/R2 proof scope. The earlier candidate requirements in this note are
+informative design context, not pending M2 assignments or current language
+rules. The broader algebra in DN-0055 remains separate exploration.</p>
+<p>Construction, actual closure captures, ordinary graph cycles, projection,
+failure, suspension, escape and refusal remain required cases. No new numeric
+family, FFI policy framework, general allocator API or backend matrix is required.</p>
+<h3 id="approved-allocator-and-storage-direction">Approved allocator and storage direction</h3>
+<p>The complete conceptual interface is:</p>
+<pre tabindex="0"><code class="language-text">RegionAllocator&lt;R&gt; {
+    allocate : Request -&gt; Storage&lt;R&gt;
+    release : Unit -&gt; Unit
+}
+</code></pre>
+<p>Both members belong to the same implementation/state association fixed when R
+is initialized. R's type and allocation/reclamation discipline remain fixed for
+its lifetime; the owner controls release. An allocation-only effect may project
+from this pair but is not the complete interface.</p>
+<p>The default implementation uses host-backed storage. Fixed-capacity storage
+uses the same ordinary effect interface, not a separate compiler policy.
+One allocator may serve and outlive several regions: closing one logical region
+does not destroy shared backing or invalidate another region. Rust heap storage
+or an ordinary slim-FFI binding module can provide physical backing. Native
+validity and cleanup guarantees remain assumptions of that module's contract,
+not consequences of the region model or a restored quarantine protocol.</p>
+<p>Allocation supplies actual storage for typed objects, owned buffers and closure
+records. Merely charging a region while retaining those payloads on an unrelated
+heap is insufficient. Reuse current typed representations and recursive slots
+through a narrow internal construction boundary. Request carries independent
+size/alignment requirements, not younger-dependent operands or captures; Ash
+initializes the supplied storage locally and publishes readable access only
+when initialization permits it. Address alone is not initialization or lifetime
+proof.</p>
+<p>A small private, nonrecursive Request representation and established host
+startup/control machinery under existing limits supply the specified lexical
+bootstrap. The <a href="/ash/spec/elaboration/">Core contract</a> defines its concrete
+Request/Storage and supplied-storage boundary. Ordinary tuples or error constructors cannot be assumed
+allocation-free; setup, refusal delivery and root observation need an established
+storage foundation, without an untracked fallback destination.</p>
 <h2 id="constraints">Constraints</h2>
 <ul>
-<li>Keep lexical name scope, physical storage lifetime, value validity, access
-permission, and completion authority distinct.</li>
-<li>Keep region owners scoped and nontransportable. No owner-plus-dependent
-package or reference count extends a whole region beyond its resource scope.</li>
+<li>Keep region placement and allocation, ownership, lifetimes, reclamation,
+mutation, and completion authority distinct, with checked composition rules.
+Region ownership includes its allocated objects; their lifetimes cannot
+exceed the region's, and region reclamation reclaims all remaining objects
+together.</li>
+<li>Preserve the relation between region lifetime and object ownership: the
+region must remain valid for every permitted use of its objects. Neither
+earlier object reclamation nor whole-region reclamation may invalidate
+objects still required by admitted ownership or access. The first lexical
+scheme rejects escapes beyond the owning scope.</li>
+<li>Use lexical scope as the first ownership scheme: the enclosing scope owns
+the region and determines its lifetime. Keep owners nontransportable within
+this scheme; no package or reference count extends that lexical lifetime.
+Other ownership schemes need separate contracts rather than this restriction
+becoming part of the region definition.</li>
 <li>Reject cycles of resource ownership dependencies. Preserve ordinary sharing
 and cyclic immutable graphs within their checked validity.</li>
 <li>Keep <code>Cell&lt;R,T&gt;</code> access tied to R's resource scope. Its retained payload
-dependencies must strictly outlive R; longer backing lifetime or quarantine
+dependencies must strictly outlive R; longer backing lifetime alone
 cannot admit self-dependency, an owner cycle, or access after R closes.</li>
 <li>Preserve ash-ffi's request-payload boundary, including hidden captures and
 indexed operation metadata. Allocation introduces no exception for a request
 interpreted outside a required owner.</li>
-<li>Distinguish source scope completion from physical owner consumption. Retained
-owners and their transitive dependencies remain protected with ordinary access
-revoked; source completion alone does not authorize backing release.</li>
-<li>Require explicit region access at allocation-capable helper boundaries first.
-Keep existing rank-1 source restrictions; do not introduce implicit
-allocation-polymorphic returned closures.</li>
-<li>Preserve existing ordinary construction until a separate proposal specifies
-its region lowering, effects, failure, and entry-result contract.</li>
+<li>Distinguish source scope completion from permitted backing release. Required
+ordinary dependencies and cleanup remain accounted for by the specified
+failure/completion rules, without a foreign-owner status protocol.</li>
+<li>Cover default placement and explicit selection at allocation-capable helper
+boundaries. Use the agreed caller-context contract below while preserving
+current rank-1
+restrictions and actual closure dependencies.</li>
+<li>Preserve the specified construction, effects, failure and entry-result
+contract; changing that base requires the proposal workflow.</li>
 <li>Keep checked operations and provider assumptions explicit. An interface
 implementation, numeric offset, or compatible type grants no memory authority.</li>
-<li>Begin sequentially with immutable region objects and a fixed-arena comparison.
-Generic Cell supplies mediated mutable state; exclusive views, moving
-collection, owner transport, and concurrency are separate extensions.</li>
+<li>Begin sequentially with lexical ownership, immutable region objects,
+host-backed storage and bulk reclamation; fixed capacity is a model instance.
+Generic Cell supplies mediated mutable
+state. Region-specific collection is a separate reclamation composition;
+exclusive views, moving collection, other ownership schemes, and concurrency
+remain later comparisons.</li>
 </ul>
 <h2 id="candidate-directions">Candidate directions</h2>
 <h3 id="roles-and-initial-boundary">Roles and initial boundary</h3>
@@ -101,27 +178,35 @@ collection, owner transport, and concurrency are separate extensions.</li>
 <tbody>
 <tr>
 <td>Region identity A</td>
-<td>Relate one owner's storage, access, effects, and completion. Each successful execution has its own activation.</td>
+<td>Relate allocation placement, storage, and dependencies, independently of the ownership scheme.</td>
 </tr>
 <tr>
 <td>Region access</td>
-<td>Reusable non-owning permission to request the admitted allocation operations while A is live.</td>
+<td>Reusable permission to request admitted allocations under the selected ownership and lifetime contract.</td>
 </tr>
 <tr>
-<td>Region owner</td>
-<td>Retain backing storage and required completion; aliases cannot close it.</td>
+<td>Ownership scheme</td>
+<td>Determine who owns A and its objects, the region's lifetime, and associated completion authority.</td>
+</tr>
+<tr>
+<td>Lifetime and validity rules</td>
+<td>Preserve A for every permitted object use, bound object lifetimes by A's lifetime, and retain their other dependencies.</td>
+</tr>
+<tr>
+<td>Region type and reclamation policy</td>
+<td>A region type may specify earlier object reclamation through counting, tracing, or another policy. Region reclamation reclaims every remaining object together, after required completion.</td>
 </tr>
 <tr>
 <td>Provider contract</td>
-<td>State admitted representations, capacity units, acquisition and allocation outcomes, and reclamation guarantees.</td>
+<td>State admitted representations, capacity units, initialization and allocation outcomes, and obligations required by the selected composition.</td>
 </tr>
 <tr>
 <td>Allocation record</td>
-<td>Identify an initialized object and its extent, representation, and access provenance. It is not ownership of A.</td>
+<td>Identify an initialized object and its extent, representation, and access provenance; allocation access alone grants no ownership of A.</td>
 </tr>
 <tr>
 <td>Value dependency facts</td>
-<td>Retain the storage and capability owners required to use the particular value.</td>
+<td>Retain required storage validity and capability owners for the particular value.</td>
 </tr>
 <tr>
 <td>Completion obligations</td>
@@ -129,40 +214,95 @@ collection, owner transport, and concurrency are separate extensions.</li>
 </tr>
 </tbody>
 </table>
-<p>Start by exposing explicit region allocation without rewriting all existing
-ordinary values. The first provider comparison uses fixed storage and bulk
-release. Static selection fixes the discipline; capacity and success can still
-depend on execution. Storage can come from foreign allocation, caller backing,
-or another admitted primitive. No native owner is intrinsic to the logical
-region contract.</p>
-<p>Acquisition evaluates its configuration in the preceding scope, then creates
-fresh A and its access only on success. Refusal enters no body and publishes no
-partial owner. A provider must state its acquisition and body-result report
-contract; there is no universal implicit outcome flattening. Required backing
-release is established before successful access is published.</p>
-<p>This is a staged refinement of DN-0035, not a replacement default heap policy.
-Its proposed nearest-region convenience remains a later elaboration question.
+<p>M2 covers default placement of ordinary construction and explicit region
+selection under the <a href="/ash/spec/elaboration/">specified lowering</a>. Storage can
+come from foreign allocation, caller backing,
+static backing, or another admitted primitive. No native owner, resource
+declaration, or runtime acquisition is intrinsic to the region contract.</p>
+<p>This is a staged refinement of DN-0035 under the agreed default-selection
+direction below. The specification owns the exact source and Core presentation.
 One managed ordinary heap and individually owned storage remain comparison
 alternatives with the tradeoffs recorded there.</p>
-<h3 id="explicit-allocation-and-call-boundaries">Explicit allocation and call boundaries</h3>
-<p>An allocation-capable helper receives region access explicitly. Its public
-contract retains the exact region parameter, effects, result storage
-relationships, and dependencies on its input values. Generic globals can
-quantify that parameter using ordinary rank-1 rules. Monomorphic callables keep
-their fixed region relationships.</p>
-<p>Entering a helper, binding an alias, or entering an ordinary block acquires no
-new region. Passing region B to a helper selects B for the constructions it
-explicitly directs there. Existing values retain their storage. Calling a
-closure inside B does not retarget access to A captured by that closure.</p>
-<p>Creating a closure and allocating when it is later called are separate events.
-A closure may receive region access as an ordinary parameter or retain access
-lexically, subject to its monomorphic type and actual captures. It cannot
-silently become universally allocation-polymorphic when stored or returned.</p>
-<p>Later implicit construction must lower to an equivalent checked allocation
-relationship. A future nearest-region form must specify the context at each
-construction and call, including callbacks and returned closures. It cannot
-select another region at runtime merely because a similarly named provider is
-nearer. This note adds no implicit caller-context rule.</p>
+<h3 id="first-ownership-scheme-lexical-scope">First ownership scheme: lexical scope</h3>
+<p>In the first composition, the enclosing scope owns region A and its allocated
+objects and determines the region's lifetime. Resource machinery can establish
+the associated ownership and completion obligations. This scope may manage
+many allocations; allocating a value does not automatically create another
+resource owner. Immutable objects
+and mutable cells retain their own access and dependency rules.</p>
+<p>The bounded model covers host/module-backed storage with bulk reclamation
+at owner completion; fixed capacity is a concrete instance. Static selection fixes these policies; capacity and
+success can still depend on execution. The scope's acquisition evaluates its
+configuration in the preceding scope, then publishes a fresh activation and
+region access only on success. Refusal enters no body and publishes no partial
+owner. Required backing release is established before access is published.
+The composition states its acquisition and body-result report contract; there
+is no universal implicit outcome flattening.</p>
+<p>The lexical scheme governs the owner dependencies and completion cases below.
+Their nontransportable ownership rules do not define every possible region.
+Using caller or static backing still requires the scheme to establish who owns
+the region and its lifetime; it need not allocate or free that backing at each
+scope entry and exit.</p>
+<h3 id="separate-reclamation-compositions">Separate reclamation compositions</h3>
+<p>Each region type may specify its own object reclamation policy. The initial
+arena type retains allocations until bulk release. Counted or traced region
+types could offer earlier reclamation under their own contracts. Keeping
+reclamation separate from placement, allocation, ownership, and lifetimes does
+not require it to be selected independently of the region type.</p>
+<p>All of these policies leave object lifetimes bounded by the region's lifetime.
+Reclaiming the region reclaims every remaining object en masse, including
+objects not reclaimed earlier. References to objects in another region do not
+transfer their ownership or include them in this reclamation.</p>
+<p>Earlier reclamation must preserve objects still required by valid ownership or
+access. A collection policy must establish their liveness; an enclosing lexical
+scope alone is not a substitute for tracing or reference accounting. Region
+reclamation must also wait until admitted object uses and required completion
+no longer need the storage. The lexical ownership scheme enforces this through
+escape and dependency checks, rather than silently extending the region or
+shortening a required object lifetime.</p>
+<p>A region-specific collector could reclaim unreachable objects while the region
+remains live and accepts allocations. Its reclamation contract must account
+for roots, references from other regions, closures, and captured control; moving
+collection also needs an update contract for every retained reference. Merely
+remaining inside the owning scope does not establish that every allocation is
+live or that a reference is a registered root.</p>
+<p>Lexical ownership could still determine that region's owner and lifetime while
+collection determines individual object reclamation. Other ownership schemes
+need their own rules for region lifetime and completion. Neither collection nor
+physical retention silently extends the scoped Cell candidate's access.
+These are future compositions, not capabilities established by the fixed-arena
+comparison or current scalar Arena evidence.</p>
+<h3 id="agreed-placement-calls-and-effects">Agreed placement, calls and effects</h3>
+<p>New ordinary construction uses the closest declared live allocation context.
+The entry wrapper establishes a configured host-backed root, using default
+parameters when none are supplied, and retains it through result observation
+and required completion. Ordinary blocks and calls acquire no region. Calls
+pass the caller's selected context for fresh construction. Explicit selection
+of admitted live or captured region access scopes that computation and its
+helpers, then restores the preceding context; it does not acquire another owner.
+Existing values and aliases never move or promote implicitly.</p>
+<p>Closure creation places its record in the creation context and retains actual
+dependencies. Invocation receives the caller's context for fresh allocations;
+explicit requests to a captured R still target that exact R. This does not make
+stored callables higher-rank or change existing rank-1 restrictions. Capture and
+resume preserve the selected context and owners rather than selecting the
+resumer's current default.</p>
+<p>Allocation is an ordinary effect tied to the selected region through existing
+parametricity and handlers. Purity-compatible defaults, including allocation,
+may be omitted in surface rows: <code>Int -&gt; Pair ! {}</code> includes those defaults;
+<code>Int -&gt; Pair ! {Console}</code> includes them plus Console. Additional observable
+allocator effects remain visible in source contracts and expanded rows. The
+complete implicit-default expansion is specified; this note selects no additional
+implicit effects. Broader inference of omitted definition rows remains outside
+the lexical base, apart from the specified default expansion.</p>
+<p>Core contains no implicits: elaboration retains expanded effect rows, selected
+region/allocator arguments or bindings, request targets and handler/cleanup
+relationships explicitly. The <a href="/ash/spec/elaboration/">specified realization</a>
+uses explicit monomorphic default forwarding and the complete allocator pair;
+it is not an ambient object. <code>StorageView</code> retains actual residency/lifetime
+dependencies, rather than erasing them as an Address cast. The
+<a href="/ash/spec/syntax/">source grammar</a> owns the region/provider and selection
+forms; this note selects no alternative current syntax, layout or bootstrap.</p>
 <h3 id="checked-construction">Checked construction</h3>
 <p>A new region allocation requires live exact region access, an admitted
 representation and construction, checked size and alignment, sufficient
@@ -173,7 +313,7 @@ indices. Native layout and Ash representation are separate contracts.</p>
 <p>Construction with younger dependencies uses two separate boundaries. Consider
 outer region A and inner cell R. Sending an R-dependent closure as an ordinary
 allocation request to A's outer interpreter is forbidden by the
-<a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/static-semantics.md#scoped-cells-and-resource-dependencies">baseline request-payload rule</a>,
+<a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">current request-payload rule</a>,
 even when the eventual object would remain confined to R.</p>
 <p>The proposed route reserves storage using independent requirements, then
 initializes it locally while R remains live. This is a scenario description,
@@ -193,12 +333,12 @@ compiler lowering. It authenticates the exact reservation, extent, layout,
 initializer, and retained dependencies before publication. It executes in the
 constructing computation under R, invokes no source callback, and issues no
 outward request carrying the payload. Ordinary access types or compatible
-descriptors cannot manufacture this permission. This boundary is proposed work,
-not permission already supplied by ash-ffi or its native byte primitives.</p>
+descriptors cannot manufacture this permission. The specified construction
+boundary is distinct from permission supplied by the pointer/Bytes FFI mapping.</p>
 <p>Any pending reservation belongs to that construction's completion obligation
 before fallible reply handling. Capture/resume preserves the same obligation;
 abandonment must cancel or account for it without publishing readable access,
-corrupting other allocations, or bypassing retained-owner protection. Independent
+corrupting other allocations, or bypassing required ordinary dependencies. Independent
 Core validation must check the reservation, local initialization, and publication
 relationship. A provider without this checked boundary rejects construction
 with younger dependencies; it cannot forward the payload to A instead.</p>
@@ -213,17 +353,19 @@ an inline field still requires the container's storage.</p>
 An explicit copy needs a separately admitted payload contract and recipient
 storage. Shallow reference copying preserves dependencies. A base provider need
 not support arbitrary deep copying of graphs, sharing, closures, or cycles.</p>
-<p>Representation support must be declared. Refusing an unsupported explicit
-region construction does not change existing ordinary construction. A later
-claim of full ordinary-Ash compatibility must cover closures and recursive
-data, rather than silently removing them or falling back to an unbounded heap.
+<p>Representation support must be declared. M2's ordinary-construction coverage
+includes closures and recursive immutable graphs, subject to valid captures,
+initialization and dependencies. That product scope is not a later fragment
+and permits no hidden unbounded heap fallback.
 Mathematical <code>Int</code> does not become a wrapping fixed-width value. Any selected
 bounded encoding needs checked conversion and its own refusal behavior.</p>
 <h3 id="storage-lifetime-and-value-validity">Storage lifetime and value validity</h3>
-<p>The owners required by a value include the owner of storage needed to observe
-it and every capability or stored reference actually needed by its use.
-Access requires all those owners to remain valid. The fact that A's bytes are
-live proves only A's storage contribution, not every captured dependency.</p>
+<p>Value validity combines the region's storage and reclamation guarantees with
+every capability or stored reference actually needed by use. Under the initial
+lexical scheme, required owners must remain valid. A collector would also need
+to preserve the allocation through its rooting contract. The fact that
+A's backing bytes are live proves only its storage contribution, not every
+captured dependency or an individual allocation's continued validity.</p>
 <p>The reservation and local-initialization route can place a local immutable
 closure in longer-lived storage A while it captures scoped cell R. Its usable
 value remains confined to R; an ordinary outer allocation request carrying
@@ -245,26 +387,28 @@ Temporary younger storage followed by clearing the cell still rejects.
 This separates a local immutable value's checked validity from publication into
 a longer-lived mutable root.</p>
 <h3 id="owner-dependencies-and-ordinary-cycles">Owner dependencies and ordinary cycles</h3>
-<p>An owner dependency records authority or backing that must remain protected
-until the dependent owner's consumption is established. Ending its source scope
-alone does not discharge an outstanding edge. The initial model admits such
-edges only to already established
-enclosing owners. Edges point from dependent to longer-lived owner;
+<p>Under the lexical ownership scheme, an owner dependency records authority or
+backing that must remain protected until the dependent owner's consumption is
+established. Ending its source scope alone does not discharge an outstanding
+edge. The initial model admits such edges only to already established enclosing
+owners. Edges point from dependent to longer-lived owner;
 self-dependency and owner cycles reject. Capture/resume preserves this relation
 through inactive periods rather than recomputing it from the currently visible
-textual block. A retained disposition keeps the same edges after ordinary
-source access has been revoked; it creates no new lifetime or cycle permission.</p>
+textual block. Pending ordinary completion must retain required dependencies;
+it creates no new lifetime or cycle permission.</p>
 <p>Consumption means the admitted disposition of the resource owner, not immediate
 reclamation of every byte it used. Ordinary Cell close consumes its slot's
 completion authority and drops the payload root even if an enclosing arena
-retains the storage. For a foreign owner, only the recorded native disposition
-establishes consumption; returning from source finish does not.</p>
-<p>An allocation owned by A referring to another ordinary allocation in A is not
-an owner-dependency edge from A to itself. Cyclic immutable graphs can therefore
-remain valid. References and captured access add value dependencies; retaining
-them in another owner's operational state requires that owner's stricter
-outlives check. This distinction preserves DN-0035's ordinary cyclic data while
-keeping the Cell restriction explicit.</p>
+retains the storage. An opaque Address or native reply proves no ownership,
+validity or completion. Foreign cleanup and lifetime interpretation belong to
+ordinary Ash binding contracts, with native behavior assumed rather than
+proved by the region model.</p>
+<p>An ordinary allocation in region A referring to another ordinary allocation in
+A is not a resource-owner dependency on itself. Cyclic immutable graphs can
+therefore remain valid. References and captured access add value dependencies;
+retaining them in another owner's operational state requires that owner's
+stricter outlives check. This distinction preserves DN-0035's ordinary cyclic
+data while keeping the Cell restriction explicit.</p>
 <p>A cell's logical owner R also remains distinct from a region A backing its
 slot. Choosing A does not change R's closing point. A region object's pointer
 to that slot cannot restore access after R closes.</p>
@@ -275,12 +419,30 @@ readable access to uninitialized fields. Failure releases or accounts for
 unpublished state without fabricating a new owner or damaging earlier objects.
 Recursive construction may use checked uninitialized slots, but no unfinished
 field may be observed and failure must revoke all unpublished access.</p>
-<p>For a fixed arena, allocation refusal is a declared ordinary outcome. The
-contract defines usable bytes, alignment padding, metadata and object limits;
-refusal preserves previous references and published usage. Unsupported
-representation, invalid construction, and internal checker/runtime exhaustion
-remain distinguishable from that declared capacity outcome. This does not
-change the terminal internal-capacity boundary retained by the Cell candidate.</p>
+<p>Allocation success and refusal use the same ordinary effect contract. A request
+captures evaluated operands and pending construction once. Success resumes
+that state once with valid selected storage; there is no operand replay.
+Refusal uses checked discard and the handler's ordinary result only where
+current rules admit discard. It does not resume refusal as Storage, add a
+per-constructor result wrapper, roll back earlier effects, retry, or fall back
+to another destination. Internal checker/runtime exhaustion remains the
+existing terminal boundary, distinct from declared allocation refusal.</p>
+<p>Recursive construction preserves current guarded slots, function templates,
+member aliases and source-order initializers. Suspension retains completed
+members, pending slots and the next initializer. Unfinished access cannot be
+forced or transported. Checked abandonment accounts for or revokes unpublished
+state without a new whole-group transaction or same-region-only restriction.</p>
+<p>During running cleanup, an inner safe handler may discard only a local
+computation and let the action finish; an outer handler cannot abandon that
+running action or an unfinished close. Closing preserves the captured
+allocation context and restoration frames. After inner frames unwind, cleanup
+uses the closing computation's context; successful discard restores the clause
+context. A saved release action captures provider function/state, not handlers:
+it must use surviving or action-local interpretations, never replace a removed
+nearest interpreter with an outer same-instance one. Preserve the current
+<code>effect.cleanup-context</code> boundary.</p>
+<p>For fixed capacity, the contract states usable bytes, padding, metadata and
+object limits. Refusal preserves previous references and published usage.</p>
 <p>Explicit allocation requests and exposed usage/failure observations constrain
 optimization. Hoisting, eliminating, or fusing them requires preservation of
 the selected observations. DN-0032's conditional scope laws do not authorize
@@ -291,55 +453,35 @@ They cannot recursively require the unestablished region without a base case.
 Bounds must include backing, metadata, initialization scratch, closure records,
 captured control, and cleanup state where promised. A payload bound alone is
 not a bound on execution memory or reclamation work.</p>
-<h3 id="completion-control-and-reclamation">Completion, control, and reclamation</h3>
-<p>Normal scope completion checks the body result and outward dependencies and
-performs required inner completion and scheduled cleanup. Backing release is
-permitted only when dependent consumption and the backing owner's disposition
-authorize it. Successful consumption releases once; a completed source scope
-does not by itself establish that consumption. Cleanup using A's storage runs
-while A is live. Ordinary unreachable-data reclamation invokes no arbitrary
-effectful source cleanup.</p>
-<p>Composition with foreign owners preserves the existing
-<a href="https://github.com/dikini/ash-lang/blob/354c76b391fe4af665cf6a03479a9874a57cb3e3/spec/dynamic-semantics.md#source-resource-execution-with-native-owners">ash-ffi retained-owner rules</a>:</p>
-<ul>
-<li>A consumed dependent removes its existing edges once, including when source
-finish reports a consumed failure. That failure does not permit a second
-release or become successful completion.</li>
-<li><code>RetainedError</code> preserves the same physical owner and dependency edges.
-The owner and transitive dependency closure remain quarantined, with ordinary
-source access revoked. Merely returning a completion report releases no edge.</li>
-<li>A retained dependent blocks a consuming enclosing call before native entry.
-<code>BlockedDependent</code> grants neither a fabricated disposition nor permission to
-free an enclosing region through another path. Only the already admitted
-completing operations may use protected dependencies under their exact rules.</li>
-<li>Separately admitted host destruction attempts dependents before enclosing
-owners. Successful consumption removes the same edges; retained destruction
-keeps them and blocks enclosing destruction. An incomplete attempt is terminal,
-is not retried, and protects unresolved objects until process termination.
-Host destruction runs no source finish or handler and cannot turn earlier
-failed source completion into success.</li>
-</ul>
-<p>Physical protection beyond source scope exit grants no usable owner package,
-region access, or extension of Cell R's scope. It cannot justify retaining
-younger access in an outer cell or admitting resource dependency cycles. A
-provider unable to preserve retained backing and dependency protection must
-exclude retaining foreign composition from its admitted profile.</p>
+<h3 id="lexical-completion-control-and-bulk-reclamation">Lexical completion, control, and bulk reclamation</h3>
+<p>In the first ownership scheme, the owning scope determines the region's
+lifetime. Before ending source access, normal completion checks the body result
+and outward dependencies and performs required inner completion and scheduled
+cleanup while A is live. Backing release must respect
+required ordinary dependencies and completion. Reclaiming the region releases
+all remaining objects together, once permitted; the
+<a href="/ash/spec/dynamic-semantics/#region-construction-and-close-steps">execution rules</a>
+define normal, failure and partial-construction transitions. Ordinary unreachable-data
+reclamation invokes no arbitrary effectful source cleanup.</p>
+<p>Composition with native calls uses the current slim FFI boundary and ordinary
+Ash handlers and scoped cleanup. It does not restore compiler-owned foreign
+quarantine, retained/consumed status reports, blocked-dependent native entry
+or host-destruction rules. A region proof cannot establish native memory
+validity or a library's cleanup behavior from its signature. The contract keeps
+those assumptions explicit while preserving required Ash-owned dependencies.</p>
 <p>Capture moves the same owner, storage, and obligations into owned control;
 resume restores them without acquisition or reinitialization. A textual boundary
-crossed during capture is not a release event. Checked discard initiates closing
-exactly its owned abandoned obligations in structural order and cannot skip
-required outside or running completion. A witnessed retained foreign finish
-keeps ash-ffi's terminal <code>runtime.resource-completion</code> behavior: no abandoned
-body report is published and the discarding clause does not continue. Its
-physical protection remains in force.
-Consumed failures during owned discard keep their existing terminal behavior
-as well; a failure report is not permission to repeat physical consumption.</p>
-<p>The fixed arena supplies no individual free, compaction, resize invalidation,
-or earlier reclamation guarantee. Repeated aliases do not duplicate release.
-Region-local counting, tracing, and moving providers require additional root,
-update, overflow, cycle, and failure contracts. They do not extend the owner
-beyond its lexical resource lifetime. Internal termination and divergence keep
-their existing limits on source cleanup and eventual release.</p>
+crossed during capture is not a release event. Checked discard completes its
+owned abandoned obligations in structural order and cannot skip required
+outside or running completion. The specified construction and cleanup failure
+rules preserve that boundary; no retired foreign completion codec is required.</p>
+<p>The fixed-arena composition supplies no individual free, compaction, resize
+invalidation, or earlier reclamation guarantee. Repeated aliases do not
+duplicate release. Region-specific counting, tracing, and moving collection
+require separate root, update, overflow, cycle, and failure contracts. Composing
+them with lexical ownership preserves its region lifetime; choosing another
+ownership scheme needs a separate account. Internal termination and divergence
+keep their existing limits on source cleanup and eventual release.</p>
 <h3 id="preservation-of-earlier-boundaries">Preservation of earlier boundaries</h3>
 <table tabindex="0">
 <thead>
@@ -350,12 +492,20 @@ their existing limits on source cleanup and eventual release.</p>
 </thead>
 <tbody>
 <tr>
-<td>Bindings do not relocate values.</td>
-<td>Allocation is explicit; aliases preserve original storage.</td>
+<td>Regions provide placement and allocation.</td>
+<td>Ownership determines the region owner and lifetime; reclamation and access rules compose separately.</td>
 </tr>
 <tr>
-<td>Nearest applicable region is a proposed future default.</td>
-<td>Initial explicit access settles the base call contract without selecting implicit elaboration.</td>
+<td>Lexical scope is the first ownership scheme.</td>
+<td>Its resource and completion rules govern the initial arena comparison without defining all regions.</td>
+</tr>
+<tr>
+<td>Bindings do not relocate values.</td>
+<td>Default placement and explicit selection concern construction; aliases preserve original storage.</td>
+</tr>
+<tr>
+<td>M2 includes default placement and explicit selection.</td>
+<td>Closest declared live context and caller selection govern new construction; usage/lifetime inference remains a later optimization.</td>
 </tr>
 <tr>
 <td>Cell lifetime is its resource scope.</td>
@@ -374,8 +524,8 @@ their existing limits on source cleanup and eventual release.</p>
 <td>Reservation carries only independent requirements; checked local initialization keeps the payload under its required owners.</td>
 </tr>
 <tr>
-<td>Source completion does not imply physical consumption.</td>
-<td>Retained edges and quarantine block enclosing release until actual consumption; they grant no source lifetime extension.</td>
+<td>Completion and backing release are distinct obligations.</td>
+<td>Required ordinary dependencies and cleanup remain accounted for; no source lifetime extension or foreign quarantine protocol follows.</td>
 </tr>
 <tr>
 <td>One-shot control moves ownership.</td>
@@ -390,13 +540,16 @@ their existing limits on source cleanup and eventual release.</p>
 <td>Admitted representation, initialization, provenance, and access are separate checked obligations.</td>
 </tr>
 <tr>
-<td>Current pure construction has no selectable allocation effect.</td>
-<td>Its migration and observable failure contract require a separate proposal and lowering account.</td>
+<td>Source construction carries explicit allocation requirements in Core.</td>
+<td>The current specification governs default expansion, placement, failure and entry observation; further variations need their own transition contract.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="evidence-and-experiments">Evidence and experiments</h2>
-<p>These are proposed requirements, not completed experiments or proofs:</p>
+<p>This table records comparison requirements and nearby failure modes. The
+specification and <a href="https://github.com/dikini/ash-lang/issues/70">R5 evidence</a> own
+the implemented lexical cases; wider composition cases remain exploratory and
+are not completed proofs merely because the lexical product is retained:</p>
 <table tabindex="0">
 <thead>
 <tr>
@@ -406,6 +559,11 @@ their existing limits on source cleanup and eventual release.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>Default placement</td>
+<td>Ordinary construction, including closures and recursive immutable graphs, receives placement under the agreed default direction and accepted R2 contract.</td>
+<td>Validity changes silently, a data-only subset is substituted, or placement inference is required to obtain a default.</td>
+</tr>
 <tr>
 <td>Explicit helper</td>
 <td>A rank-1 helper allocates into its supplied region; aliases retain their original allocation.</td>
@@ -442,14 +600,14 @@ their existing limits on source cleanup and eventual release.</p>
 <td>Direct or indirect owner cycles, double release, or release before cleanup.</td>
 </tr>
 <tr>
-<td>Retained dependent</td>
-<td>A child returning <code>RetainedError</code> preserves its edges and quarantines transitive backing; enclosing teardown is blocked before native entry.</td>
-<td>Source completion or <code>BlockedDependent</code> is treated as consumption and backing is freed.</td>
+<td>Failure and completion</td>
+<td>The accepted R2 failure rules account for unpublished construction, required dependencies and cleanup before permitted bulk release.</td>
+<td>Partial publication, duplicate release, lost cleanup, or backing release invalidates admitted uses.</td>
 </tr>
 <tr>
-<td>Consumed failure and host destruction</td>
-<td>Consumed failure removes edges once; host destruction follows dependency order without changing the source outcome.</td>
-<td>Duplicate release, retry of incomplete destruction, source cleanup during host destruction, or lost protection after retention.</td>
+<td>Ordinary native binding</td>
+<td>Ash handlers and cleanup express the library contract under explicit native assumptions.</td>
+<td>An Address or native reply is treated as ownership, memory-validity or completion proof.</td>
 </tr>
 <tr>
 <td>Fixed capacity</td>
@@ -466,10 +624,31 @@ their existing limits on source cleanup and eventual release.</p>
 <td>Source summaries, Core copying/transforms, and runtime agree on regions and dependencies.</td>
 <td>Same-shaped types, copied claims, or changed provenance grant storage authority.</td>
 </tr>
+<tr>
+<td>Separate placement and management</td>
+<td>One region holds immutable objects and mutable cells under lexical ownership without changing their access rules.</td>
+<td>Placement alone grants mutation, owner completion, or a longer cell lifetime.</td>
+</tr>
+<tr>
+<td>Region type policy</td>
+<td>Each compared region type states its object reclamation policy separately from the lexical scheme that determines its owner and lifetime.</td>
+<td>Type selection silently changes ownership or a collector's guarantees are attributed to the fixed arena.</td>
+</tr>
+<tr>
+<td>Whole-region reclamation</td>
+<td>The region owner owns the allocated objects; permitted region reclamation releases all remaining objects together.</td>
+<td>Object access survives region reclamation, required completion is skipped, or a referenced object from another region is reclaimed.</td>
+</tr>
+<tr>
+<td>Ownership and lifetime preservation</td>
+<td>The region remains valid for every owned object's admitted uses; lexical escape checks and reclamation rules preserve this relation.</td>
+<td>Region or object reclamation invalidates a use still permitted by ownership or access.</td>
+</tr>
 </tbody>
 </table>
-<p>A later bounded study should compare explicit fixed-region allocation with the
-ordinary managed-heap baseline on these cases, using the same results,
+<p>The bounded M2 comparison must cover default placement and explicit fixed-region
+selection against the ordinary managed-heap baseline on these cases, stating each one's ownership,
+lifetime, and reclamation contract and using the same results,
 dependencies, failure and completion observations. The local-closure case must
 exercise actual access provenance, not only a scalar result. Record payload and
 metadata storage, copies, peak retention, work, and rejected useful programs.
@@ -482,16 +661,14 @@ per-library unchecked authority. Product adoption requires the proposal and task
 workflow plus matching surface/Core semantics and evidence.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
+<li>Which minimum region allocation facts can be reused by other ownership and
+reclamation schemes after the first lexical composition?</li>
+<li>How should a region-specific collector expose rooting and cross-region
+references while keeping region lifetime distinct from object reclamation?</li>
 <li>Which retained construction and representation facts implement the reservation
 and local-initialization boundary with the least new machinery?</li>
 <li>How should independent validation retain value validity that can be shorter
 than its physical allocation, including through opaque public results?</li>
-<li>What explicit region API and effect-row spelling preserve useful inference
-without adding nested schemes or public capture annotations prematurely?</li>
-<li>Which initialization protocol supports the admitted recursive graph fragment
-with deterministic failure and bounded private construction work?</li>
-<li>Which application/entry ownership contract and construction lowering should
-later implement DN-0035's nearest-region default and DN-0044's supplied policy?</li>
 <li>Which concrete workloads justify temporary younger mutable dependencies,
 loans, earlier reclamation, or moving storage beyond this base?</li>
-</ul></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">← DN-0053: Scoped Generic Cells Without Native Owners</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>
+</ul></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#agreed-m2-delivery-scope">Agreed M2 delivery scope</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">← DN-0053: Scoped Generic Cells Without Native Owners</a><a rel="next" href="/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/">DN-0055: Algebra of Regions, Lifetimes, and Ownership →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

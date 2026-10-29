@@ -1,0 +1,376 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Checked FFI required evidence map · Ash</title><meta name="description" content="This map belongs to CP-0024 and TASK-0050. It translates every canonical transition into required future evidence. All rows are pending. No entry is an executed product result."><meta name="robots" content="index, follow"><meta property="og:title" content="Checked FFI required evidence map · Ash"><meta property="og:description" content="This map belongs to CP-0024 and TASK-0050. It translates every canonical transition into required future evidence. All rows are pending. No entry is an executed product result."><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Checked FFI required evidence map · Ash"><meta name="twitter:description" content="This map belongs to CP-0024 and TASK-0050. It translates every canonical transition into required future evidence. All rows are pending. No entry is an executed product result."><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/checked-ffi-evidence-map/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/checked-ffi-evidence-map/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/checked-ffi-evidence-map.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Checked FFI required evidence map","headline":"Checked FFI required evidence map","description":"This map belongs to CP-0024 and TASK-0050. It translates every canonical transition into required future evidence. All rows are pending. No entry is an executed product result.","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/checked-ffi-evidence-map/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/checked-ffi-evidence-map/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/checked-ffi-evidence-map.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="checked-ffi-required-evidence-map" data-pagefind-meta="title">Checked FFI required evidence map</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/checked-ffi-evidence-map.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This map belongs to <a href="https://github.com/dikini/ash-lang/blob/a54e9215860cd9693d1a2dc9ff79e8f0f4a57e23/docs/proposals/CP-0024-checked-foreign-host-profile.md">CP-0024</a>
+and <a href="https://github.com/dikini/ash-lang/blob/a54e9215860cd9693d1a2dc9ff79e8f0f4a57e23/docs/tasks/TASK-0050-checked-ffi-regions-control-program.md">TASK-0050</a>.
+It translates every <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/">canonical transition</a> into required
+future evidence. All rows are <strong>pending</strong>. No entry is an executed product result.</p>
+<p>For O/X/K common rows, test both modes where the event exists; isolated-only events
+need a corresponding explicit in-process limit statement, not a fabricated process
+domain. Test every L/T library row against the actual generated SQLite bridge in
+both modes where feasible; impossible native combinations use labeled injected
+faults. Pair real native behavior with protocol/bridge fault injection rather than
+pretending SQLite naturally emitted contradictions. Observe entry count, exact
+pending/control state, value publication, K, required source continuation and
+protected dependency edges separately. Check receipts against frozen source,
+contract, Core/image, native inputs and policy before transferring evidence.</p>
+<p>F3 owns summary/link/Core rejection and transformed-contract tests; F4 owns common
+runtime/ownership/completion; F5 owns ordinary source-library realization; F6 owns
+build/image/receipt admission; F7 owns isolated transport/executor realization.
+F8 audits the complete map and F-core/F-final gates. These issue keys refer to the
+<a href="https://github.com/dikini/ash-lang/blob/a54e9215860cd9693d1a2dc9ff79e8f0f4a57e23/docs/tasks/plans/checked-ffi-regions-control.md">task plan</a>, not launched product tasks.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Row</th>
+<th>Required observation</th>
+<th>Primary delivery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O1</td>
+<td>Input/state/operation limit refusal; entry counter stays zero and earlier operand effects remain.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O2</td>
+<td>Mandatory reservation one-short; terminal evaluator with zero dispatch and retained owners.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>Interrupt after first dispatch byte, before control admission; unresolved transition and no source value.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O4</td>
+<td>Admit valid exact control; fail later payload allocation and retain exact status/disposition.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O5</td>
+<td>Deliver once; then send duplicate or late success after selected failure and reject second publication.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O6</td>
+<td>Refuse conversion after acquisition; observe unpublished guard disposal or protected retention before refusal.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O7</td>
+<td>Lose transport before and after admitted control; retire session and preserve earlier facts without replay.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O8</td>
+<td>Exhaust parent before/after native outcome; terminal parent and preserved guard/dependencies.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O9</td>
+<td>Exhaust only optional diagnostic allowance; retain mandatory result and mark diagnostic unavailable.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>O10</td>
+<td>Delay termination then observe reaping; keep charged reservations until actual reclamation, never infer native completion.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>X1</td>
+<td>Exhaust evaluator codec/control work separately from native allocation; terminal evaluator classification.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>X2</td>
+<td>Inject native NOMEM with healthy evaluator; native error may return without parent terminal failure.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>X3</td>
+<td>Refuse configured result allowance with healthy evaluator; ordinary refusal differs from real allocator failure.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>X4</td>
+<td>Kill/exhaust worker with healthy parent; handled session failure, not asserted parent exhaustion.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>X5</td>
+<td>Delay supervisor reaping; stopping domain and reservations remain, no proxy reuse or reclaimed report.</td>
+<td>F4/F7</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>Open OK/non-null; guard precedes publication and fresh C retains H.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>Open error/non-null; no C publication, capture exact status and one partial-owner disposal.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>Open NOMEM/null; ordinary native failure without query or close through null.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>Open OK/null and non-NOMEM error/null; violation without fabricated owner/destructor.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L5</td>
+<td>Prepare OK/non-null; guard retains C/H, Prepared/Known state before source publication.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L6</td>
+<td>Prepare OK/null with empty/comment-only SQL; no S owner and successful tail/input policy checked.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L7</td>
+<td>Prepare error/null; native error and tail ignored, no S dependency.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L8</td>
+<td>Prepare error/non-null; quarantine and protect C/H without finalizing suspect pointer.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L9</td>
+<td>Fail result/tail publication after acquisition; guard never disappears, dispose or retain safely; no source K.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L10</td>
+<td>Bind OK while Prepared/Known; retain Known and permit a subsequent explicit step.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L11</td>
+<td>Bind error; B becomes Uncertain; reject rebind and step even after reset.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L12</td>
+<td>Clear OK from Prepared/Uncertain; B becomes Known, later explicit step admitted.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L13</td>
+<td>Clear error; B Uncertain and E unchanged, no inferred recovery.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L14</td>
+<td>Step ROW; invalidate old row on entry and establish fresh generation/cache.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L15</td>
+<td>Step DONE; invalidate old row and set Done without changing bindings.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L16</td>
+<td>Step BUSY/error; ExecutionError requires reset and no implicit retry occurs.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L17</td>
+<td>Reset OK/error after ROW; Prepared, row/cache invalidated, bindings unchanged, numeric error preserved.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L18</td>
+<td>Finalize error; consumed S, edge removed once and K recorded before diagnostic loss; no repeat finalize.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L19</td>
+<td>Close with live/unresolved child; zero native entry and protected C/H with blocked local reason.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L20</td>
+<td>Close OK; exact C consumed, edge removed once and local completion recorded.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L21</td>
+<td>Close BUSY; retained C quarantined with H after source host exit; no automatic close retry.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L22</td>
+<td>Close other error/contradiction; distinguish admitted retained outcome from rejected control; no invented consumption.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>L23</td>
+<td>Session loss before/after outcome; invalidate access/cache and preserve admitted disposition, never use stale proxy.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>K1</td>
+<td>Publish owner/access together; exactly one Pending obligation, no source obligation for unpublished guard.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K2</td>
+<td>Healthy structural exit claims Closing once and revokes access; preserve authored finish effects/continuation.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K3</td>
+<td>Admit native finish error then lose diagnostics; one Discharged record and separate required source continuation.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K4</td>
+<td>Lose session inside nested S/C bodies; close each once in structural order without stale dispatch or reaping wait.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K5</td>
+<td>Live nonquarantined session plus blocking child; one blocked local record and retained physical backing.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K6</td>
+<td>Quarantined/contradictory finish plus child; one quarantine reason outranks dependency block, no suspect-pointer call.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K7</td>
+<td>Discharged/transferred owner followed by exit/loss/terminal failure; no second transition, report or native finish.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K8</td>
+<td>Terminal parent and session loss while Closing; transfer once rather than claim source cleanup/discharge.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>K9</td>
+<td>Reap before Pending source exit; physical retirement changes no K, later local report remains available.</td>
+<td>F4/F3/F7</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>First column read; reserve classification slot and query original kind before representation conversion.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Read same row/column after refused copy; reuse original classification, never query converted kind again.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>Original NULL; publish null without text-pointer call or native result dependency.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>Original INTEGER/FLOAT/BLOB; ordinary kind refusal with unchanged row/bindings.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>TEXT/null pointer; immediate errcode distinguishes NOMEM/violation before any length/copy.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Non-null text/zero bytes; immediate errcode distinguishes NOMEM from valid empty text.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Negative byte count/contradictory native return; quarantine without unsigned cast/copy/publication.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>One-short configured cache/payload allowance; ordinary refusal preserves row/kind; compare actual allocator failure.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T9</td>
+<td>Exhaust evaluator metadata/copy/UTF8 work; terminal evaluator and closed interval, no partial value.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T10</td>
+<td>Invalid native UTF8; ordinary conversion refusal, worker emits refusal alternative rather than malformed success.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T11</td>
+<td>Valid native UTF8 including embedded zero; omit terminator and preserve independent admitted bytes.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T12</td>
+<td>Worker dies before parent payload admission; session failure, no partial string, earlier copies survive.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T13</td>
+<td>Exhaust parent payload allocation/validation; terminal parent independent of whether payload encoding is valid.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T14</td>
+<td>Valid worker conversion refusal and matching control; ordinary refusal without session loss.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T15</td>
+<td>Invalid UTF8/shape in worker success; protocol loss, retain prior control, never relabel native conversion refusal.</td>
+<td>F5/F4/F7</td>
+</tr>
+<tr>
+<td>T16</td>
+<td>Valid text/null success with matching control; publish independent parent result only after all checks; no truth claim.</td>
+<td>F5/F4/F7</td>
+</tr>
+</tbody>
+</table>
+<h2 id="coverage-beyond-individual-rows">Coverage beyond individual rows</h2>
+<p>Run every distinguishing trace in the canonical table, including overlapping
+K reasons, terminal failure versus healthy loss, original-kind caching after
+refusal, binding uncertainty across reset, and consumption before reporting loss.
+One test may cover multiple rows only with observations for each obligation.</p>
+<p>F3 must additionally reject same-spelled origins, wrong full Type/Row substitutions,
+opaque alias substitution, forged independence, hidden captured S/C/H, host-row
+erasure, stale summaries and transformed copy-window order. Validate imported
+wrappers without reinferring their bodies. Preserve nearest ordinary-handler
+precedence and source finish control through capture/resume/discard/cleanup.</p>
+<p>F6/F7 need approved exact bytes/receipt closure, changed-image races, wrong ABI,
+unavailable-control refusal, fresh session identity, malformed versus plausible
+false replies, actual launch/resource enforcement and delayed reaping. See the
+<a href="/ash/docs/design/foreign-authoring/linux-profile-experiment/">experiment contract</a>. Stage A environmental probes
+do not satisfy any product row. Missing observation, integrated correspondence,
+independent review or required checkpoint keeps the original criterion pending.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#coverage-beyond-individual-rows">Coverage beyond individual rows</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Checked FFI Linux profile experiment · Ash</title><meta name="description" content="This bounded experiment belongs to DN-0057 and TASK-0050, F2 in its plan. The historical 2026-10-21 launch authorized local preparation and nonprivileged probes. It accepts no architecture or semantics and permits no…"><meta name="robots" content="index, follow"><meta property="og:title" content="Checked FFI Linux profile experiment · Ash"><meta property="og:description" content="This bounded experiment belongs to DN-0057 and TASK-0050, F2 in its plan. The historical 2026-10-21 launch authorized local preparation and nonprivileged probes. It accepts no architecture or semantics and permits no…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Checked FFI Linux profile experiment · Ash"><meta name="twitter:description" content="This bounded experiment belongs to DN-0057 and TASK-0050, F2 in its plan. The historical 2026-10-21 launch authorized local preparation and nonprivileged probes. It accepts no architecture or semantics and permits no…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/linux-profile-experiment/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/linux-profile-experiment/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-profile-experiment.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Checked FFI Linux profile experiment","headline":"Checked FFI Linux profile experiment","description":"This bounded experiment belongs to DN-0057 and TASK-0050, F2 in its plan. The historical 2026-10-21 launch authorized local preparation and nonprivileged probes. It accepts no architecture or semantics and permits no…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/linux-profile-experiment/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/linux-profile-experiment/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-profile-experiment.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="checked-ffi-linux-profile-experiment" data-pagefind-meta="title">Checked FFI Linux profile experiment</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-profile-experiment.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>Historical experiment record. The user's 2026-10-24 smaller-boundary plan
+supersedes the assignments below. This document authorizes no further
+preparation, build, probe, installation or execution under the revised plan.</p>
+</blockquote>
+<p>This bounded experiment belongs to <a href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057</a>
+and <a href="https://github.com/dikini/ash-lang/blob/a54e9215860cd9693d1a2dc9ff79e8f0f4a57e23/docs/tasks/TASK-0050-checked-ffi-regions-control-program.md">TASK-0050</a>,
+F2 in its <a href="https://github.com/dikini/ash-lang/blob/a54e9215860cd9693d1a2dc9ff79e8f0f4a57e23/docs/tasks/plans/checked-ffi-regions-control.md#f2-validate-the-linux-execution-profile">plan</a>.
+The historical 2026-10-21 launch authorized local preparation and nonprivileged probes.
+It accepts no architecture or semantics and permits no product implementation.</p>
+<p>The later independently reviewed scalar architecture choice is
+<a href="https://github.com/dikini/ash-lang/blob/2766e8260e2590d9ebdca7abd699115b3cd02a8a/docs/decisions/AD-0015-linux-scalar-inprocess-whole-images.md">AD-0015</a>, with
+<a href="/ash/docs/design/foreign-authoring/linux-inprocess-probe/scalar-closure/">conditional source/provenance evidence</a>.
+This is partial F2 architecture acceptance only. These experiment records remain
+bounded evidence; strict per-image approval and production enforcement are
+pending, and isolated/SQLite/owner scope remains open.</p>
+<h2 id="question-and-comparison">Question and comparison</h2>
+<p>Can the proposed <a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/">Linux launch profile</a>
+maintain the required authority boundary through first execution and re-execution,
+while supporting bounded SQLite copying and connection/statement operations?
+Compare the approved whole-image in-process host, the proposed isolated worker,
+and refusal when required controls are unavailable. A subprocess alone is not
+an isolated-profile success. In-process execution has host authority and retains
+native memory-safety assumptions.</p>
+<p>The worker, including startup, bridges and monitors, is potentially faulty.
+Trusted launcher/supervisor/parent validators, approved build correspondence,
+kernel and storage enforcement are explicit premises. Record them separately
+from native result truth and source completion.</p>
+<h2 id="bounded-stages">Bounded stages</h2>
+<p>Stage A inventories this deployment and probes sealed-byte mutation refusal,
+<code>no_new_privs</code> inheritance through exec/re-exec of a trusted Python interpreter,
+user-namespace availability and cgroup delegation visibility. It executes no
+foreign artifact, changes no host credentials or policy, creates no mounts or
+resource domains, and runs no memory fault. A namespace probe may fail normally.
+The current UID is an observation, never the selected worker UID policy.
+The probe is disposable tooling; its output is evidence only for those checks.</p>
+<p>Stage B needs a concrete deployment configuration: launcher implementation,
+static test images, configured non-root UID/GID mappings, delegated controller
+root and dedicated disposable storage. The repository does not yet contain this launcher/test realization, and this
+probe establishes no complete delegated controller/storage configuration. The
+<a href="/ash/docs/design/foreign-authoring/linux-profile-probe/#deployment-prerequisite-evidence">deployment prerequisite probe</a>
+subsequently identifies host user-cgroup delegation, but its attempted trusted
+credential setup cannot clear supplementary groups. Its fail-closed result
+starts no worker and leaves Stage B unexecuted. A deployment-supplied trusted
+credential launcher and the remaining controls still need evidence. Do not
+substitute ambient privileges or weaken controls to obtain a pass. The isolated
+profile remains unavailable through this tested setup until proven otherwise.</p>
+<p>Before Stage B code runs, freeze exact kernel, compiler/linker/native archives,
+headers, image/receipt/bridge/contract digests, launcher/filter configuration,
+UID/GID maps, storage ownership, quotas and numeric limit policy. No native
+startup may precede isolation. Native faults require a contained test process.</p>
+<h2 id="independent-in-process-image-pinning-comparison">Independent in-process image-pinning comparison</h2>
+<p>A subsequent bounded assignment authorized a trusted self-authored static C
+reporter to test common image admission independently of worker setup. Its
+<a href="/ash/docs/design/foreign-authoring/linux-inprocess-probe/">source, exact approval, build provenance and observations</a>
+record sealed-fd execution after pathname replacement on the host and EACCES in
+the filesystem sandbox. It retains host authority and tests no worker isolation,
+SQLite, native fault, Ash evaluator or generated bridge. No host policy changed.
+The original isolated Stage B remains unexecuted.</p>
+<p>This comparison can inform a separately scoped scalar-only in-process
+architecture. It accepts no AD or F2 checkbox. A real generated Ash whole-image
+packaging comparison and explicit approval/trust/deployment policy still need
+review before narrow architecture acceptance. The <a href="/ash/docs/design/foreign-authoring/linux-inprocess-probe/requirements/">requirement split</a>
+keeps those questions separate from isolated-worker prerequisites and downstream
+F6 product admission/runtime evidence. Missing SQLite and worker group-clearing
+authority do not automatically block every scalar-only in-process profile.</p>
+<p>The actual <a href="/ash/docs/design/foreign-authoring/linux-inprocess-probe/generated-ash/">generated Ash static packaging comparison</a>
+links the retained evaluator, signed32 <code>abs</code> bridge and private payloads without
+changing fingerprint guards. The resulting ET_EXEC has no interpreter/dynamic
+section, but retained libc loading paths leave the proposed no-loading requirement
+unmet. Packaging performed no image execution. Any separately reviewed trusted
+diagnostic needs a distinct exact policy/approval/addendum and cannot convert
+this unresolved requirement into architecture acceptance. The subsequent
+<a href="/ash/docs/design/foreign-authoring/linux-inprocess-probe/generated-ash/diagnostic-addendum/">exactly approved scalar diagnostic</a>
+records host <code>Returned(7)</code> and sandbox EACCES under explicit known-loading and
+host-authority premises; it leaves that requirement unmet.</p>
+<h2 id="proposed-ownerresource-in-process-comparison">Proposed owner/resource in-process comparison</h2>
+<p>The <a href="/ash/docs/design/foreign-authoring/linux-owner-inprocess-experiment/">owner/resource experiment amendment</a>
+proposes one existing-profile generated malloc/free direct-resource baseline,
+compared with retained static checked lifecycle facts. It preserves AD-0015's
+owner-free scope and separates contract review, exact build/inspection assignment
+and any later exact diagnostic approval. No candidate execution, provisioning,
+checked runtime bypass or ownerful architecture acceptance follows from the
+amendment alone. Isolated Stage B and SQLite remain separate.</p>
+<h2 id="proposed-architecture-requirements-awaiting-evidence">Proposed architecture requirements awaiting evidence</h2>
+<p>These requirements refine design questions; they are not an accepted AD.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Required realization and negative comparison</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Credentials</td>
+<td>Use nonzero UID/GID inside the worker namespace and no host-root mapping; empty supplementary groups and effective/permitted/inheritable/ambient capabilities; locked securebits/bounding policy prevents regain; <code>no_new_privs=1</code>. Trusted setup must establish invariants before foreign startup and verify the same after exec and re-exec. Test UID-0 and retained-capability configurations as refusals.</td>
+</tr>
+<tr>
+<td>Image</td>
+<td>Authorize exact producer receipt and final sealed static ELF bytes; deny interpreter/shared/plugin paths; execute the verified object without reopening a filename. Race replacement, reject changed bytes and unsupported receipt versions.</td>
+</tr>
+<tr>
+<td>Root and descriptors</td>
+<td>Dedicated private root, exclusive <code>/data</code>, bounded private <code>/tmp</code>; no old-root or management descriptors, host trees or inherited credentials. Test outside-file and descriptor access at startup and request time.</td>
+</tr>
+<tr>
+<td>Syscalls</td>
+<td>Versioned native-architecture default-deny filter installed before exec; deny x32, child/thread creation, sockets, cross-process inspection/signals, namespace/mount changes, io_uring, privilege changes and new executable memfds. Derive required allows from reviewed runtime/VFS needs; traces alone are insufficient.</td>
+</tr>
+<tr>
+<td>Limits</td>
+<td>Delegated cgroup v2 memory/swap/CPU/task controls, finite RLIMITs, quotas, tmpfs bounds, frame/log budgets, aggregate admission and independent deadlines. Test actual enforcement independently; file-size limit is not a volume quota.</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td>Fresh parent session, bounded compatibility before acquisition, no worker self-attestation of containment. Failure retires access and never retries effects; retain reservations until observed termination/reaping. Delayed reaping remains charged.</td>
+</tr>
+<tr>
+<td>Library</td>
+<td>Static SQLite with URI handling disabled and loadable extensions omitted; exercise WAL/journals/locks/temp/quota failure on the actual root and syscall policy. No database correctness inference from well-shaped replies.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="required-stage-b-observations">Required Stage B observations</h2>
+<ol>
+<li>Capture trusted pre-exec setup facts and external supervisor observations.
+A cooperative credential reporter is diagnostic evidence, not the authority
+proving an arbitrary worker contained. Repeat after re-exec of the same image.</li>
+<li>Exercise approved and substituted images, ABI mismatch, missing controls,
+unsafe volume aliases, and insufficient admission budgets before startup.</li>
+<li>Attempt each denied authority at startup and during a request. Exercise
+actual memory, CPU, task, descriptor, storage, frame/log and deadline limits.</li>
+<li>Run real SQLite acquire/copy/bind/reset/finalize/close; separately label
+injected malformed replies, plausible false replies, faults and lost replies.
+Lost finalize acknowledgement must not become native completion; prior
+admitted consumption must survive later payload loss.</li>
+<li>Measure startup, bounded copying/transport and shutdown with exact sizes,
+repetitions and limits. Report failures and distributions without promising
+availability or recovery. Test delayed reaping and retained storage/journals.</li>
+</ol>
+<h2 id="retention-disposal-and-decision-gate">Retention, disposal and decision gate</h2>
+<p>Retain commands, exact inputs, failures and narrow findings in
+<a href="/ash/docs/design/foreign-authoring/linux-profile-probe/">probe evidence</a>. Keep no prototype runtime on the
+product path. Remove disposable images/volumes only after records are complete;
+persistent journals need explicit recovery ownership. A successful Stage B
+comparison can support a new AD allocated against full Git history; the next
+observed available ID is AD-0015, but this document neither reserves nor creates
+it. Contrary evidence returns to DN-0057/F1. The project lead must accept the
+architecture before F6/F7 product work that relies on this realization. Stage A cannot satisfy that gate.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question-and-comparison">Question and comparison</a><a href="#bounded-stages">Bounded stages</a><a href="#independent-in-process-image-pinning-comparison">Independent in-process image-pinning comparison</a><a href="#proposed-ownerresource-in-process-comparison">Proposed owner/resource in-process comparison</a><a href="#proposed-architecture-requirements-awaiting-evidence">Proposed architecture requirements awaiting evidence</a><a href="#required-stage-b-observations">Required Stage B observations</a><a href="#retention-disposal-and-decision-gate">Retention, disposal and decision gate</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

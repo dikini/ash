@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>C1 model correspondence and limits · Ash</title><meta name="description" content="This map is part of the DN-0056 proof assignment. The historical CP-0026 records the transition implemented on the M3 milestone. The model is evidence for its selected transitions, not a proof of the compiler or…"><meta name="robots" content="index, follow"><meta property="og:title" content="C1 model correspondence and limits · Ash"><meta property="og:description" content="This map is part of the DN-0056 proof assignment. The historical CP-0026 records the transition implemented on the M3 milestone. The model is evidence for its selected transitions, not a proof of the compiler or…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="C1 model correspondence and limits · Ash"><meta name="twitter:description" content="This map is part of the DN-0056 proof assignment. The historical CP-0026 records the transition implemented on the M3 milestone. The model is evidence for its selected transitions, not a proof of the compiler or…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/retained-control/correspondence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/retained-control/correspondence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/correspondence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"C1 model correspondence and limits","headline":"C1 model correspondence and limits","description":"This map is part of the DN-0056 proof assignment. The historical CP-0026 records the transition implemented on the M3 milestone. The model is evidence for its selected transitions, not a proof of the compiler or…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/retained-control/correspondence/","@id":"https://dikini.github.io/ash/docs/design/retained-control/correspondence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/correspondence.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="c1-model-correspondence-and-limits" data-pagefind-meta="title">C1 model correspondence and limits</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/correspondence.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This map is part of the <a href="/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/#c1-bounded-ownership-and-completion-proof-assignment">DN-0056 proof assignment</a>.
+The historical <a href="https://github.com/dikini/ash-lang/blob/ea2a7ffadefb0f485a9c8e0009975a47db5c6865/docs/proposals/CP-0026-scoped-owned-continuation-storage.md">CP-0026</a>
+records the transition implemented on the M3 milestone. The model is evidence
+for its selected transitions, not a proof of the compiler or evaluator.</p>
+<h2 id="representation-and-assumptions">Representation and assumptions</h2>
+<p>The model has one store activation, one sequential executor, finite lists of
+slots and structural owners, and natural-number identities and generations.
+It proves properties of each finite trace; it is not an exhaustive checker for
+a globally finite state space. <code>Capture.owners</code> is the abstract inventory of a
+branch's actual recursively owned closure, including nested clause, resource
+and cleanup completion owners. The inventory is assumed complete and uses
+distinct identities. Nested phases and cleanup phases represent their actual
+states, and <code>savedResult</code> is an opaque body-result witness carried with the
+capture. The model does not reconstruct a frame forest or execute action bodies.
+The completed and disposed identity lists are ghost history for the uniqueness
+argument; the proof does not require a runtime to retain those lists.</p>
+<p><code>Admit</code> requires the branch owner, excludes the store's own owner, checks that
+outside support and completion are still represented, requires disjointness
+from every fixed outside owner even when it is not referenced by the capture,
+checks the fixed interpreter, and rejects an exported
+branch-local owner. This is a local structural premise, not a new source
+permission algebra. Source and linked Core checks derive these facts from
+actual captures, values, evidence, control, and enclosing scopes.
+<code>adminSuffixClear</code> is a local premise on the retain macro-step: the authenticated
+private checkpoint clause has no skipped required suffix. It is not a source
+assertion or a runtime permission. The implementation checks actual control
+before consuming the hidden owner.</p>
+<p>The store and consumer interpretation numbers stand for complete exact
+contexts: the actual selected enclosing handler/provider frames, activation,
+instantiation and precedence. Equality is a model assumption; the proof does
+not show that same-typed effects, handler IDs or arbitrary runtime activations
+are interchangeable. The implementation reconstructs selection at each actual
+consumer and checks surviving external frames and possible nearer interception.
+Structural enclosure of <code>N</code> supplies the support boundary; no new occurrence
+identity follows from this model.</p>
+<p>Restore has implicit unit input and a single model answer family. <code>Delivery</code>
+distinguishes a fresh root's answer from a continued consumer's <code>Some</code> answer
+and a missing key's <code>None</code>. The model does not formalize general <code>A&lt;N&gt;</code>, rows,
+source spelling or elaboration. In particular, the answer may contain
+<code>Key&lt;N&gt;</code>, while generic-cell payloads are checked before the fresh owner scope.
+Elaboration and independent validation bind the Store identity before checking
+that answer contract without moving the initializer into the new scope.</p>
+<p><code>Step.retain</code> combines the atomic owner move and the administrative checkpoint
+clause's return. Its explicit <code>adminSuffixClear</code> and <code>Admit</code> premises cover the
+model boundary. The product checks the actual clause and its completion; the
+root remains active until the clause suffix returns. Ordinary private-clause
+<code>resume</code> and checked inner-handler discard are not modelled by a new transition.
+The private checkpoint owner cannot use discard to abandon its branch.
+<code>Step.refuse</code> records the unchanged ownership state at failed preparation; it
+does not add a source-level success or recovery result.</p>
+<h2 id="proved-model-claims">Proved model claims</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Obligation</th>
+<th>Named result and scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unique ownership and completion</td>
+<td><code>step_accounting</code>, <code>step_preserves_unique</code> and <code>trace_preserves_unique</code> account for fresh-root creation, selected moves, root completion and internal teardown. No step assumes a safe successor.</td>
+</tr>
+<tr>
+<td>Slot identity and capacity</td>
+<td><code>trace_preserves_slot_ids</code>, <code>trace_preserves_generation_bound</code> and <code>normal_step_preserves_capacity</code> preserve the stated initial bounds. Recycling requires a larger representable natural generation.</td>
+</tr>
+<tr>
+<td>One restoration per key</td>
+<td><code>restore_requires_live_key</code>, <code>restored_key_spent</code>, <code>step_preserves_spent_key</code> and <code>restore_cannot_replay</code> use the actual store/slot/generation match and unique slot IDs; the result remains true across any finite model trace.</td>
+</tr>
+<tr>
+<td>Support and current consumer</td>
+<td><code>trace_preserves_context</code> maintains the model's admission and current-consumer equality under the explicit fixed-context premises. The separate <code>admission_*</code> results expose the self-capture, outside-completion and escape guards.</td>
+</tr>
+<tr>
+<td>Normal completion</td>
+<td><code>actual_finish_requires_completion</code> requires finished cleanup and consumed nested phases before the model delivers its normal finished answer. <code>source_release_predecessor</code> requires empty work; <code>no_work_excludes_clause</code>, <code>_active</code> and <code>_slot</code> connect that condition to actual represented control under <code>ContextSafe</code>.</td>
+</tr>
+<tr>
+<td>Outer closing</td>
+<td><code>running_drain_is_not_skipped</code> and <code>outer_close_complete_trace</code> model an armed cleanup starting with live slots, restoring both branches, returning empty, then releasing. These are abstractions of existing Cleanup and close ordering, not new runtime or Core drain nodes.</td>
+</tr>
+<tr>
+<td>Failure</td>
+<td>The same owner accounting distinguishes successful disposal and a reported incomplete teardown. <code>leaked</code> is an abstract record of unresolved residual identities, not a claim that the runtime enumerates them or can recover forgotten objects. No source action is promised.</td>
+</tr>
+</tbody>
+</table>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/OwnershipExamples.lean">examples</a> include a fresh root, one P capture
+with a live nested clause, running cleanup and saved body result, Q retained in a separate slot,
+current-consumer return, another yield during drain, stale-key non-replay,
+shared outer support, refusal without a move, failed admission and incomplete
+teardown after a partially completed disposal. They also exercise complete
+disposal. The outer-support case proves only that the model permits two
+sequential branches to refer to one still-live owner; it is not a concurrent
+sharing or synchronization result. The outer-close trace supplies actual
+empty work as a premise of its final drain step. It does not prove an arbitrary
+library drain returns empty; that is C3's separate analysis and proof.</p>
+<h2 id="product-correspondence">Product correspondence</h2>
+<p>The retained <a href="https://github.com/dikini/ash-lang/pull/161">C2 delivery</a> checks
+actual Store ports, capture support, interpreter selection and structural
+owners through source and linked Core. The
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/eval/machine.rs">evaluator</a> prepares retention and restoration
+before moving ownership, keeps generation-qualified slots and returns restored
+answers to the current consumer. Its iterative failure disposal can report
+incomplete teardown; neither that behavior nor this model promises every
+residual release.</p>
+<p>The retained <a href="https://github.com/dikini/ash-lang/pull/162">C3 delivery</a> checks
+normal release after real root, clause and cleanup completion. The separate
+<a href="/ash/docs/design/retained-control/drain-correspondence/">drain correspondence</a> records its concrete finite
+analysis and the limits of the proof. The
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/scheduling.rs">C4 library corpus</a> exercises current-consumer
+return, repeated yields and running cleanup with the same Store mechanism.
+The <a href="/ash/docs/design/retained-control/#retained-product-evidence">proof-root evidence map</a> links the
+retained reviews and checks. These are reviewed implementation correspondence
+and tests, not a mechanized proof of Rust or a termination, fairness,
+native-provider, migration or multithreaded-safety claim.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#representation-and-assumptions">Representation and assumptions</a><a href="#proved-model-claims">Proved model claims</a><a href="#product-correspondence">Product correspondence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

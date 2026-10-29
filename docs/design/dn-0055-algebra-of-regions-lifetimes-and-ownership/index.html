@@ -1,0 +1,1522 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0055: Algebra of Regions, Lifetimes, and Ownership · Ash</title><meta name="description" content="Can an algebra connect region placement and allocation with ownership, lifetimes, and reclamation while keeping those concepts distinct? Which laws follow from definitions, which depend on a region type or ownership…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0055: Algebra of Regions, Lifetimes, and Ownership · Ash"><meta property="og:description" content="Can an algebra connect region placement and allocation with ownership, lifetimes, and reclamation while keeping those concepts distinct? Which laws follow from definitions, which depend on a region type or ownership…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0055: Algebra of Regions, Lifetimes, and Ownership · Ash"><meta name="twitter:description" content="Can an algebra connect region placement and allocation with ownership, lifetimes, and reclamation while keeping those concepts distinct? Which laws follow from definitions, which depend on a region type or ownership…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0055-algebra-of-regions-lifetimes-and-ownership.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0055: Algebra of Regions, Lifetimes, and Ownership","headline":"DN-0055: Algebra of Regions, Lifetimes, and Ownership","description":"Can an algebra connect region placement and allocation with ownership, lifetimes, and reclamation while keeping those concepts distinct? Which laws follow from definitions, which depend on a region type or ownership…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/","@id":"https://dikini.github.io/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0055-algebra-of-regions-lifetimes-and-ownership.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0055-algebra-of-regions-lifetimes-and-ownership" data-pagefind-meta="title">DN-0055: Algebra of Regions, Lifetimes, and Ownership</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0055-algebra-of-regions-lifetimes-and-ownership.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0055</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/">DN-0032</a>,
+<a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/">DN-0054</a>,
+<a href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053</a>,
+<a href="/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/">DN-0051</a>,
+<a href="/ash/docs/design/generic-cell/evidence/">generic cell checkpoint</a>,
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It records candidate definitions, elementary
+derivations, and open proof obligations. It defines no current Ash semantics,
+accepts no architecture, and authorizes no implementation or prototype. No
+complete algebraic soundness, memory-safety, or compiler-correctness theorem
+is claimed.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can an algebra connect region placement and allocation with ownership,
+lifetimes, and reclamation while keeping those concepts distinct? Which laws
+follow from definitions, which depend on a region type or ownership scheme,
+and which require a proof of observable program equivalence?</p>
+<p>The target includes a shared base of constraints with protocol-dependent
+variations. Each protocol specializes that base and must preserve it; it does
+not waive shared validity, authority-provenance, or reclamation obligations.</p>
+<p>The working candidate combines a lifetime order, placement facts, restricted
+ownership contexts, and typed state transitions. Lexical scope is the first
+ownership scheme; a fixed arena with bulk reclamation is the first storage
+and reclamation composition.</p>
+<p>The lexical-region product supplies default placement, explicit selection,
+lexical ownership, bulk reclamation, stored closures and recursive immutable
+graphs. The <a href="/ash/spec/">specification</a> governs that base; the
+<a href="/ash/docs/design/lexical-regions/evidence/">finite model evidence</a> records its separate bounded
+preservation result and assumptions. The broader permission, channel and
+alternative-ownership explorations below remain informative future work, not
+completed product behavior or additional M2 prerequisites. Usage- and
+lifetime-based placement inference remains a later optimization, not a substitute
+for the implemented default. <a href="/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/">DN-0054</a>
+retains related composition questions.</p>
+<p>A future comparison considers sequential processes communicating through
+dedicated channels. It tests ownership across communication without requiring
+shared mutable storage. It remains separate from the first sequential proof
+model and defines no current concurrency facility.</p>
+<h2 id="context">Context</h2>
+<p>The <a href="/ash/spec/">specification</a> governs current Ash. Its
+<a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">resource rules</a>
+track dependencies through values, captures, selected evidence, and operation
+metadata. <a href="/ash/spec/dynamic-semantics/#scoped-cell-execution">Execution</a>
+separates non-owning access from scope-owned completion. Capture and resume
+move the same owner; checked discard completes owned abandoned scopes.
+These are constraints on a future region algebra, not a general implemented
+region interface or a proof of this candidate.</p>
+<p><a href="/ash/docs/design/dn-0032-algebra-of-scoped-resource-composition/">DN-0032</a> derives bounded
+sequencing and context-composition laws, with conditional scope movement and
+counterexamples. Its context product and lifetime envelope do not merge storage
+regions, select their allocators, or transfer their ownership.</p>
+<p><a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a> and
+<a href="/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/">DN-0054</a> record the direction:</p>
+<ul>
+<li>Regions provide placement and allocation.</li>
+<li>An ownership scheme determines who owns a region and its lifetime. Lexical
+scope is the first scheme, among other possible schemes.</li>
+<li>Region ownership includes its allocated objects. Valid object use requires
+the region to remain valid; choosing storage cannot shorten a required use.</li>
+<li>Region types may specify different object reclamation policies. Individual
+objects may be reclaimed earlier; reclaiming the region reclaims all
+remaining objects en masse, after required completion.</li>
+<li>Mutation and access permissions remain separate. A cell can use region
+storage without placement determining its logical access lifetime.</li>
+</ul>
+<p>The <a href="/ash/docs/design/generic-cell/evidence/">generic cell checkpoint</a> is implemented and
+integrated into local Main; its original accepted proposal is retained in Git
+history. Its strict retained-payload dependencies and resource-scope cell lifetime
+remain constraints. This note changes neither current cells nor their evidence.</p>
+<p>DN-0035's <a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/#later-process-ownership">later process comparison</a>
+starts with isolated storage and requires transport to establish receiver-owned
+data. <a href="/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/">DN-0051</a> separates task
+ownership, suspension, and parallel sharing contracts. Neither supplies an
+implemented channel or proof of safe message transport. Their distinction
+between copying, sharing, and ownership transfer governs the comparison below.</p>
+<p><a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a> separates
+operation permissions, alias authority, value usage, and completion. Current
+cells permit mediated reads and writes through reusable aliases; their scope
+owns release. The polarity comparison below proposes additional access facts,
+not a reinterpretation of those handles as exclusive references.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Begin with a sequential execution model and lexical ownership. Include
+suspended owned continuations; inactivity does not end their lifetimes.</li>
+<li>Separate usable lifetime, resident object storage, and backing protection.
+Source completion need not establish physical reclamation.</li>
+<li>Preserve region and object identities through aliasing. Model names do not
+imply source-visible addresses, runtime registries, or heap inspection.</li>
+<li>Keep completion authority distinct from reusable access. Copying a handle
+must not create another owner or another permission to reclaim storage.</li>
+<li>Distinguish ordinary object-reference graphs, which may be cyclic, from
+resource-owner dependency graphs constrained by the ownership scheme.</li>
+<li>Preserve request-payload boundaries and checked construction authority.
+Lifetime inequalities alone cannot authorize an outward payload transfer.</li>
+<li>Account for allocation failure, partial construction, retained backing,
+cleanup, and observable operation order before claiming execution laws.</li>
+<li>Separate common preservation constraints from protocol-specific ownership
+construction, access compatibility, lifetime schemes, and completion rules.
+Do not promote one protocol's exclusion or phase rule into a base axiom.</li>
+<li>Keep other ownership schemes, owner transport, moving collection, concurrency,
+usage/lifetime-based placement inference, and source proof syntax outside
+the bounded lexical proof model. The specification supplies the product's
+default/explicit placement contract; that model's correspondence and limits
+remain recorded separately.
+The channel comparison below explores additional obligations;
+it does not enlarge that model's established evidence or authorize execution.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="comparison-and-working-choice">Comparison and working choice</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Approach</th>
+<th>Useful property</th>
+<th>Limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lifetime constraints alone</td>
+<td>Express outlives relations and bounds on use.</td>
+<td>Do not establish placement, reclamation authority, initialization, or required completion.</td>
+</tr>
+<tr>
+<td>Typed transitions with lifetime and ownership contexts</td>
+<td>State how allocation and management preserve validity; reuse bounded sequencing arguments.</td>
+<td>Need a precise state, operation premises, and a preservation proof.</td>
+</tr>
+<tr>
+<td>A general permission algebra for every ownership scheme</td>
+<td>Could expose common structure across later schemes.</td>
+<td>Premature before a second scheme supplies concrete obligations and contrary cases.</td>
+</tr>
+</tbody>
+</table>
+<p>Use the second approach first, with the lifetime order as one component.
+Extend its ownership rules only when another named scheme supplies a contract.
+This is a working choice for exploration, not an accepted architecture.</p>
+<h3 id="base-constraints-and-protocol-variations">Base constraints and protocol variations</h3>
+<p>Use a shared base of constraints and explicit protocol-dependent refinements.
+The following is a candidate base to test against the comparisons in this
+note, not a proved minimal, independent, or complete axiom set:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Candidate base constraint</th>
+<th>Protocol-dependent variation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ownership and authority facts have a justified construction or transition origin. Aliasing a name or observing an operation does not create them.</td>
+<td>How storage and polarity ownership are established, partitioned, shared, borrowed, delegated, transferred, or recombined.</td>
+</tr>
+<tr>
+<td>Every admitted use is covered by its required authority, usable validity, backing protection, and actual retained dependencies.</td>
+<td>Lexical ownership, transportable regions, read leases, task or channel support, and the extents of their lifetimes.</td>
+</tr>
+<tr>
+<td>Operations preserve admitted representation, initialization, payload, and access invariants.</td>
+<td>Compatible reader/writer configurations, simultaneous or alternating access, publication, atomics, locks, or other mediation.</td>
+</tr>
+<tr>
+<td>Facts remain attached to the correct identities, actors, footprints, and operation extents. Ownership or access authority is not inferred solely from equal lifetimes or shared placement.</td>
+<td>Which actors own which polarities, which grants coexist, and whether a protocol uses changing phases.</td>
+</tr>
+<tr>
+<td>Declared ownership and completion obligations remain accounted for through every transition. Nonduplicable authority is not duplicated; required completion is not lost.</td>
+<td>Unique, joint, or otherwise specified polarity ownership; closure, cancellation, failure, return, and completion policies.</td>
+</tr>
+<tr>
+<td>Reclamation cannot invalidate an admitted use or required completion. Reclaiming a region releases all remaining resident objects collectively.</td>
+<td>Early object collection, bulk-only reclamation, lease settlement, draining, deferred reclamation, and retained backing.</td>
+</tr>
+<tr>
+<td>An operation respects the layout, execution-domain, and visibility constraints applicable to its support.</td>
+<td>Required alignment, affinity, memory-order guarantees, backing policy, and locality preferences.</td>
+</tr>
+</tbody>
+</table>
+<p>The base constrains the relationship between storage and polarity ownership
+without equating them. A region's owner owns its resident object storage, while
+other actors may own the read and write polarities. Their rules must jointly
+preserve the required uses of the objects. The base does not impose one reader,
+one writer, exclusive mutation, alternating phases, or lexical lifetime equality
+for every ownership scheme.</p>
+<p>For protocol <code>Pi</code>, write <code>B(S)</code> for the common state constraints and <code>V_Pi(S)</code>
+for its additional invariant, including any instantiation of shared parameters.
+Its well-formed states satisfy:</p>
+<pre tabindex="0"><code class="language-text">WellFormed_Pi(S) = B(S) and V_Pi(S)
+</code></pre>
+<p>The protocol supplies its establishment and transition rules. Establishment
+must produce a well-formed state from justified input authority and support.
+For every admitted step from <code>S</code> to <code>S_after</code>, the preservation obligation is:</p>
+<pre tabindex="0"><code class="language-text">WellFormed_Pi(S) implies WellFormed_Pi(S_after)
+</code></pre>
+<p>This implication is a proof target conditional on the particular admitted
+transition and its premises, not a claim that every state change is valid.
+Include failure, partial construction, cancellation, closure, and deferred
+completion steps; committed effects need not roll back. Protocol refinements
+may strengthen or instantiate the base but cannot waive its guarantees.</p>
+<p>For example, one access protocol can permit overlapping read and write polarity
+owners and another can require alternating producer and consumer access. Both
+must keep each admitted access authorized, its dependencies valid, and its
+storage protected. Those preservation constraints are common; exclusion and
+phase choices are protocol variations.</p>
+<p>Composition requires more than independently valid protocols. State the mapping
+of shared storage, polarities, grants, and obligations. Show that local steps
+and cross-protocol handoffs preserve the combined constraints. A channel that
+allows retained reads and a pool that reuses bytes immediately on receipt have
+incompatible assumptions unless their composition establishes another admitted
+handoff or lifetime contract. Conjoining invariant names is not that proof.</p>
+<p>Progress, fairness, eventual completion, and quantitative bounds require their
+own protocol and execution assumptions. State preservation alone establishes
+none of them. Further comparisons may reveal missing or redundant base
+constraints; record that evidence before treating a candidate as a common law.</p>
+<h3 id="process-calculus-and-links-comparisons">Process-calculus and Links comparisons</h3>
+<p>Primary sources checked on 2026-10-19 supply comparison techniques and known
+boundaries. This is a focused reading map, not a complete literature review or
+an adoption of their calculi. The interpretations for Ash in the last column
+are proposed transfer questions, not results established by the cited work.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Source</th>
+<th>Relevant treatment</th>
+<th>Transfer question and boundary for Ash</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://cocotec.io/fdr/manual/cspm/definitions.html">CSP semantic models and refinement assertions, FDR documentation</a></td>
+<td>Distinguishes traces, failures, and failures-divergences models; deadlock assertions use the latter two rather than traces alone.</td>
+<td>Choose observations before claiming behavioral refinement or equivalence. Well-formed ownership states alone cannot distinguish refusal, deadlock, or internal divergence.</td>
+</tr>
+<tr>
+<td><a href="https://www.pure.ed.ac.uk/ws/portalfiles/portal/16426068/A_Calculus_of_Mobile_Processes_II.pdf">Milner, Parrow, and Walker: A Calculus of Mobile Processes, II, section 1</a></td>
+<td>Bound-name output and scope closing account for scope extrusion, retaining the private name while expanding its scope under freshness conditions.</td>
+<td>Relate identity and endpoint transport across actors. Moving a name's binding scope is not permission to extend a region lifetime, move backing, or change completion ownership.</td>
+</tr>
+<tr>
+<td><a href="https://www.cambridge.org/core/journals/mathematical-structures-in-computer-science/article/abs/typing-and-subtyping-for-mobile-processes/66AE6A341BAA19D1C6C5422759622C77">Pierce and Sangiorgi: Typing and Subtyping for Mobile Processes</a></td>
+<td>Distinguishes channel input, output, and combined capabilities, with a corresponding subtype relation.</td>
+<td>Compare the representation and restriction of read/write polarity authority. Mapping a channel capability to Ash polarity ownership still needs construction, usage, lifetime, and storage relations.</td>
+</tr>
+<tr>
+<td><a href="https://doi.org/10.1017/S0960129514000176">Giunti and Vasconcelos: Linearity, Session Types and the Pi Calculus</a></td>
+<td>Describes both ends of a single channel in a type constructor, uses session types for individual ends, and distributes their descriptions through typing-context splitting. Compares polarized-variable, accept/request, and linear pi calculi.</td>
+<td>Study explicit complementary authority and its distribution without requiring different runtime objects for the ends. The paper's typing and operational correspondences do not establish ownership of Ash backing regions.</td>
+</tr>
+<tr>
+<td><a href="https://staff.um.edu.mt/afra1/papers/res-pi.pdf">de Vries, Francalanza, and Hennessy: Uniqueness Typing for Resource Management in Message-Passing Concurrency, sections 2 and 3</a></td>
+<td>Extends pi-calculus with channel allocation and deallocation. Combines affine usage with uniqueness, including splitting a unique assumption into affine access and a delayed uniqueness guarantee. Unique whole-channel authority permits type revision and deallocation.</td>
+<td>Compare temporary delegation and recovery of exclusive authority. This paper's whole-channel uniqueness is stronger than uniqueness of one polar endpoint; transferring its rules to complementary endpoints and Ash regions needs a separate argument.</td>
+</tr>
+<tr>
+<td><a href="https://www-kb.is.s.u-tokyo.ac.jp/~koba/papers/generic-pi-full.pdf">Igarashi and Kobayashi: A Generic Type System for the Pi-Calculus</a></td>
+<td>Uses abstract processes as types and environments in a generic framework; specialized instances can establish properties such as race or deadlock freedom while reusing preservation machinery.</td>
+<td>Study the generic proof assumptions and instance obligations as a precedent for the shared base plus protocol variations. Their parameters and process semantics do not already establish Ash's memory or region constraints.</td>
+</tr>
+<tr>
+<td><a href="https://homepages.inf.ed.ac.uk/slindley/papers/fst.pdf">Lindley and Morris: Lightweight Functional Session Types</a></td>
+<td>Combines session types, linear and unlimited usage, row polymorphism, and subkinding, with a Links implementation. Explicitly distinguishes usage linearity from alias freedom; sections 1.1 and 1.4 distinguish guarantees after adding recursion or access points.</td>
+<td>Compare inference and environment splitting while keeping polarity ownership, alias authority, and storage ownership distinct. Record which guarantees depend on the chosen fragment.</td>
+</tr>
+<tr>
+<td><a href="https://homepages.inf.ed.ac.uk/slindley/papers/zap.pdf">Fowler, Lindley, Morris, and Decova: Exceptional Asynchronous Session Types</a></td>
+<td>Gives explicit cancellation and asynchronous buffers, including delegated endpoints and closure dependencies. Section 4.2 preserves typing with access points while allowing cyclic topologies and losing deadlock freedom.</td>
+<td>Require queued and captured authority to have a disposition on failure. Endpoint cancellation is not automatically Ash object disposal or region reclamation. The paper leaves general linear effect-handler formalization outside its scope.</td>
+</tr>
+<tr>
+<td><a href="https://arxiv.org/pdf/2307.09383">Tang, Hillerstrom, Lindley, and Morris: Soundly Handling Linearity</a></td>
+<td>Tracks control-flow linearity to protect linear values captured by effectful continuations, with core safety arguments and a Links implementation.</td>
+<td>Test ownership of polarities through capture, resume, and discard. Ash's current one-shot boundary remains the starting point; this comparison neither introduces multi-shot handlers nor transfers the paper's proofs to Ash.</td>
+</tr>
+</tbody>
+</table>
+<p>Ordinary pi-calculus has input/output action polarity and name mobility, but
+does not impose an ownership handover merely because a name is sent. In a
+schematic ordinary communication step, sending <code>a</code> on <code>c</code> substitutes it for
+the receiver's bound name <code>x</code>:</p>
+<pre tabindex="0"><code class="language-text">c&lt;a&gt;.P | c(x).Q  -&gt;  P | Q{a/x}
+</code></pre>
+<p>The sender's continuation <code>P</code> may still use <code>a</code>; nothing in this rule consumes
+its input or output authority. Thus name possession and scope can express
+accessibility without separately tracking ownership of each polarity. I/O
+capability typing restricts the directions available to the receiver. Linear
+and session disciplines add rules for distributing, consuming, or delegating
+authority; their particular context rules determine which rights the sender
+may retain. This example explains the cited calculi, not Ash syntax or a new
+Ash transition. Their polarity treatment must be examined at the chosen typed
+variant rather than assumed to be an ownership discipline of plain pi-calculus.</p>
+<p>Three further distinctions matter for the base constraints:</p>
+<ul>
+<li>State refinement by <code>B(S) and V_Pi(S)</code> differs from behavioral refinement in
+a chosen observation model. Connecting them requires a semantics and proof;
+invariant conjunction does not establish a CSP refinement result.</li>
+<li>Channel direction, endpoint usage, name scope, and ownership of backing are
+different facts. Endpoint transport must preserve the relevant relationships
+without treating name extrusion as physical storage lifetime extension.</li>
+<li>Session fidelity, alias freedom, deadlock freedom, and valid reclamation are
+different properties. The cited calculi establish particular combinations
+under particular assumptions, not a single guarantee attached to the phrase
+session typed. No result here establishes zero-copy, affinity, or allocator
+correctness for Ash.</li>
+</ul>
+<p>Useful later stress cases include transporting one owned polarity while its
+complement stays with another actor; cancelling a message carrying delegated
+authority; and capturing a continuation that retains that authority. A shared
+access-point comparison should test preservation separately from progress.
+These extend beyond the first data-only dedicated-channel case and require
+their own bounded assignment before executable work.</p>
+<p><a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013</a> already uses
+session-like protocols to evaluate general Ash mechanisms without selecting a
+privileged session calculus. Reuse that comparison boundary: identify which
+facts need checking before choosing source syntax, type-system machinery, or
+a runtime representation.</p>
+<h3 id="lifetime-order">Lifetime order</h3>
+<p>For one execution, let a lifetime be a set of event positions at which the
+corresponding validity holds. Define <code>a &lt;= b</code> by set inclusion. Source checking
+would need to establish its constraints for every admitted execution, not just
+one observed run. Lifetime extents include suspension where the same ownership
+remains valid.</p>
+<p>The following are elementary consequences of set inclusion. Equality here is
+equality of lifetime extents; two different owners or regions can have equal
+extents without having equal identities:</p>
+<pre tabindex="0"><code class="language-text">a &lt;= a
+a &lt;= b and b &lt;= c  implies  a &lt;= c
+a &lt;= b and b &lt;= a  implies  a = b
+</code></pre>
+<p>Intersection is the greatest common bound. Its laws follow from membership in
+both operand sets:</p>
+<pre tabindex="0"><code class="language-text">a intersect b &lt;= a
+a intersect b &lt;= b
+c &lt;= a and c &lt;= b  implies  c &lt;= a intersect b
+
+a intersect b = b intersect a
+(a intersect b) intersect c = a intersect (b intersect c)
+a intersect a = a
+</code></pre>
+<p>This mathematical domain does not imply that every set, intersection, or union
+can be expressed by an Ash scope. Nor does containing two lifetimes in an
+enclosing interval authorize moving acquisition or completion. The interval
+envelope in DN-0032 is an analysis bound, not a storage-region fusion rule.</p>
+<p>For a fixed execution event set <code>E</code>, the full domain of lifetime sets forms a
+complete lattice: intersection is meet, union is join, the empty set is bottom,
+and <code>E</code> is top. Expressible lexical lifetimes need not be closed under union;
+an enclosing scope gives an upper bound rather than necessarily that exact
+union. This lifetime lattice does not establish a lattice of placements,
+owners, ownership schemes, or reclamation policies. Those would need their
+own orders and proofs that the required bounds exist.</p>
+<h3 id="placement-ownership-and-usable-lifetime">Placement, ownership, and usable lifetime</h3>
+<p>Use <code>r</code> for a region, <code>x</code> for an allocated object, and <code>o</code> for an owner.
+<code>place(x) = r</code> records placement. <code>Own(o, r)</code> records ownership of the region
+and responsibility for its resident object storage. This ownership alone
+grants no additional mutation, resource access, or early-reclamation operation.</p>
+<p>An ownership scheme supplies the rules establishing <code>Own</code> and region lifetime.
+For the first scheme, a successful region-owning scope activation <code>s</code> provides:</p>
+<pre tabindex="0"><code class="language-text">Own(s, r)
+region_lifetime(r) = owner_scope_lifetime(s)
+</code></pre>
+<p>These equalities describe logical availability under lexical ownership.
+Retained or static backing may physically remain longer. Copying an access
+value preserves placement and ownership; it does not copy <code>Own</code> authority.
+Deep copying, relocation, and ownership transfer would require separate rules.</p>
+<p>For each object define <code>required_use(x)</code> from its ownership and access
+contracts, and <code>valid(x)</code> as its usable lifetime. Required use includes uses
+and pending completion justified by those contracts, not merely accesses that
+happened to execute. The candidate preservation condition is:</p>
+<pre tabindex="0"><code class="language-text">required_use(x) &lt;= valid(x) &lt;= region_lifetime(place(x))
+region_lifetime(r) &lt;= backing_protection(r)
+</code></pre>
+<p>The first inequality prevents premature loss of required validity. The second
+bounds object use by its region. The last permits protected backing after
+ordinary access ends without granting a longer usable lifetime.</p>
+<p>These are obligations to establish, not theorems obtained by naming a region.
+Once placement is fixed, an escaping use rejects rather than silently
+extending the owner scope or shortening the object's required lifetime.
+A later placement-inference optimization may instead select an existing
+enclosing region, as explored below; this does not replace M2's approved closest-live default. Other schemes must establish the same validity relationship
+under their own owner rules.</p>
+<h3 id="establishing-and-discovering-ownership">Establishing and discovering ownership</h3>
+<p>The ownership scheme establishes <code>Own(o, r)</code>; equal lifetimes or lexical
+visibility alone cannot establish it. A checker then propagates that fact
+through region access and object placement. Allocating into <code>r</code> puts the new
+object under its established owner's collective storage ownership. The helper
+executing the construction does not acquire ownership merely by allocating.
+Aliasing and borrowing preserve that relationship. Ownership transfer would
+require a separate scheme rule.</p>
+<p>For the later inference-optimization comparison, consider a variant where each entered lexical
+scope activation <code>s</code> successfully establishes one region <code>r_s</code>, owned by <code>s</code>
+and available for that activation's lifetime. This is a candidate variant,
+not the implemented default behavior or a replacement for its call-boundary
+contract. Ordinary blocks and calls acquire no region; explicit selection scopes
+new construction without moving existing values. This variant selects no physical
+representation or source annotation syntax.</p>
+<p>The three annotation variations constrain the same relationships:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Variation</th>
+<th>Established facts and remaining inference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No placement or owner annotation</td>
+<td>Each scope establishes its region's owner and lifetime. Construction defaults locally; usage requirements can require an enclosing region, whose owner then owns the object's storage.</td>
+</tr>
+<tr>
+<td>Object annotated with region <code>r</code></td>
+<td>Placement selects <code>r</code>; its established owner supplies collective storage ownership. The region must be accessible with allocation authority, and dependencies still bound usable lifetime.</td>
+</tr>
+<tr>
+<td>Object annotated with storage owner <code>o</code></td>
+<td>Placement must select a region <code>r</code> for which <code>Own(o, r)</code> holds. One region per scope determines it; multiple regions per owner require another selection rule.</td>
+</tr>
+</tbody>
+</table>
+<p>An owner annotation here denotes storage ownership, not merely the object that
+holds a reference. Neither annotation by itself promises usable validity for
+the owner's entire lifetime. If that stronger promise is required, all retained
+dependencies must support it. Region and owner annotations constrain inference;
+conflicting requirements need a diagnostic rather than silent retargeting.</p>
+<h3 id="dependency-bounds-and-projection">Dependency bounds and projection</h3>
+<p>Let <code>deps(v)</code> describe the storage and capabilities required by the particular
+value or access being checked. It follows actual retained fields, captures,
+evidence, and operation metadata. An unused environment entry alone is not a
+dependency. Bounds on usable lifetime take the following form:</p>
+<pre tabindex="0"><code class="language-text">valid(v) &lt;= storage_validity(v)
+            intersect intersection(valid(d) for d in deps(v))
+</code></pre>
+<p>Independent ordinary values add no capability dependency. A closure allocated
+in outer region <code>A</code> that reads scoped cell <code>C</code> still requires <code>C</code>; the closure's
+longer-lived storage cannot restore cell access after <code>C</code> closes.</p>
+<p>For a worked derivation, suppose <code>B</code> is lexically owned inside <code>A</code>, and <code>y</code> is
+allocated in <code>B</code> while retaining an existing reference into <code>A</code>:</p>
+<pre tabindex="0"><code class="language-text">region_lifetime(B) &lt;= region_lifetime(A)
+
+valid(y) &lt;= region_lifetime(B) intersect region_lifetime(A)
+         = region_lifetime(B)
+</code></pre>
+<p>The intersection equality follows from inclusion. This derives a bound on
+<code>y</code>, not an escape permission. Projecting the existing outer reference can
+remove the dependency on <code>B</code> if the result needs no storage in <code>B</code>. A view into
+an inline field would retain that dependency instead.</p>
+<p>The current generic cell contract remains stricter for retained mutable payloads: their resource owners
+must strictly outlive the cell owner. The intersection calculation does not
+admit temporary younger storage, self-capture, or cycles of cell owners.
+Ordinary immutable graph cycles are a different relation and remain possible.
+Likewise, constructing the closure above cannot send a younger-dependent
+payload to an outer interpreter. DN-0054's reservation and local initialization
+boundary remains a separate construction obligation.</p>
+<h3 id="access-polarity-and-lifetime-indexed-permissions">Access polarity and lifetime-indexed permissions</h3>
+<p>Read and write polarities are facets whose authority can belong to different
+actors. Keep their ownership distinct from storage ownership and from the
+individual accesses admitted under that authority. Channel endpoint direction
+and positive or negative type occurrence are related comparisons, not identical
+concepts. A polarity label alone establishes none of these ownership facts.</p>
+<h4 id="ownership-of-polarities">Ownership of polarities</h4>
+<p>Use <code>OwnPolarity_S(a, x, p)</code> for actor <code>a</code> owning polarity <code>p</code> of object or
+footprint <code>x</code> in state <code>S</code>. The candidate distinguishes these simultaneous
+facts, with <code>R</code> and <code>W</code> denoting read and write polarities:</p>
+<pre tabindex="0"><code class="language-text">OwnPolarity_S(A, x, R)
+OwnPolarity_S(B, x, W)
+Own_S(C, r)
+place(x) = r
+</code></pre>
+<p>Here <code>A</code> owns the read polarity, <code>B</code> owns the write polarity, and <code>C</code> owns the
+region and the object's resident storage. This does not require <code>A</code>, <code>B</code>, and
+<code>C</code> to be distinct, but permits them to be. Owning a polarity is not merely
+having performed an operation or holding a temporary access grant.</p>
+<p>A protocol supplies, within the base constraints, construction and transition
+rules establishing these facts. It may establish different polarity owners or
+admit a checked partition of existing authority. It determines whether a
+polarity is uniquely or jointly owned, and which sharing, borrowing, delegation,
+transfer, recombination, and completion operations are admitted. No general
+split or duplication law follows from the labels <code>R</code>, <code>W</code>, or <code>RW</code>.</p>
+<p>For example, a protocol may permit transferring the write polarity from <code>B</code>
+to <code>D</code> while <code>A</code> retains the read polarity and <code>C</code> retains region ownership.
+Such a transition need not change placement or the read polarity's lifetime.
+Its preconditions and effect on pending operations remain protocol obligations.
+Neither region ownership nor a write operation alone establishes the authority
+to create, transfer, or delegate a polarity.</p>
+<p>An access protocol derives admitted operations from owned or lawfully delegated
+polarity authority, its state, and the remaining validity conditions. Owning a
+polarity can carry responsibilities beyond an individual access, and does not
+necessarily permit that operation in every protocol state. Conversely, a
+borrower may have access without owning the polarity. The relationship must be
+specified rather than recovering ownership from an access trace.</p>
+<p>Polarity ownership, any derived grants, and storage protection have related
+lifetimes, but need not have equal extents. The region must protect every
+admitted use and required completion justified by either polarity. Ending the
+write polarity may mean end-of-input while a reader continues; whether that is
+the protocol's meaning is an explicit choice. It does not by itself reclaim
+the region. Region reclamation must settle the outstanding polarity and access
+obligations under the selected composition.</p>
+<h4 id="linearity-and-uniqueness-of-polar-endpoints">Linearity and uniqueness of polar endpoints</h4>
+<p>For channels, review usage and alias authority separately for each polar
+endpoint. Following <a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/#unique-access-contracts">DN-0038</a>,
+neither property follows merely from making a handle non-copyable. These are
+candidate protocol profiles, not new restrictions on current cells or a
+selection of channel syntax or representation.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Property</th>
+<th>What it constrains</th>
+<th>What remains to specify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linear current-state authority</td>
+<td>Each current authority value is consumed once by a lawful operation, transfer, or completion path; it cannot be duplicated or silently discarded.</td>
+<td>Which transitions produce a successor, settle the obligation, or retain it in a pending operation or captured continuation.</td>
+</tr>
+<tr>
+<td>Affine current-state authority</td>
+<td>The current value cannot be used more than once, but may be discarded.</td>
+<td>Whether a separate owner or an explicit cancellation/completion mechanism must settle the resource when access is discarded.</td>
+</tr>
+<tr>
+<td>Unique endpoint authority</td>
+<td>No incompatible usable alias to the same endpoint authority coexists with the claimed exclusivity.</td>
+<td>Which aliases may exist but be suspended, which loans are compatible, and how exclusivity is recovered.</td>
+</tr>
+</tbody>
+</table>
+<p>Linearity concerns use accounting; uniqueness concerns the authority of aliases.
+A linear token alone does not prove that a provider issued no conflicting
+token. Uniqueness alone does not require eventual use, successful communication,
+or completion. A protocol may combine both properties or use linear permissions
+to establish its uniqueness invariant.</p>
+<p>Let <code>e = (c, p)</code> identify one endpoint role of channel <code>c</code>, and let <code>E(e, q, L)</code>
+denote its candidate current authority at protocol state <code>q</code>, with validity
+extent <code>L</code>. An ordinary successful operation can have the schematic form:</p>
+<pre tabindex="0"><code class="language-text">step(E(e, q, L), input) -&gt; (E(e, q', L'), output)
+</code></pre>
+<p>The old authority is consumed and its successor carries the next state. This
+permits arbitrarily many operations when the protocol permits them; linearity
+does not make the channel a one-message channel. Successors must preserve
+lifetime and backing constraints. This notation neither extends <code>L</code> implicitly
+nor selects the failure or terminal outcomes. Those must account for retained,
+returned, transferred, or settled authority explicitly.</p>
+<p><a href="https://homepages.inf.ed.ac.uk/slindley/papers/fst.pdf">Lightweight Functional Session Types, sections 1.3.1 and 1.3.2</a>
+provides a concrete comparison: send returns an updated channel, receive returns
+a payload and updated channel, and the authors distinguish usage linearity
+from alias freedom. This supports comparing state succession with uniqueness;
+it does not supply Ash's authority-construction or backing rules.</p>
+<p>Uniqueness must name its boundary. Uniqueness of <code>(c, p)</code> need not exclude
+another actor owning <code>(c, dual(p))</code>, or a third actor owning the backing region.
+For the dedicated one-way comparison, the roles can be fixed send and receive
+polarities, usable by different actors over overlapping lifetimes. For richer
+session protocols, a stable endpoint role may alternate send and receive
+actions as <code>q</code> changes. Endpoint identity, the current action's direction, and
+memory read/write authority therefore need separate descriptions. A unique
+endpoint also does not establish uniqueness of its payload or reachable graph.</p>
+<p>Compare three profiles before choosing a mechanism:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Profile</th>
+<th>Repeated operations and delegation</th>
+<th>Main obligation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linear state succession with exclusive endpoint authority</td>
+<td>Each operation returns a successor; delegation moves the current value.</td>
+<td>Establish exclusive issuance and preserve it through context splitting, capture, and handoff; linear use checking alone is insufficient.</td>
+</tr>
+<tr>
+<td>Reusable unique authority with checked loans</td>
+<td>Operations preserve the alias invariant; transfer removes the former holder's usable authority.</td>
+<td>Track loans and suspended aliases, including across callbacks and pending operations, until uniqueness is recovered.</td>
+</tr>
+<tr>
+<td>Shared or asymmetric polar authority</td>
+<td>A protocol may share one polarity while keeping the other exclusive, or mediate both.</td>
+<td>Define arbitration, ordering, state evolution, and completion without assuming the exclusive profile's rules.</td>
+</tr>
+</tbody>
+</table>
+<p>The first two can describe the same dedicated-channel behavior with different
+checking mechanisms. The third is a useful later multi-producer or
+multi-consumer comparison. It need not inherit the same session-state or
+progress guarantees. Shared authority at an access point that creates fresh
+sessions also differs from sharing an endpoint of an existing session.</p>
+<p>The cited resource pi-calculus offers a related recovery construction: a unique
+whole-channel assumption can split into affine access and authority that
+becomes unique after a matching communication consumes that access. Its
+countdown measures communications, not elapsed time. Applying this idea per
+endpoint would require a new compatibility and preservation argument; it is
+not already a polar-endpoint rule, a general loan mechanism, or proof that the
+required communication eventually occurs.</p>
+<p>Endpoint delegation adds obligations beyond ordinary name transmission. At
+commit, the sender loses the delegated current authority; a buffered transport
+must account for it in the queued message until the receiver claims it. The
+complementary endpoint may remain with its existing owner throughout. Failure
+before commit must specify whether authority is returned or otherwise settled;
+cancellation after commit must account for queued authority without restoring
+a usable sender alias. A first exclusive comparison can require no outstanding
+loan or pending operation on the delegated endpoint. Handover of those states
+needs an additional contract.</p>
+<p>The endpoint's authority, the queued message's storage owner, and the channel's
+backing owner remain distinct. Ending one endpoint does not release storage
+still needed by its peer, buffers, loans, waiters, or external completion.
+Whole-channel reclamation requires settlement of all relevant obligations and
+the backing owner's authority. Per-endpoint uniqueness alone cannot justify it.</p>
+<h4 id="operation-modes-and-their-order">Operation modes and their order</h4>
+<p>For a fixed view and operation contract, consider the abstract modes:</p>
+<pre tabindex="0"><code class="language-text">none = {}
+R = {read}
+W = {write}
+RW = {read, write}
+</code></pre>
+<p>Order modes by set inclusion. Their meet is intersection and join is union,
+giving a four-element permission lattice with incomparable <code>R</code> and <code>W</code>.
+This describes operation sets, not source types or a rule for issuing authority.
+The equation <code>R union W = RW</code> does not let a client manufacture a combined
+capability. Restricting a view's offered operations does not copy or discharge
+its ownership, payload, loan, or completion obligations.</p>
+<p>Swapping the read and write labels is an involution fixing <code>none</code> and <code>RW</code>.
+It preserves this order; it is not Boolean complement or an order reversal.
+Nor is it an operation that converts an actual reader into a writer. Channel
+duality needs its own interpretation below.</p>
+<p>A read permission concerns its specified footprint. It does not prove deep
+immutability, stable contents across calls, permission to copy a payload, or
+freedom from metadata effects in the implementation. A write permission does
+not imply permission to read uninitialized storage, reclaim backing, or transfer
+its owner. Initialization and disposal of overwritten contents need separate
+protocol and payload rules.</p>
+<h4 id="permissions-depend-on-time-and-phase">Permissions depend on time and phase</h4>
+<p>Here a phase is a state of a chosen access protocol, such as construction,
+published reading, or reusable storage. The protocol can vary the permissions
+granted to each participant by phase while ownership and placement stay fixed.
+Read/write modes remain a separate concept; phase-dependent access is an
+optional composition, not a requirement that every object changes polarity.
+Another protocol may admit the same modes throughout its usable lifetime.
+Phases are not a global read-versus-write switch: different actors can hold
+different permissions over overlapping lifetimes.</p>
+<p>For a fixed execution event set <code>E</code>, client <code>a</code>, and view <code>v</code>, let
+<code>G(a, v)</code> be a subset of <code>{read, write} cross E</code>. Membership records an
+operation admitted at an event position, not merely an operation that executed.
+It describes derived access, not the ownership of the underlying polarity.
+Source checking must establish the relationship for every admitted execution;
+this semantic relation is not an assumed computable future-use oracle.</p>
+<p>For example, actor <code>A</code> can have read access to view <code>v</code> while actor <code>B</code> has
+write access to the same footprint:</p>
+<pre tabindex="0"><code class="language-text">G(A, v) = {read} cross L_A
+G(B, v) = {write} cross L_B
+L_A intersect L_B != empty
+</code></pre>
+<p>Overlapping grants need not alternate or end when the other actor receives
+its grant. Their compatibility is an obligation of the selected access
+protocol, including visibility and synchronization where required. A protocol
+can admit both while defining how reads observe updates. Grant coexistence
+and simultaneous execution of raw memory operations are separate questions.
+The example supplies neither a general exclusion rule nor an unrestricted
+shared-memory permission.</p>
+<p>The region owner can remain a third actor throughout. Its protection must
+cover both grants' admitted uses and required completion. The clients can have
+different grant lifetimes and admitted execution domains while referring to
+the same placement. Combining their facts must preserve the actor index; it
+cannot grant <code>RW</code> to either actor merely because both operations are present.</p>
+<p>This relation retains correlations that a pair of mode and lifetime summaries
+can lose. As a separate example, suppose one client's interface permits writes
+during construction and reads after publication, over different nonempty
+extents <code>L_build</code> and <code>L_read</code>:</p>
+<pre tabindex="0"><code class="language-text">G = ({write} cross L_build) union ({read} cross L_read)
+G subset_of {read, write} cross (L_build union L_read)
+</code></pre>
+<p>The inclusion can be strict. Replacing <code>G</code> by the larger rectangle grants
+unintended reads during construction and writes after publication. Thus taking
+the union of modes and lifetimes independently is not generally a sound
+capability join. For fixed identities and <code>E</code>, the full relation domain is a
+set lattice, but arbitrary unions need not be admissible access contracts.</p>
+<p>Descriptive restriction to modes <code>M</code> and lifetime <code>L</code> is
+<code>G intersect (M cross L)</code>. Such restrictions commute and are idempotent by
+intersection laws. These set facts do not authorize discarding pending loans
+or required completion, duplicating authority, or widening an existing grant.</p>
+<p>For each admitted access, require the operation's permission and protocol
+phase, initialized storage where needed, valid dependencies, live region
+protection, an admitted execution domain, and the required visibility or
+synchronization. A lifetime bound or a mode alone cannot discharge that check.
+All granted uses of a view remain bounded by its usable lifetime and every
+required backing region, as in the dependency and borrowing bounds above.</p>
+<h4 id="composition-ownership-and-storage">Composition, ownership, and storage</h4>
+<p>Combining permissions held by clients is not the lattice join. Define a
+separate partial compatibility relation over clients, overlapping footprints,
+lifetimes, and protocols. For unmediated ordinary storage, a candidate permits
+overlapping readers and excludes an overlapping writer against another reader
+or writer. Proven disjoint fields or buffers may permit independent writes
+within the same region. This does not require a lock or an exclusive permission
+for an entire region merely because two objects share placement.</p>
+<p>Mediated shared mutation, atomics, and locks need their own operation contracts.
+A reusable public write handle is not a raw exclusive-storage grant. The
+candidate rule does not change current cells. Likewise, <code>R union R = R</code> says
+nothing about whether two live readers exist, whether an access value may be
+duplicated, or whether all read loans have ended. A separate loan or permission
+ledger must preserve those facts; no fractional or linear representation is
+selected here.</p>
+<p>Where the protocol admits it, a polarity owner may delegate access without
+transferring that polarity or region ownership. A writer can therefore be a
+non-owner of storage and may be a borrower of write authority; a storage owner
+need not have usable mutation authority during a loan. Reclamation requires its
+distinct authority and the settlement of outstanding admitted uses. <code>RW</code> adds
+no ownership or reclamation authority.</p>
+<p>Using a read view requires its backing, and returned borrowed views retain
+their actual backing dependencies. Copying an independent value can remove a
+dependency; the operation must establish the payload's copy contract.
+Writing a reference into retained storage introduces dependencies that must
+cover all subsequently admitted reads and required completion, not just the
+write event. The current generic cell contract's strict retained resource-owner rule remains
+stronger than this necessary lifetime condition; clearing later does not relax
+it. Placement in a longer-lived region cannot repair an expired grant or an
+unsupported stored dependency.</p>
+<p>Execution domains may differ by operation: reading could be admitted on several
+workers while mutation or reclamation requires home support. A read-only
+interface still needs the representation and metadata checks from the affinity
+comparison. Mode attenuation neither relocates bytes nor establishes thread
+safety; ownership transfer must settle or transfer existing grants under its
+own rule.</p>
+<h4 id="payload-variance-and-endpoint-duality">Payload variance and endpoint duality</h4>
+<p>Under a value-flow convention, reading produces a <code>T</code> and writing accepts a
+<code>T</code>. For comparison only, suppose <code>A &lt;: B</code> is a safe payload substitution
+relation and the remaining interface contracts are fixed. Simple producing
+and accepting interfaces then have the candidate variance relationships:</p>
+<pre tabindex="0"><code class="language-text">Source&lt;A&gt; &lt;: Source&lt;B&gt;
+Sink&lt;B&gt; &lt;: Sink&lt;A&gt;
+</code></pre>
+<p>A source promises an output; a sink promises to accept an input. An interface
+offering both generally requires payload invariance. This does not introduce
+Ash subtyping or lifetime-coercion syntax. Shortening a loan's own lifetime is
+different from changing a reference lifetime inside a payload that aliases may
+write. The <a href="https://doc.rust-lang.org/reference/subtyping.html#variance">Rust variance reference</a>
+is an external comparison: function results and inputs have opposite variance,
+and a mutable reference is invariant in its referent type while covariant in
+its own reference lifetime. These rules are not adopted by this note.</p>
+<p>For a channel, sending accepts a payload from its caller and receiving produces
+one. Matching endpoint directions are dual, but the direction does not select
+the permissions of that payload. A sender may read or transfer an immutable
+message; sending does not require permission to mutate its bytes. A receiver
+may obtain a read-only lease or an owned writable region, depending on the
+transport contract.</p>
+<p>At the single-message direction level, use explanatory labels <code>Send(T)</code> and
+<code>Receive(T)</code> with <code>dual(Send(T)) = Receive(T)</code> and the reverse equation, so
+<code>dual(dual(p)) = p</code>. Protocol continuations, closure, cancellation, and payload
+transfer must still match. This is separate from swapping memory-access labels
+and does not grant both directions to either endpoint.
+<a href="https://homepages.inf.ed.ac.uk/wadler/papers/propositions-as-sessions/propositions-as-sessions-jfp.pdf">Propositions as Sessions</a>
+provides an external account of session duality. Its calculus and progress
+results do not follow from these explanatory endpoint equations.</p>
+<p>For a zero-copy pool, the producer can hold construction permission, the
+consumer a later read lease, and the pool retain storage ownership throughout.
+Publication must establish initialization and the required visibility while
+ending incompatible producer access. Reuse waits for reader loans and pending
+operations, including external completion, rather than merely observing a
+receive event. These are separate phase transitions from ownership transfer
+and backing relocation.</p>
+<h3 id="sequential-placement-inference">Sequential placement inference</h3>
+<p>Keep validity constraints, placement inference, and optimization separate.
+The constraints determine which placements are admitted. A heuristic selects
+a candidate satisfying them. Later optimization may change placement or its
+physical representation only while preserving the established guarantees and
+observable behavior, including any exposed allocation or completion effects.</p>
+<p>For the one-region-per-scope variant, start with the construction scope's
+region. Widen toward existing enclosing regions only when required uses cannot
+fit there. For sequential execution with properly nested scope activations,
+a useful candidate is the least common ancestor of the construction activation
+and all required use activations:</p>
+<pre tabindex="0"><code class="language-text">candidate_scope(x) = least_common_ancestor(
+    construction_scope(x), required_use_scopes(x))
+candidate_region(x) = region(candidate_scope(x))
+</code></pre>
+<p>These scopes denote related dynamic activations, not just source locations.
+Including construction ensures that the candidate region is already available
+when allocation executes. Required uses include aliases, retained fields,
+closures, and pending completion obligations justified by contracts, rather
+than only direct uses or accesses observed in a run. Loops, recursion, and
+function boundaries require summaries that preserve activation relationships;
+a syntactic common ancestor alone is not a complete inference algorithm.</p>
+<p>For example, the following is schematic control flow, not Ash syntax:</p>
+<pre tabindex="0"><code class="language-text">scope P:
+    x = scope A:
+        construct object
+        return object
+    scope B:
+        use x
+</code></pre>
+<p>The object is constructed inside <code>A</code> but used after <code>A</code> ends, inside its
+lexical neighbour <code>B</code>. The value reaches <code>B</code> through the binding in <code>P</code>;
+inference does not change name visibility. If all constraints permit it,
+inference selects <code>P</code>'s region before allocation. <code>P</code> owns that region and
+therefore the object's storage. No object is first allocated into <code>A</code> and then
+moved, and neither scope's lifetime is extended.</p>
+<p>The candidate still needs live exact allocation authority, compatible region
+type and construction, dependency validity, and agreement with annotations.
+In particular, placing a closure in <code>P</code> cannot make a resource owned by <code>A</code>
+available to a later call in <code>B</code>. Related ordinary value allocations may need
+joint placement constraints; this does not authorize extending resource owners
+or automatically promoting every reachable dependency. If no admitted region
+satisfies the requirements, the use must reject.</p>
+<p>Widening required by use belongs to initial placement inference. Additional
+placement choices for efficiency belong to optimization and need an observation
+contract. This heuristic is limited to the sequential fragment with nested
+lifetimes; the general algebra remains the validity constraints and ownership
+facts above. Suspension can preserve an owning activation after control leaves
+its body, and later concurrent work can introduce other lifetime relationships.
+Lexical ancestry alone cannot solve those cases. Their contracts remain open;
+this heuristic does not replace the model's existing capture obligations.</p>
+<h3 id="state-and-reclamation">State and reclamation</h3>
+<p>A candidate state <code>S</code> records region identities and types, ownership
+obligations, resident objects, placement, initialized representations,
+permitted access, roots and references, pending construction, and required
+completion. This is model state, not a selected runtime representation.</p>
+<p>Let <code>Resident(r, S)</code> be the objects still allocated in <code>r</code>. Let <code>Need(r, S)</code> be
+the subset whose preservation valid ownership, access, or completion requires.
+Its specification must account for references from other regions, closures,
+captured control, provider state, and pending cleanup. Region ownership does
+not by itself require every unreachable object to remain individually live.</p>
+<p><code>Need</code> is a semantic obligation, not an assumed computable oracle. A checker
+or collector may retain more objects through a conservative approximation;
+proving that it misses none of the required objects is part of its contract.</p>
+<p>A region type <code>K</code> supplies its allowed object reclamation policy. Any early
+reclamation transition removing objects <code>D</code> must satisfy:</p>
+<pre tabindex="0"><code class="language-text">D subset_of Resident(r, S) minus Need(r, S)
+Resident(r, S_after) = Resident(r, S) minus D
+</code></pre>
+<p>The type may impose stronger conditions or support no early reclamation. A
+fixed arena initially uses <code>D = empty</code>. Counting and tracing require their own
+accounting, roots, cycle, failure, and possible reference-update obligations.
+Neither policy changes region ownership or lifetime merely by being selected.</p>
+<p>Whole-region reclamation is a separate transition, authorized by the ownership
+scheme after remaining permitted uses end and required completion no longer
+needs the storage. It consumes reclamation authority once and establishes:</p>
+<pre tabindex="0"><code class="language-text">Resident(r, S_after) = empty
+no permitted access remains to an object allocated in r
+</code></pre>
+<p>All remaining objects are reclaimed together, including ordinary cycles that
+an earlier policy retained. Objects merely referenced in another region are
+outside this reclamation. Ending lexical source access and consuming a physical
+owner remain distinct: a retained dependent can block backing release after
+ordinary access has been revoked. The model must preserve that protection.</p>
+<h3 id="ownership-contexts-and-typed-transitions">Ownership contexts and typed transitions</h3>
+<p>Let <code>Delta</code> be an ordered context of ownership and completion obligations.
+Compatible concatenation <code>Delta tensor Gamma</code> preserves exact identities and
+dependency order, with no duplicated completion authority. <code>I</code> is empty.
+Reassociation changes grouping, not order or scope boundaries:</p>
+<pre tabindex="0"><code class="language-text">(Delta tensor Gamma) tensor Theta
+    = Delta tensor (Gamma tensor Theta)
+I tensor Delta = Delta = Delta tensor I
+</code></pre>
+<p>These structural equalities follow from concatenation, conditional on complete
+context compatibility. They do not justify exchange, owner duplication, scope
+fusion, or merging region identities. Reusable handles remain separate from
+these restricted obligations.</p>
+<p>Use <code>C : Delta0 -&gt; Delta1</code> for a model computation transforming a checked state
+under one ownership context into another. Compatible transitions sequence only
+when their intermediate state and ownership contracts agree. For finite paths,
+relation composition gives associativity:</p>
+<pre tabindex="0"><code class="language-text">(f ; g) ; h = f ; (g ; h)
+</code></pre>
+<p>Failure outcomes, committed effects, and ordered traces must be included in
+the eventual computation model. This regrouping must not restart or undo an
+earlier operation. DN-0032 supplies the bounded sequencing comparison; a
+concrete region calculus must still establish its typing and operational laws.</p>
+<h3 id="sequential-processes-and-dedicated-channels">Sequential processes and dedicated channels</h3>
+<p>This future comparison composes sequential processes with isolated local
+regions. Begin with a dedicated unidirectional channel <code>c</code> connecting one
+producer <code>P</code> and one consumer <code>Q</code>, with a fixed message type and payload
+contract.
+Distinguish synchronous rendezvous from a bounded FIFO buffer; neither
+interpretation is implied by the word channel.
+Endpoint delegation, multiple producers or consumers, shared mutation, and a
+multicore memory model remain outside this case. No scheduling API is selected.</p>
+<h4 id="network-composition-and-communication-order">Network composition and communication order</h4>
+<p>Write <code>P parallel_c Q</code> for the network with that connection. This composition
+combines process states, channel state, pending operations, and ownership facts.
+It is distinct from ordered ownership-context concatenation <code>tensor</code>; the
+channel connects obligations belonging to different process activations.</p>
+<p>Let <code>a precedes b</code> be the transitive closure of each process's event order and
+the matching communication order. For buffered delivery, publication precedes
+claim by the receiver. For rendezvous, both processes participate in one
+handoff event. Communication orders the relevant events; it does not establish
+that one process's entire lifetime contains the other's. Thus lexical common
+ancestry alone cannot determine message placement.</p>
+<p>Regrouping a network is a candidate structural law only when it preserves the
+same process identities, channel connections, capacities, and observations.
+It does not reorder events within a process or imply a scheduling policy.
+Commuting independent local steps would need separate premises about disjoint
+support and observations; shared allocation capacity can invalidate that law.</p>
+<p>For a buffered channel without message discards, record sequences of distinct
+message identities in publication order, receive-commit order, and the queue.
+The candidate FIFO invariant is:</p>
+<pre tabindex="0"><code class="language-text">published(c) = received(c) ++ queued(c)
+0 &lt;= length(queued(c)) &lt;= capacity(c)
+</code></pre>
+<p>Here <code>++</code> is sequence concatenation. It has an empty identity and associative
+grouping, but does not commute. These elementary sequence laws do not permit
+arbitrary concatenated executions: capacity, closed state, and message ownership
+still constrain every prefix. A discard policy needs an explicit disposition
+record instead of silently deleting a message from this accounting. Rendezvous
+has no persistent queue; it requires a matching participant, rather than being
+an ordinary buffered send into a permanently full zero-capacity queue.</p>
+<h4 id="payload-contracts">Payload contracts</h4>
+<p>Dedicated endpoints do not by themselves establish a message's storage or
+access permissions. Compare three contracts explicitly:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Contract</th>
+<th>Ownership and placement</th>
+<th>Additional obligation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copy data</td>
+<td>Construct a fresh message graph in independently owned storage. The source graph retains its placement and owner.</td>
+<td>Specify copying of sharing and cycles, permitted payloads, observations, failure, and costs. A copied local resource handle still depends on its original owner and is not independent data.</td>
+</tr>
+<tr>
+<td>Transfer a message region</td>
+<td>Move responsibility for one complete region and its resident objects; placement and region identity remain unchanged.</td>
+<td>Establish transferable backing and completion support, no remaining sender or third-party access, and no unsupported external dependencies.</td>
+</tr>
+<tr>
+<td>Share storage</td>
+<td>Keep the original region owner and grant specified cross-process access.</td>
+<td>Prove the shared lifetime and access/visibility contract. Immutability or a long lifetime alone does not establish safe sharing. Excluded from the first isolated comparison.</td>
+</tr>
+</tbody>
+</table>
+<p>Copying data is the initial isolated-storage baseline from DN-0035. Region
+transfer is a second ownership scheme to compare algebraically, not an implied
+optimization of copying: object identity, failure, and storage observations may
+distinguish them. Begin either comparison with data-only payloads; transporting
+resource handles, handlers, endpoints, or captured control needs further rules.</p>
+<p>Transferring one reference into a general process region cannot transfer that
+object's storage ownership independently. Region ownership covers all resident
+objects. Either copy the message into independent storage, or prepare a whole
+detachable message region. Splitting regions is not assumed. A unique completion
+owner is insufficient evidence that sender aliases or hidden captures are gone.</p>
+<h4 id="ownership-during-delivery">Ownership during delivery</h4>
+<p>Use <code>Own_S(o, r)</code> for ownership in state <code>S</code>. The following is an ownership
+history for successful buffered transfer of a prepared message region <code>r_m</code>;
+it is not an unconditional operational rule:</p>
+<pre tabindex="0"><code class="language-text">Own_S0(P, r_m)
+    -- publication commits --&gt; Own_S1(c, r_m)
+    -- receive commits -----&gt; Own_S2(Q, r_m)
+</code></pre>
+<p>Here <code>c</code> denotes the channel's obligation for accepted undelivered messages,
+not either endpoint's observation handle. A surrounding owner must preserve
+channel support until accepted messages, waiters, and cleanup are settled.
+The receiver can retain the accepted region after the queue slot is reused.</p>
+<p>Each successful handoff removes the old ownership fact and establishes the new
+one together. Placement, region type, and internal reclamation policy remain
+unchanged; future collection must use the new owner's roots. On a synchronous
+rendezvous, ownership passes directly from <code>P</code> to <code>Q</code> in the matched event,
+without a persistently queued message owner. Copying first creates a distinct
+message region under a construction owner; publishing that region follows the
+same delivery obligations while the source graph remains owned by <code>P</code>.</p>
+<p>For every unreclaimed message region, the candidate invariant is:</p>
+<pre tabindex="0"><code class="language-text">|{ o : Own_S(o, r_m) }| = 1
+required_use(m) &lt;= valid(m) &lt;= region_lifetime(r_m)
+</code></pre>
+<p>Every live state must have an owner protecting the region, including periods
+with no running user. Its lifetime must cover construction, pending delivery,
+receiver use, and required completion. It need not equal either process's whole
+lifetime. This transportable-region scheme replaces the lexical lifetime
+equality for those regions; it does not silently extend a region still bound
+to an ordinary lexical owner. The owning obligation must be detachable from
+the construction scope under an explicit rule before that scope can complete.</p>
+<p>For transfer, all resident storage and closing obligations must be eligible,
+and all remaining sender access must be ruled out. A closed ordinary object
+graph may include internal cycles. References to sender-local resources,
+foreign thread-affine support, or other non-transferable dependencies reject
+unless a separate contract establishes their transport. Changing <code>Own_S</code> alone
+does not establish access revocation, initialized data, or cross-worker
+visibility. Those remain premises of a future handoff rule.</p>
+<h4 id="zero-copy-variations">Zero-copy variations</h4>
+<p>Specify the boundary of a zero-copy promise. Here the candidate promise is no
+additional payload copying during channel publication and receipt. Initial
+construction, descriptor copying, allocation, synchronization, physical page
+movement, and remote access costs are separate observations. An end-to-end I/O
+promise needs a larger boundary. A guaranteed zero-copy operation cannot
+silently fall back to copying; an optional fast path needs its own contract.</p>
+<p>Compare these variations without conflating storage ownership with temporary
+access. The borrowing, pooling, and sharing rows extend the isolated baseline
+only under additional contracts:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Variation</th>
+<th>Placement and ownership</th>
+<th>Conditions to compare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copy to independent storage</td>
+<td>A fresh message region follows the delivery history above. Choose its backing policy separately.</td>
+<td>Baseline payload-copy cost, failure, graph/identity observations, and receiver locality.</td>
+</tr>
+<tr>
+<td>Transfer a prepared region</td>
+<td>The complete region changes owner; payload storage stays in place.</td>
+<td>No remaining sender access; admissible use and reclamation on the destination or through retained support.</td>
+</tr>
+<tr>
+<td>Construct directly in final storage</td>
+<td>The producer initializes reserved receiver- or channel-supported storage; publication changes access phase.</td>
+<td>A checked construction permit, initialized publication, and precise responsibility for refusal, partial construction, or cancellation. No existing payload is copied.</td>
+</tr>
+<tr>
+<td>Borrow a view</td>
+<td>Storage ownership remains with the lender; the receiver gets a bounded lease.</td>
+<td>The region covers the lease; incompatible mutation and reclamation wait for all admitted uses and acknowledgements. Dedicated endpoints alone do not prove this.</td>
+</tr>
+<tr>
+<td>Reuse channel or pool slots</td>
+<td>A stable region owner retains storage while write, queued, read, and reusable phases govern a slot.</td>
+<td>Receipt does not imply the consumer finished using the bytes. Reuse waits for every view and pending operation; stale accesses must not become valid for a later slot generation.</td>
+</tr>
+<tr>
+<td>Share immutable data</td>
+<td>An enclosing or separately specified shared owner retains storage.</td>
+<td>Cross-process lifetime, roots, representation safety, and reclamation accounting. This is a sharing contract rather than region-owner transfer.</td>
+</tr>
+<tr>
+<td>Send descriptors for several buffers</td>
+<td>A message names slices of one or more existing regions.</td>
+<td>Every backing dependency remains protected. Descriptor transfer alone neither transfers those regions nor makes sender-local backing independent.</td>
+</tr>
+<tr>
+<td>Use registered I/O or device buffers</td>
+<td>A region provides storage with an external operation in flight.</td>
+<td>Registration, layout, address stability, and completion acknowledgement protect bytes until the external user has finished, including cancellation races. No device contract is assumed here.</td>
+</tr>
+</tbody>
+</table>
+<p>For a borrowed view <code>v</code>, let <code>backing_regions(v)</code> include every region needed
+for its descriptor and referenced bytes. Necessary lifetime bounds include:</p>
+<pre tabindex="0"><code class="language-text">lease_use(v) &lt;= valid(v)
+valid(v) &lt;= intersection(region_lifetime(r) for r in backing_regions(v))
+</code></pre>
+<p>These bounds do not establish mutation exclusion or synchronization; the
+earlier resource-dependency bounds still apply. A pool can remain the storage
+owner throughout; the producer's construction permission and consumer's read
+permission are separate phase facts. Ending a queued entry therefore differs
+from ending payload access and from reclaiming its region. Per-slot reuse is
+not an assumed region split or a transfer of storage ownership.</p>
+<p>The process comparison concerns logical Ash processes. Same-address-space
+access, separate address spaces, and remote machines require different
+transport contracts. A pointer or ownership fact alone does not establish a
+valid mapping or representation at the destination.</p>
+<h4 id="placement-and-execution-affinity">Placement and execution affinity</h4>
+<p>Thread/processor alignment here means execution affinity and memory locality.
+Keep byte alignment as a separate construction and access constraint. Extend
+the model with distinct facts:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Fact</th>
+<th>Candidate meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Own_S(o, r)</code></td>
+<td>Who holds the region's ownership and completion obligation now.</td>
+</tr>
+<tr>
+<td><code>place(x) = r</code></td>
+<td>Which logical region contains the object.</td>
+</tr>
+<tr>
+<td><code>backing_location_S(r)</code></td>
+<td>Where backing is resident, potentially across several memory nodes; allocation policy and actual residence are distinct.</td>
+</tr>
+<tr>
+<td><code>execution_domain_S(P)</code></td>
+<td>The process's current worker/thread/processor placement, with no assumption that these identities coincide.</td>
+</tr>
+<tr>
+<td><code>allowed_domains(r, op, S)</code></td>
+<td>Domains allowed to perform a particular operation with its transitive representation, provider, resource, and completion support.</td>
+</tr>
+</tbody>
+</table>
+<p>For an event <code>e</code> operating on <code>r</code>, admission requires its execution domain to
+belong to the operation's allowed domains, in addition to ownership, access,
+initialization, lifetime, and visibility obligations. Allowed-domain sets can
+be intersected when several supports constrain one operation; an empty
+intersection rejects that execution choice. This does not order complete
+ownership schemes or prove that a legal domain is efficient.</p>
+<p>Changing process placement, transferring region ownership, and relocating
+backing are three distinct transitions. None implies either of the others.
+Migration must account for retained support and later completion, not just the
+next payload read. Compare same-worker execution, fixed per-core processes,
+and migration among an admitted domain set without selecting one scheduler.</p>
+<p>Hard restrictions and preferences also differ. A required thread for a foreign
+operation or reclamation is an admission condition. Preferred processor/cache
+or memory-node locality is a cost policy unless the contract makes it a hard
+restriction. Byte, cache-line, page, and device alignment requirements must
+state which are required for valid access and which are performance choices.
+No universal alignment size or platform topology is selected.</p>
+<p>Zero-copy ownership transfer need not produce receiver-local storage. Compare
+leaving backing in place, constructing with a destination-oriented allocation
+policy, copying to different backing, moving execution toward the data, and
+explicit backing migration under its own stability contract. Measure payload
+copies, retained bytes, metadata and synchronization work, remote accesses,
+and completion traffic; zero copied payload bytes alone is not a cost order.</p>
+<p>Reclamation may be restricted to a home worker even when remote payload access
+is admitted. The receiving owner can then retain a unique completion obligation
+and route reclamation through home support. If that obligation is delegated to
+a completion record, the transfer must preserve its uniqueness until settlement.
+Protect home support and backing while a return or acknowledgement is pending;
+neither consumer completion nor a posted reclamation request proves release.</p>
+<p>These distinctions have external precedents, not Ash implementation evidence.
+<a href="https://docs.seastar.io/master/group__smp-module.html">Seastar's multicore contract</a>
+uses per-core services and routes destruction of a moved <code>foreign_ptr</code> back to
+its originating core. Linux documents distinct
+<a href="https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v1/cpusets.html">CPU and memory-node restrictions</a>
+and <a href="https://www.kernel.org/doc/html/latest/admin-guide/mm/numa_memory_policy.html">NUMA allocation policy</a>;
+changing allocation policy does not by itself relocate existing pages. They
+motivate separate access, placement, and reclamation facts; they do not select
+an Ash runtime or prove any candidate transition above.</p>
+<h4 id="failure-closure-and-reclamation">Failure, closure, and reclamation</h4>
+<p>The publication and receive commits determine ownership even if notification
+or process resumption happens later. Full, closed, or cancelled send before
+publication leaves the prepared message with its sender or pending-operation
+owner. After publication, sender cancellation cannot silently take it back.
+Cancellation before receive commitment leaves the queued owner unchanged;
+after commitment, the receiver or its completion path must settle the region.
+A partially constructed copy must close its own obligations without publishing
+readable data or consuming the original graph.</p>
+<p>Closing admission is distinct from draining or discarding accepted messages.
+Choose an explicit policy for queued messages and pending sends when an endpoint
+closes or a process fails. The invariant requires every outstanding region to
+remain owned until delivery, an explicit return, or authorized completion and
+reclamation. Receiver failure cannot orphan an accepted message; sender exit
+cannot invalidate one already transferred. Final channel reclamation waits for
+its remaining support obligations. It cannot reclaim a region already received
+by <code>Q</code> merely because that region travelled through the channel.</p>
+<p>Queue entries, pending sends, and completion paths are roots for <code>Need(r, S)</code>.
+No collector may treat a message as dead merely because neither process is
+currently reading it. Reclaiming a transferred region still reclaims all its
+remaining objects en masse after required completion. Queue capacity bounds
+accepted entries, not message bytes, blocked producers, receiver-retained data,
+or total protected backing; those need separate bounds.</p>
+<p>The proof target is global validity preservation from checked process steps
+and checked communication transitions, including publication, receipt,
+cancellation, and closure. Unique ownership and lifetime coverage are safety
+obligations. They do not prove deadlock freedom, fairness, eventual receipt,
+eventual reclamation, or a bound on retained memory. Those need separate
+protocol, scheduling, and capacity premises.</p>
+<h3 id="law-status-and-limits">Law status and limits</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Claim</th>
+<th>Status in this note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lifetime order and intersection laws</td>
+<td>Elementary derivations from the chosen set model.</td>
+</tr>
+<tr>
+<td>Nested-region dependency bound</td>
+<td>Derived above from containment and the proposed dependency premises.</td>
+</tr>
+<tr>
+<td>Context reassociation and identity</td>
+<td>Structural equalities for compatible ordered concatenation.</td>
+</tr>
+<tr>
+<td>Transition sequencing associativity</td>
+<td>Conditional on the chosen typed relation and outcome composition.</td>
+</tr>
+<tr>
+<td>Region ownership covers resident objects</td>
+<td>Candidate ownership contract, not derived from placement alone.</td>
+</tr>
+<tr>
+<td>Ownership recovered from selected placement</td>
+<td>Conditional on the ownership scheme having established the region owner.</td>
+</tr>
+<tr>
+<td>Common-ancestor placement</td>
+<td>Candidate inference heuristic for the sequential fragment with nested activations, subject to all validity and allocation constraints.</td>
+</tr>
+<tr>
+<td>Message-region ownership conservation</td>
+<td>Candidate invariant for the future channel comparison; requires checked transfer, access, and failure transitions.</td>
+</tr>
+<tr>
+<td>Network regrouping or independent-step commutation</td>
+<td>Conditional proof targets preserving channel connections and observations; no general exchange law.</td>
+</tr>
+<tr>
+<td>Ownership transfer, execution migration, and backing movement</td>
+<td>Distinct transitions; no unconditional commutation or performance ordering.</td>
+</tr>
+<tr>
+<td>Mode sets, grant relations, and descriptive restriction</td>
+<td>Elementary set laws in their fixed domains; do not establish capability issuance or compatible permission composition.</td>
+</tr>
+<tr>
+<td>Read/write polarity ownership</td>
+<td>Candidate protocol-established facts, separately assignable from storage ownership; construction, partition, and transfer rules remain to be specified.</td>
+</tr>
+<tr>
+<td>Endpoint linearity and uniqueness</td>
+<td>Distinct candidate constraints on use accounting and alias authority, applicable per polarity. Their combination, successor rules, and delegation preservation remain protocol obligations.</td>
+</tr>
+<tr>
+<td>Shared base with protocol refinements</td>
+<td>Candidate common constraints; each protocol and their composition must establish preservation rather than waive the base.</td>
+</tr>
+<tr>
+<td>Literature correspondences</td>
+<td>External comparison evidence and proposed mappings; neither imported theorems nor a selected Ash calculus.</td>
+</tr>
+<tr>
+<td>Payload variance and endpoint duality</td>
+<td>Conditional interface comparisons; no Ash subtype system, session calculus, or progress result is established.</td>
+</tr>
+<tr>
+<td>Allocation, collection, and completion preserve validity</td>
+<td>Proof obligations for the operational model and each policy.</td>
+</tr>
+<tr>
+<td>Lifetime widening, region fusion, or allocation reordering</td>
+<td>No general law; observable failure, retention, and cleanup need comparison.</td>
+</tr>
+<tr>
+<td>Correspondence with Ash source, Core, and runtime</td>
+<td>Open; no implementation or compiler proof follows from this algebra.</td>
+</tr>
+</tbody>
+</table>
+<p>In particular, release is not an unrestricted idempotent operation: a second
+release lacks the authority consumed by the first. An abstract empty-set
+calculation does not justify double release. Garbage collection does not imply
+source cleanup ran. One-shot capture moves ownership without copying it, but
+does not itself prove exclusive access, liveness, or eventual completion.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>The first proof target is preservation of well-formed state and required object
+validity across each admitted transition. A finite execution then preserves the
+invariant by induction, provided every transition case has been proved. The
+allocation, initialization, root, dependency, and completion premises needed for
+that argument remain to be specified and discharged.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Required positive evidence</th>
+<th>Contrary case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lexical ownership</td>
+<td>The scope determines the region owner and lifetime; required object uses stay within it.</td>
+<td>A handle or hidden capture remains usable after the scope ends.</td>
+</tr>
+<tr>
+<td>Nested placement and projection</td>
+<td>Inner storage retains outer references; an independent projected outer reference can return.</td>
+<td>An inline view loses its inner backing dependency.</td>
+</tr>
+<tr>
+<td>Later inferred-placement comparison</td>
+<td>Local-only construction stays local; use in a sibling activation selects a suitable common enclosing region before allocation and derives its storage owner.</td>
+<td>Inference relocates an existing object, changes binding visibility, or silently extends an owner.</td>
+</tr>
+<tr>
+<td>Annotation constraints</td>
+<td>Region annotations resolve their established owners; storage-owner annotations select among that owner's compatible regions.</td>
+<td>Equal lifetimes fabricate ownership, conflicting annotations are ignored, or one owner is assumed to have only one region outside that variant.</td>
+</tr>
+<tr>
+<td>Placement versus dependency validity</td>
+<td>A longer-lived region permits later use only when retained dependencies permit it too.</td>
+<td>Outward placement makes an expired inner resource usable or bypasses the request-payload boundary.</td>
+</tr>
+<tr>
+<td>Ownership versus access</td>
+<td>Aliases use the same object without creating completion owners.</td>
+<td>Copying a handle permits another region release.</td>
+</tr>
+<tr>
+<td>Ordinary graph cycle</td>
+<td>Initialized immutable cyclic data remains valid and is reclaimed with its region.</td>
+<td>Object edges are confused with resource-owner cycles or tracing is silently required for bulk release.</td>
+</tr>
+<tr>
+<td>Region type policy</td>
+<td>An arena retains objects; a separately specified collector reclaims only unneeded objects while its region remains available.</td>
+<td>A hidden root is missed or type selection changes ownership and region lifetime.</td>
+</tr>
+<tr>
+<td>Whole-region reclamation</td>
+<td>All remaining resident objects are reclaimed together after required completion.</td>
+<td>A resident object survives reclamation or an object in another region is incorrectly reclaimed.</td>
+</tr>
+<tr>
+<td>Captured control</td>
+<td>Capture and resume preserve the same owner, object contents, and pending obligations.</td>
+<td>Suspension is treated as scope completion, or resume recreates ownership.</td>
+</tr>
+<tr>
+<td>Failed construction and retained backing</td>
+<td>No partial readable object is published; unresolved dependent ownership protects backing.</td>
+<td>Failure fabricates validity, or source completion is treated as successful backing reclamation.</td>
+</tr>
+<tr>
+<td>Observations and costs</td>
+<td>Comparisons retain failure behavior, external order, and any exposed allocation observations.</td>
+<td>A scope rewrite changes capacity failure, cleanup order, or a declared usage report.</td>
+</tr>
+<tr>
+<td>Buffered message ownership</td>
+<td>Publication transfers one prepared region to the channel; receipt transfers it to the consumer without changing placement.</td>
+<td>An unowned interval, duplicated owner, remaining sender alias, or channel close reclaims receiver-owned storage.</td>
+</tr>
+<tr>
+<td>Rendezvous versus buffering</td>
+<td>Matched direct handoff and queued handoff each preserve their stated ownership and lifetime contracts.</td>
+<td>Zero capacity is treated as an ordinary full queue, or buffered messages retain sender-local dependencies.</td>
+</tr>
+<tr>
+<td>Message copying and region granularity</td>
+<td>A copy has independent eligible storage; a move transfers an entire eligible region.</td>
+<td>Copying a handle fabricates independence, or moving one object leaves its backing owned by the sender.</td>
+</tr>
+<tr>
+<td>Communication failure</td>
+<td>Each side of publication and receipt commitment identifies the remaining owner and required completion.</td>
+<td>Cancellation, endpoint closure, or process failure loses a queued or accepted region.</td>
+</tr>
+<tr>
+<td>Queued roots and capacity</td>
+<td>Pending operations, queued entries, and receiver-held regions remain protected and are accounted separately.</td>
+<td>Collection drops an unread message or bounded slots are claimed to bound all retained bytes.</td>
+</tr>
+<tr>
+<td>Zero-copy variants</td>
+<td>State the copy boundary and separately verify transfer, construction, lease, slot, or descriptor obligations.</td>
+<td>Zero-copy is inferred from a moved handle, hidden copying breaks a promise, or queue removal permits premature slot reuse.</td>
+</tr>
+<tr>
+<td>Execution affinity and locality</td>
+<td>Every admitted operation respects required domains while locality policies and actual backing are recorded separately.</td>
+<td>Ownership change is treated as physical relocation, migration bypasses retained support, or preferred locality is mistaken for a safety proof.</td>
+</tr>
+<tr>
+<td>Reclamation on a home worker</td>
+<td>A unique retained completion obligation protects backing and home support until acknowledgement.</td>
+<td>Receiver exit, allocator shutdown, or a posted free request prematurely releases support or duplicates reclamation.</td>
+</tr>
+<tr>
+<td>Permission and lifetime correlation</td>
+<td>Construction writes and later reads retain distinct allowed phases.</td>
+<td>Joining mode and lifetime summaries grants reads before initialization or writes after publication.</td>
+</tr>
+<tr>
+<td>Access compatibility and ownership</td>
+<td>Compatible reader loans, disjoint writes, and mediated aliases retain their stated rules without transferring storage ownership.</td>
+<td><code>R union R</code> erases outstanding loans, a writer is assumed to own storage, or <code>RW</code> permits reclamation.</td>
+</tr>
+<tr>
+<td>Overlapping actor grants</td>
+<td>One actor's reads and another's writes coexist over overlapping lifetimes when the access protocol admits them, preserving their separate rights and visibility contract.</td>
+<td>A global phase rule forbids all such overlap, the actor index is erased to grant both modes to either client, or grant coexistence is mistaken for permission for arbitrary raw memory races.</td>
+</tr>
+<tr>
+<td>Different polarity owners</td>
+<td>A protocol establishes separate read, write, and storage owners and preserves their stated obligations through admitted transitions.</td>
+<td>Polarity ownership is reduced to an access grant, inferred from an operation, or assigned by placement without a construction rule.</td>
+</tr>
+<tr>
+<td>Endpoint succession and exclusivity</td>
+<td>Repeated communication uses lawful successors or preserves a checked uniqueness invariant while the complementary endpoint remains usable by its owner.</td>
+<td>A stale state is reused, two conflicting authorities are issued, linearity is mistaken for exclusive issuance, or exclusivity of one end forbids its peer.</td>
+</tr>
+<tr>
+<td>Endpoint delegation and recovery</td>
+<td>Commit accounts for the current authority in the queue or receiver; loans and pending operations prevent premature exclusive handoff.</td>
+<td>A sender retains a usable delegated end, cancellation loses a queued obligation, an unfinished loan is ignored, or endpoint closure frees backing still needed by its peer.</td>
+</tr>
+<tr>
+<td>Base constraints and protocol variation</td>
+<td>Contrasting protocols preserve the common validity and obligation constraints while making different access and ownership choices.</td>
+<td>A local exclusion rule becomes universal, a protocol waives required lifetime coverage, or individually valid components are assumed to compose.</td>
+</tr>
+<tr>
+<td>Read and retained-write dependencies</td>
+<td>Returned views retain backing; retained payloads preserve all later admitted reads and completion.</td>
+<td>Read-only access makes backing immortal, or a short write event hides an expiring stored dependency.</td>
+</tr>
+<tr>
+<td>Endpoint and payload polarity</td>
+<td>Dual endpoint roles match while payload permissions follow the transport contract.</td>
+<td>A send endpoint implies payload mutation authority, receipt implies writable data, or duality alone proves progress.</td>
+</tr>
+</tbody>
+</table>
+<p>The fixed-arena case is the first bounded model. Compare a collector only after
+specifying its root and reclamation contract; current scalar Arena evidence
+does not prove these graph, lifetime, or collection cases. Record contrary cases
+as well as successful derivations. No new executable or machine-checked proof
+has been produced for this note.</p>
+<p>Channel cases are future comparisons, not evidence for the first sequential
+model. A later bounded assignment must specify copy or transfer payloads,
+rendezvous or buffering, commit points, endpoint closure, cancellation, and
+the observations used to compare network executions before claiming a proof.
+For a zero-copy or affinity comparison, also name the exact copy boundary,
+access phases, admitted domains, backing policy, and reclamation route.</p>
+<p>The literature comparisons supply additional positive and contrary cases,
+including name extrusion, I/O capability restriction, delegated cancellation,
+captured linear authority, and shared access points that change progress
+guarantees. They are evidence about their stated fragments, not experimental
+results or correctness evidence for Ash.</p>
+<p>A later prototype needs a separately bounded assignment naming the state and
+operation fragment, observations, comparison policies, and retention conditions.
+Retain reproducible proofs, countermodels, and measured policy differences as
+design evidence. Discard machinery that silently extends owners, hides backing
+dependencies, or assumes a runtime representation to make an algebraic law true.
+Product adoption requires the proposal or decision and task workflow.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which candidate base constraints are necessary, which follow from others,
+and which need revision under the sequential, channel, polarity, and pool
+comparisons? What is the smallest useful shared basis?</li>
+<li>Which assumptions and instance obligations from generic process typing can
+be reused for the base, and which new premises connect polarity ownership
+to backing protection, region reclamation, and observable behavior?</li>
+<li>What precise state invariant connects initialized residency, permissions,
+ownership, and the required-object set without relying on future execution?</li>
+<li>Which lifetime extents and bounds can the first lexical checker express?
+How should later schemes replace that restriction while preserving validity?</li>
+<li>How do summaries and independent Core checking retain placement, actual
+captures, field projection, and ownership facts through abstraction?</li>
+<li>Which required-use and activation summaries make sequential placement
+inference conservative through loops, recursion, helpers, and closures?</li>
+<li>How should compatible regions be selected when one owner has several, and
+which allocation observations constrain optional placement optimization?</li>
+<li>Which operations can be framed by unrelated context without changing root
+accounting, capacity, exact dispatch, or completion behavior?</li>
+<li>What additional laws belong to a specific counted or traced region type,
+including cross-region roots and final bulk reclamation?</li>
+<li>How should pending construction and retained native dependencies participate
+in the same preservation argument without identifying source exit with free?</li>
+<li>Which observation model distinguishes sound lifetime reasoning from a
+semantics-preserving program transformation, and which costs stay separate?</li>
+<li>What checked contract permits detaching a message region's ownership and
+completion support while ruling out retained sender access and dependencies?</li>
+<li>Which channel close and cancellation policies account for every pending,
+queued, and received region, including process failure around commit points?</li>
+<li>Which network equivalence and visibility premises support composition laws,
+and which additional protocol or capacity rules establish progress or bounds?</li>
+<li>Which zero-copy variants need ownership transfer versus leases or phase
+permissions, and when may pooled storage safely be reused?</li>
+<li>Which support facts constrain access, execution migration, and reclamation
+domains independently, and how is home support retained through shutdown?</li>
+<li>Which locality and copy-cost observations guide policy without silently
+changing lifetime, alignment, failure, or visibility contracts?</li>
+<li>Which permission and loan facts preserve client, footprint, mode, and lifetime
+correlations through abstraction without inventing new grants at a join?</li>
+<li>Which protocol rules establish read and write polarity ownership, and permit
+its partition, sharing, borrowing, or transfer independently of storage
+ownership? What responsibilities and completion obligations does each carry?</li>
+<li>For each endpoint, which rules concern linear or affine use accounting and
+which concern unique alias authority? Can linear succession and reusable
+unique access preserve the same observable protocol and failure behavior?</li>
+<li>What checked construction establishes exclusive authority initially, and how
+can loans, delegation, capture, or protocol transitions recover or transfer
+it without forbidding the complementary endpoint's concurrent use?</li>
+<li>Which raw and mediated access protocols admit compatible aliases, and how do
+initialization, publication, retained writes, and reuse update those facts?</li>
+<li>Which payload variance and endpoint-duality relationships survive the chosen
+effects, usage, lifetime, and transport contracts without conflating them?</li>
+</ul>
+<p>Further algebra work must identify which state, context-compatibility and
+transition premises differ from the specified lexical base, and keep its
+additional proof obligations separate from the retained bounded model. This note
+authorizes no such work. Placement inference and comparisons with another
+reclamation or ownership scheme remain future questions; they do not redefine
+the product's default placement or enlarge the existing proof claim.
+The dedicated-channel case supplies a later comparison: start with copied,
+independent data, then compare transportable regions under the same message
+protocol. Preserve the separation between memory safety and progress claims.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/">← DN-0054: Region Allocation and Lexical Ownership Contracts</a><a rel="next" href="/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/">DN-0056: Scoped Continuation Retention and Library Scheduling →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

@@ -1,0 +1,849 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0051: Userspace Concurrency and Scheduling · Ash</title><meta name="description" content="Research reviewed on 2026-10-16. Here, userspace means execution managed within Ash above kernel threads and events. Browser execution is not a requirement of this investigation."><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0051: Userspace Concurrency and Scheduling · Ash"><meta property="og:description" content="Research reviewed on 2026-10-16. Here, userspace means execution managed within Ash above kernel threads and events. Browser execution is not a requirement of this investigation."><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0051: Userspace Concurrency and Scheduling · Ash"><meta name="twitter:description" content="Research reviewed on 2026-10-16. Here, userspace means execution managed within Ash above kernel threads and events. Browser execution is not a requirement of this investigation."><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0051-userspace-concurrency-and-scheduling.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0051: Userspace Concurrency and Scheduling","headline":"DN-0051: Userspace Concurrency and Scheduling","description":"Research reviewed on 2026-10-16. Here, userspace means execution managed within Ash above kernel threads and events. Browser execution is not a requirement of this investigation.","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/","@id":"https://dikini.github.io/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0051-userspace-concurrency-and-scheduling.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0051-userspace-concurrency-and-scheduling" data-pagefind-meta="title">DN-0051: Userspace Concurrency and Scheduling</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0051-userspace-concurrency-and-scheduling.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0051</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a>,
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a>,
+<a href="/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/">DN-0045</a>,
+<a href="/ash/docs/design/dn-0048-pure-core-kernels-and-parallel-lowering/">DN-0048</a>,
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
+<a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
+</ul>
+<blockquote>
+<p>This note records research and candidate future directions. Current Ash is
+intentionally sequential and remains the stabilization target. This note
+changes no specification, implementation, accepted architecture, proof scope,
+or stabilization criterion. It authorizes no prototype or implementation.</p>
+</blockquote>
+<p>Research reviewed on 2026-10-16. Here, userspace means execution managed within
+Ash above kernel threads and events. Browser execution is not a requirement
+of this investigation.</p>
+<h2 id="question">Question</h2>
+<p>What public contracts and implementation approaches could later give Ash
+asynchronous operations, concurrent tasks, and multicore execution with useful
+latency, throughput, and capacity behavior?</p>
+<p>There are three distinct goals:</p>
+<ul>
+<li>Asynchrony lets an operation remain pending without occupying its worker.</li>
+<li>Concurrency lets several computations make progress during overlapping
+lifetimes, possibly on one worker.</li>
+<li>Parallelism executes work simultaneously on multiple workers or devices.</li>
+</ul>
+<p>Kernel threads and I/O events supply mechanisms. They do not decide who owns
+an Ash task, how a suspended handler retains its context, when cancellation
+finishes, or whether a value may cross a worker boundary.</p>
+<p>Research can proceed independently of sequential stabilization. Future semantic
+changes need their own proposal and task after the relevant sequential boundary
+is stable. No current representation or ABI needs reserved task machinery.
+Existing sequential conformance evidence should remain a comparison baseline;
+it is not evidence of concurrent safety or scheduler performance.</p>
+<h2 id="context">Context</h2>
+<p>The <a href="/ash/spec/dynamic-semantics/">dynamic semantics</a> define one deterministic
+small-step configuration. An operation moves a continuation segment into its
+selected clause; resumption restores its lexical handler nesting and eventually
+returns to remaining clause work. It does not copy that segment.</p>
+<p>The <a href="/ash/spec/static-semantics/#effects">static continuation rules</a> require
+exactly one resume or checked discard on each normally completing clause path.
+The hidden capability has no source type or binder. It cannot enter a closure,
+argument, result, or queue. Consequently, current source handlers cannot retain
+a continuation and resume it later from a scheduler. An explicit library state
+machine is possible in principle, but does not provide transparent suspension
+through ordinary calls.</p>
+<p><a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">Resource dependencies</a>
+and <a href="/ash/spec/dynamic-semantics/#scoped-cleanup-actions">cleanup</a> already
+separate reusable access from completion ownership. Capture moves ownership;
+discard closes owned captures while preserving required outside and running
+completion. These rules motivate future suspension contracts, but do not already
+establish cancellation, thread transfer, or race freedom.</p>
+<p><a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a> supplies inspectable
+control independent of the Rust call stack. Its deep-expression evidence does
+not measure native task switching. <a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a>
+separately explores bounded transfer and asynchronous hooks. Its async sketch
+does not establish fairness, parallel execution, or latency, and its retained
+one-shot proof work does not prove suspension or escaping control. Structural
+consumption schedules in that experiment are not a userspace task scheduler.</p>
+<p>There are two further boundaries:</p>
+<ul>
+<li><a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a> explores
+access and usage properties under sequential assumptions; it establishes no
+concurrent memory model.</li>
+<li><a href="/ash/docs/design/dn-0048-pure-core-kernels-and-parallel-lowering/">DN-0048</a> explores parallel
+implementation of checked pure kernels without introducing source
+concurrency. It remains a separate throughput route.</li>
+</ul>
+<h2 id="constraints">Constraints</h2>
+<p>These are criteria for comparing future candidates, not additions to current
+stabilization requirements:</p>
+<ul>
+<li>Preserve the stabilized sequential behavior of code outside the extension.</li>
+<li>Retain unique control ownership, exact interpretation, resource dependencies,
+and required completion through suspension and lowering.</li>
+<li>State progress, capacity, foreign, and sharing assumptions explicitly.</li>
+<li>Compare end-to-end latency, throughput, and retained memory under the same
+workload; do not infer performance from API shape or queue microbenchmarks.</li>
+</ul>
+<h2 id="lessons-from-current-practice">Lessons from current practice</h2>
+<p>Public lifetime semantics and internal scheduling are independent choices.
+Structured concurrency gives children an owner and a completion boundary. It
+does not itself provide preemption, overload control, or multicore safety.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Approach</th>
+<th>Useful precedent</th>
+<th>Cost or limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Effect-based direct-style tasks</td>
+<td>OCaml Eio uses switches for fiber/resource lifetimes and separate domains for parallel execution.</td>
+<td>Local fibers cooperate; a long computation can monopolize its domain.</td>
+</tr>
+<tr>
+<td>Stackless futures</td>
+<td>Rust separates pending computations from spawning tasks; Tokio supports local and work-stealing execution.</td>
+<td>Suspension state and cancellation safety need careful lowering. Long polls obstruct fairness.</td>
+</tr>
+<tr>
+<td>Managed green threads</td>
+<td>Go provides direct-style goroutines, small growable stacks, and managed-code preemption.</td>
+<td>The runtime/compiler commitment is larger. Goroutine creation alone supplies no structured lifetime.</td>
+</tr>
+<tr>
+<td>Virtual threads</td>
+<td>Java can suspend many direct-style I/O requests over fewer carrier threads.</td>
+<td>More outstanding requests improve throughput only when downstream capacity permits; native boundaries still matter.</td>
+</tr>
+<tr>
+<td>Actors and supervision</td>
+<td>Erlang isolates service state through processes and messages and contains failures through supervision.</td>
+<td>Mailboxes still need overload protocols. Service supervision and request-scoped joining solve different problems.</td>
+</tr>
+<tr>
+<td>Per-core ownership</td>
+<td>Seastar keeps data local and makes remote execution explicit.</td>
+<td>Partitioning can reduce synchronization but exposes imbalance and cross-core coordination.</td>
+</tr>
+<tr>
+<td>Composable operation protocols</td>
+<td>C++ P2300 distinguishes schedulers, operation state, and value/error/stopped completion.</td>
+<td>This is a useful low-level boundary, not a reason to expose its template vocabulary in Ash.</td>
+</tr>
+</tbody>
+</table>
+<p>Primary sources: <a href="https://github.com/ocaml-multicore/eio">Eio</a>,
+<a href="https://doc.rust-lang.org/std/future/trait.Future.html">Rust Future</a>,
+<a href="https://docs.rs/tokio/latest/tokio/runtime/index.html">Tokio runtime</a>,
+<a href="https://go.dev/src/runtime/HACKING">Go runtime architecture</a>,
+<a href="https://go.dev/src/runtime/preempt.go">Go preemption</a>,
+<a href="https://docs.oracle.com/en/java/javase/27/core/virtual-threads.html">Java virtual threads</a>,
+<a href="https://www.erlang.org/doc/system/ref_man_processes.html">Erlang processes</a>,
+<a href="https://seastar.io/shared-nothing/">Seastar</a>, and
+<a href="https://www9.open-std.org/JTC1/SC22/WG21/docs/papers/2024/p2300r10.html">P2300R10</a>.</p>
+<p>Two distinctions deserve explicit attention. Swift structured task groups do
+not make cancellation forceful; cancellation remains cooperative. Actor
+isolation also permits interleaving across suspension, so it does not preserve
+an entire asynchronous operation's invariant automatically.
+<a href="https://github.com/swiftlang/swift-evolution/blob/main/proposals/0304-structured-concurrency.md">Structured concurrency</a>,
+<a href="https://github.com/swiftlang/swift-evolution/blob/main/proposals/0306-actors.md">actor reentrancy</a>.</p>
+<p>Java 27 was released on September 15, 2026, but its structured concurrency API
+is still preview. Its scope close waits for subtasks, including those that
+ignore interruption. A timeout can therefore precede actual scope completion.
+This is a useful contract to study, not an API maturity claim to copy.
+<a href="https://blogs.oracle.com/java/the-arrival-of-java-27">Release announcement</a>,
+<a href="https://docs.oracle.com/en/java/javase/27/docs/api/java.base/java/util/concurrent/StructuredTaskScope.html">StructuredTaskScope</a>.</p>
+<h2 id="candidate-directions">Candidate directions</h2>
+<p>Compare public task semantics, suspended-control representation, and placement
+policy separately. A choice on one axis does not settle the others.</p>
+<h3 id="public-task-and-lifetime-contract">Public task and lifetime contract</h3>
+<p>The strongest candidate for later investigation is structured, one-shot tasks
+with effect-based suspension. A parent scope owns children and retained support
+until they finish. Pending work can relinquish its worker without requiring a
+general first-class continuation API or multi-shot control.</p>
+<p>This is a research preference. Current Ash has no such task contract.
+<a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a> offers a useful
+bounded alternative to arbitrary escape: transfer into an owner whose input,
+answer, support, interpretation, and completion policy are fixed. Its feasibility
+and interaction with source handlers remain open.</p>
+<p>A future implementation would need to preserve the entire suspended task state,
+including clause work after resume and required completion outside a captured
+segment. Merely placing the selected continuation suffix in a queue is
+insufficient. Starting a child would create fresh control with admitted captures;
+it would not clone the parent's continuation.</p>
+<p>An ordinary closure does not capture the surrounding handler stack. Child-task
+interpretation therefore needs a separate contract: explicitly supplied context,
+restricted inherited interpretations, or checked capture at task creation. Live
+completion owners and mutable handler state cannot be copied indiscriminately.</p>
+<h3 id="representation-of-suspended-control">Representation of suspended control</h3>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Representation</th>
+<th>Potential advantage</th>
+<th>Main comparison question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Explicit library state machines</td>
+<td>Small semantic commitment; useful for an explicit polling API.</td>
+<td>Is manual state management acceptable for the intended applications?</td>
+</tr>
+<tr>
+<td>Compiler-generated state machines or selective CPS</td>
+<td>Store live state at suspension; retain direct calls where justified.</td>
+<td>What are frame size, allocation, dispatch, code-size, and higher-order-call costs?</td>
+</tr>
+<tr>
+<td>One-shot stackful fibers</td>
+<td>Preserve nested direct-style calls; detach and relink control segments.</td>
+<td>What are stack storage, growth, unwinding, foreign-frame, and target costs?</td>
+</tr>
+</tbody>
+</table>
+<p>Rust describes generated async state as roughly an enum retaining live values at
+each suspension. Its pinning contract illustrates a general obligation: references
+into suspended state and intrusive registrations need stable storage and correct
+destruction. Ash need not expose Rust's <code>Pin</code> API to meet that obligation.
+<a href="https://doc.rust-lang.org/reference/expressions/block-expr.html#async-blocks">Async blocks</a>,
+<a href="https://doc.rust-lang.org/std/pin/index.html">Pin</a>.</p>
+<p>OCaml uses one-shot effect continuations and stack segments. It also prohibits
+effects escaping through certain C callback boundaries. Stackful execution does
+not make arbitrary foreign frames suspendable. Its implementation paper provides
+bounded benchmark evidence, not a universal performance ordering against CPS.
+<a href="https://ocaml.org/manual/5.5/effects.html">OCaml effects</a>,
+<a href="https://anil.recoil.org/papers/2021-pldi-retroeff.pdf">Retrofitting Effect Handlers onto OCaml</a>.</p>
+<p>Koka demonstrates effect-handler compilation through evidence passing and yield
+propagation to ordinary C. It supports comparing selective control lowering with
+stack switching; it does not predict Ash's costs. LLVM supplies several coroutine
+lowerings, but choosing an intrinsic does not choose ownership, cancellation, or
+the scheduler ABI.
+<a href="https://www.microsoft.com/en-us/research/publication/generalized-evidence-passing-for-effect-handlers-or-efficient-compilation-of-effect-handlers-to-c/">Generalized Evidence Passing</a>,
+<a href="https://www.llvm.org/docs/Coroutines.html">LLVM coroutines</a>.</p>
+<h3 id="placement-and-scheduling-policy">Placement and scheduling policy</h3>
+<p>Three policies are worth comparing independently of representation:</p>
+<ol>
+<li>A local cooperative event loop: simplest control and affinity boundary; no
+multicore speedup and no protection against an unbounded running task.</li>
+<li>A worker pool with local queues and work stealing: general load balancing;
+migration requires checked transportability and incurs synchronization costs.</li>
+<li>Per-core task/data ownership with explicit remote messages: useful for
+partitionable services; persistent skew and coordination need explicit policy.</li>
+</ol>
+<p>Compiler checkpoints or managed preemption can supplement the first two. They
+are not free consequences of effects. Go's safe points require runtime/compiler
+cooperation; Tokio's fairness contract instead assumes bounded task count and
+bounded poll duration. Neither supplies a hard real-time guarantee.</p>
+<h2 id="candidate-api-contracts-to-investigate-later">Candidate API contracts to investigate later</h2>
+<p>These names describe concepts, not proposed Ash syntax or current library APIs.
+The <a href="#concrete-local-task-sketch">concrete local sketch</a> below makes one set of
+choices for comparison. It does not settle these contracts for Ash.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Concept</th>
+<th>Contract to resolve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Task scope</td>
+<td>Own children and their support; define normal, failed, and cancelled exit.</td>
+</tr>
+<tr>
+<td>Spawn and join</td>
+<td>Start fresh child control; define captures, result ownership, error observation, and handle lifetime.</td>
+</tr>
+<tr>
+<td>Suspend and wake</td>
+<td>Publish readiness and schedule continuation without losing completion races or duplicating execution.</td>
+</tr>
+<tr>
+<td>Deadline and cancellation</td>
+<td>Request cancellation; distinguish request, stopped operation, cleanup, and scope completion.</td>
+</tr>
+<tr>
+<td>Race / first success</td>
+<td>Choose an outcome, cancel and join losers; specify partial effects and failure reporting.</td>
+</tr>
+<tr>
+<td>Bounded channel / semaphore</td>
+<td>State capacity, full/closed behavior, wait cancellation, and fairness.</td>
+</tr>
+<tr>
+<td>Yield / execution budget</td>
+<td>Give other ready work an opportunity; state what progress assumption this requires.</td>
+</tr>
+<tr>
+<td>Parallel submission</td>
+<td>Admit only transferable captures and results under a defined sharing contract.</td>
+</tr>
+<tr>
+<td>Blocking submission</td>
+<td>Isolate foreign/blocking work and bound concurrency and queued work.</td>
+</tr>
+<tr>
+<td>Runner / host entry</td>
+<td>Explicitly acquire scheduler state; define shutdown, reentry, and foreign callbacks.</td>
+</tr>
+</tbody>
+</table>
+<p>For asynchronous handlers, distinguish a request that needs a result from a
+notification queued for later execution. The first retains a suspended caller;
+the second needs a destination owner, support retention, overload policy, and
+failure reporting even if the publisher returns immediately. DN-0033's queued
+hook sketch is one candidate: select registrations at publication, retain selected
+support, and drain owned work before releasing it. Deregistration and cancellation
+need separate meanings. FIFO selection does not imply FIFO completion.</p>
+<p>Cancellation safety is operation-specific. A losing read may already have
+consumed bytes; a write may have made partial progress. A first-success race does
+not prove that only one external action occurred. Progress needs an owner that
+survives whichever cancellation points the API admits.
+<a href="https://docs.rs/tokio/latest/tokio/macro.select.html">Tokio cancellation safety</a>.</p>
+<h2 id="concrete-local-task-sketch">Concrete local task sketch</h2>
+<p>This candidate uses one cooperative worker, lexical task groups, fresh child
+control, explicit child handlers, and whole-task suspension. Cancellation is a
+request observed through typed results. There is no automatic abandonment of
+arbitrary task control, general continuation escape, or parallel execution.
+These are comparison choices, not a proposed change to current source handlers.</p>
+<h3 id="group-task-and-result-ownership">Group, task, and result ownership</h3>
+<p>Use these explanatory names; they do not introduce Ash source types or syntax:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Name</th>
+<th>Candidate meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Group&lt;G,A,E&gt;</code></td>
+<td>One activation owns children with result <code>A</code> and error <code>E</code>, their control, pending operations, and retained reports.</td>
+</tr>
+<tr>
+<td><code>Task&lt;G,A,E&gt;</code></td>
+<td>A non-owning observation handle dependent on that group activation. Copying or dropping it changes no execution ownership.</td>
+</tr>
+<tr>
+<td><code>WaitResult&lt;Q,E&gt;</code></td>
+<td>Ordinary alternatives <code>Ready(Q)</code>, <code>Failed(E)</code>, and <code>Cancelled</code>; cancellation is part of this operation's declared result.</td>
+</tr>
+<tr>
+<td><code>TaskOutcome&lt;A,E&gt;</code></td>
+<td>Ordinary alternatives <code>Success(A)</code>, <code>Failure(E)</code>, and <code>Cancelled</code>, published only after required completion.</td>
+</tr>
+<tr>
+<td>Group report</td>
+<td>The scope body's outcome, child outcomes, and cleanup reports, with their dependencies retained and checked separately.</td>
+</tr>
+</tbody>
+</table>
+<p>Fixing the child result/error types per group avoids requiring heterogeneous
+source packaging in the first comparison. Separate groups or an explicit sum
+can express different child results. General result packaging remains open.
+The group identity has a static scope and a fresh runtime activation, analogous
+to the distinction already needed for scoped resources; a library-generated
+integer alone would not enforce its lifetime.</p>
+<p>The group owns every admitted child until completion. <code>try_spawn_local</code> reserves
+the required task slot before publishing a handle and queues fresh child control.
+The child starts only when the worker selects it after the caller yields. The
+operation can return a declared capacity or closed-group refusal; this does not
+turn every internal allocation failure into a recoverable source result.
+Copying a thunk or handle does not clone a running task or its continuation.</p>
+<p><code>join</code> observes a stored outcome after completion. In this candidate, repeated
+joins can read the same ordinary result, subject to its dependencies; one-shot
+control does not require one-shot observation. A child-local resource cannot
+escape through its result. A report leaving <code>G</code> cannot retain a task handle or
+other dependency on <code>G</code>. Dropping an unjoined handle does not detach the child
+or remove its failure from the group report.</p>
+<p>Normal scope exit closes admission and drains existing children before releasing
+group support. The comparison policy is wait-all with retained child reports.
+If the body explicitly returns failure or observes cancellation, the wrapper
+requests child cancellation before draining. Child failure alone is recorded;
+requesting immediate sibling cancellation is a different library policy. A child
+attempting to spawn into a draining group receives the declared closed result.</p>
+<p>The following is pseudocode. The context wrapper installs ordinary handlers
+inside the child; acquisition and spawn refusal are explicit branches. <code>cleanup</code>
+denotes the candidate's retained invocation obligation, not a new callable API.</p>
+<pre tabindex="0"><code class="language-text">run_local(services, () =&gt; task_scope(G, wait_all, () =&gt; {
+    match try_spawn_local(G, () =&gt; {
+        match acquire_input() {
+            Failed(e) =&gt; Failure(e)
+            Ready(input) =&gt; cleanup(() =&gt; close_input(input), () =&gt; {
+                with_read_handlers(input, () =&gt; {
+                    match read_next() {
+                        Ready(bytes) =&gt; Success(decode(bytes))
+                        Failed(e) =&gt; Failure(e)
+                        Cancelled =&gt; Cancelled
+                    }
+                })
+            })
+        }
+    }) {
+        Started(t) =&gt; join(t)
+        Refused(reason) =&gt; Failure(map_refusal(reason))
+    }
+}))
+</code></pre>
+<p>The returned group report retains the body and child outcomes and any cleanup
+failures. It is not just the value selected by <code>join</code>. The example illustrates
+control and ownership; it establishes no executable API, error coercion, or native
+resource provider. In particular, cancellation does not mean acquisition failed
+before it acquired ownership: a late successful acquisition still needs release
+before the task can finish.</p>
+<p>The input is acquired before its read handler is installed. That handler retains
+the input as admitted support; <code>Read.next</code> need not carry an inner resource handle
+outward in its request. The close action uses services available outside this
+handler or installs its own. It cannot rely on restoring the inner read handler
+after that handler has returned.
+Here <code>close_input</code> returns unit and reports typed close failures through an
+explicit reporting adapter; an ignored failure value would not report itself.</p>
+<h3 id="one-shot-suspension-at-the-task-boundary">One-shot suspension at the task boundary</h3>
+<p>Keep execution state separate from cancellation and completion protection:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Axis</th>
+<th>Candidate states</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scheduling</td>
+<td>Queued, ready, running, parked, finished</td>
+</tr>
+<tr>
+<td>Cancellation</td>
+<td>No request, requested</td>
+</tr>
+<tr>
+<td>Completion protection</td>
+<td>Ordinary execution, protected cleanup or group drain</td>
+</tr>
+</tbody>
+</table>
+<p>A protected cleanup can be parked; a cancellation request can coexist with any
+unfinished state. Neither fact permits deleting its control. Nested cleanup can
+finish and return to ordinary body work, so protection is not synonymous with
+the final phase of a task.</p>
+<p>Each suspension creates a private wait generation with its typed reply slot and
+operation registration. Parking moves the complete task configuration into the
+runner's ownership: environment, ordinary frames, live source-handler captures,
+clause suffixes, resource/cleanup owners, and exact interpretation. There is one
+owner of executable control. The source clause does not transfer its hidden
+resume capability into an ordinary library queue.</p>
+<p>A synchronous completion returns directly without parking. For a pending wait,
+registration and readiness checking close the completion race before the worker
+is relinquished. Completion publishes a typed reply and makes that generation
+ready at most once. Only the runner restores execution; a host callback does not
+recursively run Ash control. Duplicate notifications may coalesce. A late callback
+for a retired generation cannot start another execution or address reused storage.
+Dropping stale notification data does not remove any duty to account for the
+external operation and release its retained resources.</p>
+<p>On restoration, the reply goes to the suspended wait expression and evaluation
+continues normally. A later wait creates another generation. Thus a task may
+suspend many times while every individual suspension remains one-shot.
+DN-0033's bounded <code>park</code> is a different operation: its original clause may finish
+and its eventual answer goes to a new consumer. This sketch retains the original
+clause and its answer path.</p>
+<h3 id="handler-context-and-work-after-resume">Handler context and work after resume</h3>
+<p>For a child, the minimal rule is explicit construction: its thunk installs the
+ordinary user handlers it needs. The selected scheduling service remains at its
+task root. This avoids a first-class handler-context value or automatic parent
+handler inheritance in the first comparison. Captured handler closures still
+need their ordinary value and resource dependencies checked. Resource providers
+or foreign services also need their actual interpretation available; saving an
+effect name, row, or handle alone is insufficient.</p>
+<p>Within one task, suspension retains existing handler activations and exact
+instantiation. Scheduling the task under a handler at the <code>join</code> site cannot
+reinterpret its operations. Asynchronous notification handlers can use the same
+model by installing a checked registration-site wrapper when constructing each
+child. Arbitrary retention of an outer handler activation remains a separate
+candidate with provider-state and lifetime obligations.</p>
+<p>Consider this schematic handler clause. <code>Read.next</code> declares
+<code>WaitResult&lt;Bytes,ReadError&gt;</code> as its result, so all three outcomes are valid inputs
+to its source resumption. <code>wait_io</code> may suspend the task while that source
+capability remains live.</p>
+<pre tabindex="0"><code class="language-text">next request =&gt; {
+    log_before(request)
+    reply = wait_io(request)
+    answer = resume reply
+    log_after(request)
+    answer
+}
+</code></pre>
+<p>The execution order is: enter the clause, possibly park in <code>wait_io</code>, restore it
+with one reply, resume the captured body, finish that body's required work,
+return to <code>log_after</code>, then return through the remaining outer frames. A value
+produced by the resumed body is not yet the task's terminal outcome. For example,
+if a clause adds one after <code>resume</code>, a resumed body returning <code>41</code> must still
+produce <code>42</code> after suspension. Recording <code>41</code> as task completion loses source
+control. This is an extension obligation derived from the
+<a href="/ash/spec/dynamic-semantics/#effect-handlers-and-completion">current resume behavior</a>.</p>
+<p>An existing operation returning just <code>Bytes</code> cannot receive <code>Cancelled</code> instead.
+It needs an explicitly different result contract or a later admitted abandonment
+mechanism. The scheduler cannot manufacture a value of the declared result type.</p>
+<p>External support must outlive every child's use and retained result. In
+<code>group G { resource R { spawn G child_using_R }; ... }</code>, <code>R</code> ends before the
+group drains. The simple comparison rejects that capture. Nesting <code>G</code> inside
+<code>R</code> can establish the lifetime order, but does not alone establish safe shared
+access or interpretation. Proving an earlier join sufficient for a shorter
+resource lifetime is a possible later refinement.</p>
+<h3 id="cancellation-operation-settlement-and-cleanup">Cancellation, operation settlement, and cleanup</h3>
+<p>In this candidate, <code>cancel</code> only records a request. A designated wait or explicit
+checkpoint may observe it and return <code>Cancelled</code> through its declared result.
+The task then runs ordinary source control, including <code>resume</code> and clause work,
+and chooses its task outcome. A task that ignores the request can succeed. A
+request received after completion does not rewrite the stored outcome. Cancellation
+does not inject an exception, silently discard a suffix, or forcibly stop a worker.</p>
+<p>For an I/O wait, distinguish the request flag from operation settlement. The
+adapter attempts cancellation when supported, but keeps the registration and
+buffers alive until the original completion or cancellation protocol establishes
+that the operation no longer uses them. Only then does it deliver one reply.
+This comparison preserves an original success or failure that wins the race;
+<code>Cancelled</code> means the adapter settled the wait as cancelled. A checkpoint before
+starting an operation can instead return <code>Cancelled</code> without starting it. Other
+winner policies remain possible, but cannot release support prematurely or imply
+rollback of external effects.</p>
+<p>This first model retains the waiter until settlement. Returning cancellation
+early while an operation continues in the group would require an explicit
+transfer of its buffers and completion obligation; it is not an incidental
+optimization. A foreign operation that never settles can therefore prevent
+task and group completion indefinitely.</p>
+<p>Cleanup and group draining are protected completion. During them, ordinary
+cancellation delivery is deferred; a request cannot skip or restart an acquired
+action or bypass joining children. The comparison permits cleanup to suspend:
+the complete protected configuration and support remain owned, and the runner
+continues servicing its waits while the group drains. Cancellation cannot remove
+that work from the scheduler. This needs new suspension admission evidence; it
+is not already established by current cleanup tests.</p>
+<p>A cleanup operation can still return an ordinary typed failure, which the chosen
+reporting adapter retains without erasing the primary outcome. Within a task,
+cleanup retains structural order. Across children there is no implied total
+effect order; a library may present reports in spawn order while execution
+interleaves. Starting an action discharges its right to be invoked again, not
+its duty to finish. Neither successful invocation nor returning a failure proves
+successful native release.</p>
+<p>For the example, a cancellation during <code>read_next</code> gives this possible order:</p>
+<pre tabindex="0"><code class="language-text">request cancellation
+    -&gt; settle the pending read and retain its one reply
+    -&gt; resume source control with Cancelled
+    -&gt; finish source handler clause work
+    -&gt; run close_input under completion protection, possibly suspending
+    -&gt; retain task outcome and cleanup reports
+    -&gt; satisfy join and finish group draining
+    -&gt; release group-owned support
+</code></pre>
+<p>The position of <code>close_input</code> relative to handler clause work follows their
+lexical nesting: in this example cleanup surrounds the handled call. Placing
+cleanup inside the handler body would instead finish that cleanup before resume
+returns to <code>log_after</code>.
+Normal completion uses the existing lexical interpreter context. Cancellation
+here follows normal control; it does not restore abandoned handlers to run
+cleanup. Abortive cancellation would need a separate admissible-cut and closing
+design consistent with current discard's surviving-context rules.</p>
+<p>Masking cancellation does not prove termination, fairness, or deadlock freedom.
+A child awaiting its own group's completion creates a join cycle. A deadline
+can initiate cancellation without bounding when protected completion releases
+resources. Stronger shutdown or bounded-close contracts remain separate work.</p>
+<h2 id="compiler-runtime-and-library-responsibilities">Compiler, runtime, and library responsibilities</h2>
+<p>The distinction is between checked language mechanisms, their trusted execution
+implementation, and policy expressed using them. A runtime component may be
+distributed as a library, including one authored in Ash, while still depending
+on compiler-recognized contracts. An ordinary interface implementation does not
+establish those contracts merely by matching a method signature.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Feature</th>
+<th>Compiler / Core</th>
+<th>Trusted runtime or host library</th>
+<th>Ordinary Ash library</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Group scope and task handles</td>
+<td>Check scope identity, nonescape, support, and required group completion; validate the representation.</td>
+<td>Retain group activation and children until completion.</td>
+<td>Public wrapper, child inventory, shutdown policy, report presentation.</td>
+</tr>
+<tr>
+<td>Spawn</td>
+<td>Admit captures, result dependencies, and a fresh task root with its interpretation.</td>
+<td>Create control and reserve stable task storage.</td>
+<td>Admission limits, refusal/wait policy, queue selection, convenience functions.</td>
+</tr>
+<tr>
+<td>Suspension and restoration</td>
+<td>Validate and lower the full configuration, reply type, handlers, and owner phases.</td>
+<td>Park and restore one control owner with unique wait generations.</td>
+<td>Choose when to yield/wait and which ready task to select.</td>
+</tr>
+<tr>
+<td>Handler context</td>
+<td>Preserve lexical interpretation across new suspension; wider inheritance needs additional checking.</td>
+<td>Retain admitted activations and support.</td>
+<td>Explicit wrappers install ordinary child handlers; no first-class context feature is needed for this case.</td>
+</tr>
+<tr>
+<td>Wakeups and host callbacks</td>
+<td>Authenticate notification authority without exposing control ownership.</td>
+<td>Close registration races; account for storage; prevent stale or double restoration and inline host reentry.</td>
+<td>Readiness and ordering policy over opaque notifications.</td>
+</tr>
+<tr>
+<td>Cancellation request and typed checkpoints</td>
+<td>No new nonlocal control: ordinary typed data/branching plus lawful state access suffice.</td>
+<td>Supply request storage/access and operation-specific cancellation acknowledgement.</td>
+<td>Set/read requests, propagate them, return explicit outcomes.</td>
+</tr>
+<tr>
+<td>Automatic cancellation or unwinding</td>
+<td>Requires a new admitted cut, closing, answer, and outcome contract; absent here.</td>
+<td>Execute any later admitted close protocol.</td>
+<td>Choose when to request it; a token alone cannot supply it.</td>
+</tr>
+<tr>
+<td>Cleanup and group drain</td>
+<td>Extend completion validation to retained tasks and protected suspension.</td>
+<td>Preserve unique invocation and unfinished completion; retain support while parked.</td>
+<td>Reporting, cancellation deferral, and scheduling during drain under those laws.</td>
+</tr>
+<tr>
+<td>Deadlines, join, race, task combinators</td>
+<td>No new construct per combinator once wait/group mechanisms exist.</td>
+<td>Clock and timer/operation registration protocols.</td>
+<td>Timer ordering, winner policy, joining losers, error aggregation.</td>
+</tr>
+<tr>
+<td>Channels, semaphores, explicit yield</td>
+<td>No dedicated syntax needed over admitted wait/notify and storage access.</td>
+<td>Lawful storage and wait/notify primitives.</td>
+<td>Capacity, ordering, backpressure, fairness policy, yield calls.</td>
+</tr>
+<tr>
+<td>Queues, priorities, work stealing</td>
+<td>No queue algorithm required in the compiler; task movement needs separate parallel admission.</td>
+<td>Storage/synchronization and safe task dispatch.</td>
+<td>Queue algorithms, placement, batching, priorities, metrics, tuning.</td>
+</tr>
+<tr>
+<td>I/O and blocking adapters</td>
+<td>Define/check foreign entry and support boundaries; provide backend lowering as needed.</td>
+<td>Operation settlement, buffers, callback reentry, thread affinity, native execution.</td>
+<td>Device/file/network APIs, pool limits, platform choice, cancellation adaptation.</td>
+</tr>
+<tr>
+<td>Assisted yielding or preemption</td>
+<td>Safe-point insertion and root/control preservation; optional further work.</td>
+<td>Save/restore safely and deliver scheduling requests.</td>
+<td>Quantum, budget, priority policy; explicit cooperative yield is the smaller alternative.</td>
+</tr>
+<tr>
+<td>Parallel tasks and shared mutation</td>
+<td>Separate transfer/share and memory-visibility contract for transitive support.</td>
+<td>Synchronization, storage, and foreign-thread implementation of that contract.</td>
+<td>Pools, per-core ownership, messages, synchronization abstractions.</td>
+</tr>
+<tr>
+<td>Surface syntax</td>
+<td>Optional sugar; library calls still need checked scope/ownership rules.</td>
+<td>No independent syntax obligation.</td>
+<td>Functions, effect declarations, ordinary outcomes, wrappers, combinator names.</td>
+</tr>
+</tbody>
+</table>
+<p>The minimum compiler-facing extension in this comparison is checked task/group
+ownership plus whole-task suspend/restore and its completion/support rules.
+Typed dialect transforms can lower it without selecting a universal native stack
+representation or adding a recursive Core form for every library combinator.
+Native code generation must preserve those rules; the explicit evaluator could
+provide a future reference execution after separate authorization. Both remain
+outside current stabilization.</p>
+<p>The minimum trusted execution boundary realizes fresh task roots, stable retained
+state, wait registration/settlement, and one-owner restoration. An implementation
+must account for these mechanisms even if packaged as library intrinsics. Queue
+policy need not be trusted merely because it chooses schedules: where possible,
+checked operations should preserve safety for every admitted ordering, with
+fairness and liveness stated separately.</p>
+<p>Ordinary library code can build the public structured-concurrency API over that
+boundary. This is not a claim that today's Ash already supplies all storage,
+FFI, atomics, provider authoring, or generative-scope facilities required to write
+those libraries. Their own design boundaries remain in
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a>, and
+<a href="/ash/docs/design/dn-0045-native-compilation-and-interactive-execution/">DN-0045</a>.</p>
+<p>As an alternative with less language work, libraries can represent computations
+as explicit user-written state machines and schedule their steps. That can
+express a useful cooperative protocol after suitable storage/platform facilities
+exist. It does not make arbitrary current function or handler stacks suspendable,
+and it does not supply new scope or foreign safety guarantees by convention.</p>
+<h2 id="scheduler-behavior-that-affects-latency-and-throughput">Scheduler behavior that affects latency and throughput</h2>
+<p>The following are candidate evaluation criteria, not current Ash requirements:</p>
+<ul>
+<li>Bound active tasks, queued work, retained bytes, I/O registrations, and blocking
+jobs. A bounded channel alone does not bound producers waiting to send or the
+total retained memory. Define admission, waiting, rejection, or coalescing.</li>
+<li>Separate latency-sensitive work from long CPU and blocking calls. Budget ready
+tasks as well as operations that actually suspend. An always-ready operation can
+otherwise prevent useful yielding.</li>
+<li>Compare explicit yields with compiler checkpoints at loop backedges and calls.
+A checkpoint's overhead and maximum delay depend on primitive operations and
+foreign code between checkpoints. Arbitrary-precision arithmetic can itself be
+substantial work. No quantum alone establishes a wall-clock bound.</li>
+<li>Limit uninterrupted queue draining and completion batching; periodically service
+timers and I/O. Compare locality benefits against delayed work and starvation.</li>
+<li>Prefer local execution where useful, but measure queue contention, migration,
+allocation, and NUMA effects. Fixed affinity and stealing have different costs.</li>
+<li>Keep priority policy explicit and measure starvation and priority inversion.
+More priorities do not establish deadline guarantees.</li>
+<li>Trace task ancestry, suspension reason, queue delay, worker use, retained
+resources, and cancellation progress. Debugging needs more than a creation stack.</li>
+</ul>
+<p>Wakeup correctness is distinct from fairness. Rust's <code>AtomicWaker</code> illustrates
+registration followed by a readiness check, or checking again after registration,
+to close a lost-wakeup race. Wakes can coalesce; they are notifications to inspect
+state, not counts of completed operations. Multiple wakes must not execute the
+same task simultaneously or consume its one-shot control twice.
+<a href="https://docs.rs/futures/latest/futures/task/struct.AtomicWaker.html">AtomicWaker</a>,
+<a href="https://doc.rust-lang.org/std/task/struct.Waker.html">Waker</a>.</p>
+<h2 id="kernel-and-foreign-boundary">Kernel and foreign boundary</h2>
+<p>A userspace scheduler selects ready tasks; an I/O driver supplies readiness or
+completion; a timer service supplies expiry; kernel threads supply execution.
+These may be packaged together while retaining different obligations. libuv is
+an established example of event-loop/platform separation and worker-pool
+adaptation, without providing Ash's language ownership contract.
+<a href="https://docs.libuv.org/en/v1.x/design.html">libuv design</a>.</p>
+<p>Pthreads or another host library could provide workers and synchronization.
+Readiness backends such as epoll/kqueue and completion backends such as IOCP or
+io_uring need adapters with truthful cancellation and buffer-lifetime contracts.
+Backend selection should follow target and workload evidence rather than become
+the public concurrency model.</p>
+<p>In particular, cancelling an io_uring request can race with successful completion;
+the cancellation request and original operation have distinct completion records.
+Retained buffers and operation state cannot be freed merely because the Ash task
+has requested cancellation. Late callbacks and stale operation identifiers need
+an accounting protocol before storage can be reused.
+<a href="https://kernel.googlesource.com/pub/scm/linux/kernel/git/axboe/liburing/+/refs/heads/master/man/io_uring_cancelation.7">liburing cancellation</a>.</p>
+<p>Blocking foreign work may continue after its waiter is cancelled. Tokio cannot
+abort an already-running blocking task; Go explicitly changes runtime state
+around cgo calls. A future Ash boundary would need to specify ownership until
+actual foreign completion, allowed callback reentry, and thread affinity.
+<a href="https://docs.rs/tokio/latest/tokio/task/fn.spawn_blocking.html">Tokio blocking work</a>,
+<a href="https://go.dev/src/runtime/cgocall.go">Go cgo boundary</a>.</p>
+<p><a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a> provides an exploratory reason to make
+the runner selectable and omittable when unused. It does not eliminate the
+storage, wakeup, cleanup, and synchronization machinery that selected tasks need,
+and passive imports should not silently acquire runtime initialization semantics.</p>
+<h2 id="additional-boundary-for-parallel-execution">Additional boundary for parallel execution</h2>
+<p>Task concurrency on one worker can be studied before multicore execution. A
+parallel extension would additionally need rules for the entire reachable task
+environment: data, closures, storage providers, resources, handlers, and hidden
+control support. Moving a handle does not prove that its backing storage or
+foreign resource can move. Immutable data still needs a valid sharing lifetime
+and a thread-safe representation.</p>
+<p>Possible initial restrictions include copied messages, immutable shareable data,
+or explicit ownership transfer. Shared mutation would need synchronization and
+memory-order rules. Spawn, join, and message delivery would need defined
+visibility relationships. A <code>Send</code>-like marker name or an ordinary interface
+signature alone cannot establish the required laws.</p>
+<p>An empty outward effect row is insufficient evidence for unrestricted parallel
+execution: handled state and cleanup may remain inside a computation. DN-0048's
+stronger Pure Core boundary supplies a separate comparison case, still subject
+to its strict evaluation and completion obligations.</p>
+<h2 id="research-beyond-established-runtime-practice">Research beyond established runtime practice</h2>
+<p>Recent scheduler research reinforces the need to keep public semantics independent
+of one queue or preemption mechanism:</p>
+<ul>
+<li><strong>BWoS, OSDI 2023:</strong> block-based work-stealing queues reduce owner/thief
+interference and include weak-memory verification. Its reported Tokio/Hyper
+throughput gain is much smaller than its queue microbenchmark gain. Evaluate
+whole workloads before adopting a queue algorithm.
+<a href="https://www.usenix.org/conference/osdi23/presentation/wang-jiawei">Paper</a>.</li>
+<li><strong>User interrupts, NSDI 2025:</strong> experiments show more consistent low-overhead
+preemption, while identifying constraints imposed by other software layers.
+Specialized hardware does not remove runtime safety or scheduling-policy work.
+<a href="https://www.usenix.org/conference/nsdi25/presentation/guo">Paper</a>.</li>
+<li><strong>SBB, OSDI 2026:</strong> combines decentralized preemption, core allocation, and
+load balancing, using task stealing for temporary skew and flow migration for
+persistent skew. It reports 1.7–5.2 times higher throughput at the same tail
+target when scaling to 48 cores in its evaluation. Its implementation uses
+user-interrupt hardware, a patched Linux kernel, and DPDK. This is evidence
+about a specialized network runtime, not a portable Ash performance forecast.
+<a href="https://www.usenix.org/conference/osdi26/presentation/hu-kang">Paper</a>,
+<a href="https://www.usenix.org/system/files/osdi26-hu-kang.pdf">implementation details</a>.</li>
+</ul>
+<p>The transferable lesson is to compare preemption, core allocation, and work
+distribution separately. Work stealing alone cannot solve every persistent
+imbalance, and a central dispatcher can become a bottleneck. These results do
+not justify putting kernel-bypass or hardware interrupts into the initial API.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>No Ash scheduler performance measurements were made for this note. A future
+experiment needs separate scope, a named question, comparison criteria, and
+retention or disposal conditions. Useful comparisons would hold the public task
+contract constant while varying control representation and scheduling policy.</p>
+<p>Correctness cases would include completion before registration, concurrent
+wakeups, cancellation during registration, duplicate or late callbacks, nested
+handler interpretation, cancellation with running cleanup, partial external
+progress, scope exit with live children, and a foreign operation that never
+returns. Multicore cases would separately examine visibility, transportability,
+cross-core cancellation, and concurrent access rejection.</p>
+<p>For the concrete local sketch, compare traces through resumed bodies and the
+remaining source clauses, including the <code>41</code> then <code>+ 1</code> example. Reject a child
+whose supporting inner resource ends before group drain, or a result escaping
+its child-local owner. Exercise cancellation before child start, after a winning
+completion, during protected parked cleanup, and while a group rejects new work.
+Check that repeated joins do not repeat execution, dropped handles retain group
+obligations, and acquisition/cancellation races release any acquired resource.
+Record which checks belong to typed admission, Core validation, runtime protocol,
+and library policy. These are future comparison cases, not current test gates.</p>
+<p>Performance comparison should report nonsuspending sequential overhead,
+immediate-completion cost, suspended bytes per task, allocator traffic,
+spawn/join cost, wake-to-run delay, and cancellation-to-resource-release delay.
+Use mixed CPU/I/O work, skewed task sizes, bursts, overload, and several core
+counts. Measure p50, p99, and p99.9 latency together with throughput at a stated
+latency target and retained memory. Include offered load independent of completion
+so a slowing service does not hide its own queueing delay. Record hardware,
+backend, task sizes, capacity limits, and scheduling configuration.</p>
+<h2 id="open-questions">Open questions</h2>
+<p>The intended workloads, supported platforms, latency targets, and useful capacity
+bounds remain unspecified. Those choices affect the acceptable suspension costs,
+yielding policy, and foreign adapters. The task ownership, cancellation, context,
+and parallel sharing questions above also remain unresolved.</p>
+<p>The local sketch fixes a comparison baseline rather than accepting a contract.
+Its main alternatives are wait-all versus immediate sibling cancellation,
+explicit child handlers versus admitted borrowed context, cancellation settlement
+before reply versus transfer to a group-owned operation, and suspending protected
+cleanup versus a restricted non-suspending cleanup profile. Heterogeneous results,
+shorter support lifetimes justified by early joins, and an abortive cancellation
+cut would each need additional evidence. No answer here requires changing the
+sequential stabilization target.</p>
+<p>The initial research preference is structured, one-shot tasks with effect-based
+suspension and selectable userspace scheduling. Compare selective state-machine
+or CPS lowering with stackful fibers before choosing a native representation.
+Treat compiler-assisted yielding and per-core ownership as further policies to
+evaluate, and give parallel transfer/sharing its own semantic design. General
+first-class continuations, multi-shot control, detached work, hard real-time
+claims, and universal actor execution are unnecessary initial commitments.</p>
+<p>This preference imposes no work on current sequential stabilization. A later
+decision needs workload-specific latency/capacity targets and evidence that the
+candidate preserves the stabilized sequential behavior while satisfying its new
+ownership, completion, and scheduling contracts.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#lessons-from-current-practice">Lessons from current practice</a><a href="#candidate-directions">Candidate directions</a><a href="#candidate-api-contracts-to-investigate-later">Candidate API contracts to investigate later</a><a href="#concrete-local-task-sketch">Concrete local task sketch</a><a href="#compiler-runtime-and-library-responsibilities">Compiler, runtime, and library responsibilities</a><a href="#scheduler-behavior-that-affects-latency-and-throughput">Scheduler behavior that affects latency and throughput</a><a href="#kernel-and-foreign-boundary">Kernel and foreign boundary</a><a href="#additional-boundary-for-parallel-execution">Additional boundary for parallel execution</a><a href="#research-beyond-established-runtime-practice">Research beyond established runtime practice</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0050-native-program-gas-estimates/">← DN-0050: Native program gas estimates</a><a rel="next" href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053: Scoped Generic Cells Without Native Owners →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

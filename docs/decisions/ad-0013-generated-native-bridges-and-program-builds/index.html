@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>AD-0013: Generated native bridges and program builds · Ash</title><meta name="description" content="Build whole Ash programs as native executables containing compiler-private checked-Core construction data/code, the existing evaluator and generated Rust bridges for the program's checked foreign declarations.…"><meta name="robots" content="index, follow"><meta property="og:title" content="AD-0013: Generated native bridges and program builds · Ash"><meta property="og:description" content="Build whole Ash programs as native executables containing compiler-private checked-Core construction data/code, the existing evaluator and generated Rust bridges for the program's checked foreign declarations.…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="AD-0013: Generated native bridges and program builds · Ash"><meta name="twitter:description" content="Build whole Ash programs as native executables containing compiler-private checked-Core construction data/code, the existing evaluator and generated Rust bridges for the program's checked foreign declarations.…"><meta property="og:url" content="https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/"><link rel="canonical" href="https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/decisions/AD-0013-generated-native-bridges-and-program-builds.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"AD-0013: Generated native bridges and program builds","headline":"AD-0013: Generated native bridges and program builds","description":"Build whole Ash programs as native executables containing compiler-private checked-Core construction data/code, the existing evaluator and generated Rust bridges for the program's checked foreign declarations.…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/","@id":"https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"accepted","isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/decisions/AD-0013-generated-native-bridges-and-program-builds.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+</style><title>AD-0013: Generated native bridges and program builds · Ash</title><meta name="description" content="Build whole Ash programs as native executables containing compiler-private checked Core, the existing evaluator and generated typed Rust bridges for passive foreign declarations. The specification defines the…"><meta name="robots" content="index, follow"><meta property="og:title" content="AD-0013: Generated native bridges and program builds · Ash"><meta property="og:description" content="Build whole Ash programs as native executables containing compiler-private checked Core, the existing evaluator and generated typed Rust bridges for passive foreign declarations. The specification defines the…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="AD-0013: Generated native bridges and program builds · Ash"><meta name="twitter:description" content="Build whole Ash programs as native executables containing compiler-private checked Core, the existing evaluator and generated typed Rust bridges for passive foreign declarations. The specification defines the…"><meta property="og:url" content="https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/"><link rel="canonical" href="https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/decisions/AD-0013-generated-native-bridges-and-program-builds.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"AD-0013: Generated native bridges and program builds","headline":"AD-0013: Generated native bridges and program builds","description":"Build whole Ash programs as native executables containing compiler-private checked Core, the existing evaluator and generated typed Rust bridges for passive foreign declarations. The specification defines the…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/","@id":"https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"accepted","isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/decisions/AD-0013-generated-native-bridges-and-program-builds.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,7 +13,7 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Architectural decisions</p><h1 id="ad-0013-generated-native-bridges-and-program-builds" data-pagefind-meta="title">AD-0013: Generated native bridges and program builds</h1><p class="spec-source">Development architectural decisions · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/decisions/AD-0013-generated-native-bridges-and-program-builds.md">ash-lang <code>7949b6d</code></a></p><p class="decision-status">Architectural decisions record non-language choices. Each document retains its recorded status and scope. Read the <a href="/ash/spec/">language specification</a> for current language rules.</p></header><nav class="spec-chapters" aria-label="Architectural decisions"><a href="/ash/docs/decisions/">All architectural decisions</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Architectural decisions</p><h1 id="ad-0013-generated-native-bridges-and-program-builds" data-pagefind-meta="title">AD-0013: Generated native bridges and program builds</h1><p class="spec-source">Development architectural decisions · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/decisions/AD-0013-generated-native-bridges-and-program-builds.md">ash-lang <code>67c79dd</code></a></p><p class="decision-status">Architectural decisions record non-language choices. Each document retains its recorded status and scope. Read the <a href="/ash/spec/">language specification</a> for current language rules.</p></header><nav class="spec-chapters" aria-label="Architectural decisions"><a href="/ash/docs/decisions/">All architectural decisions</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
 <ul>
 <li>ID: <code>AD-0013</code></li>
 <li>Status: accepted</li>
@@ -25,77 +25,64 @@
 </ul>
 <h2 id="decision">Decision</h2>
 <p>Build whole Ash programs as native executables containing compiler-private
-checked-Core construction data/code, the existing evaluator and generated Rust
-bridges for the program's checked foreign declarations. Libraries remain passive
-Ash source dependencies. This records the converged build boundary. The retained
-CP-0022 transition supplied the semantic change; the
-<a href="/ash/spec/static-semantics/#source-foreign-declarations">specification</a> and
-<a href="/ash/docs/tools/ash/">tool guide</a> describe the implemented product profile. Main
-adoption remains subject to the separate integration gate.</p>
-<p>The initial target is <code>x86_64-unknown-linux-gnu</code>. Link static archives and ordinary
-shared dependencies through the native linker. Generate typed Rust call sites
-for exactly the supported profile. Do not introduce a descriptor-driven ABI call
-engine, native Ash backend, stable Core wire format, separate compiled Ash
-library format or runtime dynamic loader for this milestone.</p>
-<p>Ash source supplies signatures, representations, constants, foreign assumptions
-and all library-specific protocol/conversion/lifecycle policy. Generated bridges
-perform common native calls, marshaling and admitted guard/access transitions.
-They contain no dispatch on SQLite, arena or native-buffer names. Replace the
-handwritten manifests/adapters and runtime C shim on the product path as the
-three Ash libraries become sufficient.</p>
+checked Core, the existing evaluator and generated typed Rust bridges for passive
+foreign declarations. The <a href="/ash/spec/static-semantics/#source-foreign-declarations">specification</a>
+defines the supported source boundary; the <a href="/ash/docs/tools/ash/">tool guide</a> defines
+build inputs and invocation.</p>
+<p>The target is <code>x86_64-unknown-linux-gnu</code>. Link static archives and ordinary shared
+dependencies through the native linker. Generate <code>extern "C"</code> pointer calls and
+actual void returns from the supported signatures. Do not introduce a generic
+ABI engine, native Ash backend, stable Core wire format, compiled Ash library
+format or runtime library resolver.</p>
 <h3 id="compiler-library-and-program-responsibilities">Compiler, library and program responsibilities</h3>
-<p>The front end checks a passive source graph and produces independently validated
-typed Core plus immutable canonical foreign contracts. Library exports preserve
-defining identities and body-free checked facts. A library import contributes
-required contracts/symbols without performing native initialization.</p>
-<p>Program build takes that checked graph, the selected target and explicit native
-inputs. It resolves the target profile, emits Rust bridges and an evaluator host,
-then compiles/links an executable. The private Core representation follows the
-matching compiler/runtime version. No cross-version compatibility is promised.
-The host independently validates reconstructed Core before execution and checks
-bridge registration against the original contracts before associated acquisition.</p>
-<p>Execution runs that admitted program and creates fresh resource activations.
-Prepared declaration/template data can be shared; runtime owners and foreign
-calls cannot. Existing non-foreign <code>run_path</code> and <code>RunConfiguration</code> users remain
-supported. Add compile/build/execute API phases and an <code>ash build</code> tool path;
-define exact arguments and diagnostics with the authorized implementation task.
-Foreign execution requires the generated linked host, not runtime compilation
-hidden inside an ordinary call to <code>run_path</code>.</p>
+<p>The front end checks a passive source graph and independently validates typed
+Core with immutable defining symbol facts. Imports preserve exact declaration,
+operation and signature identities without performing native initialization.
+Bindings supply profile, signature and native link name. Ordinary Ash functions,
+handlers and cleanup supply protocol, null/length checks and lifetime policy.
+The compiler does not verify native behavior or manage foreign ownership.</p>
+<p>Program build takes the checked graph and explicit native inputs, emits typed
+Rust bridges and an evaluator host, then compiles and links an executable.
+Private images require the matching compiler/runtime version; no cross-version
+compatibility is promised. Startup independently reconstructs and validates Core
+and exact bridge registrations before evaluation. No live pointer is an image
+constant. Ordinary source handlers retain nearest-handler precedence.</p>
+<p>Bytes exposes one readonly pointer with managed backing retained through the
+synchronous call. Address preserves a data pointer without integer conversion;
+Unit results use actual void. Retention of a Bytes pointer beyond a call requires
+the module to retain the original backing, and managed backing must not be
+mutated or freed. No hidden length, terminator or inferred ownership is supplied.</p>
 <h3 id="one-canonical-contract-and-explicit-phases">One canonical contract and explicit phases</h3>
-<p>Use phase-specific Rust types for unchecked declarations, checked foreign
-contracts, target-resolved bridge plans and linked executable bindings. A
-constructor for the next phase consumes or borrows the appropriate completed
-phase. Checked immutable contracts retain original authority; projections for
-module summaries, Core operands and bridges refer to them rather than preparing
-independent descriptions of the same occurrence repeatedly.</p>
-<p>Cache/reuse keys include exact source/dependency identities, profile, compiler
-version and native build configuration. A changed input invalidates its derived
-plan. Phase branding prevents use of unfinished data; it is not evidence that
-source, Core or an external binary is valid. Independent Core reconstruction
-still checks authority and rejects stale transformed facts.</p>
-<p>Native ABI arrays remain Type-only, with an authenticated projection from the
-complete ordered Type/EffectRow source arguments. Bridge tables authenticate
-original library, operation and signature/assumption facts, rather than matching
-native symbol names alone. Required binding/conversion checks precede acquisition.</p>
+<p>Keep compile, prepare and build phases explicit. Immutable checked symbol facts
+remain shared authority for module summaries, Core operands and generated bridge
+plans. Binding tables authenticate the original symbol allocation and exact
+signature rather than selecting by native link name alone. Independent Core
+validation rejects stale or transformed correspondence.</p>
+<p>Reuse keys include exact source/dependency identities, profile, compiler version
+and native build inputs. Phase completion or cache reuse does not establish
+external binary validity. Ordinary non-native execution remains available;
+foreign execution requires an explicitly generated and linked host.</p>
 <h3 id="native-preparation-and-startup-gas">Native preparation and startup gas</h3>
 <p>Use input-derived cumulative work allowances at the modular compiler phase
 owners and for native preparation and startup. The accepted policy is:</p>
-<pre tabindex="0"><code class="language-text">preparation gas = 125 * (admitted source UTF8 bytes + validated main Core nodes)
-source gas      = 800 * (canonical loaded source UTF8 bytes, including builtins)
+<pre tabindex="0"><code class="language-text">preparation gas = 850 * (admitted source UTF8 bytes + validated main Core nodes)
+resolution gas  = max(327680, 80 * (canonical loaded source UTF8 bytes, including builtins))
+source gas      = 10000 * (canonical loaded source UTF8 bytes, including builtins)
 final gas       = 800 * (the same canonical source UTF8 closure)
+builder gas     = max(327680, 8 * (the same canonical source UTF8 closure)), per program arena
 rewrite gas     = 16 * (the same canonical source UTF8 closure), per compiler arena
-Core gas        = 345 * (the same canonical source UTF8 closure)
-startup gas     = 22 * (canonical image bytes + canonical expected-fact bytes)
+Core gas        = 25000 * (the same canonical source UTF8 closure)
+startup gas     = 118 * (canonical image bytes + canonical expected-fact bytes)
 </code></pre>
 <p>Source checking sizes the complete canonical loaded source closure before
 checking. Count each loaded module once, including builtin sources, rather than
 import edges or aliases. Pay one unit per source and one for the census in a
-finite source-count-derived bootstrap, then carry that work inside <code>800*S</code>
+finite source-count-derived bootstrap, then carry that work inside <code>10000*S</code>
 through every module, source copy, closed entry and retained provenance. This is
 the total allowance; the historical ten-percent deficit does not apply.
 Final elaboration and independent compiler Core each pay their own identical
 resident-length census before work begins and carry it inside their respective
-<code>800*S</code> and <code>345*S</code> totals. Apply this at both Pure and Effect modular driver
+<code>800*S</code> and <code>25000*S</code> totals. Apply this at both Pure and Effect modular driver
 entries. Their existing remaining-credit loans debit the same cumulative meter.
 These totals have no historical extra ten percent.</p>
 <p>The paid census also returns its canonical byte count for a separate <code>16*S</code>
@@ -105,6 +92,120 @@ inherits only the allowance, never spent work or unused Source/Final credit.
 Reject multiplication overflow. There is no floor, intercept, refill or extra
 margin. Generic builder, standalone and private-image defaults remain unchanged;
 resolution, constraints and other construction budgets remain separate.</p>
+<p>Program arenas also receive a separate primary payload-construction allowance
+<code>max(327680, 12*S)</code> from that paid census. Install it before catalog precharges;
+each arena starts with fresh independent primary and rewrite meters. Primary
+construction remains excluded from the Source/Final reports. Standalone,
+default and private-image primary limits retain their existing capacities.</p>
+<p>Public standalone Source checking has a separate current exception. The public
+<code>check_module</code> entry uses one cumulative 15,663,104 structural-work-unit allowance
+per module, with the existing Structural diagnostic calibration override. It
+carries that same owner through body checking and export collection/freeze.
+Explicit <code>check_module_with_budget</code> callers and driver Source phase policies
+retain their supplied limits; this is not graph-wide credit or a refill.</p>
+<p>The graph-wide interface-and-constraint default is 1,376,256 work units. One
+owner persists through dependency admission, checking, linking and independent
+evidence validation, with the existing Structural calibration override. A finite
+constraint-only completion probe on unchanged interface graphs measured 368,276
+units at 2,800 monomorphic interfaces, 590,976 at 4,500, and 1,096,476 at 5,000
+polymorphic interfaces. The genuine 4,500-interface cycle reached its semantic
+failure at 352,321 units. The largest completed owner gives a 25% reserve target
+of 1,370,595; rounding to a 65,536-work-unit step gives 1,376,256, a 25.5163%
+reserve. These are work units, not memory sizes. Explicit caller budgets and all
+Type, primary, rewrite, private-image and coverage defaults remain unchanged.
+The earlier 327,680-unit refusal remains an explicit driver control, and a
+400,000-unit owner preserves the wide graph's no-refill validation boundary.
+No standalone resolution-Type allowance changes to rescue a test setup.</p>
+<p>The original 128-method and 192-function publication witnesses completed with a
+finite diagnostic Source-only allowance of 1,310,720 units. Their defining
+module owners used 366,561 and 534,701; entry owners used 71,000 and 201,323,
+while independent foreign/region owners used 442 and 3,575 each. Do not sum those
+independent owners to fit a module limit. The largest completed owner, 534,701,
+has an integer 25% reserve target of 668,377. Rounding to the next 65,536-work-unit
+step selected the earlier 720,896 allowance, giving 34.82% reserve over that
+completed cost. This is a work allowance, not a memory size. The diagnostic probes still reached the
+original stale two-versus-four module census; normal verification corrects only
+that census to exact graph identities and retains the original programs and
+public default-checking route. Earlier unchanged-standalone Source statements
+describe the policies before this narrow exception, not a current global claim.</p>
+<p>The unchanged recursive resource fixtures then exposed the larger completed
+Source cost of capture/control publication. Four independent entry owners
+completed at 799,093, 828,475, 852,554 and 4,220,960 units; their intended
+<code>ResourceEscape</code> negative companions retained their source diagnostics. The
+original 24-scope/256 KiB fresh-process witness completed at 12,517,818 units
+under a finite Source-only diagnostic allowance. Its earlier 11,534,334-unit
+refusal is a truncated prefix, not a completed cost. All temporary probes were
+restored exactly. The largest complete owner has a ceiling 25% reserve target
+of 15,647,273; the next 65,536-work-unit step is 15,663,104, giving 25.1265%
+reserve. This replaces the earlier fixed 720,896 fit, without a new scaling
+rule, changed capture semantics or work sharing between independent owners.</p>
+<p>On 2026-10-26 the unchanged 8,000-member recursive-group/call-chain test exposed
+the fixed primary builder cap and repeated whole-arena variable searches during
+closure preparation. One temporary, charged first-variable index per existing
+batch preserves first-match and fallback behavior. With S = 438,691, Source work
+fell from 519,069,391 to 7,149,428; Final previously exhausted 350,952,800 and then
+completed at 2,296,950. Core completed at 10,731,616. The largest complete primary
+arena used 2,680,644; a 25% fitting reserve requires 3,350,805, covered by
+<code>8*S = 3,509,528</code>. Completion diagnostics used a finite <code>16*S</code> primary ceiling;
+the normal selected <code>8*S</code> policy then passed the original test, including its
+256 KiB worker, evaluation and evidence-envelope assertions. Phase coefficients,
+rewrite ownership and runtime limits are unchanged.</p>
+<p>The later unchanged 10,000-member cyclic-data witness at 320 KiB exposed the
+primary <code>8*S</code> ceiling during cleanup-row replay, not aggregate Source
+exhaustion. With S = 398,678 it refused a one-cell charge at 3,189,424. A finite
+<code>16*S</code> primary diagnostic completed all original render/count/drop assertions;
+its four independent primary arenas used <code>23</code>, <code>117</code>, <code>3,430,201</code> and
+<code>3,430,528</code> cells.
+Rewrite work remained separate. The largest complete owner requires 4,288,160
+with the existing 25% reserve. The selected rounded primary coefficient is now
+12: 4,784,136 here, 39.46% above observed use (28.29% of the allowance unused).
+Source, Final and Core completed at 8,654,930, 2,320,736 and 15,063,023 cells.
+No qualifying small replay optimization was established: provisional propagation,
+strict removal and atomic rollback retain distinct obligations. All temporary
+tracing and the diagnostic coefficient were restored before selecting the policy.
+Standalone/default/private-image primary capacities, paid prefixes, independent
+rewrite ownership and every other phase coefficient remain unchanged. Normal
+uninstrumented verification is separate from this completion measurement. The
+selected policy passes the original cycle witness with all three reported phases
+complete at the same measured costs, all 25 driver tests, four policy tests,
+57 builder tests and the exact/short/retry cleanup-row replay test.</p>
+<p>Program resolution receives a fresh independent graph-wide allowance
+<code>max(327680, 80*S)</code> after the existing paid canonical source census. Check the
+multiplication before applying the floor. Standalone resolvers and explicit
+caller budgets keep their existing limits; Source/Final/Core reports do not
+absorb resolution work. The existing Structural diagnostic override and
+resolution calibration report use this owner's selected allowance.</p>
+<p>The unchanged depth-48, width-4 public-route test completed resolution at
+643,634 cells with S = 11,791 under a temporary finite 655,360-cell diagnostic.
+Its normal Source/Final/Core budgets and 320 KiB worker remained unchanged,
+including exact/one-short constraint checks. The 25% fitting target is 804,543;
+the rounded coefficient 80 supplies 943,280. Clone-before-lookup still checks
+complete alternate effect declarations: avoiding the allocation without dropping
+its charged authentication traversal did not offer a material work reduction.
+The fixed standalone capacity and other phase coefficients are unchanged.</p>
+<p>The connected R-core check restored the unchanged 24-owner Cell witness.
+Escape payload checks now reuse the existing charged forward boundary walk and
+omit only per-boundary captured prefixes they never consume. Every selected
+owner and payload check remains, in the same order; ordinary capture prefix
+reconstruction is unchanged. At S = 1,791, complete Source work fell from
+21,142,054 to 13,215,994 (37.49%). Final completed at 29,736 and independent
+Core at 33,035,808. Earlier normal and 2× Core refusals were truncated, not
+fitting numerators. The final finite completion used 8× the former Source and
+Core allowances and retained the original result 42, 24 distinct acquisitions
+and exact reverse release assertions.</p>
+<p>The 25% fitting targets are Source 16,519,993 and Core 41,294,760. Rounded
+coefficients 10,000 and 25,000 supply 17,910,000 and 44,775,000 respectively
+(about 35.5% reserve). This increases admitted work after the bounded saving;
+it does not claim unchanged cost or a universal complexity guarantee. Canonical
+source counting, paid census, cumulative phase owners, overflow and refusal
+prefixes are unchanged. At that fitting checkpoint, Final 800<em>S, resolution 80</em>S
+with its default floor, primary 8<em>S with its default floor, rewrite 16</em>S,
+standalone, private-image,
+constraint, depth and production stack limits remain unchanged. Normal-policy
+verification is separate from these finite completion measurements. The
+selected normal policy subsequently passed all 25 original driver tests, four
+policy tests, 78 capture tests, five reporting tests and two observer tests.
+This is focused evidence, not a complete workspace gate.</p>
 <p>Preparation reads resident admitted source lengths and main arena length before
 image construction. Pay one unit per source and one for the node count using a
 finite source-count-derived sizing allowance; carry those charges inside the
@@ -162,6 +263,65 @@ These finite measurements stopped before independent Core, preparation or
 native execution. They are fitting evidence, not a holdout, normal caller pass
 or universal complexity guarantee. Normal verification and retained delivery
 remain separate obligations.</p>
+<p>On 2026-10-26 the project lead selected Source <code>2600S</code> and Core <code>5300S</code>
+for the connected integer-residency and legacy Cell analysis. Final remains
+<code>800S</code>. The exact 24-owner fixture used 3,595,764 Source units and 7,560,218
+Core units over 1,791 canonical source bytes (2,007.685 and 4,221.227 units per
+byte). Applying the existing 25% fitting reserve gives minimum coefficients
+2,510 and 5,277; rounding upward to hundreds gives 2,600 and 5,300. The fitted
+headroom is about 29.5% and 25.6%. This increases admitted work; it does not
+claim unchanged analysis cost. Focused rediscovery dominated the measured work.
+The finite diagnostic returned 42 and checked 24 unique Cell acquisitions with
+exact reverse release order. It used larger diagnostic allowances, so normal
+policy verification remains separate. Canonical source counting, paid census,
+cumulative phase owners and checked overflow are unchanged. No floor, runtime
+margin, refill, cross-phase credit or change to standalone, private-image,
+constraint, runtime, depth or stack defaults is introduced.</p>
+<p>On 2026-10-26 the closure-storage delivery recalibrated Source to <code>3900S</code>
+and Core to <code>6200S</code>, retaining Final <code>800S</code>. The original 1,024-level
+registration fixture completed at 4,886,806 Source units and 7,763,338 Core
+units over S = 1,582 canonical bytes (3,089.005 and 4,907.293 units per byte).
+The existing 25% fitting rule rounded upward to hundreds gives 3,900 and 6,200,
+about 26.3% reserve each. The completion measurement used one diagnostic
+Source allowance of twice normal; Final and Core retained normal allowances.
+Its original sum, 1,025 registration/request counts, exact failure/retry and
+256 KiB runtime-worker assertions passed; normal policy verification is separate.
+Focused discovery used about 94% of both measured phases; copying used less than
+0.7%, with no demonstrated safe root/state omission or raw-context growth.
+This raises admitted work, not performance claims. Canonical S, paid census,
+cumulative owners, overflow, all other phase/default capacities and production
+stack settings remain unchanged. Two private disposal stress workers separately
+use 128 KiB after observed 64 KiB failures and 128 KiB passes at unchanged depths;
+this is fixed debug-frame headroom evidence, not a minimal or universal bound.</p>
+<p>On 2026-10-26 the project lead also selected startup <code>65B</code>, preserving B as
+canonical image bytes plus canonical expected-fact bytes. Of nine complete
+imported-flow restoration observations, the recursive case used 406,477 units
+for B = 7,873 (4,900 image and 2,973 fact bytes): 51.629239 units per byte.
+The existing 25% fitting rule gives <code>ceil(1.25 * 51.629239) = 65</code>, above the
+previous coefficient 22. This measures framing, fact comparison and complete
+restoration; later native binding correspondence and final admission remain in
+the same meter but were not measured by that restoration fixture. Actual native
+caller verification is separate. The recursive case refuses the unchanged
+327,680 standalone image allowance; the other eight measured cases fit it.
+Normal <code>65B</code> restoration must retain all nine expected results and exact
+short/retry checks. No standalone limit, extra runtime margin, refill or
+Source/Core credit transfer is introduced.</p>
+<p>On 2026-10-26 the closure-storage delivery selected startup <code>118B</code>. All nine
+existing imported-flow fixtures completed with one diagnostic allowance of
+<code>130B</code> per image, retaining framing, canonical fact comparison and restoration
+in the same meter. The maximum recursive case used 772,224 units over
+B = 8,206 (5,233 image and 2,973 expected-fact bytes), or 94.104801 units per
+byte. The existing integer fitting rule gives <code>ceil(1.25 * 94.104801) = 118</code>,
+about 25.4% reserve. An earlier normal <code>65B</code> run refused that case at
+533,647/533,650 over B = 8,210; separately generated identity encodings account
+for the different byte census, so these are not identical image bytes. In the
+completed diagnostic, cases one and two refused the unchanged standalone
+327,680 allowance and the other seven fit it. This fits complete restore-stage
+work, not the later native-binding correspondence/final admission that retains
+the same cumulative meter. Normal nine-flow and actual native verification
+remain separate obligations. Canonical B, checked overflow, all other owners
+and defaults, the supported image profile and the no-refill/no-transfer rules
+are unchanged.</p>
 <p>The project lead subsequently selected preparation <code>125P</code> under the same
 delegated judgment after independent review of four complete preparation
 observations. Here P retains its existing paid definition: canonical admitted
@@ -174,63 +334,50 @@ meter carries its census, native-input checks, image encoding and emission.
 The finite measurements used <code>204P</code> and stopped before generated-host building
 or evaluation; normal native verification and retained delivery remain required.
 Source/Final/rewrite/Core/startup policies and every other check remain unchanged.</p>
-<h3 id="optional-cheader-verification">Optional C/header verification</h3>
-<p>Provide a separate <code>ash check-ffi</code> authoring path which emits/compiles C checks
-against supplied headers for exact symbol types, representation facts and
-constant/sentinel values. Runtime program calls are generated Rust. C checks
-create no source contracts, executable constants or stronger ownership authority.
-No C header parser or C runtime shim is required to build an already authored
-binding. The native Rust toolchain/linker remains required and may use a platform
-linker driver; this does not promise a toolchain independent of all C tooling.</p>
-<p>Verification inputs associate exact declaration identities with C type, symbol
-and constant spellings from the supplied headers. The tool checks those mappings
-against the source profile/representation facts before using them in generated
-signature and value checks. These optional mappings carry no executable values
-or ownership authority; changing them cannot change a runtime bridge plan.</p>
-<p>The author supplies complete executable facts in Ash. Verification failures
-refer to those declarations and checked facts. A header mismatch, missing native
-symbol, incompatible target or unsupported ABI shape is diagnosed causally.
-Successful linking does not prove that headers match a binary or that the binary
-obeys declared retention, validity and consumption assumptions.</p>
+<p>For the CP-0024 slim transition, the project lead selected preparation <code>850P</code>
+under the same delegated calibration judgment after independent review. The
+retained ordinary handled-row workload at depth 42 used 2,181,566 units for
+P = 3,494; depth 43 used 2,330,800 units for P = 3,510 (3,401 source bytes and
+109 main nodes). These measurements carry the paid source census through complete
+image encoding and Rust emission; they exclude native-input path checks,
+generated-host building and execution. Encoding and emission took about 28 ms
+at depth 43. A 25% fitting reserve requires integer coefficient 831; 850 grants
+2,983,500 units, about 28% above that observation. The former <code>125P</code> allowance
+would require an 81% reduction in complete preparation work for this input.
+Changing the coefficient avoids new encoding or caching machinery for this
+measured cost. These two fitting cases are not a universal bound. The cumulative
+meter still pays native-input checks, and all bootstrap, overflow, exhaustion,
+depth and separate phase limits remain unchanged. Normal depth-42/43 preparation
+and native startup verification remain required.</p>
 <h2 id="context">Context</h2>
-<p>DN-0036 established resource/Core/evaluator and native lifecycle evidence, but
-retained library-specific Rust manifests/adapters and a SQLite C sentinel shim.
-Moving manifest text into Ash alone would leave the authoring objective unmet.
-The selected generated-bridge route makes fixed signatures available to Rust
-without introducing another compiler or evaluator.</p>
-<p>The user selected Rust bridges, copying first, optional C verification, the
-bounded Linux target, source libraries and a runnable evaluator host. A generic
-ABI engine adds another calling-convention runtime without removing ownership
-or conversion obligations. A native Ash backend and compiled library ecosystem
-would broaden this milestone beyond its authoring objective.</p>
+<p>The earlier foreign experiments established useful bridge and evaluator evidence
+but coupled it to numeric, owner, output, status, window and host policy. The
+smaller boundary retains generated typed calls and existing compiler/evaluator
+machinery while placing binding policy in ordinary Ash. Experimental lifecycle
+or full SQLite results do not enlarge the supported ABI.</p>
 <h2 id="consequences">Consequences</h2>
 <ul>
-<li>Adding a supported library changes Ash declarations and native inputs; adding
-an ABI shape/target changes common compiler/runtime support under its own scope.</li>
-<li>Binding authors can check headers separately from building clients; builds
-cannot obtain missing executable facts from verification output.</li>
-<li>A foreign program requires native host generation and linkage before execution.
-Ordinary Ash functions continue to run in the existing evaluator.</li>
-<li>Exact Core/contract identity and matching runtime versions are required; private
-embedding is not a stable serialized Ash artifact.</li>
-<li>Minimal arena uses common C allocation/release primitives, rather than requiring
-a C ABI shim for the experiment's Rust Arena backing. Typed storage is deferred.</li>
-<li>Native buffer requires explicit source caller migration. Cell stays unchanged.</li>
-<li>Preparation sharing and phase types address duplicated work without weakening
-independent validation or caching per-activation ownership.</li>
-<li>Implementation follows the proposal/task workflow and AD-0011. The milestone
-uses <code>integration/ffi-ash</code>; Main changes only at the final integration gate.</li>
+<li>Adding a binding within the supported mapping changes Ash declarations and
+native inputs. A new ABI shape or target requires separately authorized work.</li>
+<li>Native validity, retention and release remain binding assumptions. Address is
+neither a resource nor proof of allocation or lifetime.</li>
+<li>Ordinary resources, cells, cleanup, handlers, work/depth limits and independent
+source/Core/image validation retain their existing responsibilities.</li>
+<li>There is no mandatory header-checking tool, FFI-specific artifact protocol,
+protected approval or security receipt gate.</li>
+<li>Numeric ABI, out-pointers, callbacks, structs and foreign text/memory
+interpretation remain unsupported gaps.</li>
 </ul>
 <h2 id="verification">Verification</h2>
-<p>Before Main adoption, review the specification's implemented semantic account
-and complete member/access forms against SQLite, native buffer and minimal
-arena. Require a generated executable for each library, static/shared link
-evidence, reproducible commands and actual native ownership/access observations.
-Existing realistic copying and persistence programs are comparison cases.</p>
-<p>Inspect generated Rust to establish exact signature/origin mapping and absence
-of library-specific policy or a C runtime shim. Reject malformed contracts, target
-shapes, bridge registrations and reconstructed/transformed Core independently.
-Run optional header verification separately, including a deliberate mismatch.
-Measure preparation reuse and added checking work without altering depth limits.
-Record exact source/configuration pins and run the full integrated gate before
-the final Main PR and milestone closure.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#decision">Decision</a><a href="#context">Context</a><a href="#consequences">Consequences</a><a href="#verification">Verification</a></nav><div class="aside-note"><p>These records explain non-language choices at the source revision linked above. Read each decision’s status, scope, and verification requirements.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent architectural decisions"><a rel="prev" href="/ash/docs/decisions/ad-0012-proof-development-feedback-and-build-reuse/">← AD-0012: Proof development feedback and build reuse</a><a rel="next" href="/ash/docs/decisions/ad-0014-rust-verification-stage-reuse/">AD-0014: Rust verification stage reuse →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>
+<p>Require real pointer/void/Bytes calls, ordinary source-handler overrides, missing
+binding refusal, null/equality, unsupported-signature rejection and ordinary
+cleanup on normal, error and checked-discard paths. Exercise static/shared native
+inputs, repeated source-independent embedded-image startup and malformed
+Core/image/registration rejection without weakening validation.</p>
+<p>The direct SQLite version/source-id getter canary is required. Non-null/equality
+observations do not read its text or establish full database coverage. Numeric
+and out-pointer requirements of open/prepare remain gaps. Inspect generated Rust
+for exact typed pointer/void signatures and absence of library-specific policy
+or a runtime C shim. Preserve normal depth-42/43 preparation and startup checks
+under the gas policy above. Final-head independent review and the normal full
+workspace gate remain required before integration and milestone closure.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#decision">Decision</a><a href="#context">Context</a><a href="#consequences">Consequences</a><a href="#verification">Verification</a></nav><div class="aside-note"><p>These records explain non-language choices at the source revision linked above. Read each decision’s status, scope, and verification requirements.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent architectural decisions"><a rel="prev" href="/ash/docs/decisions/ad-0012-proof-development-feedback-and-build-reuse/">← AD-0012: Proof development feedback and build reuse</a><a rel="next" href="/ash/docs/decisions/ad-0014-rust-verification-stage-reuse/">AD-0014: Rust verification stage reuse →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

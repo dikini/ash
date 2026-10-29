@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Exhaustion-safe FFI reporting and ownership preservation · Ash</title><meta name="description" content="This design refinement belongs to DN-0057 and the copied-text and connection/statement cases. It resolves their remaining reporting/ownership policy at design level, subject to review, semantic adoption and…"><meta name="robots" content="index, follow"><meta property="og:title" content="Exhaustion-safe FFI reporting and ownership preservation · Ash"><meta property="og:description" content="This design refinement belongs to DN-0057 and the copied-text and connection/statement cases. It resolves their remaining reporting/ownership policy at design level, subject to review, semantic adoption and…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Exhaustion-safe FFI reporting and ownership preservation · Ash"><meta name="twitter:description" content="This design refinement belongs to DN-0057 and the copied-text and connection/statement cases. It resolves their remaining reporting/ownership policy at design level, subject to review, semantic adoption and…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Exhaustion-safe FFI reporting and ownership preservation","headline":"Exhaustion-safe FFI reporting and ownership preservation","description":"This design refinement belongs to DN-0057 and the copied-text and connection/statement cases. It resolves their remaining reporting/ownership policy at design level, subject to review, semantic adoption and…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="exhaustion-safe-ffi-reporting-and-ownership-preservation" data-pagefind-meta="title">Exhaustion-safe FFI reporting and ownership preservation</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This design refinement belongs to
+<a href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057</a> and the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/">copied-text and connection/statement cases</a>.
+It resolves their remaining reporting/ownership policy at design level,
+subject to review, semantic adoption and implementation evidence. It selects
+no source syntax and authorizes no implementation.</p>
+<h2 id="common-contract-and-existing-limits">Common contract and existing limits</h2>
+<p>These rules are platform-independent. They require an executor to support
+admission, bounded control records, unique owner tracking and disposition
+reporting. Isolated execution additionally requires session invalidation,
+termination requests and observation of actual process termination. Exact
+platform mechanisms belong to a deployment profile; this document requires
+no particular executable format, syscall, allocator or process-control API.</p>
+<p>Current Ash's <a href="https://github.com/dikini/ash-lang/blob/2766e8260e2590d9ebdca7abd699115b3cd02a8a/spec/dynamic-semantics.md#scoped-native-buffer-execution">native-buffer execution</a>
+prepares storage and release work before native allocation, keeps internal
+exhaustion terminal, and gives no unconditional teardown guarantee. Its
+<a href="/ash/spec/dynamic-semantics/#typed-failure-reporting">typed failure reporting</a>
+keeps body outcomes separate from completion errors. These are constraints
+to preserve, not evidence that general FFI already exists.
+The experimental <a href="https://github.com/dikini/ash-lang/blob/2766e8260e2590d9ebdca7abd699115b3cd02a8a/src/foreign/runtime.rs">runtime</a> and
+<a href="https://github.com/dikini/ash-lang/blob/2766e8260e2590d9ebdca7abd699115b3cd02a8a/src/eval/foreign.rs">evaluator</a> additionally distinguish consumed and
+retained owners from fallible error conversion. Transfer that distinction
+without adopting the whole experimental adapter architecture.</p>
+<h2 id="failure-classes">Failure classes</h2>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#common-outcome-precedence">canonical precedence</a>
+and <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#common-exhaustion-domains">domain table</a> own
+classification. Evaluator/parent mandatory capacity failure is terminal to
+that evaluation. Isolated worker-runtime exhaustion is session failure to a
+healthy parent; a worker report cannot establish parent exhaustion. Returned
+native NOMEM remains a native outcome, not evidence about either runtime.</p>
+<p>A declared limit is an ordinary outcome only when its small result envelope
+has already been admitted. Optional diagnostics have a separate bounded
+allowance and may be skipped before allocation. Actual evaluator allocation
+failure stays terminal. No global budget refill or retry follows refusal.</p>
+<h2 id="pre-admission-and-reserved-records">Pre-admission and reserved records</h2>
+<p>Before native acquisition or an effectful call, reserve the control storage
+and fixed host work needed for all of that call's admitted outcomes:</p>
+<ul>
+<li>Exact contract/operation, actual owner references, call phase and native
+status slots; no formatted strings or dynamically copied provenance.</li>
+<li>Acquisition guard, fresh activation and dependency edges before acquiring
+a connection or statement, including partial-acquisition outcomes.</li>
+<li>Scope/access publication storage and its bounded success/failure envelope.</li>
+<li>Separate local-completion K and native-disposition records, ordered report
+slots, quarantine capacity,
+and dependency-ordered host-teardown bookkeeping for each admitted owner.</li>
+<li>For isolation, pending-request/session record, bounded outcome-frame storage,
+validation work, invalidation flag and supervisor shutdown/reaping records.</li>
+</ul>
+<p>Reservations precede native entry/dispatch, after operand evaluation as needed.
+Earlier operand effects are not rolled back on refusal. Reservations cannot
+be consumed by ordinary computation or optional diagnostic construction.
+Bound identity counters and refuse before entry rather than wrap or reuse IDs.</p>
+<p>Payload sizes not yet known, such as a column length, require a second check
+before allocating/copying that payload. The already reserved control record
+can retain the outcome of failing that check without allocating again.
+Pre-admitting a control record does not reserve an arbitrary result graph.</p>
+<p>Each owner reserves its own eventual disposition slot, not an unbounded event
+history. Retain ordered completion records until the enclosing report has
+been delivered or the runtime failure path has retained them. Charge retained
+history against explicit capacity; sequential acquisitions do not bypass that
+limit by releasing live-owner slots. Refuse new acquisition before native
+entry when the required report capacity is unavailable. Emergency records
+must not silently discard ownership facts or claim a truncated list complete.</p>
+<p>Fixed control/report capacity is a bounded host guarantee under an intact
+runtime. It does not reserve SQLite's internal allocations, make arbitrary
+source cleanup executable after exhaustion, or ensure native termination.</p>
+<h2 id="ownership-changes-precede-reporting">Ownership changes precede reporting</h2>
+<p>Track whether the call was not entered, entered but unresolved, or returned
+with a recorded outcome. Store native status, protocol transition and known
+consumption/retention in reserved slots immediately after a conforming return,
+before diagnostic queries, encoding, allocation or source-result construction.
+This host bookkeeping step must not allocate or charge unreserved work.</p>
+<p>Only the unique owner record establishes consumption. Access aliases, ordinary
+error constructors and optional diagnostics cannot change it. Once consumed,
+clear the native access and remove its dependency edge exactly once; later
+failure must not resurrect the owner or cause another native finish. Retained
+or uncertain ownership cannot authorize source reuse or backing release.</p>
+<p>Acquisition installs an unpublished guard immediately when the native contract
+establishes an owner. Publish access only after its dependency/activation and
+source-result admission succeed. If publication fails, the guard survives
+and follows its admitted disposal/quarantine path. A contradictory native
+address is not a conformingly acquired owner; follow the ABI profile's
+quarantine rule instead of calling a destructor through suspect output.</p>
+<h2 id="minimal-reporting-and-source-outcomes">Minimal reporting and source outcomes</h2>
+<p>Keep a fixed runtime failure record separate from ordinary Ash values. It
+contains cause/phase, operation and owner references, known native status,
+disposition, diagnostic-availability reason and report-completeness state.
+Use bounded IDs and references into already retained metadata. Creating this
+record requires no heap allocation, native diagnostic query or source callback.
+Rendering, localization and external output are later fallible operations;
+failure to render cannot change the retained ownership facts.</p>
+<p>For normal source completion, preserve the body result separately from ordered
+completion reports. K1–K9 in the canonical table govern exact-once local
+discharge. Session loss or quarantine permits local closure with a failure
+record, never a stale native finish. A consumed or retained finish outcome is
+recorded and discharges K before optional diagnostics; report failure cannot
+recreate either authority. Reserve the envelope and report links before the
+relevant ownership transitions. Materializing richer ordinary data may still fail;
+that is terminal runtime failure, not a fabricated successful source return.
+The runtime record can retain a reference to an already obtained body result
+without promising to serialize or deliver it after exhaustion.</p>
+<p>Primary runtime failure is not replaced by a later diagnostic or teardown
+failure. Preserve separately the native status already observed, each known
+owner disposition and subsequent completion/teardown failures. Missing detail
+is marked unavailable, never translated to successful release. This record
+is runtime evidence, not a first-class proof or source recovery mechanism.</p>
+<h2 id="copied-text-in-process">Copied text in-process</h2>
+<p>Admit fixed control/error delivery before entering the copy sequence. After
+kind, pointer and matching length checks, reserve copy/UTF-8 work and payload
+storage before reading the native interval. A configured length refusal is an
+ordinary boundary outcome; exhausted runtime work/storage is terminal.</p>
+<p>If admission fails, publish no string and close temporary access. The statement
+remains in its known row state if native behavior conformed; terminal failure
+does not continue the source body merely because that state is known.
+If native text conversion reports NOMEM, retain that native status distinctly
+from a later Ash allocation failure. Preserve the ABI profile's immediate
+error-probe ordering; do not attempt optional diagnostics first.</p>
+<p>Copy into unpublished storage and expose only the bytes actually written.
+UTF-8 rejection publishes no string. Successful publication transfers the
+independent value; later reporting or resource failure cannot invalidate it.
+An incomplete copy never becomes an empty successful string. Release scratch
+without granting an escaping native view or retrying the operation.</p>
+<h2 id="connection-and-statement-in-process">Connection and statement in-process</h2>
+<p>Use L1–L22 of the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#sqlite-acquisition-and-lifecycle-table">canonical lifecycle table</a>
+for partial acquisition, unpublished-owner disposal and consumption/retention.
+O4 records disposition before fallible reporting; O8 preserves it on evaluator
+exhaustion. No second error-to-ownership mapping is defined here.</p>
+<p>Consumed statement access cannot reappear even when source error construction
+fails. Known retained dependencies block enclosing destruction before native
+entry. Partial-owner disposal may itself fail or fail to return; neither
+reserved bookkeeping nor a destructor invocation proves release succeeded.</p>
+<h2 id="isolated-control-and-payload-delivery">Isolated control and payload delivery</h2>
+<p>Reserve parent pending-operation and acquisition/proxy capacity before sending
+any request bytes. The worker must reserve its guard/control capacity before
+native entry, but the parent never trusts it to have done so. Give every
+operation a fixed-size, independently bounded outcome frame, followed only by
+its declared bounded value payload and optional diagnostic payload. The
+outcome frame contains expected session/request/operation/resource identities,
+native outcome/status and permitted ownership/protocol disposition. Frames
+have no arbitrary embedded allocation size, pointer or source authority.</p>
+<p>Validate the complete outcome frame and expected transition with pre-admitted
+parent work/storage. A partial header, unvalidated frame or out-of-order reply
+establishes no completion. Once a complete frame is admitted, commit the
+known disposition before allocating or decoding later payloads. It is still
+a foreign report under the stated assumptions, not proof of worker behavior.</p>
+<p>Apply O1–O10 and X1–X5 from the canonical tables: preserve admitted control
+before later payload failure; distinguish worker exhaustion from parent
+exhaustion; never infer successful source delivery from control alone.
+Optional diagnostic draining is bounded and pre-admitted, or the session ends.</p>
+<p>An admitted native outcome without a required payload is not successful source
+delivery. Parent runtime exhaustion terminates evaluation; its already
+admitted supervisor path can invalidate/stop the worker without allocating a
+fresh request or relying on its cooperation. Oversized/malformed frames lose
+the session rather than cause unbounded buffering or draining. A worker that
+cannot send its reserved outcome may die; the parent still follows the
+unknown-completion path. No acknowledgement is presumed to arrive under OOM.</p>
+<h2 id="terminal-disposal-and-executor-obligations">Terminal disposal and executor obligations</h2>
+<p>On evaluator exhaustion X1, stop ordinary source evaluation and transfer
+unfinished K through K8 without claiming source cleanup. Do not invoke arbitrary
+source cleanup, replay completion, increase limits or promise source recovery.
+Worker exhaustion X4 instead loses that session: a healthy parent can handle
+the boundary failure and discharge its local scopes through K4 in order.
+Transfer live guards to already reserved host disposal records on terminal
+source evaluation, separately from local discharge in a healthy parent.
+Use retained dependency order; never discard backing while a dependent may
+still need it. Record whether native completion was unattempted, returned or
+unresolved so host teardown cannot replay an operation already known consumed.</p>
+<p>In-process teardown may invoke only the separately admitted native disposal
+path, not source code. It needs an explicit contract for each still-live owner.
+If a finish already refused, do not silently retry it as guard destruction.
+Retain/quarantine the owner and required backing when safe release cannot be
+established. This may retain native storage until host termination; capacity
+remains charged. There is no eventual-release or native-call time bound in
+this mode. External termination can prevent all subsequent reporting.</p>
+<p>In isolation, the supervisor requests termination using reserved platform
+control resources, observes actual termination and reaps before retiring the
+session's reservations. Until then, keep the session inaccessible, its grant
+reserved and its termination state explicit. Native completion not already
+acknowledged stays unknown; process reclamation is a different fact. Preserve
+persistent data/journals. Platform mechanisms and their limits belong to the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/">launch profile</a>, not this common contract.</p>
+<h2 id="closure-evidence">Closure evidence</h2>
+<p>Fault-inject each fallible reservation before entry and each conversion after
+return, separately from native NOMEM. Cover exact budget, one-short budget and
+a fresh sufficient run without retrying effects from the failed execution.
+Verify no partial value/owner publication and no loss of primary failure.</p>
+<p>For copied text, distinguish native conversion failure, configured size refusal,
+runtime allocation refusal, invalid UTF-8 and isolated payload loss. For
+ownership, inject failure after open returns a partial owner, after prepare
+returns a statement, after finalize consumption and after close retention.
+Observe exact-once consumption, preserved dependencies, unavailable diagnostics
+and no source continuation after terminal exhaustion.</p>
+<p>For isolation, fail before dispatch, during a partial outcome frame, after a
+complete consumed frame and during subsequent payload/diagnostic delivery.
+Exhaust normal evaluation while a request is pending and verify the supervisor
+does not need new allocation to invalidate and request termination. Test delayed
+reaping and refusal of further admission while reservations remain charged.
+Reserve-capacity accounting must include retained report history and quarantine.</p>
+<p>Together with the canonical transitions, SQLite policy, checked representation
+and explicit target/executor profiles, this supplies proposed design rules for
+the four identified blockers. The canonical tables own their combined meaning.
+It is not implementation or production-readiness evidence. Semantic adoption,
+architecture decisions and authorized delivery with positive/negative checks
+remain necessary. Syntax, exact runtime structs, wire encoding and platform
+API implementations remain unselected.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#common-contract-and-existing-limits">Common contract and existing limits</a><a href="#failure-classes">Failure classes</a><a href="#pre-admission-and-reserved-records">Pre-admission and reserved records</a><a href="#ownership-changes-precede-reporting">Ownership changes precede reporting</a><a href="#minimal-reporting-and-source-outcomes">Minimal reporting and source outcomes</a><a href="#copied-text-in-process">Copied text in-process</a><a href="#connection-and-statement-in-process">Connection and statement in-process</a><a href="#isolated-control-and-payload-delivery">Isolated control and payload delivery</a><a href="#terminal-disposal-and-executor-obligations">Terminal disposal and executor obligations</a><a href="#closure-evidence">Closure evidence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

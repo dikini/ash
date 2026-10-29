@@ -1,0 +1,151 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Ownerful in-process closure delta · Ash</title><meta name="description" content="Status: reviewed-input assessment, not an architecture choice, strict approval or startup assignment. AD-0015 remains owner-free scalar only. The accepted owner experiment contract authorizes separately assigned…"><meta name="robots" content="index, follow"><meta property="og:title" content="Ownerful in-process closure delta · Ash"><meta property="og:description" content="Status: reviewed-input assessment, not an architecture choice, strict approval or startup assignment. AD-0015 remains owner-free scalar only. The accepted owner experiment contract authorizes separately assigned…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Ownerful in-process closure delta · Ash"><meta name="twitter:description" content="Status: reviewed-input assessment, not an architecture choice, strict approval or startup assignment. AD-0015 remains owner-free scalar only. The accepted owner experiment contract authorizes separately assigned…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Ownerful in-process closure delta","headline":"Ownerful in-process closure delta","description":"Status: reviewed-input assessment, not an architecture choice, strict approval or startup assignment. AD-0015 remains owner-free scalar only. The accepted owner experiment contract authorizes separately assigned…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="ownerful-in-process-closure-delta" data-pagefind-meta="title">Ownerful in-process closure delta</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>Status: reviewed-input assessment, not an architecture choice, strict approval or
+startup assignment. AD-0015 remains owner-free scalar only. The accepted owner
+experiment contract authorizes separately assigned evidence gates, not ownerful
+runtime semantics. Exact read inputs are in <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment-inputs/inputs.json">inputs.json</a>. No compiler,
+linker, trace or native image ran for the assessment. The separately assigned
+header query and syntax result below subsequently passed independent audit.</p>
+<h2 id="what-now-exists">What now exists</h2>
+<p>The fifth image is 71,022,184 bytes, SHA-256
+52f09983205ecb2b524a3572fba267e79e28057c933f6408f7fde0f3ac42bc65.
+Its complete 100,345,205-byte map is SHA-256
+43348533a205d18534436b7c9bb932d6b86e733c3ec3162b8b86703f2fb4997b.
+Static ELF facts and exact source/tool/generated before/after correspondence are
+observed. The map has 78 LOAD records, 68 existing records covering 67 paths,
+and 10 absent linker temporaries. This does not establish a fully hashed native
+closure, source-to-installed-libc reproduction or absence of runtime loading.
+The two source-requested symbols are malloc and free, not abs. Rust/runtime
+allocation already existed in the scalar image, so this is not evidence that
+allocator machinery is entirely new; the explicit native owner lifetime and
+irreversible call/report/cleanup obligations are new to this binding class.</p>
+<p>The exact generated main.rs declares <code>malloc(usize) -&gt; void*</code> and <code>free(void*)</code>, with
+fixed private coordinates and expected-facts association. Allocate accepts one
+USize operand; readiness.returned arms the returned pointer before an ordinary
+Ash reporting step. Free takes the admitted current address and returns void.
+The source owner is dependency-free, opaque, nullable acquisition, consumes on
+void teardown. No native read/byte/window callback is generated. Entry requests
+size 8 and its handler returns stored source data 8; it does not read native memory.
+The size 9 refusal branch exists in producer source but is not this fixed entry.</p>
+<p>The selected source runtime reserves guard storage before native entry and arms
+NonNull immediately after return (source_owner_runtime.rs:674–839). RawOwnerGuard
+removes its address before invoking destruction (around 299); ordinary storage
+close/drop/quarantine paths are around 372–415,492–506,545–634. These are reviewed
+source mechanisms, not an observed fifth-image cleanup run. Process exit or a
+printed completion cannot independently prove native destructor truth. The
+private image startup decoder/fact/bridge correspondence path is build/mod.rs:
+320 onward; generated main prints either output or error. Checked-profile
+runtime admission and CP-0024 O/K completion do not follow from this legacy path.</p>
+<h2 id="transfer-and-additional-obligations">Transfer and additional obligations</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Transferable support</th>
+<th>Additional ownerful condition or unknown</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Whole static image</td>
+<td>Same target/ET_EXEC/no INTERP/DYNAMIC mechanism and final-image pinning design</td>
+<td>This exact evaluator/bridge/payload/runtime/native image and new LOAD census need their own receipt and approval; old scalar approval is inapplicable.</td>
+</tr>
+<tr>
+<td>Locale/loading</td>
+<td>Scalar audit's conditional built-in C locale/gettext/strerror reasoning; same libc.a hash</td>
+<td>Preserve C locale in global/every thread and exclude direct/indirect plugin/NSS/charset loading across allocator/error/destruction paths too. Retained loader names are not observed loads.</td>
+</tr>
+<tr>
+<td>Allocation</td>
+<td>Existing runtime already allocates; exact bridge uses size_t and fixed 8</td>
+<td>Review/trust installed allocator initialization, arenas/thread/TLS, locking, native allocation failure and allocator diagnostics under the fixed context. No unexplored tunable/plugin/debug allocator configuration. Source correspondence is not supplied merely by header success.</td>
+</tr>
+<tr>
+<td>Native ownership</td>
+<td>Exact malloc/free signatures and generated current operand plan; real guard source</td>
+<td>Trust nonnull allocation validity/extent/alignment, same allocator/free compatibility, valid live pointer exactly once, synchronous return and truthful declared consuming disposition. Runtime/native memory integrity remains trusted. Wrong/double/free-after-loss can corrupt or terminate the whole host.</td>
+</tr>
+<tr>
+<td>Acquisition/report gap</td>
+<td>Source reserves storage and arms destruction before report</td>
+<td>Establish exact deployed producer/runtime applicability for null, allocation/report refusal, panic/unwind and abandoned source continuation. No claim native return implies source completion or that resource preparation cannot fail.</td>
+</tr>
+<tr>
+<td>Teardown/shutdown</td>
+<td>Existing finite startup/error/unwind/shutdown closure contract</td>
+<td>Include native free, pending/abandoned guard close, registered destructors, partial initialization and allocator reentrancy/abort behavior. Whole host loss can prevent any cleanup; neither timeout/reaping nor process exit proves free ran.</td>
+</tr>
+<tr>
+<td>Accounting/group</td>
+<td>Scalar architecture has no owner groups</td>
+<td>Later checked implementation must reserve/account the connected owner group before acquisition, preserve generation/identity/dependencies and one-attempt/quarantine rules. Legacy independent guard/storage evidence is not F4 checked group/O/K evidence.</td>
+</tr>
+<tr>
+<td>Startup/finalizers</td>
+<td>Review method for _start/_init/_fini/arrays/IFUNC/TLS/registrations transfers</td>
+<td>Scalar constructor-array counts do not transfer to this image. Exact fifth initializers, thread/signal entries, registered cleanup, Rust panic/backtrace/unwind and shutdown conformity need their own bounded review or explicit trusted applicability.</td>
+</tr>
+<tr>
+<td>Deployment/admission</td>
+<td>Independent protected approval, administrator context association and sealed same-fd design can be proposed for reuse</td>
+<td>None is provisioned/enforced by packaging. Host authority/supplementary groups retained; no isolation/availability/native truth guarantee. Changed image/context/policy must refuse before native initialization or allocation.</td>
+</tr>
+</tbody>
+</table>
+<p>The exact libc.a agrees with the earlier scalar audit's installed package, but
+that audit's Ubuntu import is patches-unapplied and local Rust sources do not
+reproduce precompiled std. Its 81-input manifest does not contain malloc.c;
+there is no newly reviewed allocator implementation source here. The earlier
+nine missing scalar temporary inputs are historical; this image has its own ten
+missing temporaries, not an inherited completed closure. A small bounded name
+selection in <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment-inputs/map-examples.json">map-examples.json</a> records retained allocator/loading/exit names;
+it is not a call-graph or all-path reachability proof. A future trace might
+expose a violation, but absence in one run cannot discharge the closure premise.</p>
+<h2 id="smallest-justified-next-action">Smallest justified next action</h2>
+<ol>
+<li>Completed and independently audited: the separately assigned query found
+27 headers plus exact source; the subsequent syntax-only gate passed C
+target/prototype/size_t/pointer assertions with all 28 frozen inputs equal
+before/after and equal emitted dependency set/hash. See the <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/query/discovery-receipt.json">query receipt</a>
+and <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/syntax/syntax-receipt.json">syntax receipt</a>. This is conditional installed-header
+evidence, not libc implementation or owner behavior. Original discovery
+remains post-query snapshots, not retrospective byte-history proof.</li>
+<li>Prepare one <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/linux-owner-header-closure-evidence/ownerful-premise.proposed.json">proposed finite ownerful closure applicability record</a> for independent
+review: exact producer/runtime/native/bridge/payload/image/map/header context;
+malloc/free assumptions above; C-locale/no-loading/startup/error/unwind/cleanup
+conformity; host-loss and checked-group exclusions. Use existing producer
+receipt plus independent approval, no new registry or self-authorizing flag.
+Ten absent temporaries and exact distribution/precompiled-runtime provenance
+are residual trust limits. Do not require a formal whole-libc proof or pretend
+digest equality proves these premises. An ownerful decision remains separate.</li>
+<li>After the necessary exact review, a trusted diagnostic could ask only whether
+this exact legacy entry reaches acquisition/read/teardown/report from a sealed
+image under fixed argv/empty environment and bounded output/deadline/reaping.
+Preparation must freeze exact expected rendering from source and identify
+allocation-refused versus acquired/completed outcomes before approval. A
+successful printed report would not prove memory reads, destructor internals,
+checked O/K, reserved groups, host-loss cleanup, loading exclusion or isolation.
+It requires a new exact receipt/image/policy-specific approval; no old scalar
+or possible-loading approval can be silently reused or called strict.</li>
+</ol>
+<p>This sequence advances actual ownerful evidence rather than substituting scalar
+execution. F4 acquisition/call/copy/guard/quarantine/completion accounting, F6
+immutable checked receipt/admission/approval/context enforcement and F7 isolation
+still need connected product delivery and hostile/budget/fault tests. Declared
+C-to-S dependencies, bytes/windows, SQLite and the full FFI milestone remain
+visible; this bounded malloc/free assessment neither accepts nor removes them.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#what-now-exists">What now exists</a><a href="#transfer-and-additional-obligations">Transfer and additional obligations</a><a href="#smallest-justified-next-action">Smallest justified next action</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

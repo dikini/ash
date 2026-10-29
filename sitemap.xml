@@ -4,6 +4,7 @@
   <url><loc>https://dikini.github.io/ash/contribute/</loc><lastmod>2026-10-18</lastmod></url>
   <url><loc>https://dikini.github.io/ash/diaries/</loc></url>
   <url><loc>https://dikini.github.io/ash/diaries/exploring-verification/</loc><lastmod>2026-10-23</lastmod></url>
+  <url><loc>https://dikini.github.io/ash/diaries/working-on-ffi/</loc><lastmod>2026-10-29</lastmod></url>
   <url><loc>https://dikini.github.io/ash/discover/</loc><lastmod>2026-10-18</lastmod></url>
   <url><loc>https://dikini.github.io/ash/docs/</loc><lastmod>2026-10-19</lastmod></url>
   <url><loc>https://dikini.github.io/ash/docs/decisions/</loc></url>
@@ -72,8 +73,12 @@
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0047-ecs-and-open-heterogeneous-stores/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0048-pure-core-kernels-and-parallel-lowering/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0050-native-program-gas-estimates/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/dn-0057-checked-ffi-module-boundaries/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/capture-discard-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/local-newtype-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/milestone-closure-evidence/</loc></url>
@@ -84,8 +89,40 @@
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/resume-required-effect-kernel-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/scoped-evidence-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/synchronous-hooks-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/checked-ffi-evidence-map/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/dn-0036-readiness/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-inprocess-probe/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-inprocess-probe/generated-ash/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-inprocess-probe/generated-ash/diagnostic-addendum/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-inprocess-probe/generated-ash/diagnostic/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-inprocess-probe/requirements/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-inprocess-probe/scalar-closure/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-architecture-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-diagnostic-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-diagnostic-evidence/preparation/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/assessment/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/query/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-header-closure-evidence/syntax/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-inprocess-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-inprocess-experiment/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-inprocess-probe/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-map128-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-owner-static-packaging-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-profile-experiment/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-profile-probe/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-checked-representation/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-consistency-review/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-transitions/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/generic-cell/evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/lexical-regions/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/lexical-regions/correspondence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/lexical-regions/evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/lib-ash/kinds-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/lib-ash/method-parameters-evidence/</loc></url>
@@ -143,6 +180,9 @@
   <url><loc>https://dikini.github.io/ash/docs/design/provider-experiments/resource-calibration/sqlite-rust/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/provider-experiments/semantics/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/provider-experiments/sqlite-copying-delivery-2026-10-08/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/correspondence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/drain-correspondence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/template/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/install/</loc><lastmod>2026-10-18</lastmod></url>
   <url><loc>https://dikini.github.io/ash/docs/tools/</loc></url>

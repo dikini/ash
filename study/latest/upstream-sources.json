@@ -180,8 +180,24 @@
         "text": "multiply_three : Int -> Int -> Int -> Int"
       }
     ],
-    "assets": [],
-    "sha256": "06dc83684c225ea73e6e660ed1b2ad5010c7b8061899e0d42f52374bd11e1beb",
+    "assets": [
+      {
+        "source": "content/learn/using-more-than-one-input/assets/fig-add-types/figure.svg",
+        "staged": "assets/source-947f7d6ad29a1821-figure.svg",
+        "sha256": "6e772a8fc175cbba38d93fb4325bce485d22f39fa8215275bd856e5e9c187cf7"
+      },
+      {
+        "source": "content/learn/using-more-than-one-input/assets/fig-add-type-value/figure.svg",
+        "staged": "assets/source-2566cbcfd25e9bdf-figure.svg",
+        "sha256": "4bef304638a3e9069dbe0bca53036ac7a4eb500f16d91888553dfcaa291c974d"
+      },
+      {
+        "source": "content/learn/using-more-than-one-input/assets/fig-add-20-application/figure.svg",
+        "staged": "assets/source-a19c0da468099cc1-figure.svg",
+        "sha256": "077f0d66d01d927f2f13c9e836c76492bdeb992a03aed07c7c8d0f734783d51f"
+      }
+    ],
+    "sha256": "b422265350de57b55f12a66ec5c43f56b8c111cb4ae08955392ea09fb1c8a61e",
     "role": "lesson",
     "title": "Using more than one input",
     "anchor": "using-more-than-one-input",
@@ -324,8 +340,19 @@
         "text": "sum_and_product : (Int, Int) -> (Int, Int)"
       }
     ],
-    "assets": [],
-    "sha256": "a552423768de8829fda21ae7644b331fc213aa8083a92f39d5f9cb79ea25b1fb",
+    "assets": [
+      {
+        "source": "content/learn/values-travel-together/assets/fig-sum-pair/figure.svg",
+        "staged": "assets/source-e953eae2f9f13750-figure.svg",
+        "sha256": "4ed46b14508a89a210a30892e520f430e9db4aa23ebcc1e74d25c97893ad9f2a"
+      },
+      {
+        "source": "content/learn/values-travel-together/assets/fig-add-inputs/figure.svg",
+        "staged": "assets/source-0e681a8d3faae682-figure.svg",
+        "sha256": "5b512f336e6158e20a70b671e09d984af281c713bffccca816ed94e0a845686f"
+      }
+    ],
+    "sha256": "812844a590b0075380f2842431d5b64bcde7ee5feb5386653bb4e97d82d51900",
     "role": "lesson",
     "title": "Making values travel together",
     "anchor": "making-values-travel-together",
@@ -3049,12 +3076,32 @@
     ],
     "assets": [
       {
-        "source": "content/cases/guaranteeing-logarithmic-retrieval/assets/tree-repair.svg",
-        "staged": "assets/source-daa9ea2c4b0cbd79-tree-repair.svg",
-        "sha256": "fed20cd634aea631348bcb8ee165e91096c47a0271356f97713d2ac34a602585"
+        "source": "content/cases/guaranteeing-logarithmic-retrieval/assets/fig-restore-left-left/figure.svg",
+        "staged": "assets/source-939354727ea109d3-figure.svg",
+        "sha256": "a0d47826249fdda473beeb8b0bdc257b35766b567a937c69c38d33aca461d290"
+      },
+      {
+        "source": "content/cases/guaranteeing-logarithmic-retrieval/assets/fig-restore-left-right/figure.svg",
+        "staged": "assets/source-e5a22cb4b9191848-figure.svg",
+        "sha256": "3e7090b04f7f0fb9647d24dcb069da45b6beb7099e806c934861c20a405aa2b5"
+      },
+      {
+        "source": "content/cases/guaranteeing-logarithmic-retrieval/assets/fig-restore-right-left/figure.svg",
+        "staged": "assets/source-2dc2002adcc5eca9-figure.svg",
+        "sha256": "12a45901f57a92a535765773a5b758feadb399246ce4924abf77a80255792c28"
+      },
+      {
+        "source": "content/cases/guaranteeing-logarithmic-retrieval/assets/fig-restore-right-right/figure.svg",
+        "staged": "assets/source-e72f01e38eed3427-figure.svg",
+        "sha256": "60124fa76041ec7ad9931eac6b002fd0c8f9a5d4fcb9e0ca82b00e35a9aab0a1"
+      },
+      {
+        "source": "content/cases/guaranteeing-logarithmic-retrieval/assets/fig-tree-repair/figure.svg",
+        "staged": "assets/source-a0461b1f944e4e01-figure.svg",
+        "sha256": "6f8496633fe08157e684bc20a1ad752fdaff4740d723fa43e3ceefa12eb5b8c2"
       }
     ],
-    "sha256": "64cdceb56c413cd3602122e747b84380d0b5ac2c6eea9de6aff3b645cdae0ad8",
+    "sha256": "e180f2d02531ea52caa5b06cd43842d8b3e70862883689d8aca2134f75744fd3",
     "role": "lesson",
     "title": "Guaranteeing logarithmic retrieval",
     "anchor": "guaranteeing-logarithmic-retrieval",

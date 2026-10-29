@@ -1,0 +1,355 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Checked representation for the minimal FFI cases · Ash</title><meta name="description" content="This design refinement belongs to DN-0057. It specifies candidate checked contracts, effects and dependencies for the copied-text and connection/statement cases, using their ABI profile. It selects no source syntax…"><meta name="robots" content="index, follow"><meta property="og:title" content="Checked representation for the minimal FFI cases · Ash"><meta property="og:description" content="This design refinement belongs to DN-0057. It specifies candidate checked contracts, effects and dependencies for the copied-text and connection/statement cases, using their ABI profile. It selects no source syntax…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Checked representation for the minimal FFI cases · Ash"><meta name="twitter:description" content="This design refinement belongs to DN-0057. It specifies candidate checked contracts, effects and dependencies for the copied-text and connection/statement cases, using their ABI profile. It selects no source syntax…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-checked-representation/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-checked-representation/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-checked-representation.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Checked representation for the minimal FFI cases","headline":"Checked representation for the minimal FFI cases","description":"This design refinement belongs to DN-0057. It specifies candidate checked contracts, effects and dependencies for the copied-text and connection/statement cases, using their ABI profile. It selects no source syntax…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-checked-representation/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-checked-representation/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-checked-representation.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="checked-representation-for-the-minimal-ffi-cases" data-pagefind-meta="title">Checked representation for the minimal FFI cases</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-checked-representation.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This design refinement belongs to
+<a href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057</a>. It specifies candidate
+checked contracts, effects and dependencies for the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/">copied-text and connection/statement cases</a>,
+using their <a href="/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/">ABI profile</a>. It selects no source
+syntax or Rust encoding, defines no current Ash semantics and authorizes no
+implementation.</p>
+<h2 id="existing-boundaries-and-representation-choice">Existing boundaries and representation choice</h2>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/">canonical transition tables</a> own outcome,
+exhaustion-domain and lifecycle rules. Records below carry all those state
+coordinates, pending-operation phases and K; no single protocol tag replaces
+binding validity, access, native disposition or session state. Admission checks
+live source permissions; failure processing uses pending/owner records without
+requiring them to remain live. SQLite signatures and native assumptions belong
+to the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/">SQLite policy</a>, not a target profile.</p>
+<p>The current <a href="/ash/spec/elaboration/">elaboration contract</a> authenticates
+module identities, retains exact computation rows, checks capture summaries
+and lowers builtin resource scopes. It adds no general FFI. The
+<a href="/ash/spec/dynamic-semantics/#scoped-cell-execution">scoped runtime contract</a>
+distinguishes scope-owned completion from reusable access and fresh dynamic
+activations from static identities.
+<a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a> requires structural
+types, causal provenance and independent dialect validation.</p>
+<p>The experimental <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/foreign.rs">foreign facts</a> and
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/foreign/runtime.rs">runtime</a> already separate defining operation,
+state lineage, independent results, acquisition and consumption/retention.
+This transfers as evidence for those distinctions, not as adopted source
+semantics. The existing manifest or its in-memory allocation identity is not
+the selected public contract or a persistent artifact-authentication scheme.</p>
+<p>Choose one canonical checked semantic contract with phase-specific projections.
+Keep operation semantics and module summaries target-independent. Declared
+foreign representation roles and required executor capabilities are common
+facts; concrete sizes, layouts, native entries and deployment mechanisms belong
+to a separately checked target realization. It refers back to the same
+original semantic identities and cannot redefine their obligations. No
+Linux-specific syscall or executable format enters ordinary effect rows or
+dependency summaries.</p>
+<p>Do not maintain independently authored module, Core, ABI and runtime contracts.
+An ABI-only descriptor lacks access and ownership facts; ordinary function
+types alone cannot express hidden captures, native validity or completion.
+Runtime monitoring alone cannot prevent static scope escape. Each stage must
+check the obligations for which it has evidence.</p>
+<h2 id="canonical-checked-records">Canonical checked records</h2>
+<p>Names below describe compiler data roles, not source forms or concrete structs.
+Each reference resolves to an admitted original declaration, not a matching
+spelling, symbol address, constructor shape or digest alone.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Record</th>
+<th>Required semantic information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Foreign contract</td>
+<td>Defining module/declaration identities, causal origin, revision, native library requirement and ABI-profile reference.</td>
+</tr>
+<tr>
+<td>Resource family</td>
+<td>Defining nominal/effect identities; ordered kinded parameters; which parameter is the owned identity; dependency coordinates; acquisition and finish relations.</td>
+</tr>
+<tr>
+<td>Operation</td>
+<td>Exact defining operation identity and full value scheme; ordered type/row binders; exact computation row; operand paths and identity substitutions; required state checks; transitions by outcome.</td>
+</tr>
+<tr>
+<td>ABI relation</td>
+<td>Reference to the admitted operation's exact native signature, representations, sentinel roles, input intervals and initialized-output alternatives.</td>
+</tr>
+<tr>
+<td>Result relation</td>
+<td>Ordinary copied value, fresh guarded acquisition, or completion of the exact owner; dependency paths and publication requirements per alternative.</td>
+</tr>
+<tr>
+<td>Temporary access</td>
+<td>Source owner/activation coordinates, permitted native query sequence, invalidating operations, bounds/conversion checks and the point where independent publication ends native dependence.</td>
+</tr>
+<tr>
+<td>Assumption</td>
+<td>Defining identity, precise stated obligation, affected operations, target/configuration applicability and any separately admitted evidence.</td>
+</tr>
+<tr>
+<td>Wrapper summary</td>
+<td>Defining function and scheme, exact effect behavior, argument/result/capture dependency relations, required completion/control facts and transitive foreign assumptions.</td>
+</tr>
+</tbody>
+</table>
+<p>An operation's borrowed operands name exact tuple/field paths and their owner
+coordinates. A result relation distinguishes retained access from copied
+contents. State checks and transitions are a finite, operation-specific table;
+the first profile does not admit arbitrary user-supplied predicates as proofs
+of native state. Result constructors carry reports, not authority.</p>
+<p>Contract revisions distinguish incompatible facts. A content fingerprint may
+detect staleness but cannot authenticate a malicious replacement. Checking
+must establish identity, structural agreement and availability through the
+actual module route. Binding the resulting contract to a native executable
+artifact follows the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/#common-artifact-admission-obligations">artifact-admission policy</a>.</p>
+<h2 id="effects-and-execution-authority">Effects and execution authority</h2>
+<p>Retain three distinct judgments: which computation occurs, which owners a
+value depends on, and which scope owns completion. None implies either of the
+others. In particular, an independent copied result does not make its call
+pure, and an ordinary handler cannot manufacture native execution authority.</p>
+<p>Introduce one compiler-authenticated native-host effect family for this
+profile. Its exact instance is indexed by a lexical host identity H. This is
+a proposed addition, not a current builtin or a new kind of effect row.
+Ordinary operations use Ash's existing exact-instance rows. The trusted host
+boundary owns H, its execution mode and native execution authority; it
+outlives the connection group. The first profile uses one coarse native-host
+effect rather than claiming inferred filesystem or database-effect precision.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Operation in these cases</th>
+<th>Required computation effects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open connection</td>
+<td>Native-host instance H, plus actual operand-evaluation effects.</td>
+</tr>
+<tr>
+<td>Acquire statement under C</td>
+<td>Exact connection-operation instance C and native-host H.</td>
+</tr>
+<tr>
+<td>Step, bind, reset, clear, copied column under S</td>
+<td>Exact statement-operation instance S and native-host H.</td>
+</tr>
+<tr>
+<td>Finalize S or close C</td>
+<td>Exact owner-operation instance and native-host H, with the scope's authenticated completion authority.</td>
+</tr>
+<tr>
+<td>Pure UTF-8 check over already copied bytes</td>
+<td>Only its actual Ash computation effects; no native effect is introduced by historical origin of bytes.</td>
+</tr>
+</tbody>
+</table>
+<p>Resource handling may discharge its exact connection or statement instance.
+It must retain the native-host effect of actual foreign calls and required
+completion. An ordinary handler may simulate an operation without native
+execution; if its clause invokes native primitives it needs H and their
+authenticated contract. Neither simulation nor a same-shaped result can
+establish a native acquisition or consumed disposition.</p>
+<p>The explicit trusted execution boundary discharges H only for its configured
+host implementation. It accounts for initialization, native entry, native
+cleanup and isolated dispatch. Imports are passive and supply no host scope.
+The executable entry retains an empty outward row only after this boundary
+is validated. A semantic proposal must specify this addition to the current
+entry contract; it cannot silently waive the empty-row requirement.</p>
+<p>In-process and isolated implementations share the operation contracts and
+logical effect family. A host identity has one fixed execution mode and
+configuration during its lifetime. No automatic fallback or cross-host
+resource use is admitted. Mode-specific assumptions and failure outcomes
+remain inspectable; their containment guarantees are not equated by sharing
+an effect family.</p>
+<h2 id="dependency-representation">Dependency representation</h2>
+<p>Static dependencies refer to lexical owner identities and parameter positions.
+They never contain native pointers or dynamic session IDs. Retain these facts
+through generic instantiation, tuples, nominal payloads, closure captures,
+selected evidence and existing control summaries. A plain return type is
+insufficient when a closure or hidden field retains access.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Entity</th>
+<th>Required retained dependencies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connection access C</td>
+<td>Its scoped owner C and host H.</td>
+</tr>
+<tr>
+<td>Statement access S</td>
+<td>Its owner S, connection C and transitively host H.</td>
+</tr>
+<tr>
+<td>Closure using S</td>
+<td>All dependencies of its captured access and selected operations, even if its ordinary result is a string.</td>
+</tr>
+<tr>
+<td>Temporary text interval</td>
+<td>Exact statement/current-row window and group access; never a source-visible escaping value.</td>
+</tr>
+<tr>
+<td>Successfully copied string/null</td>
+<td>No native resource dependency contributed by this operation.</td>
+</tr>
+<tr>
+<td>Copied diagnostic/report</td>
+<td>No native dependency unless another actual payload field retains access. A report grants no finish permission.</td>
+</tr>
+</tbody>
+</table>
+<p>Dependencies of unrelated retained payloads are still preserved. Marking one
+field as copied cannot erase other captured owners. A value may cross a scope
+boundary only when all its retained dependencies outlive its admitted use.
+The scope's completion obligation is unique and is not a dependency that
+copying a handle can duplicate.</p>
+<p>Summaries express relations from actual arguments and captures to possible
+result positions, including closures and branch alternatives. Joins retain
+all possible dependencies; recursive summaries require a bounded fixed point.
+Specialization substitutes complete identity/type/row arguments, including
+those hidden by opacity. No caller needs the dependency's source body.
+Exhaustion admits no partial summary or permission. Work/storage reporting
+is refined by the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/">exhaustion design</a>.</p>
+<p>Protocol state is checked at runtime in this first profile. Successful state
+checks authorize only the current interaction; no general source typestate
+or first-class proof token is introduced. A failed operation cannot leave
+behind reusable evidence that the resource is still in its preceding state.</p>
+<h2 id="across-modules">Across modules</h2>
+<p>A checked module publishes its ordinary schemes and a body-free semantic
+projection containing the resource/operation/result relations needed by its
+exports, wrapper summaries, and transitive assumption references. Public
+inspection shows assumptions in terms of affected operations and guarantees;
+it does not expose private native layouts or constructors as source access.</p>
+<p>Opaque hidden identities remain available to compiler validation without
+becoming nameable or constructible by clients. Imports and re-exports preserve
+their exact defining origins and authorization routes. Aliasing does not
+mint a fresh resource family or operation. A dependency may expose only a safe
+wrapper while keeping raw primitives private; the wrapper's effects,
+dependencies and assumptions still compose into its clients' summaries.</p>
+<p>Summary admission checks the defining identities, schemes, substitutions and
+contract projection against authenticated dependency facts. Linking checks
+that all references resolve to the same admitted declarations and revisions.
+Do not trust a serialized checked flag, an imported report constructor or a
+copied identifier. Persistent module formats remain outside this decision;
+any later deserialization must re-establish these admission obligations.</p>
+<h2 id="through-core">Through Core</h2>
+<p>Keep native primitives in an authenticated operation family of Effect Core.
+Do not encode them as ordinary pure function applications or introduce an
+inhabited native operation into Pure Core. Candidate Core roles are native
+invocation, guarded acquisition, owner completion and bounded native copy.
+They may share the existing operation-family infrastructure; concrete node
+variants remain an architecture choice.</p>
+<p>Every retained occurrence references its canonical contract, full instantiated
+operand/result types and row, exact owner binders, operand paths and causal
+origin. Acquisition binds a fresh scoped identity and one completion owner;
+finish must reference that owner. A reusable access operand cannot substitute
+for it. Explicit scopes retain required completion/control behavior through
+capture, resume, discard and cleanup under the existing ownership discipline.</p>
+<p>Represent the text copy sequence as one bounded, non-suspending native
+interaction whose checked plan contains kind check, pointer query, immediate
+error probes, matching length query, bounds, copy and result admission.
+No source handler, callback or other native operation runs inside that open
+window. No temporary pointer value is exposed as an ordinary Core operand
+that can be stored or captured. This avoids a general borrow-token mechanism
+for the two selected cases while retaining independently checkable steps.</p>
+<p>Core validation reconstructs structural typing, exact rows, identity
+substitution, resource lineage, allowed operation roles, publication and
+completion relations, temporary-window order, and scope/capture dependencies
+from admitted facts. Source annotations and constructor APIs are not evidence
+that these checks passed. A target bridge plan is derived only from validated
+contracts/occurrences, not from a second authored signature inventory.</p>
+<p>Transforms must preserve effects, dependency and completion behavior. They
+cannot remove, duplicate or reorder a native interaction merely because its
+result is unused, independent, or represented by a pure value. Any changed
+occurrence or projection is revalidated; native windows cannot be split across
+suspension or reordered with step/reset/finalize. Share immutable contracts
+where identity is preserved, without caching per-activation ownership.</p>
+<h2 id="at-runtime">At runtime</h2>
+<p>Static binders map to fresh runtime activations on every acquisition. A host
+activation selects the configured executor. A connection record retains its
+host activation; a statement record retains the exact connection activation.
+The unique guard holds native ownership separately from aliases of access.
+The record stores live protocol state, dependencies, native disposition,
+source-access permission and the separate K state from the canonical
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#common-exact-once-local-completion">local completion table</a>.
+Core retains the same unique owner through capture/resume, including whether
+closure has started or local completion has already been recorded. Pointer
+reuse never reactivates old access.</p>
+<p>At call admission, authenticate the binding and actual activations, check
+liveness/state and serialized group access, then retain the entry snapshot
+and run the admitted plan. Observations, failures and local closure use their
+own pending/owner records and phase guards.
+Install known state/disposition transitions before fallible result decoding.
+Publish ordinary values only after their result relation is satisfied.
+Finalization error still consumes S; a retained owner protects its backing
+dependencies but grants no source lifetime extension. Quarantine records keep
+executor configuration and physical backing alive after source H/C scopes
+close; source discharge never substitutes for physical retirement. Follow
+the canonical dependency-retirement rules for consumption or process reclamation.</p>
+<p>In-process records contain private native handles. Isolated parent records
+contain session-bound remote references, while worker records contain native
+handles. Both use the same static owner lineage. The parent checks replies
+against its pending request and allowed transition table; worker-supplied IDs
+or consumed tags cannot create arbitrary local authority. Plausible false
+reports remain part of the declared native-behavior assumptions.</p>
+<p>Session loss marks the whole group inaccessible and preserves unknown native
+completion where applicable. Pending source obligations remain until their
+structural closing positions; Closing obligations settle locally on loss.
+K4 records one session-loss completion without dispatch or claiming native
+finalization. K7 prevents another local report when admitted finalize already
+discharged the owner. Physical records survive until safe reclamation; no
+old proxy becomes access to a replacement worker.</p>
+<h2 id="the-two-cases-end-to-end">The two cases end to end</h2>
+<p>For copied text, a client's imported wrapper summary requires S and H during
+the call and retains the actual statement dependencies in any returned reader
+closure. Specialization maps those identities to the caller's exact owners.
+Core validates the bounded copy plan; runtime checks the current row and
+activation. Successful string/null publication removes only the temporary
+native dependence of the copied contents. The call's effect remains recorded.
+In isolation, the parent repeats payload checks before publishing the same
+ordinary result, with no remote reference embedded in it.</p>
+<p>For statement acquisition, the imported contract relates a fresh S to the
+actual enclosing C and H. Core validates guard/publication and completion
+ownership; runtime installs that dependency before publishing access. Imported
+helpers cannot return access or a captured reader beyond S. On finalize, only
+the scope's completion owner authorizes consumption; the result report cannot
+invoke another finish. Known consumption removes S's native dependency edge
+once. Close refusal or quarantine preserves the necessary edges. In isolation,
+the same relations apply to parent proxies and worker owners, with session
+failure distinguished from acknowledged native consumption.</p>
+<h2 id="closure-evidence-and-remaining-limits">Closure evidence and remaining limits</h2>
+<p>Compare rejection at summary admission, linked/Core validation and runtime
+where applicable: same-spelled foreign declarations; re-exported or opaque
+identity substitution; forged independent-result facts; reader closures whose
+return type hides captured S; branch/recursive dependency loss; host-effect
+erasure; wrong-host use; copied access used as completion authority; transformed
+copy windows; duplicate finalize; and stale proxies after restart.</p>
+<p>Positive evidence must include independent checking of an imported copied-text
+helper without its source body, copied results surviving both resource scopes,
+captured readers remaining scoped, exact identity preservation through generic
+helpers and re-exports, and ownership/effect preservation through a retained
+Core transform in both execution modes. Reuse current capture/control checks
+and experimental lineage tests only within their demonstrated scope.</p>
+<p>This closes the representation choices for the two worked cases at design
+level, subject to review and later semantic adoption. A proposal must make
+the new host boundary and generic foreign-resource authority explicit. Exact
+Rust data structures, persistent formats and source syntax remain unselected.
+The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/">launch and artifact design</a> separates
+common admission obligations from the selected Linux containment realization.
+The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/">exhaustion design</a> refines common
+reporting and ownership preservation in both execution modes.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#existing-boundaries-and-representation-choice">Existing boundaries and representation choice</a><a href="#canonical-checked-records">Canonical checked records</a><a href="#effects-and-execution-authority">Effects and execution authority</a><a href="#dependency-representation">Dependency representation</a><a href="#across-modules">Across modules</a><a href="#through-core">Through Core</a><a href="#at-runtime">At runtime</a><a href="#the-two-cases-end-to-end">The two cases end to end</a><a href="#closure-evidence-and-remaining-limits">Closure evidence and remaining limits</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

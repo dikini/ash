@@ -1,0 +1,199 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>C3 drain analysis correspondence and limits · Ash</title><meta name="description" content="This map relates the bounded proof to the reviewed implementation of one focused Store query. The independently reviewed source completed the frozen AD-0012 gate. The linked validator runs this analysis for retained…"><meta name="robots" content="index, follow"><meta property="og:title" content="C3 drain analysis correspondence and limits · Ash"><meta property="og:description" content="This map relates the bounded proof to the reviewed implementation of one focused Store query. The independently reviewed source completed the frozen AD-0012 gate. The linked validator runs this analysis for retained…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="C3 drain analysis correspondence and limits · Ash"><meta name="twitter:description" content="This map relates the bounded proof to the reviewed implementation of one focused Store query. The independently reviewed source completed the frozen AD-0012 gate. The linked validator runs this analysis for retained…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/retained-control/drain-correspondence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/retained-control/drain-correspondence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/drain-correspondence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"C3 drain analysis correspondence and limits","headline":"C3 drain analysis correspondence and limits","description":"This map relates the bounded proof to the reviewed implementation of one focused Store query. The independently reviewed source completed the frozen AD-0012 gate. The linked validator runs this analysis for retained…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/retained-control/drain-correspondence/","@id":"https://dikini.github.io/ash/docs/design/retained-control/drain-correspondence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/drain-correspondence.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="c3-drain-analysis-correspondence-and-limits" data-pagefind-meta="title">C3 drain analysis correspondence and limits</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/drain-correspondence.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This map relates the <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/DrainSafety.lean">bounded proof</a> to the reviewed
+implementation of one focused Store query. The independently reviewed source
+completed the frozen <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/tasks/evidence/local-retained-control/c3-model/README.md">AD-0012 gate</a>.
+The linked validator runs this analysis for retained carriers. The connected
+C2/C3 checkpoint was independently verified at milestone commit
+<code>d256bef288ac6b828e475c9dcaaf710812405b7a</code>; C2 and C3 are accepted. This map
+is not a mechanized proof of the Rust compiler.</p>
+<h2 id="focused-analysis-and-closure">Focused analysis and closure</h2>
+<p>The ordinary discovery records each reached Store acquisition as a candidate
+and saves its entry state (<code>discover_boundary</code>). <code>check_focused_entries</code>
+requires every candidate to have an entry, reconstructs each occurrence with
+<code>restore_entry</code>, and starts the new focused Store with <code>DrainWork::Empty</code>.
+This seed describes a freshly acquired Store, not an arbitrary old summary.
+The focused query calls <code>discover</code> and tests <code>release_unsafe</code> only after that
+query has returned successfully. Each focused Resource return inspects the
+work on that actual predecessor; any value except Empty latches refusal.</p>
+<p>The linked validator authenticates the registry, carrier ports, types and
+scopes before reconstructing capture control. Its census selects
+<code>check_nodes_with_release</code> when the actual Core contains Store, RetainedRoot or
+Retain; other programs keep the ordinary capture check. Both paths charge the
+remaining shared Core work budget, including failed work. The capture graph's
+own fast path also recognizes RetainedRoot and Retain, including a generic
+root without a local Store. Subsequent checks must still succeed for admission.</p>
+<p><code>discover</code> retains normalized complete control States in <code>visited</code> and
+processes its pending queue. After the queue empties, it closes the value graph.
+If the graph revision grew, it directly requeues recorded call States and
+explicit-owner/retained request States, bypassing <code>visited</code> suppression. A
+call's delivered prefix is published only after its new successor and value
+work succeeds. A call waits for a value alternative at every strict argument
+port before delivering any callee or opaque-return successor, as the value
+transfer already does. An absent argument keeps the earlier prefix for replay;
+an unknown argument remains an alternative. New Store/key operands remain
+unresolved until their replay succeeds; any still unresolved after both
+queues stabilize fails. A work or allocation refusal returns failure, not a
+partial release result.</p>
+<p>This replay list does not omit a value-dependent Change to a prior Choice or
+Bind: <code>case_of</code> reads the borrowed immutable graph and a path-local facts map,
+not growing atoms or edges. A slot's <code>(expression, context)</code> identity is
+append-only, and facts are part of the complete State's equality and hash.
+Thus the same State has the same case read after a value revision. A different
+fact is a different State. Calls and owner/Store/key selection do read growing
+atoms and are the explicitly replayed cases. This stability argument does not
+by itself establish that a reused aggregate origin denotes the right dynamic
+value; that separate condition appears below.</p>
+<h2 id="local-transfer-and-physical-completion">Local transfer and physical completion</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Event</th>
+<th>Rust control/evaluator</th>
+<th>Lean evidence and condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Actual Probe</td>
+<td><code>requested</code> checks the driver before source-handler selection. <code>requested_native</code> requires the actual recent focused Store, exact canonical Probe and instance. It splits the current work and writes that answer to its result port immediately.</td>
+<td><code>selected_probe_sound</code> and <code>selected_probe_forget_origins_sound</code> require actual selected-provider and driver premises. A source handler's Bool is not an authentic Probe.</td>
+</tr>
+<tr>
+<td>Reads and results</td>
+<td><code>case_of</code> follows only path-local facts and the transparent expressions, with exact constructor and payload checks. Every <code>DrainProjection::assign</code> first drops all older aggregate origins, even if the assigned result is unknown. It retains earlier scalar cases. Executed Bind/arm and CaseReturn copy the read; CallReturn, Handler, Clause and Root return clear the map and omit returned aggregate origin.</td>
+<td><code>DrainSafety-v4.lean</code> proves global origin forgetting, read-to-assignment and read-to-return cases using <code>read_sound</code>. Resume uses the same <code>read_return_sound</code> rule: it retains the case and freshness, but clears the map and drops the incoming origin before assigning the captured request port. Calls snapshot every actual read before clearing facts, then assign each formal from that snapshot; the pointwise formal lemma retains earlier scalar formal cases.</td>
+</tr>
+<tr>
+<td>Reused contexts</td>
+<td>Calls, source-clause entry, Continue and focused acquisition discard caller facts; call arguments and returned cases omit aggregate origins. An unfactored binder is an <code>Expr::Slot</code>, where <code>case_of</code> stops rather than following global joined value edges. Every case assignment now forgets all origins already stored in the current facts, before it publishes the newly read case.</td>
+<td>The shared-Core fixture confirms that one aggregate and one Match can execute twice in one value context: the old false payload became the new true fact, and the old implementation allowed a Pending close. The current guard refuses that graph. For an ordinary Bind or arm, the introduced binder is out of scope in the initializer or scrutinee; a Match result cannot occur in its own descendant arm construction without a Core cycle. These are local conditions on a just-read incoming origin, not a claim that a static port is an occurrence. Resume's captured request port need not satisfy those syntactic conditions, so Resume drops its incoming origin. Static port equality and source-only call resets are not sufficient authority.</td>
+</tr>
+<tr>
+<td>Fresh root and finish</td>
+<td>Analysis pushes RetainedRoot outside the private Handler. Runtime installs the counted completion marker below the Handler; a restored cut likewise sits above a fresh marker, and its consumer's Some adapter sits below.</td>
+<td><code>enter_root_sound</code> applies on actual root admission. <code>finish_root_sound</code> and C1 <code>Step.finish</code> apply at the matching marker's real return after the clause suffix and owned cleanup, with <code>ReadyToFinish</code>, not when the Handler disappears.</td>
+</tr>
+<tr>
+<td>Retain and continued work</td>
+<td>Retain publishes a slot while the current private clause suffix still runs. The root marker remains counted. Continue uses a fresh marker and changes the analysis work to Unknown on both miss and live paths. Old retained entries are possible work, not exact slot counts.</td>
+<td>Retain changes the work view to Pending. C1 <code>Step.retain</code> is a macro through the actual administrative return; its <code>adminSuffixClear</code> premise is not asserted at the Retain instruction. Pending covers the intermediate saved slot and unfinished suffix.</td>
+</tr>
+<tr>
+<td>Closing</td>
+<td><code>close_segment</code> preserves armed cleanup before the focused Store and rejects abandonment of unfinished RetainedRoot or running cleanup. The focused Store's real return checks its predecessor. Runtime decrements the root only at <code>RetainedRootCompletion</code> pop and tests both active roots and live slots at Probe and release.</td>
+<td>C1 <code>finishOuterClose</code> requires actual empty work after normal cleanup; it is not justified by discarding the marker or by constructing a result. The outer-discard focused tests witness cleanup return before the same Store close, and reject missing drain or later Retain.</td>
+</tr>
+</tbody>
+</table>
+<p>The root/Continue, interpreter and support checks must have already succeeded
+for the same actual Store before these work facts are used. A partial failure
+teardown is separate from normal release. These facts do not prove that any
+particular source program passes linked validation.</p>
+<h2 id="full-state-relation-and-implementation-correspondence">Full-State relation and implementation correspondence</h2>
+<p>The proof domain is the finite collection of normalized <em>analysis</em> States
+in one successfully completed focused query. It is not the set of all
+runtime stacks, generations or recursive executions. A State includes the
+control position and context, active and captured edges, Store associations,
+retained records, and its work and case projection. Equal ports alone never
+identify two States. The normal-return relation pairs an actual full call
+entry with its matching returned full State, using the existing CallReturn,
+handler and clause continuation frames. Only after identifying both endpoints
+may their work and cases be projected. No projected-only relation is composed
+across different owners or stacks.</p>
+<p>For the correspondence, define <code>Step</code> from the existing control successor
+rules at the query's final value closure, before testing membership in the
+visited set. It includes both ordinary enqueue successors and successors of
+replayed call and owner requests. It does not mean "an edge already in
+visited." The finite universe used by Lean can include the observed States
+and all their one-step possible successors at that final closure; checking
+closure establishes that those successors are visited. Successful budgeted
+execution supplies a finite actual graph. It does not establish global
+termination of source execution or of an unbounded analysis.</p>
+<p>The worklist argument is:</p>
+<ol>
+<li><code>restore_entry</code> constructs the fresh focused Store seed and <code>discover</code>
+enqueues it through the same normalization and visited insertion as every
+other State. The seed is in the successful query's visited set.</li>
+<li>Each dequeued State expands every syntactic and control successor for its
+fixed full State. Queue exhaustion followed by successful <code>data.close</code>
+and unchanged <code>revision</code> means no newly propagated call target or
+Store/owner/key operand remains undelivered. On any revision change, every
+recorded value-dependent call and owner request is requeued directly, even
+if its State was already visited. A changed case fact creates a different
+State; a fixed State's case read is stable as explained above. Any
+unresolved retained operand causes failure after the loop. Therefore each
+final-closure <code>Step</code> from a visited State has its successor in visited,
+subject to the code-by-code successor audit below.</li>
+<li><code>Path</code> retains those whole-State edges; <code>path_is_visited</code> inducts from the
+actual seed using the successor-closure property. <code>Reach</code> has
+<code>R0 = {seed}</code> and <code>R(n+1) = Rn ∪ post(Rn)</code>. The existing finite-union lemma
+gives a finite bound. <code>finite_return_bound</code> similarly bounds the pairs of
+actual matching call entry and return States, including mutual and imported
+calls. It does not infer termination or pair an entry with an unmatched
+continuation.</li>
+<li>Every focused Store-close predecessor on such a path is visited. At that
+predecessor <code>returned</code> latches <code>release_unsafe</code> unless the work is Empty.
+A successful focused <code>discover</code> therefore provides the checked premise of
+<code>checked_close_is_quiet</code>; C1 <code>NoWork</code> follows only for the same represented
+Store close. The later retention, payload, support, resource and linked
+Core checks must still succeed before admission.</li>
+</ol>
+<p>The representation induction begins with the actual fresh Store's zero roots
+and live slots. At each actual selected transition, the local work lemmas keep
+its work represented: root admission uses <code>enter_root_sound</code>; actual Retain
+creates a live slot and uses <code>retain_sound</code>; Continue, stale/missing keys and
+unknown control widen to Unknown; only actual marker return may use
+<code>finish_root_sound</code>; the selected native Probe uses the real driver premise and
+splits on the provider's actual predicate. Old abstract retained records are
+may-work and are not counted as exact owners. An interrupted or failed move is
+not a normal successor. At actual case transfers, the Read lemmas preserve the
+value/work relation, and unknown cases explore all applicable arms. Work
+mutation expires old Probe freshness. These steps establish representation
+through the path; it is not assumed for the first time at an Empty close.</p>
+<p>The independent bounded review found no further missing worklist, completion
+or control transition in the v2 mapping. Its incoming-origin review identified
+Resume as the transfer without a syntactic destination condition; the current
+candidate drops that origin. The local forgetting lemma does not itself prove
+payload stability: the ordinary scope and graph conditions above are part of the
+concrete correspondence independently reviewed at <code>0f73745e</code>. The linked
+admission routing above is retained product behavior. The later C4 strict-call
+readiness repair preserves the recorded revision replay and was independently
+reviewed with its affected tests. This is not a Rust mechanization.</p>
+<h2 id="evidence-and-remaining-gates">Evidence and remaining gates</h2>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/tasks/evidence/local-retained-control/c3-model/review.md">independent review</a>
+pins product checkpoint <code>0f73745eeb897c9018638a210aa34c26ca53de9c</code>, the
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/DrainSafety.lean">model source</a>, its correspondence and the focused Rust
+receipts. The shared-Core regression reached the existing linked release gate
+after 23,857 work units; the focused query then refused the unsafe close.
+The retained regression family passed 94 tests at that checkpoint.</p>
+<p>The linked validator now admits the checked recursive and cleanup drains and
+refuses the corresponding undrained paths. Public source and image execution
+exercise both drains. The recursive drain also runs after linked identity and
+folding transforms. Fresh allocation under an allocator handler owned by the
+capture passes; the distinct external cleanup forwarder is rejected under the
+accepted interpreter-identity contract. Full C2/C3 acceptance and the connected
+checkpoint are recorded in <a href="https://github.com/dikini/ash-lang/pull/162">PR #162</a>.
+The later <a href="https://github.com/dikini/ash-lang/pull/163">C4 library delivery</a>
+was retained at <code>73f6304a69183682a94d85aa81f9b1a88c21ef5e</code> after its own
+fresh workspace checkpoint. C5 specification and final integration remain
+separate.</p>
+<p>The standalone Core validation allowance remains 983,040 units. In the public
+source driver, the outer-discard fixture used 1,309,582 of 78,225,000 units; its
+image startup used 1,355,242 of 1,753,834 units. Those allowances are computed
+from their inputs, and these measurements do not establish a bound for every
+program.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#focused-analysis-and-closure">Focused analysis and closure</a><a href="#local-transfer-and-physical-completion">Local transfer and physical completion</a><a href="#full-state-relation-and-implementation-correspondence">Full-State relation and implementation correspondence</a><a href="#evidence-and-remaining-gates">Evidence and remaining gates</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

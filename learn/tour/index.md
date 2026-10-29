@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/learn/tour/  
 Authority: website-guidance  
-Source revision: b47320fe24f76868c511dc0ba7636a532ccda9af
+Source revision: ceecbe838e306d461f75d8e60658bb4b2e4649d9
 
 This tour assumes you have written programs before. New to programming? Start with the [guided learning route](/ash/learn/#new-to-programming).
 

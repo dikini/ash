@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>The ash Executable · Ash</title><meta name="description" content="ash loads and runs one modular Ash program:"><meta name="robots" content="index, follow"><meta property="og:title" content="The ash Executable · Ash"><meta property="og:description" content="ash loads and runs one modular Ash program:"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="The ash Executable · Ash"><meta name="twitter:description" content="ash loads and runs one modular Ash program:"><meta property="og:url" content="https://dikini.github.io/ash/docs/tools/ash/"><link rel="canonical" href="https://dikini.github.io/ash/docs/tools/ash/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/tools/ash.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"The ash Executable","headline":"The ash Executable","description":"ash loads and runs one modular Ash program:","inLanguage":"en","url":"https://dikini.github.io/ash/docs/tools/ash/","@id":"https://dikini.github.io/ash/docs/tools/ash/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/tools/ash.md","version":"7949b6d9136b0152ee9104e67bd0451cb9db4727"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+</style><title>The ash Executable · Ash</title><meta name="description" content="ash loads and runs one modular Ash program:"><meta name="robots" content="index, follow"><meta property="og:title" content="The ash Executable · Ash"><meta property="og:description" content="ash loads and runs one modular Ash program:"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="The ash Executable · Ash"><meta name="twitter:description" content="ash loads and runs one modular Ash program:"><meta property="og:url" content="https://dikini.github.io/ash/docs/tools/ash/"><link rel="canonical" href="https://dikini.github.io/ash/docs/tools/ash/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/tools/ash.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"The ash Executable","headline":"The ash Executable","description":"ash loads and runs one modular Ash program:","inLanguage":"en","url":"https://dikini.github.io/ash/docs/tools/ash/","@id":"https://dikini.github.io/ash/docs/tools/ash/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/tools/ash.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,7 +13,7 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Tools</p><h1 id="the-ash-executable" data-pagefind-meta="title">The ash Executable</h1><p class="spec-source">Development tool documentation · <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/tools/ash.md">ash-lang <code>7949b6d</code></a></p></header><nav class="spec-chapters" aria-label="Tool documentation"><a href="/ash/docs/tools/">Overview</a><a href="/ash/docs/tools/ash/" aria-current="page">The ash Executable</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Tools</p><h1 id="the-ash-executable" data-pagefind-meta="title">The ash Executable</h1><p class="spec-source">Development tool documentation · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/tools/ash.md">ash-lang <code>67c79dd</code></a></p></header><nav class="spec-chapters" aria-label="Tool documentation"><a href="/ash/docs/tools/">Overview</a><a href="/ash/docs/tools/ash/" aria-current="page">The ash Executable</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
 <p><code>ash</code> loads and runs one modular Ash program:</p>
 <pre tabindex="0"><code class="language-text">ash [--message-format human|short|json] [--locale NAME] [--root name=path]... &lt;entry-file&gt;
 </code></pre>
@@ -21,12 +21,9 @@
 precede that path. The executable reads UTF-8 Ash source files and does not read
 a program from standard input.</p>
 <h2 id="building-an-executable">Building an executable</h2>
-<p>The program-build path supports the retained Pure subset, scalar/void foreign
-calls, declared dependent opaque owners, initialized byte resource scopes and
-scoped read-only copying windows on Linux x86-64 GNU. It
-compiles the source graph once
-and generates a Rust host containing private Core construction data, the
-existing evaluator and any required typed native bridges:</p>
+<p>The program-build path generates a Rust host containing private checked Core,
+the existing evaluator and typed native bridges on Linux x86-64 GNU. Foreign
+calls support Address/Bytes pointer arguments, Address results and Unit as C void:</p>
 <pre tabindex="0"><code class="language-text">ash build --output ./program [--target TARGET] [--cargo-target-dir PATH] \
     [--native-static PATH]... [--native-shared PATH]... entry.ash
 ./program
@@ -79,8 +76,7 @@ LD_LIBRARY_PATH="$PWD${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ./program
 <code>build::NativeLinkInput::SharedLibrary(PathBuf)</code> before <code>build::prepare_program</code>.
 Ordinary <code>ash entry.ash</code>, <code>driver::execute</code> and <code>driver::run_path</code> refuse required
 source-native bindings before Ash execution; they do not compile or link a host
-implicitly. The native-input options are unsupported by ordinary execution and
-<code>check-ffi</code>.</p>
+implicitly. The native-input options are unsupported by ordinary execution.</p>
 <p>For an existing authored <code>entry.ash</code> and regular static archive
 <code>libcounter.a</code>, a Rust caller can build the linked program with:</p>
 <pre tabindex="0"><code class="language-rust">use ash::build::{BuildConfiguration, NativeLinkInput, build_path};
@@ -112,160 +108,71 @@ canonicalizes the paths and checks the supported file kind: a regular static
 archive or an ELF64 little-endian x86-64 shared library. It preserves input
 order, including archive dependency order. These inputs do not supply Ash
 contract facts or prove that a binary follows the authored signature and foreign
-assumptions. The generated host checks its linked bridge registrations against
+assumptions. The generated host checks its supplied linked bridge registrations against
 its independently validated original contracts before Ash execution.</p>
 <p>Shared dependencies use the system loader. The build emits no automatic rpath
 and provides no runtime library-name resolver. Install dependencies in the
 loader's search path or set <code>LD_LIBRARY_PATH</code> explicitly for the generated
 process. A missing shared dependency can prevent the host from starting.</p>
 <h3 id="supported-foreign-execution">Supported foreign execution</h3>
-<p>The first source-native subset admits owner-free scalar calls and zero-operand
-<code>void</code> calls. Scalar representations are signed/unsigned 8-, 32-
-and 64-bit integers and the profile's 64-bit <code>size_t</code>. Ash <code>Int</code> remains
-mathematical: checked narrowing refuses an out-of-range input before the native
-call, reporting <code>Foreign.ConversionFailed</code>; a scalar reply widens exactly,
-including unsigned 64-bit results. A successful <code>void</code> call reports
-<code>Foreign.Returned(())</code> without reading a native result.</p>
-<p>Imports and generic helpers retain complete ordered Type/EffectRow arguments.
-Executable interpreter instances must be closed; unused row arguments are not
-removed from their identity. The generated host supplies the mandatory native
-interpretation, rather than selecting an ordinary Ash handler for a native
-symbol. Work/storage admission failures terminate execution instead of becoming
-conversion outcomes. A returned native call is recorded before reporting or
-ordinary continuation work can refuse; subsequent failure does not retry the
-call or undo its external effects.</p>
-<p>The Pure carrier retains its restrictions on polymorphic or lexical type
-operations. It admits the common side-effect-free <code>Foreign.checked_i64</code> and
-<code>Foreign.checked_size_t</code> checks, both returning <code>Foreign.Call&lt;Int&gt;</code> with the
-unchanged integer or a conversion failure. The Effect carrier also admits
-generic helper abstraction/application, native requests, declared dependent
-opaque or initialized byte source resource scopes, and the admitted read-only
-copy-window profile. Ordinary handler precedence, local resumption, resource
-capture/resume, owned discard, retained quarantine and nested reports use the
-existing evaluator and authenticated original lifecycle forests. Window views
-and extents retain exact live owner/family/window identities; an ordinary helper
-or matching function type grants no native-call permission.</p>
-<p>Both carriers refuse unsupported method evidence, newtype conversion, other
-intrinsics and integer literal payloads outside signed 64-bit range. Evaluated
-integer arithmetic and widened native results retain their mathematical
-semantics. These are build-path limitations, not changes to ordinary non-foreign
-execution. The source <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/libraries/README.md">arena library</a> provides the
-minimal allocation/usage/release lifecycle. The ordinary source buffer library
-supplies checked zeroed bytes and scoped access through the same generated path.
-The source <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/libraries/README.md#copying-sqlite">copying SQLite library</a>
-uses explicit native inputs, source protocol and guarded temporary copy windows.
-The admitted windows run only in permitted direct provider phases, retain exact
-live owner/view authority and publish independent copied bytes. They cannot
-suspend, complete their owner or escape; the detailed
-<a href="/ash/spec/static-semantics/#source-foreign-declarations">source foreign rules</a>
-define these bounds.</p>
-<h3 id="generated-host-linkage-checks">Generated-host linkage checks</h3>
-<p>The source Arena target runs its complete real-allocation and separately labelled
-injected-refusal scenarios with both static and shared fixture libraries. Shared
-execution sets its loader path only on the generated child process. The SQLite
-target runs the unchanged complete copying workload with the installed shared
-library and with a genuine implementation archive. The static case requires
-<code>ASH_SQLITE_STATIC_ARCHIVE</code>; a missing input fails the test.</p>
-<p>Build that archive once from the pinned official SQLite 3.46.1 amalgamation.
-Run these commands from the repository root, keeping the resulting inputs while
-the verification receipts depend on them:</p>
-<pre tabindex="0"><code class="language-sh">task41_sqlite_dir=$(mktemp -d)
-python3 - "$task41_sqlite_dir" &lt;&lt;'PY'
-import hashlib, pathlib, sys, urllib.request, zipfile
-directory = pathlib.Path(sys.argv[1])
-archive = directory / 'sqlite-amalgamation-3460100.zip'
-with urllib.request.urlopen('https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip') as response:
-    contents = response.read()
-assert hashlib.sha256(contents).hexdigest() == '77823cb110929c2bcb0f5d48e4833b5c59a8a6e40cdea3936b99e199dbbe5784'
-archive.write_bytes(contents)
-with zipfile.ZipFile(archive) as source:
-    for name in ('sqlite3.c', 'sqlite3.h'):
-        (directory / name).write_bytes(source.read('sqlite-amalgamation-3460100/' + name))
-assert hashlib.sha256((directory / 'sqlite3.c').read_bytes()).hexdigest() == '6c35bc5f7f85eac9c49928bacbb02bb694b547aabf69197e058cca245ad80e83'
-assert hashlib.sha256((directory / 'sqlite3.h').read_bytes()).hexdigest() == '89b62c671c5964e137409ce034941b7b05a3af2c9875aba41f47f9483d0c2515'
-assert (directory / 'sqlite3.h').read_bytes() == pathlib.Path('foreign-adapter/vendor/sqlite3.h').read_bytes()
-PY
-cc -O2 -fPIC -c "$task41_sqlite_dir/sqlite3.c" -o "$task41_sqlite_dir/sqlite3.o"
-ar crs "$task41_sqlite_dir/libsqlite3.a" "$task41_sqlite_dir/sqlite3.o"
-export ASH_SQLITE_STATIC_ARCHIVE="$task41_sqlite_dir/libsqlite3.a"
-CARGO_BUILD_JOBS=1 cargo +1.97.1 test --all-features \
-  --test source_arena_execution --test sqlite_library -- --test-threads=1
-</code></pre>
-<p>This preserves SQLite's default compile-time options. Record the selected
-compiler/archive tools, options, source/header hashes and resulting archive
-hash for the actual build. The test checks defined <code>sqlite3_*</code> implementation
-symbols in the archive and executable, and rejects a SQLite <code>DT_NEEDED</code>
-dependency. Platform Rust/libc shared dependencies remain permitted. It removes
-Ash inputs before host construction and external image/facts before execution,
-then checks the complete copying result. The optional test-only
-<code>ASH_ARENA_EVIDENCE_DIR</code> and <code>ASH_SQLITE_DIAGNOSTIC_DIR</code> retain generated artifacts
-while the normal harness removes their execution-side source/image/facts files.</p>
-<p>For checkpoint or explicit receipt reuse, name the archive <strong>bytes</strong> as an
-external input; the environment variable alone pins only its path. Use the same
-declared source/header/archive/tool inputs for the before/after observations:</p>
-<pre tabindex="0"><code class="language-sh">CARGO_BUILD_JOBS=1 cargo +1.97.1 xtask verify \
-  --input "$ASH_SQLITE_STATIC_ARCHIVE" \
-  --input "$task41_sqlite_dir/sqlite-amalgamation-3460100.zip" \
-  --input "$task41_sqlite_dir/sqlite3.c" \
-  --input "$task41_sqlite_dir/sqlite3.h" \
-  --input "$task41_sqlite_dir/sqlite3.o" \
-  --input /usr/bin/cc --input /usr/bin/ar --input /usr/bin/nm --input /usr/bin/readelf
-</code></pre>
-<p>Keep the other native/header/tool inputs required by the current checkpoint in
-that invocation. The <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/docs/project/verification.md">verification guide</a> defines
-the complete input and reuse boundary. These linkage tests do not close the
-milestone or authorize Main integration.</p>
-<h2 id="optional-c-header-checking">Optional C header checking</h2>
-<p><code>check-ffi</code> checks authored foreign declarations against explicitly supplied C
-headers. Its input is a valid entry with <code>main</code> which imports the bindings to
-check. It runs the complete source compiler without evaluating the entry.</p>
-<pre tabindex="0"><code class="language-sh">ash check-ffi --header binding.h --mapping mapping.json --compiler cc \
-    --output checks --root ffi=libraries entry.ash
-</code></pre>
-<p>The current authoring compiler is GNU C 14 or later for
-<code>x86_64-unknown-linux-gnu</code>. Other target requests refuse. Headers may repeat;
-other check options may appear once and must precede the entry. Existing
-diagnostic format/locale and root options apply. Header/tool errors exit 2;
-source rejection keeps its source diagnostic and exit status.</p>
-<p>The mapping is JSON version 1. Each declaration selects its <strong>defining source
-path</strong>, library, role and member, rather than an importing alias or an equal
-donor. Paths in the JSON are UTF-8 and relative to the mapping file. All foreign
-members in the loaded closure require exactly one mapping, including private,
-unused and constant-only declarations. Profile directives need no mapping.</p>
-<pre tabindex="0"><code class="language-json">{
-  "version": 1,
-  "declarations": [
-    {"module":"native.ash", "library":"C", "kind":"representation",
-     "member":"CInt", "c_type":"int"},
-    {"module":"native.ash", "library":"C", "kind":"symbol",
-     "member":"Abs", "c_name":"abs", "parameters":["int"], "result":"int"}
-  ]
+<p>A passive foreign library states the <code>"x86_64-unknown-linux-gnu"</code> profile and
+symbols with source signatures and native link names. For example:</p>
+<pre tabindex="0"><code class="language-ash">import @builtin.foreign as F
+
+pub foreign library Fixture {
+    profile "x86_64-unknown-linux-gnu"
+    symbol Make : Unit -&gt; F.Address { name "fixture_make" }
+    symbol Echo : F.Address -&gt; F.Address { name "fixture_echo" }
+    symbol EchoBytes : Bytes -&gt; F.Address { name "fixture_echo_bytes" }
+    symbol Release : F.Address -&gt; Unit { name "fixture_release" }
 }
 </code></pre>
-<p><code>representation</code>, <code>owner</code> and <code>access</code> take <code>c_type</code>. <code>constant</code> and <code>sentinel</code>
-take a <code>c_name</code> identifier; a helper header can define a macro for a C expression.
-<code>symbol</code> takes its original authored native <code>c_name</code>, ordered physical
-<code>parameters</code> and <code>result</code>. Source generics and logical source arguments do not
-add C parameters. Types accept C type words, qualifiers and pointer stars; use a
-header typedef for complex types, including function pointers. Arbitrary C
-fragments, missing/duplicate/wrong-role mappings and unsupported symbol spellings
-refuse before the compiler runs.</p>
-<p>Checks cover the admitted integer category/width/sign and <code>size_t</code>, object/byte
-pointer families, owner result/output slots, offsets and view/extent roles,
-fixed non-callable function-address sentinels, exact function prototypes, and
-mathematical constant/sentinel values. Same-width floating types cannot stand in
-for integer representations. A pointer mapping checks ABI facts and grants no
-Ash owner, access, lifetime or callback permission.</p>
-<p>The output directory contains <code>check-ffi.c</code>, <code>check-ffi.log</code> and
-<code>check-ffi-declarations.json</code>. Generated <code>ash-ffi-declaration-N</code> locations map to
-the original compiled source path, byte range, library, role and member in that
-index. Mismatch diagnostics retain the log and, when the C compiler identifies a
-generated declaration, its original source label. The tool invokes the selected
-compiler with explicit arguments, including <code>-std=gnu11 -m64 -fsyntax-only -Wstrict-prototypes -Werror</code>; it emits no object and performs no native calls.</p>
-<p>Verification mappings cannot supply missing executable facts, change a Rust
-bridge or select ownership behavior. Ordinary authored bindings build without
-headers or check output. Header success does not certify a separately supplied
-binary or its validity, retention and consumption assumptions.</p>
+<p>A client imports the module and calls <code>perform Fixture.Make.call ()</code>. Each symbol
+is an ordinary effect with a <code>call</code> operation; source handlers may implement it
+under the normal handler and continuation rules. The generated host interprets
+remaining required symbol effects. Imports are passive and compilation alone
+supplies no native binding.</p>
+<p><code>@builtin.foreign</code> exports opaque nominal <code>Address</code> and pure <code>null</code>, <code>is_null</code>
+and <code>equal</code>. Pointer equality proves neither allocation identity nor validity.
+Address has no constructor, integer conversion, arithmetic, dereference or
+automatic release. It carries no ownership or resource escape authority.</p>
+<p>Whole Unit means zero C arguments. Whole Address or Bytes means one pointer;
+a flat tuple of Address/Bytes supplies pointers in source order. Address results
+preserve pointers including null; Unit results use actual C void. Bytes is
+argument-only. Numeric inputs/results, String inputs, Unit tuple slots, nested
+tuples, out-pointers, callbacks, variadics and structs by value are unsupported.</p>
+<p>Bytes supplies a readonly pointer whose backing is held through the synchronous
+call. No length, terminator or encoding is implicit. Empty Bytes promises no
+readable byte. Native code must not mutate or free managed backing. If it retains
+or returns that pointer, the binding module must keep the original Bytes alive
+for every subsequent use; returning Address does not infer that relation.
+There is no Address-to-Bytes/String or arbitrary memory-access API.</p>
+<p>The signature and link name assume the C ABI and behavior; the compiler does
+not verify them. Binding authors express null/length checks, ordinary errors
+and scoped cleanup in Ash. A returned Address alone is no allocation witness.
+Internal work/storage failures remain terminal. Failure after a completed native
+call neither retries it nor undoes external effects. Existing cell, handler,
+cleanup, capture, image-validation and work/depth rules remain in force.</p>
+<h3 id="generated-host-linkage-checks">Generated-host linkage checks</h3>
+<p><code>tests/program_build_native.rs</code> exercises the same pointer/Bytes/void fixture
+with static and shared native inputs, source-independent embedded Core startup,
+repeated execution and loader/linker refusals. It observes real allocation,
+null return, pointer identity, readonly Bytes and ordinary Ash cleanup, including
+body error and checked discard. These checks establish observed behavior rather
+than native validity or lifetime guarantees.</p>
+<p>The required SQLite canary links the runtime library directly and calls
+<code>sqlite3_libversion(void)</code> and <code>sqlite3_sourceid(void)</code> as Address-returning
+functions. It checks non-null and repeated pointer equality without a C wrapper,
+header dependency, numeric shim or text dereference. This is not full SQLite
+coverage: interpreting the returned text needs an unsupported memory-read or
+Address conversion, while <code>sqlite3_open</code> and <code>sqlite3_prepare_v2</code> require numeric
+results and out-pointers; preparation also requires a numeric input. These are
+explicit future gaps, not additional supported ABI forms.</p>
+<p>Use the normal workspace verification gate for connected source, Core, images,
+bridges and examples. Native-origin artifacts use the existing validation and
+build machinery; no FFI receipt, protected-launch or security admission protocol
+is required. Link success does not establish that the native binary obeys its
+declared signature or behavior.</p>
 <h2 id="diagnostic-formats-and-locales">Diagnostic formats and locales</h2>
 <p>Diagnostics use human-readable explanations by default. Explicit options select
 the format and locale:</p>
@@ -421,35 +328,6 @@ sharing and earlier snapshots; replacing the slot does not change an earlier
 read. Handles and values depending on the scope still cannot escape it.
 Interpreted execution and generated executables require the same independent
 source/Core dependency proof.</p>
-<p>The executable test <code>native_buffer_documentation_example_has_exact_cli_output</code>
-checks this complete native-buffer program:</p>
-<pre tabindex="0"><code class="language-ash">import @ffi.native_buffer as Buffer
-
-main : Unit -&gt; Buffer.Outcome&lt;Buffer.Outcome&lt;Int&gt;&gt;
-main () = resource Buffer.Buffer&lt;R&gt; b = 4 {
-    match Buffer.write (b, 0, 42) {
-        Buffer.Success(()) =&gt; Buffer.read (b, 0)
-        Buffer.Failure(error) =&gt; Buffer.Failure error
-    }
-}
-</code></pre>
-<p>From the repository root, build and run it with:</p>
-<pre tabindex="0"><code class="language-sh">CARGO_BUILD_JOBS=1 cargo run --bin ash -- build --root ffi=libraries \
-    --cargo-target-dir target/ffi-native-hosts --output ./program entry.ash
-./program
-</code></pre>
-<p>On successful allocation, the generated program prints
-<code>Success(Success(42))</code> and a newline. The outer success
-records acquisition and normal body completion; the inner result is the body's
-ordinary read outcome. Allocation failure skips the body. Length must be
-positive and fit the bridge's addressable bound; indices and byte values are
-checked before access or mutation. Release occurs before the outer success is
-observed. The library owns this policy; no compiler dispatch depends on its
-filename. The former <code>@builtin.native_buffer</code> import and lowercase builtin
-resource form are removed. See the <a href="https://github.com/dikini/ash-lang/blob/7949b6d9136b0152ee9104e67bd0451cb9db4727/libraries/README.md#native-buffer-migration">migration table</a>
-for explicit source type and effect spellings. The ordinary local-newtype and
-non-resource lexical-dictionary native-image limitation remains; source/Core
-capture checks still apply to those programs.</p>
 <p>The executable test <code>synchronous_hooks_documentation_example_has_exact_cli_output</code>
 checks this complete hook program:</p>
 <pre tabindex="0"><code class="language-ash">effect Adjust {
@@ -560,7 +438,7 @@ inline operational definition:</p>
 first ignored = second ()
 
 fn second(ignored : Unit) -&gt; Int {
-    let retain : Unit -&gt; Int = fn(value) {
+    let saved : Unit -&gt; Int = fn(value) {
         first value
     }
     42
@@ -730,7 +608,7 @@ main : Unit -&gt; (Int -&gt; Int)
 main () = identity
 </code></pre>
 <p>Its exact standard output is:</p>
-<pre tabindex="0"><code class="language-text">&lt;function&gt; : Int -&gt; Int
+<pre tabindex="0"><code class="language-text">&lt;function&gt; : Int -&gt; Int ! {DefaultAlloc}
 </code></pre>
 <p>The executable test <code>tool_cyclic_data_uses_structural_rendering</code> runs:</p>
 <pre tabindex="0"><code class="language-ash">type Stream =
@@ -774,10 +652,15 @@ selector that established the rejection. An unavailable private or unselected
 implementation is reported without exposing that declaration's metadata.</p>
 <p>Entry failures are ordered as <code>entry.missing-main</code>, <code>entry.main-polymorphic</code>,
 <code>entry.main-domain</code>, <code>entry.main-effects</code>, <code>entry.main-open-result</code>, and
-<code>entry.main-constrained</code>. After mandatory exact owner-free native interpretation,
-any residual ordinary effect requirement or open entry row is a source rejection.
-Required source-native bindings are admitted separately before Ash execution;
-execution has no source-level unhandled-operation outcome.</p>
+<code>entry.main-constrained</code>. The generated root discharges the default allocation
+requirement, and exact native interpretation discharges required admitted symbols.
+Any residual ordinary effect requirement or open entry row is a source rejection.
+Supplied native callback entries are checked against original symbols before
+Ash execution. A selected native invocation requires its exact entry; a missing
+entry is a terminal runtime failure after operand evaluation and boundary
+selection. Ordinary execution refuses entries requiring native interpretation
+rather than building or linking implicitly. Execution has no source-level
+unhandled-operation outcome.</p>
 <p>Effect declaration and resolution failures use <code>effect.operation-shape</code>,
 <code>effect.unknown</code>, <code>effect.kind</code>, <code>effect.duplicate</code>, and
 <code>effect.resume-outside-clause</code>. Effect-row and handler checking failures use
@@ -847,10 +730,10 @@ interpreter reports <code>effect.cleanup-context</code>, with discard, action an
 labels. Safely owned cells, registrations and armed actions can be closed.
 The effect machine's live-cell, registration or cleanup capacity failure is <code>runtime.resource-capacity</code>,
 an internal status-<code>2</code> failure. It publishes no partial acquisition. Cell
-acquisition has no source-level allocation-failure branch. Native allocation
-refusal can return <code>Failure(AllocationFailed)</code> only at the atomic attempt
-boundary: preceding initializer effects remain committed, but no native body
-or authority is published. Neither provider exposes source use-after-release.</p>
+acquisition has no source-level allocation-failure branch. A foreign allocation
+returning null is an ordinary Address result; any error constructor or cleanup
+policy belongs to the binding module. Raw Address supplies no use-after-release
+check or lifetime guarantee.</p>
 <p>Detectable runtime resource failures terminate with status <code>2</code>, without source
 continuation, source cleanup, retry or rollback. Their bounded diagnostic keeps
 the original reason code and identifies the resource cause, phase and resource,
@@ -888,4 +771,4 @@ arguments. Update exact-wording assertions where applicable; do not change JSON
 reasons or facts just because the prose changed.</p>
 <p>Run the catalogue tests and the affected phase's human/JSON tests together.
 Runtime messages additionally require pre-execution preparation and tests of the
-separate allocation-independent reporter; do not format them after failure.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#building-an-executable">Building an executable</a><a href="#optional-c-header-checking">Optional C header checking</a><a href="#diagnostic-formats-and-locales">Diagnostic formats and locales</a><a href="#complete-module-tree-example">Complete module-tree example</a><a href="#successful-output">Successful output</a><a href="#failures">Failures</a><a href="#maintaining-diagnostic-messages">Maintaining diagnostic messages</a></nav><div class="aside-note"><p>These commands describe the source revision linked above. It may be newer than the compiler used by the tour.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent tool documents"><a rel="prev" href="/ash/docs/tools/">← Overview</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>
+separate allocation-independent reporter; do not format them after failure.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#building-an-executable">Building an executable</a><a href="#diagnostic-formats-and-locales">Diagnostic formats and locales</a><a href="#complete-module-tree-example">Complete module-tree example</a><a href="#successful-output">Successful output</a><a href="#failures">Failures</a><a href="#maintaining-diagnostic-messages">Maintaining diagnostic messages</a></nav><div class="aside-note"><p>These commands describe the source revision linked above. It may be newer than the compiler used by the tour.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent tool documents"><a rel="prev" href="/ash/docs/tools/">← Overview</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

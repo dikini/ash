@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Local retained-control model · Ash</title><meta name="description" content="These bounded C1 ownership and C3 drain models support DN-0056. The historical CP-0026 records the transition; the specification defines language semantics. The models do not. The C1 correspondence map states its…"><meta name="robots" content="index, follow"><meta property="og:title" content="Local retained-control model · Ash"><meta property="og:description" content="These bounded C1 ownership and C3 drain models support DN-0056. The historical CP-0026 records the transition; the specification defines language semantics. The models do not. The C1 correspondence map states its…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Local retained-control model · Ash"><meta name="twitter:description" content="These bounded C1 ownership and C3 drain models support DN-0056. The historical CP-0026 records the transition; the specification defines language semantics. The models do not. The C1 correspondence map states its…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/retained-control/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/retained-control/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/README.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Local retained-control model","headline":"Local retained-control model","description":"These bounded C1 ownership and C3 drain models support DN-0056. The historical CP-0026 records the transition; the specification defines language semantics. The models do not. The C1 correspondence map states its…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/retained-control/","@id":"https://dikini.github.io/ash/docs/design/retained-control/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/README.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="local-retained-control-model" data-pagefind-meta="title">Local retained-control model</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/README.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>These bounded C1 ownership and C3 drain models support
+<a href="/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/">DN-0056</a>.
+The historical <a href="https://github.com/dikini/ash-lang/blob/ea2a7ffadefb0f485a9c8e0009975a47db5c6865/docs/proposals/CP-0026-scoped-owned-continuation-storage.md">CP-0026</a>
+records the transition; the <a href="/ash/spec/">specification</a> defines
+language semantics. The models do not. The
+<a href="/ash/docs/design/retained-control/correspondence/">C1 correspondence map</a> states its premises, proved claims
+and reviewed product correspondence.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Module</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/Ownership.lean">Ownership</a></td>
+<td>Finite owner inventories, transfer and restore transitions, completion, support, generations and failure accounting.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/OwnershipExamples.lean">OwnershipExamples</a></td>
+<td>Concrete positive and negative traces over those transitions.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/retained-control/DrainSafety.lean">DrainSafety</a></td>
+<td>Finite focused-State normal returns, port cases and the checked Store-close predecessor.</td>
+</tr>
+</tbody>
+</table>
+<p>The C1 candidate passed independent source review and a frozen scoped
+<a href="/ash/docs/decisions/ad-0012-proof-development-feedback-and-build-reuse/">AD-0012</a>
+integration build. The <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/tasks/evidence/local-retained-control/c1-model/README.md">gate record</a>
+pins its sources, compiler, review and reports. C1's retained result was
+independently verified.</p>
+<p>The C3 <a href="/ash/docs/design/retained-control/drain-correspondence/">drain correspondence</a> records the concrete
+control, value and completion premises used by the bounded analysis. Its
+reviewed source completed a separate frozen <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/tasks/evidence/local-retained-control/c3-model/README.md">gate</a>;
+its receipt passed independent audit. Linked validation uses the drain analysis;
+the connected C2/C3 checkpoint is retained and accepted.</p>
+<h2 id="retained-product-evidence">Retained product evidence</h2>
+<ul>
+<li><strong>C1 ownership.</strong> <a href="https://github.com/dikini/ash-lang/pull/160">PR #160</a>
+retained <code>6d530614d426db3f31fd0e9fe1f01d12399f78c9</code>. The frozen C1 evidence
+has SHA-256
+<code>fa3462c847fe90766c33ef6d069dceaf5a3febec0b1cb78d490efbf06d46ed0b</code>.</li>
+<li><strong>C2 Store and moves.</strong> <a href="https://github.com/dikini/ash-lang/pull/161">PR #161</a>
+retained <code>e12d4242a35ffe01ccd9d3e90342992e77f94613</code>. The
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/eval/machine_retained_tests.rs">runtime tests</a> cover
+preparation, generation, one-shot restoration and disposal.</li>
+<li><strong>C3 release.</strong> <a href="https://github.com/dikini/ash-lang/pull/162">PR #162</a>
+retained <code>d256bef288ac6b828e475c9dcaaf710812405b7a</code>. The frozen C3 evidence
+has SHA-256
+<code>717fea322b63c90626938c0c98fadf3cbb2f4735a41959542fb1003ebafb3a90</code>.
+The connected seven-stage checkpoint was verified at that retained tree.</li>
+<li><strong>C4 libraries.</strong> <a href="https://github.com/dikini/ash-lang/pull/163">PR #163</a>
+retained <code>73f6304a69183682a94d85aa81f9b1a88c21ef5e</code>. The
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/scheduling.rs">scheduling tests</a> cover selection, queueing,
+gas, resume and repeated cleanup. Its fresh seven-stage
+<a href="https://github.com/dikini/ash-lang/pull/163#issuecomment-6475295972">checkpoint audit</a>
+and <a href="https://github.com/dikini/ash-lang/pull/163#issuecomment-6475359212">retained-result review</a>
+are separate records.</li>
+</ul>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/core/capture.rs">capture checks</a> include
+<code>retained_drain_tracks_actual_result_cases_and_fresh_probes</code>, the driver and
+post-resume suffix checks, and support and interpreter negatives. The
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/retained_control.rs">public tests</a> reject unproved drain paths
+and exercise ordinary Probe interception. The
+<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/core/validate.rs">linked validation tests</a> reject a same-typed
+cleanup callback substitution and recheck transformed control. The runtime
+<code>retained_move_prepares_storage_before_taking_either_owner</code> test covers failed
+preparation and retry without a partial move. Images are independently decoded
+and validated before execution. These tests and reviewed correspondences
+connect the bounded models to the implementation; the Lean results do not
+mechanically prove the compiler or evaluator. <a href="https://github.com/dikini/ash-lang/issues/165">Issue #165</a>
+records two analysis limitations and their reproductions. The
+<a href="https://github.com/dikini/ash-lang/issues/75#issuecomment-6476014597">C5 checkpoint</a>
+and <a href="https://github.com/dikini/ash-lang/issues/54#issuecomment-6476014971">separate Main handoff</a>
+remain open.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#retained-product-evidence">Retained product evidence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

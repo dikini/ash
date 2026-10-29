@@ -1,0 +1,286 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Minimal FFI contract: copied text and scoped statements · Ash</title><meta name="description" content="This worked design belongs to DN-0057. The choices below are candidates for review, not current Ash semantics, an accepted architecture or implementation authorization. They refine DN-0037's readiness brief before…"><meta name="robots" content="index, follow"><meta property="og:title" content="Minimal FFI contract: copied text and scoped statements · Ash"><meta property="og:description" content="This worked design belongs to DN-0057. The choices below are candidates for review, not current Ash semantics, an accepted architecture or implementation authorization. They refine DN-0037's readiness brief before…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Minimal FFI contract: copied text and scoped statements · Ash"><meta name="twitter:description" content="This worked design belongs to DN-0057. The choices below are candidates for review, not current Ash semantics, an accepted architecture or implementation authorization. They refine DN-0037's readiness brief before…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-contract-cases.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Minimal FFI contract: copied text and scoped statements","headline":"Minimal FFI contract: copied text and scoped statements","description":"This worked design belongs to DN-0057. The choices below are candidates for review, not current Ash semantics, an accepted architecture or implementation authorization. They refine DN-0037's readiness brief before…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-contract-cases.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="minimal-ffi-contract-copied-text-and-scoped-statements" data-pagefind-meta="title">Minimal FFI contract: copied text and scoped statements</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-contract-cases.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This worked design belongs to
+<a href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057</a>. The choices below are
+candidates for review, not current Ash semantics, an accepted architecture or
+implementation authorization. They refine
+<a href="/ash/docs/design/foreign-authoring/dn-0036-readiness/">DN-0037's readiness brief</a> before choosing source syntax.</p>
+<h2 id="bounded-profile">Bounded profile</h2>
+<p>Keep the common FFI contract separate from platform realizations. Checked
+operation identity, effects, dependencies, result publication, disposition,
+reporting and session-loss rules are common. Native layouts, artifact packaging,
+launch restrictions and enforcement APIs belong to an explicit target/executor
+profile. The Linux choices below are one proposed realization, not requirements
+that every Ash platform implement ELF, namespaces, memfd or cgroups.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Layer</th>
+<th>Owning design</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Common outcome precedence and exhaustion domains, then SQLite transition instance</td>
+<td><a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/">Canonical transitions</a>.</td>
+</tr>
+<tr>
+<td>Common semantic contracts, effects, dependencies and activations</td>
+<td><a href="/ash/docs/design/foreign-authoring/minimal-ffi-checked-representation/">Checked representation</a>.</td>
+</tr>
+<tr>
+<td>Common exhaustion, reporting and ownership guarantees</td>
+<td><a href="/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/">Exhaustion and ownership</a>.</td>
+</tr>
+<tr>
+<td>Portable SQLite inputs, constants, signatures and native assumptions</td>
+<td><a href="/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/">SQLite policy</a>.</td>
+</tr>
+<tr>
+<td>Concrete C representations for the selected target</td>
+<td><a href="/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/">Linux x86-64 ABI profile</a>.</td>
+</tr>
+<tr>
+<td>Common artifact-admission obligations and selected Linux realization</td>
+<td><a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/">Launch and artifact design</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>Use a SQLite connection with scoped prepared statements. The copied result is
+one nullable text column from a current row. A statement depends on its
+connection; neither native owner nor temporary view escapes its scope.</p>
+<p>For a concrete first target, propose Linux x86-64, the System V C ABI and
+fixed-signature generated bridges. Admit checked signed/unsigned integer
+widths, opaque native handles, explicit-length temporary buffers, initialized
+output slots and required declared sentinels. Enumerate each operation's exact
+representation in its checked contract. Reject unsupported aggregates,
+variadic calls, callbacks, retained input borrows and general native views.
+This profile is a proposed restriction, not a claim of existing target support.</p>
+<p>Serialize calls within one connection and its statements. The binding admits
+no concurrent or reentrant operation on that group. Input buffers remain valid
+for their declared synchronous call, and non-retention remains an explicit
+native assumption. Ordinary Ash definitions express SQLite-specific policy;
+the common bridge and ownership machinery must also serve the minimal native
+arena lifecycle required by DN-0037.</p>
+<h2 id="common-boundary-contract">Common boundary contract</h2>
+<p>Describe each foreign operation with one authenticated checked contract:</p>
+<ul>
+<li>Defining operation, library requirement, ABI signature and target profile.</li>
+<li>Required resource identities, states and dependencies.</li>
+<li>Each input's representation, access interval and retention assumption.</li>
+<li>Output initialization and interpretation for every native outcome.</li>
+<li>Ownership disposition and protocol transition, independently of error status.</li>
+<li>Conversion, bounds, publication conditions and declared external effects.</li>
+<li>Remaining native assumptions and evidence applicable to each obligation.</li>
+</ul>
+<p>Public module summaries preserve client-relevant obligations and transitive
+assumptions. Keep the assumption identities and dependencies in checked
+metadata; explanatory text supplies their meaning. Do not require clients to
+restate assumptions. Core independently validates the relationships rather
+than trusting a copied success flag. Native behavior remains assumed where
+the boundary cannot enforce it.</p>
+<p>Report operation outcome and resource disposition separately. Distinguish
+rejection before dispatch, received native outcome, boundary/conversion
+failure, and unknown completion after dispatch. A received outcome is an
+observation under the binding assumptions, not proof of database correctness
+or durable effects. Distinguish live, consumed, quarantined and inaccessible
+resource states; unknown native disposition must not authorize access.</p>
+<p>Preserve the body outcome and ordered completion reports. Local completion K
+is separate from native disposition: loss/quarantine can discharge a scope
+locally at its closing position without dispatching a finish or claiming
+consumption. K1–K9 make that bookkeeping exact-once. Reporting an error
+must not overwrite a known consumption transition. Failure after dispatch
+does not promise rollback. Check elimination later needs evidence for the
+same obligation and applicable native artifact.</p>
+<h2 id="copied-result-nullable-text-column">Copied result: nullable text column</h2>
+<p>The public operation takes scoped statement access and a column index. It
+returns SQL null, an independent valid UTF-8 string, or an explicit failure.
+SQL null and the empty string are different outcomes. Preserve embedded zero
+bytes when valid UTF-8; do not scan for a terminator or replace invalid text.
+Reject other column kinds rather than introducing implicit numeric conversion.</p>
+<h3 id="in-process-copied-result">In-process copied result</h3>
+<ol>
+<li>Before native entry, authenticate the live statement and connection,
+require a current row, and check the column index. Hold exclusive operation
+access for the whole copy sequence.</li>
+<li>Establish the original column kind once for this row generation and retain
+it across rereads and failed copies. Use that cached classification before
+conversions; return null, reject another kind or enter the text sequence.</li>
+<li>Obtain the UTF-8 text pointer, then its byte length in the compatible query
+order. Distinguish native allocation failure from null and empty text.
+Check length arithmetic and configured result/allocation limits.</li>
+<li>Copy the exact bytes while the declared validity window remains open.
+No stepping, resetting, finalizing or incompatible representation query
+may intervene. Validate the independent bytes as UTF-8 before publication.</li>
+<li>Publish only the completed Ash value. Release temporary access on success
+or failure; no native pointer is present in the result. Later stepping or
+finalization cannot invalidate a successfully published copy.</li>
+</ol>
+<p>SQLite documents the relevant preconditions and pointer/length query order in
+<a href="https://www.sqlite.org/c3ref/column_blob.html">column access</a>. These remain
+foreign assumptions even when the binding enforces its side of the interval.
+Null and bounds checks cannot establish that native memory is readable.</p>
+<p>Wrong kind, invalid UTF-8 and a configured size refusal leave the statement
+in its known row state, provided the native interaction remained conforming.
+A detectable contradiction in the native contract quarantines the affected
+resource group. A native fault or host exhaustion may terminate execution;
+this path adds no recovery or source-cleanup guarantee for those events.</p>
+<h3 id="isolated-copied-result">Isolated copied result</h3>
+<p>Use one worker process per connection group initially. Native pointers,
+temporary buffers and ownership records stay in that worker. It performs the
+same copy sequence as one serialized operation and sends a null tag or an
+explicit-length byte payload. The client receives no native address.</p>
+<p>The parent treats the entire worker as untrusted, including its validators.
+Before allocation and publication, it independently checks bounded framing,
+protocol/contract version, session, request and resource identities, expected
+reply shape, payload length and UTF-8. Worker validation does not substitute
+for parent validation. A well-formed reply establishes a valid Ash string,
+not that the worker returned the database's true contents.</p>
+<p>A declared, valid worker conversion-refusal outcome is an ordinary failure.
+Invalid UTF-8 under a worker success-string alternative instead violates its
+reply contract. A malformed or mismatched reply loses the session and
+invalidates its handles.
+Worker death or timeout publishes no partial result. Preserve any admitted
+outcome; only an unacknowledged transition remains unknown, as specified by
+the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#common-outcome-precedence">canonical precedence table</a>.
+Earlier independent copies remain valid after session loss.</p>
+<h2 id="stateful-resource-connection-and-statement">Stateful resource: connection and statement</h2>
+<p>Scope ownership controls completion; copying access does not copy release
+authority. The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#sqlite-acquisition-and-lifecycle-table">canonical lifecycle table</a>
+separates execution state, binding validity, access permission, disposition
+and session state. Reset changes execution state while preserving bindings
+and uncertainty. Consumption and loss of source access are distinct facts.
+All guards retain required dependencies until physical retirement is safe.</p>
+<h3 id="in-process-resource-lifecycle">In-process resource lifecycle</h3>
+<ol>
+<li>Resolve and preflight native bindings before acquisition. Initialize
+output slots before calls. Guard any partially returned connection or
+statement immediately, including failure outcomes that still return one.</li>
+<li>Publish scoped access only after native outcome classification, dependency
+registration and result admission succeed. A post-call conversion failure
+disposes of unpublished state under the acquisition contract; it cannot
+silently drop the native owner.</li>
+<li>Check operation permissions and record each native transition before any
+later fallible reporting conversion. Reject use after consumption or
+quarantine before entering native code.</li>
+<li>Complete dependent statements before their connection. Statement
+finalization consumes the statement even when reporting an error. Remove
+its dependency once; never retry through the consumed address.</li>
+<li>Connection close can refuse and retain the owner. A known live dependency
+blocks close before native entry. Unexpected retained state after an actual
+close attempt is reported and quarantined; it cannot be called successful
+release or permit scoped access to escape.</li>
+</ol>
+<p>The difference between error and consumption follows SQLite's
+<a href="https://www.sqlite.org/c3ref/finalize.html">finalization</a> and
+<a href="https://www.sqlite.org/c3ref/close.html">close</a> contracts. Use ordinary close,
+without silently substituting deferred close. Exact release and retention
+behavior remains an explicit assumption about the native implementation.</p>
+<h3 id="isolated-resource-lifecycle">Isolated resource lifecycle</h3>
+<p>The parent owns scoped proxies. Native ownership stays in the worker. Each
+proxy is bound to an authenticated parent-side record and a fresh worker
+session; wire IDs alone cannot create source access or release authority.
+Do not reuse session identities after restart. The parent mirrors only the
+states needed to reject invalid requests and replies; the worker checks the
+same native operation preconditions.</p>
+<p>Acquisition replies publish proxies only after parent admission. If a reply
+cannot be admitted, terminate the session and reap the worker rather than
+leave an untracked remote acquisition. This bounds abandoned native process
+state but makes no claim that foreign destructors ran.</p>
+<p>After an acknowledged finalization, consume the proxy even if its report
+contains a native error. Local K is discharged before fallible reporting.
+After session loss, proxies become inaccessible; Pending scopes remain until
+closing and then discharge locally once with loss reports in S-before-C order.
+Do not send stale finishes or infer that unacknowledged native operations
+completed. Physical process records can outlive local source completion.
+Reaping the worker establishes process termination and operating-system
+reclamation within the selected profile, not successful library completion.
+Previously reported consumed states remain consumed; any in-flight native
+disposition can remain unknown.</p>
+<h2 id="isolation-and-failure-choices">Isolation and failure choices</h2>
+<p>For the first isolated profile, use a local child process, bounded framed
+messages over private pipes, one request in flight, and no shared native
+memory or transferable native pointers. Include fresh session and monotonic
+request identities. Fix protocol and checked-contract compatibility before
+acquisition. Apply frame, result, handle-count and allocation limits; reject
+an oversized frame before allocating its declared size.</p>
+<p>The supervisor owns deadlines, worker termination and reaping. Reject a request
+locally when limits or state fail before dispatch. After any dispatch bytes,
+loss leaves only unacknowledged transitions unknown; admitted outcomes survive
+later payload or diagnostic loss. On timeout,
+protocol violation or lost connection, stop dispatch, invalidate the session,
+terminate and reap the worker. Do not continue a timed-out session or
+automatically restart and replay an operation. This supplies no exactly-once
+claim for external effects. OS resource enforcement and a concrete launch
+policy must bound workers that ignore protocol limits or deadlines.</p>
+<p>Isolation contains native memory faults in the parent under the OS/process
+assumptions. Native code may corrupt its worker-side monitor and emit a
+plausible false reply. The parent's checks still protect Ash representation
+and local authority; database behavior and native lifecycle reports remain
+assumed. Restrict filesystem, network, inherited descriptors and process
+authority explicitly. A child process alone does not establish those
+restrictions. The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/">launch and artifact design</a>
+refines the concrete Linux policy and its evidence requirements.</p>
+<p>Use the same value and resource contracts in both modes. Include boundary
+failure and unknown-completion outcomes in the shared public model; do not
+promise transparent native-fault recovery in-process. Execution mode and its
+assumptions remain inspectable. No claim that both modes admit identical
+failures, timing or containment follows from sharing the success contract.</p>
+<h2 id="closure-and-remaining-blockers">Closure and remaining blockers</h2>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/">canonical transitions</a> address the common and
+SQLite findings, including R1–R3's phase guards, local completion and encoding
+failure distinctions, in the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-consistency-review/">consistency review</a>.
+The Linux profile's credential/syscall/storage acceptance still requires
+separate policy detail and deployment evidence. Transition closure is proposed
+design, not acceptance of the platform realization.</p>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/">exhaustion and ownership design</a>
+resolves the final blocker's pre-admission, minimal reporting, disposition
+preservation and terminal-disposal rules in both modes. These are common
+executor obligations; platform mechanisms remain in their profiles.</p>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-launch-and-artifacts/">launch and artifact design</a> resolves
+the third blocker's containment, pre-execution setup, resource enforcement,
+storage grants and authorized immutable execution images at design level.
+The policy still requires architecture acceptance and deployment evidence;
+it does not prove native correctness.</p>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/">ABI profile</a> maps native roles to Linux x86-64.
+The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/">SQLite policy</a> separately owns signatures,
+constants and input/output roles. Acquisition, conversion and disposition
+transitions have one owner in the canonical tables. These remain proposed
+contracts pending semantic adoption and implementation evidence.</p>
+<p>The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-checked-representation/">checked representation</a> resolves
+the second blocker's canonical contract, module-summary projection, exact
+effects, static dependencies, Core validation and runtime activation roles.
+It includes a proposed authenticated native-host boundary and preserves the
+distinction between copied data, native effects and completion authority.</p>
+<p>These cases select candidate rules for independent publication, finite access
+windows, serialized resource groups, consumption separate from errors,
+session-bound proxies, parent validation and conservative lost-reply handling.
+They require no general dynamic type, proof language or source typestate syntax.</p>
+<p>The four identified blockers now have proposed design-level resolutions for
+these cases. This does not establish implementation or production readiness.
+Review the common semantic delta for a change proposal and the concrete
+platform/runtime choices for architectural decisions before authorized delivery.
+Additional platform profiles must satisfy the same common obligations or
+explicitly refuse unsupported execution modes; they need not use Linux APIs.</p>
+<p>Required comparisons include null/empty/invalid UTF-8, exact and oversized
+lengths, forbidden copy-window invalidation, stale identities, finalize error
+with consumption, close refusal, publication failure after acquisition,
+malformed and plausible false replies, worker death before and after a native
+effect, and restart with old handles. Run native fault injection in contained
+processes. Compare the same successful values and scoped dependencies in both
+modes; retain their different failure guarantees. A later prototype needs its
+own bounded question and disposal conditions under DN-0057.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#bounded-profile">Bounded profile</a><a href="#common-boundary-contract">Common boundary contract</a><a href="#copied-result-nullable-text-column">Copied result: nullable text column</a><a href="#stateful-resource-connection-and-statement">Stateful resource: connection and statement</a><a href="#isolation-and-failure-choices">Isolation and failure choices</a><a href="#closure-and-remaining-blockers">Closure and remaining blockers</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.DfNSfgCD.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>SQLite policy for the minimal FFI cases · Ash</title><meta name="description" content="This library contract belongs to DN-0057. It owns the portable SQLite signatures, constants, input and output roles, conversion assumptions and diagnostic rules for the worked cases. The canonical transition table…"><meta name="robots" content="index, follow"><meta property="og:title" content="SQLite policy for the minimal FFI cases · Ash"><meta property="og:description" content="This library contract belongs to DN-0057. It owns the portable SQLite signatures, constants, input and output roles, conversion assumptions and diagnostic rules for the worked cases. The canonical transition table…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="SQLite policy for the minimal FFI cases · Ash"><meta name="twitter:description" content="This library contract belongs to DN-0057. It owns the portable SQLite signatures, constants, input and output roles, conversion assumptions and diagnostic rules for the worked cases. The canonical transition table…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-sqlite-policy.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"SQLite policy for the minimal FFI cases","headline":"SQLite policy for the minimal FFI cases","description":"This library contract belongs to DN-0057. It owns the portable SQLite signatures, constants, input and output roles, conversion assumptions and diagnostic rules for the worked cases. The canonical transition table…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/","@id":"https://dikini.github.io/ash/docs/design/foreign-authoring/minimal-ffi-sqlite-policy/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-sqlite-policy.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="sqlite-policy-for-the-minimal-ffi-cases" data-pagefind-meta="title">SQLite policy for the minimal FFI cases</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/foreign-authoring/minimal-ffi-sqlite-policy.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>This library contract belongs to
+<a href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057</a>. It owns the portable
+SQLite signatures, constants, input and output roles, conversion assumptions
+and diagnostic rules for the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-contract-cases/">worked cases</a>.
+The <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/">canonical transition table</a> owns outcome
+precedence and lifecycle transitions for both execution modes. The
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-abi-profile/">ABI profile</a> supplies concrete target mappings;
+platform executor profiles supply launch, storage and containment mechanisms.
+No Linux layout or source syntax is defined here. These are proposed contracts,
+not current Ash semantics or implementation authorization.</p>
+<h2 id="exact-operation-inventory">Exact operation inventory</h2>
+<p>These are C signatures describing ABI facts, not proposed Ash syntax.
+<code>D</code> below abbreviates the native <code>sqlite3_destructor_type</code> only in the table.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Operation</th>
+<th>Native signature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Host setup</td>
+<td><code>int sqlite3_initialize(void)</code></td>
+</tr>
+<tr>
+<td>Connection acquisition</td>
+<td><code>int sqlite3_open_v2(const char*, sqlite3**, int, const char*)</code></td>
+</tr>
+<tr>
+<td>Statement acquisition</td>
+<td><code>int sqlite3_prepare_v2(sqlite3*, const char*, int, sqlite3_stmt**, const char**)</code></td>
+</tr>
+<tr>
+<td>Bind copied text</td>
+<td><code>int sqlite3_bind_text(sqlite3_stmt*, int, const char*, int, D)</code></td>
+</tr>
+<tr>
+<td>Bind SQL null</td>
+<td><code>int sqlite3_bind_null(sqlite3_stmt*, int)</code></td>
+</tr>
+<tr>
+<td>Execute</td>
+<td><code>int sqlite3_step(sqlite3_stmt*)</code></td>
+</tr>
+<tr>
+<td>Column count</td>
+<td><code>int sqlite3_column_count(sqlite3_stmt*)</code></td>
+</tr>
+<tr>
+<td>Original column kind</td>
+<td><code>int sqlite3_column_type(sqlite3_stmt*, int)</code></td>
+</tr>
+<tr>
+<td>Text interval</td>
+<td><code>const unsigned char *sqlite3_column_text(sqlite3_stmt*, int)</code></td>
+</tr>
+<tr>
+<td>Text byte count</td>
+<td><code>int sqlite3_column_bytes(sqlite3_stmt*, int)</code></td>
+</tr>
+<tr>
+<td>Reset execution</td>
+<td><code>int sqlite3_reset(sqlite3_stmt*)</code></td>
+</tr>
+<tr>
+<td>Clear parameters</td>
+<td><code>int sqlite3_clear_bindings(sqlite3_stmt*)</code></td>
+</tr>
+<tr>
+<td>Statement consumption</td>
+<td><code>int sqlite3_finalize(sqlite3_stmt*)</code></td>
+</tr>
+<tr>
+<td>Connection close</td>
+<td><code>int sqlite3_close(sqlite3*)</code></td>
+</tr>
+<tr>
+<td>Primary/current code</td>
+<td><code>int sqlite3_errcode(sqlite3*)</code></td>
+</tr>
+<tr>
+<td>Extended diagnostic code</td>
+<td><code>int sqlite3_extended_errcode(sqlite3*)</code></td>
+</tr>
+<tr>
+<td>Optional diagnostic bytes</td>
+<td><code>const char *sqlite3_errmsg(sqlite3*)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Copied text/null binding supports repeated statement use and exercises the
+required transient sentinel. Integer/BLOB binding, alternative prepare/open
+variants and deferred close are not added by this inventory. This does not
+remove those operations from the wider DN-0037 copying-binding program.
+Initialization is host-owned before acquisition; a connection never shuts
+down shared SQLite state. Threading and initialization configuration must
+satisfy the serialized group contract.</p>
+<h2 id="constants-nulls-and-negative-sentinels">Constants, nulls and negative sentinels</h2>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Native value</th>
+<th>Meaning in this profile</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SQLITE_OK = 0</code></td>
+<td>Success only for operations whose contract admits it.</td>
+</tr>
+<tr>
+<td><code>SQLITE_ROW = 100</code>, <code>SQLITE_DONE = 101</code></td>
+<td>Step outcomes; neither is generic success for acquisition or close.</td>
+</tr>
+<tr>
+<td><code>SQLITE_NOMEM = 7</code>, <code>SQLITE_BUSY = 5</code>, <code>SQLITE_MISUSE = 21</code></td>
+<td>Allocation failure, close refusal/operation-specific busy, and detected misuse respectively.</td>
+</tr>
+<tr>
+<td>Column tags 1, 2, 3, 4, 5</td>
+<td>Integer, float, text, BLOB, SQL null; the copied-text case accepts only 3 and 5.</td>
+</tr>
+<tr>
+<td><code>SQLITE_OPEN_READWRITE = 2</code>, <code>SQLITE_OPEN_CREATE = 4</code></td>
+<td>Fixed open flags <code>2 | 4</code>; arbitrary caller flags are rejected.</td>
+</tr>
+<tr>
+<td>Typed null VFS argument</td>
+<td>Select default VFS; not a missing connection or empty path.</td>
+</tr>
+<tr>
+<td><code>SQLITE_TRANSIENT</code></td>
+<td>Native <code>((sqlite3_destructor_type)-1)</code> in the destructor argument only.</td>
+</tr>
+<tr>
+<td><code>SQLITE_STATIC</code></td>
+<td>Native destructor null; rejected because retained input is unsupported.</td>
+</tr>
+<tr>
+<td>Negative input lengths</td>
+<td>Rejected; the SQLite scan-to-zero mode is not used.</td>
+</tr>
+</tbody>
+</table>
+<p>The sentinel mapping follows SQLite's
+<a href="https://www.sqlite.org/c3ref/c_static.html">destructor constants</a>. The bridge
+materializes the declared typed constant. It never calls it or accepts an
+arbitrary source integer as a destructor. This bounded sentinel role does not
+admit general function pointers or callbacks.</p>
+<p>Preserve each returned C status exactly, including extended codes. Recognize
+only operation-appropriate outcomes. Unrecognized error codes remain numeric
+native failures; do not invent ownership transitions from their names.
+Impossible success/tag combinations and detected misuse are boundary
+violations. Record any independently known consumption before quarantine.</p>
+<h2 id="input-preparation">Input preparation</h2>
+<p>Paths and SQL are valid UTF-8 without embedded zero. Append one native zero
+byte. Paths use the zero-terminated contract; SQL passes the explicit total
+buffer size including the terminator. Keep the input allocation live until
+all output interpretation requiring it has finished.</p>
+<p>Use flags <code>READWRITE | CREATE</code> and null VFS. This supplies no writable-access
+or filesystem-confinement guarantee. Accept only a database selected by the
+host grant or explicit in-memory mode; URI handling is disabled for this
+binding. Concrete path spelling and storage enforcement belong to executor
+profiles. See <a href="https://www.sqlite.org/c3ref/open.html">open</a>.</p>
+<p>Text binding uses a valid UTF-8, zero-free input and a nonnegative payload
+byte length, excluding its added terminator, with <code>SQLITE_TRANSIENT</code>. Even
+empty text has a non-null backing buffer. SQL null uses <code>sqlite3_bind_null</code>.
+Parameter indices are positive native integers; the native call reports
+invalid parameter positions. Admission and failed-binding recovery follow
+L10–L17 in the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#sqlite-acquisition-and-lifecycle-table">canonical table</a>.
+Input storage ends after return under
+the declared copying assumption. See
+<a href="https://www.sqlite.org/c3ref/bind_blob.html">binding values</a>.</p>
+<h2 id="output-storage-and-acquisition-interpretation">Output storage and acquisition interpretation</h2>
+<p>Every call's direct return is captured in its native type before conversion.
+There is no fabricated default return if execution does not return. Slots
+are valid native storage for the complete call, inaccessible to source code.
+Initialize <code>db = NULL</code>, <code>stmt = NULL</code>, and <code>tail = NULL</code> before their respective
+calls. A local publication flag begins false and changes only after admission.
+Initialization makes storage defined; it does not prove the callee wrote it.</p>
+<p>Acquisition outcomes are L1–L9 in the
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#sqlite-acquisition-and-lifecycle-table">canonical lifecycle table</a>.
+The distinction between partial failed open, empty successful prepare and
+failed prepare derives from <a href="https://www.sqlite.org/c3ref/open.html">open</a> and
+<a href="https://www.sqlite.org/c3ref/prepare.html">prepare</a>.</p>
+<p>On successful prepare, require a non-null tail within the SQL payload through
+its terminating position. Derive a checked offset while retaining the original
+allocation; never export the pointer. The unused suffix must contain only
+ASCII whitespace: bytes 9 through 13 or 32. Reject a second statement or other
+suffix, including trailing comments after the first statement. This deliberately
+restricts the wrapper rather than silently ignoring SQL. Empty/comment-only
+input can still produce the no-statement outcome. On tail/admission failure,
+finalize a conformingly acquired unpublished statement before releasing its
+connection dependency. If partial-owner close refuses, retain/quarantine its
+guard; never report disposal succeeded.</p>
+<h2 id="copied-text-and-lifecycle-rules">Copied text and lifecycle rules</h2>
+<p>Use T1–T16 in the <a href="/ash/docs/design/foreign-authoring/minimal-ffi-transitions/#sqlite-copied-text-table">canonical copied-text table</a>
+for null/empty/conversion failures, row-scoped original-kind caching, copy
+admission and publication. Native conversion refusal is T10; an admitted worker
+refusal is T14; malformed worker success is T15. Parent capacity failure is
+T13, independently of encoding. Use L10–L23 for binding/reset/step/native finish
+and K1–K9 for local scope discharge. A lost session closes locally without a
+stale native call or invented consumption. These rules are the same on each
+target; only physical executor mechanisms belong to platform profiles.</p>
+<p>Native contracts are documented by SQLite's
+<a href="https://www.sqlite.org/c3ref/column_blob.html">column access</a>,
+<a href="https://www.sqlite.org/c3ref/reset.html">reset</a>,
+<a href="https://www.sqlite.org/c3ref/clear_bindings.html">clear bindings</a>,
+<a href="https://www.sqlite.org/c3ref/finalize.html">finalize</a> and
+<a href="https://www.sqlite.org/c3ref/close.html">close</a>. Binding policy conservatively
+blocks execution/rebinding after uncertainty even where a native implementation
+might permit additional operations. A native declaration does not prove
+adherence to any of these contracts.</p>
+<h2 id="diagnostic-copying">Diagnostic copying</h2>
+<p>Diagnostic codes are direct C integer results. Capture them while the
+connection is live and before another mutating call. Optional <code>errmsg</code> bytes
+are borrowed, zero-terminated native storage: null means unavailable. Copy
+within a configured scan bound before invalidation; absent terminator,
+invalid encoding or refusal of the separate optional diagnostic allowance
+yields unavailable text with a reason. Actual runtime allocator/work failure
+is terminal, preserving the original status and known disposition in reserved
+control storage rather than promising an ordinary source report.
+The bound limits scanning but does not prove native readability. Never query
+an already closed connection or finalized statement. See
+<a href="https://www.sqlite.org/c3ref/errcode.html">error reporting</a>. The
+<a href="/ash/docs/design/foreign-authoring/minimal-ffi-exhaustion-and-ownership/">common exhaustion design</a> specifies
+the required reservations and report construction.</p>
+<h2 id="evidence">Evidence</h2>
+<p>Apply the canonical table's distinguishing traces to both executors. Pair
+native failures with runtime/worker/parent capacity refusal; observe original
+status, owner disposition, dependency protection and source delivery separately.
+Header/target representation checks belong to the ABI profile. Launch and
+containment evidence belongs to the platform executor profile. A conforming
+logical outcome does not establish native memory safety or database truth.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#exact-operation-inventory">Exact operation inventory</a><a href="#constants-nulls-and-negative-sentinels">Constants, nulls and negative sentinels</a><a href="#input-preparation">Input preparation</a><a href="#output-storage-and-acquisition-interpretation">Output storage and acquisition interpretation</a><a href="#copied-text-and-lifecycle-rules">Copied text and lifecycle rules</a><a href="#diagnostic-copying">Diagnostic copying</a><a href="#evidence">Evidence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

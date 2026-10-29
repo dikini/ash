@@ -21,7 +21,8 @@ async function readSnapshot(source, ref, directories, requiredChapters, label) {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error('Invalid resolved specification revision');
   const files = (await git(source, ['ls-tree', '-r', '--name-only', revision, '--', ...directories])).trim().split('\n');
   const directory = directories.find(directory => files.includes(`${directory}/README.md`)) ?? directories[0];
-  const available = files.filter(file => file.startsWith(`${directory}/`) && file.endsWith('.md')).map(file => file.slice(directory.length + 1));
+  // ".proposed.md" files are upstream proposal-state material, not publishable chapters.
+  const available = files.filter(file => file.startsWith(`${directory}/`) && file.endsWith('.md') && !file.endsWith('.proposed.md')).map(file => file.slice(directory.length + 1));
   for (const file of requiredChapters) if (!available.includes(file)) throw new Error(`Missing ${label} chapter: ${directory}/${file} at ${revision}`);
   const ordered = [...requiredChapters, ...available.filter(file => !requiredChapters.includes(file)).sort()];
   const chapters = [];

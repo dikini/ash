@@ -197,6 +197,20 @@ the wash alone falls below the perceptual threshold. The type distinction the
 frames carry stays: definition terms are semibold sans labels, route titles
 use serif.
 
+The colour revision gives the shared header and home opening a continuous
+green-black field. The home hero uses paper headings, code-muted secondary
+text, a seal-red primary action, and benihi links and focus outlines on the
+dark surface. The header brand reuses the bare tree symbol rather than the
+black-square favicon; the browser theme colour matches the ink header. Paper
+returns at Discover, while the home definition and status panels use a deeper
+sage mixed from the existing surface and status tokens. The hero display is
+capped at 56px so each haiku verse stays on one line on wide screens; narrow
+screens retain readable wrapping. The Learn heading is “Tour, Study, Specs”;
+the adjoining Discover and Learn padding is 48px on each side, while their
+outer spacing and mobile rhythm remain unchanged. The ash-tree detail,
+typefaces, column geometry, and section order remain unchanged. The mobile
+menu retains its paper reading surface and native disclosure behavior.
+
 ### Location and context in vertical navigation
 
 The primary job of reading navigation is to answer two questions at a glance:

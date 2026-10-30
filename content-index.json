@@ -17,15 +17,15 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "src/pages/index.astro",
-        "sha256": "c0777f5b8f5130d0c919a4c20b9410dd0b74132d5f01dac0ce29008dc7dedaf7"
+        "sha256": "837f3451d6126c9c52f7bf847c41bf3e76a609db56c3bcd1706623ef19abca81"
       },
       "url": "/ash/",
       "canonical": "https://dikini.github.io/ash/",
       "markdown": "/ash/index.md",
-      "markdownSha256": "6f61997b0513861876a6ed876c0b2630eedd0c5d2d0d07003b06f2be3e8651a0"
+      "markdownSha256": "7d8ef4010ed439b0ec1e03b3f70a2d8d0e470da6993513cb1c855a8daf06e3c9"
     },
     {
       "title": "Contribute to Ash",
@@ -47,7 +47,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/contribute.md",
         "sha256": "fabf1bc8893400c90e52fccc7c30604c9ac934c7f9ea402fe6a57e1cc2c90b1c"
@@ -55,7 +55,7 @@
       "url": "/ash/contribute/",
       "canonical": "https://dikini.github.io/ash/contribute/",
       "markdown": "/ash/contribute/index.md",
-      "markdownSha256": "c470d066872df47854eb5583b44cc6500fec6ee5160bd428b4e799caa272f97f"
+      "markdownSha256": "53ef8180a058c66271b3d6837ab6be70fc5610efcb64a89b6df7985069fd05e6"
     },
     {
       "title": "Developer diaries",
@@ -70,7 +70,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "src/pages/diaries/index.astro",
         "sha256": "fb1b154aa780c73374417b22698b8a586b64c80eb8d2d102b2270bc8f3fee6b1"
@@ -78,7 +78,7 @@
       "url": "/ash/diaries/",
       "canonical": "https://dikini.github.io/ash/diaries/",
       "markdown": "/ash/diaries/index.md",
-      "markdownSha256": "84ea9c79675c0b7697a4e43eb4566307258e5d354220decfdfc8a0fa07121883"
+      "markdownSha256": "962c826f22952f96c48e31e93dedddfc68ef5ed3683b835e4ac405e161d4e9ee"
     },
     {
       "title": "Exploring verification in Ash",
@@ -113,7 +113,7 @@
       "type": "Article",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/diaries/exploring-verification.md",
         "sha256": "6b0730debf7ccca8a3de01c26f100a4f6df20f44927faa2ba6b9c9ebf069e5fc"
@@ -121,7 +121,7 @@
       "url": "/ash/diaries/exploring-verification/",
       "canonical": "https://dikini.github.io/ash/diaries/exploring-verification/",
       "markdown": "/ash/diaries/exploring-verification/index.md",
-      "markdownSha256": "cfa01be6dd6a0cc263f6e4395d419180944f6c19914a6418262b6cff102dad68"
+      "markdownSha256": "e1332cf56d67232c96aefabe3c89e4d89979c7d40e6ddc44ddbf26544046c1cb"
     },
     {
       "title": "Working on FFI in Ash",
@@ -156,7 +156,7 @@
       "type": "Article",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/diaries/working-on-ffi.md",
         "sha256": "58b061d4037f4e03089630d71887e2f802dce1986eda76012a7808343b64f25b"
@@ -164,7 +164,7 @@
       "url": "/ash/diaries/working-on-ffi/",
       "canonical": "https://dikini.github.io/ash/diaries/working-on-ffi/",
       "markdown": "/ash/diaries/working-on-ffi/index.md",
-      "markdownSha256": "c601a4af1eb8d1b2ff9c2a5c4acc573dcc3f1442bcee34fd228e5062353b0e70"
+      "markdownSha256": "c8b7d373cdd33694282f3da233819687b1eb448882b037eb3c821fc19e832dc7"
     },
     {
       "title": "Meet Ash",
@@ -186,7 +186,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/discover.md",
         "sha256": "f7028868469152a7df908afe1b7a5a8cc72aabc5e28b6db9fff256eae02485da"
@@ -194,7 +194,7 @@
       "url": "/ash/discover/",
       "canonical": "https://dikini.github.io/ash/discover/",
       "markdown": "/ash/discover/index.md",
-      "markdownSha256": "ffebe48ee8ca52f05e96ff333ad038e9fdbb8c8d3e7bd640506ad27bfa4dfeb4"
+      "markdownSha256": "5f792d3d3609b9046f823dceea2fa9c8c1305ee070e9bcaa9da49369dcfc5b87"
     },
     {
       "title": "Documentation",
@@ -216,7 +216,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/docs.md",
         "sha256": "cd180c5d64a928cc0e1b6fe22879a8b064713ce3c20478ec1d6eb9a5c8a342dd"
@@ -224,7 +224,7 @@
       "url": "/ash/docs/",
       "canonical": "https://dikini.github.io/ash/docs/",
       "markdown": "/ash/docs/index.md",
-      "markdownSha256": "3475bc264f9b28c7c22e9a7043dfa33b5c83af753a13b6aed6154c4149e351d8"
+      "markdownSha256": "42c3c27a12b44ab434ff4b5156c4eb630bb9109c31ac8db1002e03b9e25464c0"
     },
     {
       "title": "Architectural decisions",
@@ -5746,7 +5746,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/docs/install.md",
         "sha256": "97c28dc4e132c8ba1c403a4e866079af8fadbad33d9ffbe88c2371596df2a377"
@@ -5754,7 +5754,7 @@
       "url": "/ash/docs/install/",
       "canonical": "https://dikini.github.io/ash/docs/install/",
       "markdown": "/ash/docs/install/index.md",
-      "markdownSha256": "64e16d812b945a27d2bf8dafb70e0d802ed03c7deafec937c0cba5a0a56391ea"
+      "markdownSha256": "65994be2844d3fd0e9e47e4171008d8fbc22ddebfdf3dc740a536b2f49359245"
     },
     {
       "title": "Ash Tools",
@@ -5826,7 +5826,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/learn.md",
         "sha256": "7d9abcdf7595c5876ca8cee4ff52a18f947c2e143505c21dc3de22ebab985282"
@@ -5834,7 +5834,7 @@
       "url": "/ash/learn/",
       "canonical": "https://dikini.github.io/ash/learn/",
       "markdown": "/ash/learn/index.md",
-      "markdownSha256": "dc525e9ecb1eadb3ef69fe2485fc2391a35db1dabaa7ccc13a51a98389b8e2e0"
+      "markdownSha256": "e1d25b7501b6b8c6943f921a5e3bb5a3955dce7f122815b2019ba8712ad82997"
     },
     {
       "title": "A short tour of Ash",
@@ -5849,7 +5849,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "src/pages/learn/tour.astro",
         "sha256": "d4ed1fdd47ff1602169e00e9d707c44e9cab05ec01e2ccf5a3613ee2571675b6"
@@ -5857,7 +5857,7 @@
       "url": "/ash/learn/tour/",
       "canonical": "https://dikini.github.io/ash/learn/tour/",
       "markdown": "/ash/learn/tour/index.md",
-      "markdownSha256": "6d96867bca9298f31a29c85b85ead8605da8c3298efb3ed22a894553a1d8721a"
+      "markdownSha256": "424a59d0a048ebd1f316caaf72297614f7bd7affe104da5d2e0f3c853794cdd2"
     },
     {
       "title": "Ash Specification",
@@ -6054,7 +6054,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/status.md",
         "sha256": "d83d742d0588ab82928fc86a7c158dac1d0a1a9294eebe53b913bbff7863fa28"
@@ -6062,7 +6062,7 @@
       "url": "/ash/status/",
       "canonical": "https://dikini.github.io/ash/status/",
       "markdown": "/ash/status/index.md",
-      "markdownSha256": "ac5457095aec4b7dd6e222f9e5c102dcb359207fafdb63e0d68cdace79b5702f"
+      "markdownSha256": "dd8b45d5497e49eee37a432f65c3e50363628707dca139fed8332f903d1c40ef"
     },
     {
       "title": "Take time to understand the program",
@@ -6077,7 +6077,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "src/pages/study/index.astro",
         "sha256": "dce3e24e7e104acd766c24838da8031f7c121299177712130b1f4fb94abc472b"
@@ -6085,7 +6085,7 @@
       "url": "/ash/study/",
       "canonical": "https://dikini.github.io/ash/study/",
       "markdown": "/ash/study/index.md",
-      "markdownSha256": "278e810fa0e721f114dd3d723ad11b7b22ae544c1ebe25a4bdbc1bb814776717"
+      "markdownSha256": "899bb49cc46d54d3fb2c33434e9a9b04e988a8db424ce1c2824df0f5dac223f4"
     },
     {
       "title": "Ash documentation",
@@ -8041,7 +8041,7 @@
       "type": "WebPage",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "src/pages/updates/index.astro",
         "sha256": "77d2f14236f969eeedc15be05dd52c9834d850aaf1a01151358c3e04dcefbec4"
@@ -8049,7 +8049,7 @@
       "url": "/ash/updates/",
       "canonical": "https://dikini.github.io/ash/updates/",
       "markdown": "/ash/updates/index.md",
-      "markdownSha256": "287a1422b7646740b31aa872b3e795d44d5967d29b77893b1a7224863c489503"
+      "markdownSha256": "c90df058dfd42b8474e8d5542e2dbdf6eb90d5bc3247c71545ae87f258e0c5e8"
     },
     {
       "title": "A public home for an evolving language",
@@ -8071,7 +8071,7 @@
       "type": "Article",
       "source": {
         "kind": "website",
-        "revision": "ceecbe838e306d461f75d8e60658bb4b2e4649d9",
+        "revision": "7e759686699a13ce32287c0d43f9c3c889b9fba6",
         "dirty": false,
         "path": "content/updates/first-version.md",
         "sha256": "89f17c8582ca5f544491c75a58e0995997ff75fcea9c6d0e7a6c9ae4ebc65d03"
@@ -8079,7 +8079,7 @@
       "url": "/ash/updates/first-version/",
       "canonical": "https://dikini.github.io/ash/updates/first-version/",
       "markdown": "/ash/updates/first-version/index.md",
-      "markdownSha256": "181bb57853d3913860d3561e675b547fd73bbe6f10205b96582149b879a84a47"
+      "markdownSha256": "ec816b4433a9bc2c6c731e5ef4e259b0e12d978647ad78251259233ff7ccf2cc"
     }
   ]
 }

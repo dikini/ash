@@ -203,7 +203,7 @@ text, a seal-red primary action, and benihi links and focus outlines on the
 dark surface. The header brand reuses the bare tree symbol rather than the
 black-square favicon; the browser theme colour matches the ink header. Paper
 returns at Discover, while the home definition and status panels use a deeper
-sage mixed from the existing surface and status tokens. The hero display is
+sage derived from the existing surface and status tokens. The hero display is
 capped at 56px so each haiku verse stays on one line on wide screens; narrow
 screens retain readable wrapping. The Learn heading is “Tour, Study, Specs”;
 the adjoining Discover and Learn padding is 48px on each side, while their

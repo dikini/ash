@@ -224,7 +224,7 @@ main:focus { outline: none; }
 .home-page .hero .primary:hover { background: var(--paper); color: var(--ink); }
 .home-page .hero .text-link { color: var(--color-accent-bright); }
 .home-page .hero-example::before {
-  background: radial-gradient(58% 62% at 52% 45%, var(--code-surface) 0%, transparent 72%);
+  background: radial-gradient(58% 62% at 52% 45%, var(--panel) 0%, transparent 72%);
 }
 .code-example {
   overflow: hidden;
@@ -312,9 +312,7 @@ main:focus { outline: none; }
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
 }
-.home .principle-list, .home .honest-status {
-  background: color-mix(in srgb, var(--color-surface-subtle) 88%, var(--color-status-dot));
-}
+.home .principle-list, .home .honest-status { background: #d9dece; }
 .status-mark {
   position: absolute;
   top: 50%;

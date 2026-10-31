@@ -39,6 +39,8 @@ test('hosted chapters reflow while keeping native mobile reading and site menus'
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px overflow`).toBe(true);
     await expect(page.getByRole('button', { name: 'Toggle sidebar navigation', exact: true })).toBeVisible();
     await expect(page.locator('details.on-this-page summary')).toBeVisible();
+    expect(await page.locator('details.on-this-page summary').evaluate(el => getComputedStyle(el).color))
+      .toBe(await page.locator('.ash-study-banner').evaluate(el => getComputedStyle(el).color));
     if (width <= 760) {
       const menu = page.locator('.ash-study-header details.mobile-nav');
       await menu.locator('summary').click();

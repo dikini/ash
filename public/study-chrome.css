@@ -73,6 +73,7 @@ body #quarto-content {
 #quarto-document-content figcaption { color: var(--muted); font: 14px/1.6 var(--sans); }
 #quarto-margin-sidebar #TOC { padding: var(--space-5); border: 1px solid var(--line); background: var(--color-surface-subtle); font: 14px/1.6 var(--sans); }
 .breadcrumb, .breadcrumb-item, .breadcrumb-item a, .nav-page, .nav-page a, #quarto-document-content summary, #TOC, #TOC a { color: var(--muted) !important; }
+details.on-this-page > summary { color: var(--muted) !important; font-family: var(--sans); }
 .quarto-page-breadcrumbs, .quarto-secondary-nav, .breadcrumb, .nav-page { font-family: var(--sans); }
 .quarto-page-breadcrumbs a { display: inline-block; min-height: 24px; }
 @media (min-width: 992px) {

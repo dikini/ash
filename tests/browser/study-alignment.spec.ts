@@ -75,3 +75,49 @@ test('hosted study keeps reading controls and reflows with doubled text', async 
   await expect(page.locator('details.on-this-page summary')).toBeVisible();
   await expect(page.locator('#quarto-document-content')).toBeVisible();
 });
+
+test('full-width study sections keep prose clear of sticky chapter navigation and preserve illustrations', async ({ page }) => {
+  const path = '/study/latest/learn-using-more-than-one-input.html#pausing-after-the-first-input';
+  for (const width of [1440, 1280, 1100, 992]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(path);
+    const section = page.locator('#pausing-after-the-first-input');
+    await section.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(100);
+    await expect(page.locator('#quarto-document-content')).toHaveClass(/page-full/);
+    const layout = await page.evaluate(() => {
+      const sidebar = document.querySelector('#quarto-sidebar')!.getBoundingClientRect();
+      const aside = document.querySelector('#quarto-margin-sidebar')!.getBoundingClientRect();
+      const shell = document.querySelector('#quarto-content')!.getBoundingClientRect();
+      return {
+        left: sidebar.right, right: aside.left, shellRight: shell.right,
+        content: [...document.querySelectorAll('#pausing-after-the-first-input > h2, #pausing-after-the-first-input > p, #pausing-after-the-first-input > pre')].map(el => {
+          const r = el.getBoundingClientRect(); return { left: r.left, right: r.right };
+        }),
+        images: [...document.querySelectorAll<HTMLImageElement>('#quarto-document-content img.authored-illustration')].map(el => {
+          const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width };
+        }),
+      };
+    });
+    expect(layout.content.length).toBeGreaterThan(0);
+    for (const r of layout.content) {
+      expect(r.left, `sidebar overlap at ${width}px`).toBeGreaterThanOrEqual(layout.left - 1);
+      expect(r.right, `aside overlap at ${width}px`).toBeLessThanOrEqual(layout.right + 1);
+    }
+    expect(layout.images.length).toBeGreaterThan(0);
+    for (const r of layout.images) {
+      expect(r.width, `illustration visible at ${width}px`).toBeGreaterThan(100);
+      expect(r.left).toBeGreaterThanOrEqual(layout.right - 1);
+      expect(r.right).toBeLessThanOrEqual(layout.shellRight + 1);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  for (const width of [820, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(path);
+    const widths = await page.locator('img.authored-illustration').evaluateAll(images => images.map(el => el.getBoundingClientRect().width));
+    expect(widths.length).toBeGreaterThan(0);
+    expect(widths.every(width => width > 100)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});

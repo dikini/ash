@@ -35,3 +35,45 @@ test('study integration exposes shared navigation and static current-page semant
   assert.equal(document.querySelector('.active').getAttribute('aria-current'), 'page');
   assert.equal(document.querySelector('a[href="./other.html"]').hasAttribute('aria-current'), false);
 });
+
+test('study integration shares site chrome while preserving native chapter markup', () => {
+  const chapter = '<nav id="quarto-sidebar"><details open><summary>Part</summary><a class="sidebar-link active" href="./chapter.html">Chapter</a></details></nav><main id="quarto-document-content"><pre><code>&lt;tag&gt;  \n  main () = "a &amp; b"\n</code></pre><a href="next.html#exercise">Next</a></main>';
+  const original = `<!doctype html><html><head></head><body>${chapter}</body></html>`;
+  const integrated = integrateStudyHtml(original, snapshot);
+  const { document } = parseHTML(integrated);
+  assert.ok(document.querySelector('.ash-study-header .ash-tree-mark'));
+  assert.ok(document.querySelector('.ash-study-header nav[aria-label="Main navigation"]'));
+  assert.ok(document.querySelector('.ash-study-header a[href="/search/"]'));
+  assert.ok(document.querySelector('.ash-study-header .source-link'));
+  assert.ok(document.querySelector('.ash-study-header details.mobile-nav > summary'));
+  assert.equal(document.querySelector('.ash-page-menu a[href="/study/"]').getAttribute('aria-current'), 'true');
+  for (const href of ['/diaries/', '/study/', '/contribute/', '/status/']) {
+    assert.ok(document.querySelector(`.ash-study-footer a[href="${href}"]`));
+  }
+  assert.ok(document.querySelector('.ash-study-footer .footer-mark'));
+  assert.equal(document.querySelector('.ash-study-footer').getAttribute('data-pagefind-ignore'), '');
+  assert.ok(integrated.indexOf('</footer>') < integrated.indexOf('</body>'));
+  assert.ok(integrated.includes('<code>&lt;tag&gt;  \n  main () = "a &amp; b"\n</code>'));
+  assert.ok(integrated.includes('<details open><summary>Part</summary>'));
+  assert.equal(document.querySelector('#quarto-sidebar .active').getAttribute('aria-current'), 'page');
+  assert.equal(document.querySelector('main a').getAttribute('href'), 'next.html#exercise');
+});
+
+test('study integration rejects output without a supported closing body', () => {
+  assert.throws(() => integrateStudyHtml('<html><head></head><body><main id="quarto-document-content">Chapter</main></html>', snapshot), /unsupported.*format/i);
+});
+
+test('study snapshot metadata remains escaped in hosted chrome', () => {
+  const { document } = parseHTML(integrateStudyHtml('<html><head></head><body><main id="quarto-document-content">Chapter</main></body></html>', { ...snapshot, milestone: '<script>bad</script>' }));
+  assert.equal(document.querySelector('.ash-study-banner script'), null);
+  assert.ok(document.querySelector('.ash-study-banner').textContent.includes('<script>bad</script>'));
+});
+
+test('hosted study chapters use the website SVG favicon', () => {
+  const original = '<html><head><title>Chapter</title></head><body><main id="quarto-document-content"><p>Chapter</p></main></body></html>';
+  const { document } = parseHTML(integrateStudyHtml(original, snapshot));
+  const icon = document.querySelector('head link[rel="icon"]');
+  assert.ok(icon, 'Missing website favicon');
+  assert.equal(icon.getAttribute('type'), 'image/svg+xml');
+  assert.equal(icon.getAttribute('href'), '/favicon.svg?v=ash-tree');
+});

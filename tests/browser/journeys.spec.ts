@@ -7,7 +7,7 @@ test('study chapters retain book navigation and return to the site', async ({ pa
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   await page.locator('.nav-page-next').click();
   await expect(page).toHaveURL(/learn-using-another-source-file\.html/);
-  await page.getByRole('navigation', { name: 'Ash website' }).getByRole('link', { name: 'Study overview' }).click();
+  await page.locator('.ash-study-footer').getByRole('link', { name: 'Study Ash', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Take time to understand the program' })).toBeVisible();
 });
 

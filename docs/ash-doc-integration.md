@@ -79,3 +79,12 @@ covers navigation into the book, return links, desktop/mobile layout, and study
 search. The import adapter never edits ash-doc source. Shared HTML design tokens are
 synchronized locally before development and HTML builds through the
 [design system](design-system.md) workflow; the hosted theme applies them even to older source snapshots.
+
+## Hosted study presentation
+
+The site-side adapter supplies the tree wordmark, main navigation, search, native
+mobile menu, development notice, and footer. `public/study-chrome.css` scopes
+shared display typography, code and callout treatments, the 1240px shell, and
+responsive gutters to hosted HTML. Quarto retains its chapter sidebar, on-page
+aside, search, mobile disclosures, content order, and book serif body face.
+These overrides do not change ash-doc source or standalone PDF/EPUB styling.

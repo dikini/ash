@@ -68,3 +68,12 @@ test('study snapshot metadata remains escaped in hosted chrome', () => {
   assert.equal(document.querySelector('.ash-study-banner script'), null);
   assert.ok(document.querySelector('.ash-study-banner').textContent.includes('<script>bad</script>'));
 });
+
+test('hosted study chapters use the website SVG favicon', () => {
+  const original = '<html><head><title>Chapter</title></head><body><main id="quarto-document-content"><p>Chapter</p></main></body></html>';
+  const { document } = parseHTML(integrateStudyHtml(original, snapshot));
+  const icon = document.querySelector('head link[rel="icon"]');
+  assert.ok(icon, 'Missing website favicon');
+  assert.equal(icon.getAttribute('type'), 'image/svg+xml');
+  assert.equal(icon.getAttribute('href'), '/favicon.svg?v=ash-tree');
+});

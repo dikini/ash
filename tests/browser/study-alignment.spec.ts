@@ -5,6 +5,11 @@ const chapter = '/study/latest/learn-what-is-an-ash-program.html';
 test('hosted chapters share site chrome and keep Quarto reading columns', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(chapter);
+  const favicon = page.locator('head link[rel="icon"]');
+  await expect(favicon).toHaveAttribute('href', /\/favicon\.svg\?v=ash-tree$/);
+  const iconResponse = await page.request.get(new URL((await favicon.getAttribute('href'))!, page.url()).href);
+  expect(iconResponse.ok()).toBe(true);
+  expect(iconResponse.headers()['content-type']).toContain('image/svg+xml');
   const shell = page.locator('#quarto-content');
   const geometry = await shell.evaluate(el => ({ max: getComputedStyle(el).maxWidth, width: el.getBoundingClientRect().width }));
   expect(geometry.max).toBe('1240px');

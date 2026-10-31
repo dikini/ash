@@ -24,3 +24,12 @@
   font-weight: 400;
   font-display: swap;
 }
+
+/* Bundled monospace keeps code on one face on every device. */
+@font-face {
+  font-family: "Ash Mono";
+  src: url("/fonts/ash-mono-regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}

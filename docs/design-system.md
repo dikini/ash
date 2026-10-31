@@ -52,7 +52,8 @@ be used in media-query conditions.
 - Code uses monospace text, the dark code palette, horizontal scrolling,
   and keyboard focus for scrollable blocks. Inline code uses the light palette.
 - Body copy uses sans; diary prose and display headings use serif. The study
-  book retains its own bundled serif and monospace fonts and margin layout.
+  book retains its bundled serif reading face and Quarto navigation; hosted chrome,
+  content widths, and components follow the website.
 
 The bright benihi token is decorative; use the darker enji accent for links on
 paper. Keep reduced-motion and forced-colors rules. Coarse-pointer navigation
@@ -122,8 +123,10 @@ Keep the identical engine and regression tests updated together when changing
 the synchronization protocol. No GitHub workflow is added for this feature.
 
 Hosted chapters receive the website theme, including snapshots from older
-ash-doc revisions. The book retains its bundled reading fonts and margin
-layout; EPUB and PDF retain their format styles. Token versions describe
+ash-doc revisions. The book retains its bundled serif reading fonts and native Quarto columns;
+hosted chapters share the 1240px shell, responsive gutters, and 760px article
+limit, site header/footer, display headings, and component treatments. EPUB and
+PDF retain their format styles. Token versions describe
 presentation, not an Ash language edition.
 
 ## Website presentation (October 2026)

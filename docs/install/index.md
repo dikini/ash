@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/docs/install/  
 Authority: website-guidance  
-Source revision: e86e095237103057afb0e94320f2b45cbec09874  
+Source revision: 5e5cb9b6c145a1b8ee66299e63e150628e7832fb  
 Updated: 2026-10-18
 
 You need Git and a Rust toolchain managed by rustup. The repository's `rust-toolchain.toml` selects Rust 1.97.1. Cargo may download the selected toolchain and dependencies during the build.

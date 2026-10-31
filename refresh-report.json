@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "completedAt": "2026-10-31T17:25:14.007Z",
+  "completedAt": "2026-10-31T17:42:31.344Z",
   "event": "manual",
-  "reason": "Reserve 32px study navigation gutter",
+  "reason": "Publish main homepage with updated study presentation and fixes",
   "checks": [
     "check",
     "build",
@@ -10,8 +10,8 @@
     "test:browser",
     "prepare:pages"
   ],
-  "buildManifestSha256": "a45672576a793b59020172f31264fffed3b770a98e17d6591bd585e5a4ffa33e",
-  "artifactSha256": "8bda97366817746a5379f911a9e04f07cf472edef89362d246c51e5d1b72ba88",
-  "sourceBuildManifestSha256": "a31127dad335a891b16020917aac4bbb9227e6da785c8ade268056a380f38070",
-  "preparedAt": "2026-10-31T17:25:37.916Z"
+  "buildManifestSha256": "7b064b951b19f019072d2a01ccf01204be521bf0d9a1be36835c9bd18f9cfaab",
+  "artifactSha256": "0175ee15b04aee6136a61962fbd26bbf67855b79a8bfb093cd21ab597bdc49d8",
+  "sourceBuildManifestSha256": "bf60df6c25fe2db981de88593ebbfbdb35b473c0f6375e69e0aa6a0323c97168",
+  "preparedAt": "2026-10-31T17:42:45.778Z"
 }

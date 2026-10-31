@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/diaries/  
 Authority: website-guidance  
-Source revision: e86e095237103057afb0e94320f2b45cbec09874
+Source revision: 5e5cb9b6c145a1b8ee66299e63e150628e7832fb
 
 A place for work in progress: small experiments, design questions, implementation detours, and the thinking behind the changes. Entries describe a moment in development; an idea here may change as the work continues.
 

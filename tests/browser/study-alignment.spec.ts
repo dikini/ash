@@ -106,7 +106,7 @@ test('full-width study sections keep prose clear of sticky chapter navigation an
     });
     expect(layout.content.length).toBeGreaterThan(0);
     for (const r of layout.content) {
-      expect(r.left, `sidebar overlap at ${width}px`).toBeGreaterThanOrEqual(layout.left - 1);
+      expect(r.left, `sidebar overlap at ${width}px`).toBeGreaterThanOrEqual(layout.left + 31);
       expect(r.right, `aside overlap at ${width}px`).toBeLessThanOrEqual(layout.right + 1);
     }
     expect(layout.images.length).toBeGreaterThan(0);
@@ -123,6 +123,22 @@ test('full-width study sections keep prose clear of sticky chapter navigation an
     const widths = await page.locator('img.authored-illustration').evaluateAll(images => images.map(el => el.getBoundingClientRect().width));
     expect(widths.length).toBeGreaterThan(0);
     expect(widths.every(width => width > 100)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
+
+test('chapter reading column leaves a clear gutter beside the scrolling navigation', async ({ page }) => {
+  for (const width of [1440, 1280, 1100, 992]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/study/latest/learn-naming-intermediate-values.html');
+    await page.locator('#quarto-document-content h1').scrollIntoViewIfNeeded();
+    const gap = await page.evaluate(() => {
+      const sidebar = document.querySelector('#quarto-sidebar')!.getBoundingClientRect();
+      const heading = document.querySelector('#quarto-document-content h1')!.getBoundingClientRect();
+      return heading.left - sidebar.right;
+    });
+    expect(gap, `navigation gutter at ${width}px`).toBeGreaterThanOrEqual(31);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
 });

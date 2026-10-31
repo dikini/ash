@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-31T16:47:42.015Z",
+  "generatedAt": "2026-10-31T17:12:26.424Z",
   "site": {
-    "revision": "2458febc3af7733631eb0d9abc1f9558c521ebbd",
+    "revision": "0d7497f101091ca57579e67539d24bbd4a56cb76",
     "dirty": false
   },
   "trigger": {
     "event": "manual",
-    "reason": "Publish redesigned website with aligned hosted study and refreshed ash-doc"
+    "reason": "Fix hosted full-width study overlap and add shared favicon"
   },
   "inputs": {
     "sourceConfigSha256": "b01ad89201482f0d3dba6c3d330c82e192bf8b4b9d6f0703aa284545d06700ef",
@@ -18,7 +18,7 @@
   "sources": {
     "ash-lang": {
       "repository": "https://github.com/dikini/ash-lang.git",
-      "ref": "main",
+      "ref": "9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b",
       "revision": "9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b",
       "mode": "remote",
       "publications": [
@@ -55,7 +55,7 @@
     },
     "ash-doc": {
       "repository": "https://github.com/dikini/ash-doc.git",
-      "ref": "main",
+      "ref": "c7884d38a8f839fe155eb2a89da5121543808117",
       "revision": "c7884d38a8f839fe155eb2a89da5121543808117",
       "ashRevision": "354c76b391fe4af665cf6a03479a9874a57cb3e3",
       "route": "/study/latest/",
@@ -117,9 +117,9 @@
     "baseUrl": "https://dikini.github.io/ash",
     "pageCount": 285,
     "generatedMarkdownCount": 14,
-    "catalogueSha256": "903b97bff42231c5d2a4d7d0f743a5d26f4dc7b0960ffb1a97630ea7aa9c8ba3",
+    "catalogueSha256": "cb8b5b71ede4b88534b7f1a5dd3e1621b34ac217a29fe361a7c621eef72a86a0",
     "llmsSha256": "0a9240fe04743b0870b3f212f1273ca4dac1f55cb8df737cd6187d327b201fc0",
-    "markdownSetSha256": "a5b12c236ccb0bad161f22ae85c72d5cfcd039b256a033bb4cbf72d5ff57cb42"
+    "markdownSetSha256": "beb1e0e6294fc1801b1153609f10107c7c0fceb44ab944cf80d87b768200c575"
   },
   "hosting": {
     "provider": "github-pages",

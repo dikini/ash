@@ -82,6 +82,13 @@ details.on-this-page > summary { color: var(--muted) !important; font-family: va
   }
   #quarto-document-content { width: 100%; max-width: var(--layout-article); }
 }
+/* Full-width chapters and nested sections share the shell's named reading and
+   margin tracks; independent grids can place prose beneath the sticky sidebar. */
+body #quarto-content > #quarto-document-content.page-columns.page-full {
+  max-width: none;
+  grid-template-columns: subgrid;
+}
+#quarto-document-content .page-columns.page-full { grid-template-columns: subgrid; }
 @media (max-width: 1100px) {
   .ash-study-header { gap: var(--space-5); }
   .ash-study-header .desktop-nav { gap: var(--space-4); }

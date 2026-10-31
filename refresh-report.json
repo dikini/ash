@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "completedAt": "2026-10-31T16:49:35.185Z",
+  "completedAt": "2026-10-31T17:14:21.555Z",
   "event": "manual",
-  "reason": "Publish redesigned website with aligned hosted study and refreshed ash-doc",
+  "reason": "Fix hosted full-width study overlap and add shared favicon",
   "checks": [
     "check",
     "build",
@@ -10,8 +10,8 @@
     "test:browser",
     "prepare:pages"
   ],
-  "buildManifestSha256": "92682f2419f26a59acb981b75e75a92438cbcda577f325c119a238b207ad6cb8",
-  "artifactSha256": "23533787e252b39ac0f5c34de5d7fe5dbc4f450925413bf0ee1a5921f9d83bbd",
-  "sourceBuildManifestSha256": "020386e1d139054c3726c2e97a522a224ac85b04791e60df64765e5fd9c42363",
-  "preparedAt": "2026-10-31T16:49:53.360Z"
+  "buildManifestSha256": "dc8c9b23ac54db473b4e0326caedee60a6f1c3c6ac52d43ca75f751e45519456",
+  "artifactSha256": "21065f09fc7502b787d55ee228fd0ce18a38431350e89c1744654891a91eb56b",
+  "sourceBuildManifestSha256": "eec68060248a65d924c10a3ee8116e9d3afa95a670607634f88472b5a8ba4898",
+  "preparedAt": "2026-10-31T17:14:46.123Z"
 }

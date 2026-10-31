@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/diaries/exploring-verification/  
 Authority: website-guidance  
-Source revision: 2458febc3af7733631eb0d9abc1f9558c521ebbd  
+Source revision: 0d7497f101091ca57579e67539d24bbd4a56cb76  
 Published: 2026-10-23  
 Updated: 2026-10-23  
 Authors: Vlado

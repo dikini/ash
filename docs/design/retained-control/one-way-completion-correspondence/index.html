@@ -1,0 +1,261 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>One-way completion: candidate proof slice · Ash</title><meta name="description" content="OneWayCompletion.lean is the retained model for the assignment. Its frozen, independently reviewed gate and 130 ordered reports for 129 unique names are recorded in the proof evidence. The retained source is…"><meta name="robots" content="index, follow"><meta property="og:title" content="One-way completion: candidate proof slice · Ash"><meta property="og:description" content="OneWayCompletion.lean is the retained model for the assignment. Its frozen, independently reviewed gate and 130 ordered reports for 129 unique names are recorded in the proof evidence. The retained source is…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="One-way completion: candidate proof slice · Ash"><meta name="twitter:description" content="OneWayCompletion.lean is the retained model for the assignment. Its frozen, independently reviewed gate and 130 ordered reports for 129 unique names are recorded in the proof evidence. The retained source is…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/retained-control/one-way-completion-correspondence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/retained-control/one-way-completion-correspondence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/one-way-completion-correspondence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"One-way completion: candidate proof slice","headline":"One-way completion: candidate proof slice","description":"OneWayCompletion.lean is the retained model for the assignment. Its frozen, independently reviewed gate and 130 ordered reports for 129 unique names are recorded in the proof evidence. The retained source is…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/retained-control/one-way-completion-correspondence/","@id":"https://dikini.github.io/ash/docs/design/retained-control/one-way-completion-correspondence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/one-way-completion-correspondence.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="one-way-completion-candidate-proof-slice" data-pagefind-meta="title">One-way completion: candidate proof slice</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/one-way-completion-correspondence.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/OneWayCompletion.lean">OneWayCompletion.lean</a> is the retained model for the
+<a href="/ash/docs/design/retained-control/one-way-completion-proof-assignment/">assignment</a>. Its frozen, independently
+reviewed gate and 130 ordered reports for 129 unique names are recorded in the
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/tasks/evidence/pinned-one-way-proof/README.md">proof evidence</a>. The
+retained source is <code>870b4f0f4b134e49a2d97a1039d8f362700cb2ff1f7d667877d6cb9816e1573c</code>.
+The subsequent helper-routing draft is not part of that source or gate. The
+model's scope and the trusted mapping to actual Core and runtime behavior are
+separate; the model alone grants no product completion authority.</p>
+<h2 id="modeled-result">Modeled result</h2>
+<p>The modeled control state carries its Network, activation key, actual control
+node, frame stack, external-work bits and taint. Its receive transitions use the
+selected Network channel and operation: Message commits the exact queue head to
+held work, Empty requires an unsealed empty channel, and End requires a healthy,
+sealed, empty channel. End first records a pending observation for the same
+activation, lane and side. Only the modeled successful reply edge creates an
+End fact; a source value or helper return cannot create it.
+<code>control_step_network</code>, <code>execution_step_network</code> and <code>execution_network</code> map
+the modeled control and processing steps to <code>WorkerChannel.NetworkTrace</code>.</p>
+<p>The authenticated End return requires a fact and frame for the same key.
+An ordinary normal return can carry no End fact. The oldest outer driver has
+an exact result destination and a checked End match leading to finish or stop;
+inner recursive frames have the separately checked inert suffixes.
+<code>trace_preserves_frames</code> derives the modeled live frames from their exact call
+nodes, with no bound on finite dynamic stack depth. The bounded suffix checker
+admits allocation-free alias, construction, projection, branches and returns;
+it checks all listed operands and both branch successors. It translates those
+nodes into the same modeled control machine. <code>trace_fact_origin</code> shows that
+such a suffix execution cannot mint an End fact. Unsupported nodes and
+message-derived operands fail that check.</p>
+<p>The restricted processing graph represents no-output stutters, forwarding with
+explicit finite operand and destination ports, and selected native bindings whose
+synchronous return and preservation of modeled network, Store and dependencies
+are explicit conditional premises. Their association with actual native calls
+and the ordinary host assumptions remains to be established. Forwarding unions message-derived value
+and capture dependencies into the destination; branch enumeration covers both
+successors. It orders cleanup start and return before the marker. Retain,
+callbacks, escape and unknown nodes fail. <code>checked_region_marker_finishes</code> maps every
+modeled region walk reaching its marker to C1 cleanup and the same-entry
+<code>WorkerChannel.NetworkStep.finishProcessing</code>. It checks all supplied older
+frame continuations. The same-Store work projection includes the active
+capture, clause, live slots and explicit external callback, cleanup, capture and
+other-work bits. The relation of those bits and the selected C3 query to actual
+runtime work remains unproved.</p>
+<p>The finite analysis join refuses different full contexts, loses unequal facts
+and work, unions dependencies and escape, and proves that an End fact at a join
+came from every listed normal predecessor. The separate <code>Summary</code> relation
+starts empty; <code>no_base_no_returns</code> excludes a bare recursive cycle, <code>least</code>
+proves leastness, and its pair-universe theorem proves finite convergence.
+The finite projection keeps a pending End distinct from a successful reply,
+and keeps taint, terminal failure, compatibility and pending state separate.
+It retains symbolic receive sites rather than dynamic delivery identifiers,
+with fixed-width dependency and frame-site bits. A draft bounded solver records
+full entry/current configurations, starts its return-pair set empty and
+replays configurations after each revision. The solver proves a least fixed
+point for its enumerated rules. From reached configurations,
+<code>certified_call_enters</code> and <code>certified_matched_return_replayed</code> connect an
+actual modeled call and its matching return to solver replay. <code>SolverFrames</code>
+records each dynamic frame with the reached caller that created it. From that
+witness, <code>certified_stack_call_enters</code> and <code>certified_stack_return_replayed</code>
+connect the actual push and matched return to solver configurations, and
+<code>certified_stack_return_matches</code> excludes a wrong return port by replaying the
+tainted result and checking admission. <code>certified_execution_reached</code> derives
+that witness and solver reachability for every finite, healthy modeled
+execution from the normalized initial seed and an empty initial frame stack.
+<code>certified_dispatch_successor</code> derives the checked selected-root successor.
+<code>certified_receive_message</code>, <code>certified_receive_empty</code> and
+<code>certified_receive_end_pending</code> cover those concrete receive outcomes from a
+reached configuration. The Message case derives the empty held list and active
+root exclusion from admission. <code>execution_preserves_reply_consistency</code> keeps a
+pending End separate from a returned fact throughout modeled execution.
+<code>certified_end_reply</code> connects a successful reply of that pending fact to the
+solver. <code>certified_branch_successor</code> covers either branch, and
+<code>certified_forward_successor</code> propagates the listed operand dependencies.
+<code>certified_processing_successor</code> derives the selected delivery, root and work
+checks from admission and covers the actual modeled processing path.
+<code>certified_execution_finish</code> combines that induction with the finish check.
+From an accepted normalized seed, empty initial fact, pending reply and event
+list, and an empty initial frame stack, every healthy modeled finish has a
+genuine End event, no current or held delivery, empty projected same-Store
+work, checked saved-frame suffixes and a Network trace. It does not assume the
+finish cut or solver reachability as premises.</p>
+<p>The revised model preserves normal returns without End and the driver's
+non-End stop. Both receive-failure forms, before and after operation-token
+acquisition, retain their control successors. Result constructor cases remain
+separate from authenticated End provenance: an unknown or unauthenticated
+End-shaped success takes a tainted alternative that healthy admission refuses.
+<code>certified_execution_coverage</code> covers unfiltered modeled Execution: a healthy
+endpoint is solver-reached, while a failed endpoint cannot satisfy the finish
+predicate. Network failure is permanent; failed paths need no exact solver
+projection to establish this accepted-finish safety result.</p>
+<p>A separate restricted <code>Loop.Run</code> combines modeled Message, Empty and End paths.
+<code>normal_run_end_witness</code> identifies the exact modeled sealed End channel and
+Network transitions. <code>normal_run_observes_end</code> derives a quiet held list and
+Store from a safe, quiet entry for every finite <code>Run</code>. Its Message constructor
+requires a checked region path, exact held entry and matching selected C1 root.</p>
+<h2 id="model-limits-and-implementation-evidence">Model limits and implementation evidence</h2>
+<p>These modeled results do not constitute a mechanized proof of the implementation. <code>Loop.Run</code> is already
+filtered by acceptance premises and is not derived from <code>Execution</code>. Its frame
+fields are not connected to the actual control steps that created and returned
+those frames. The unified execution includes a dispatch transition linking the current
+Message entry to a capture constructed from a finite root graph and to the
+selected root consumer. A rejected capture graph and a mismatched actual root
+have explicit tainted successors. The selected-root projection checks the
+concrete branch, held entry, owner, cleanup shape and consumer. The relation
+between this graph and actual linked Core is a trusted, independently reviewed
+implementation mapping rather than a mechanized Rust refinement proof. Unsupported control nodes
+and paths reaching an unverified
+processing operation invalidate the fact and taint the state. The unified
+execution retains control continuations after Network failure. Permanent
+failure prevents the concrete finish predicate from succeeding. Solver admission
+rejects the modeled unsupported processing, rejected capture and mismatched
+capture alternatives. Their coverage of actual linked Core and runtime
+successors is checked through the implementation mapping and connected tests
+below. The modeled finish theorem alone grants no actual <code>finish_receive</code> or
+release authority. The implemented validator and runtime enforce their own
+authenticated routes, cuts, observations and settlement checks.</p>
+<p>The modeled call transfer uses simultaneous reads of finite argument and
+capture ports, a saved caller dependency vector, and a
+return assignment that replaces the caller destination. Successful End reply
+replaces its destination; pending observation and failure do not. Return nodes
+name their value operand. Authenticated End and inert-suffix returns reject
+a derived operand; ordinary returns without an End fact may retain dependencies. Its finite
+projection records saved-frame return maps and computes a conservative
+dependency closure. A solver replay of a return-source mismatch produces a
+tainted successor, which the checker rejects. The execution induction connects
+this replay to mismatched returns and saved frames in the modeled machine.
+The preflight budget must cover this computation and the remaining solver
+work; its cost coverage is not proved.</p>
+<p>The accepted <a href="/ash/docs/design/retained-control/drain-correspondence/">C3 correspondence</a> already covers the
+focused full-state closure, matched call and return, fresh root and marker
+completion. The implementation mapping relates worker, delivery, End and native
+evidence to that same focused query; it does not require a second general
+evaluator proof. C3's ordinary Unknown native result remains conservative.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Reused C3 result</th>
+<th>Additional one-way obligation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Helper call and return</td>
+<td>Final-closure replay, simultaneous input reads and matched full-state returns</td>
+<td>Rebind every selected closure alternative and return in the same focus; reverse the actual port pairs and preserve their contexts.</td>
+</tr>
+<tr>
+<td>Native return</td>
+<td>Unknown work is conservative for an unresolved request</td>
+<td>Authenticate the actual selected binding and successful return, check the ignored Unit use, and apply the conditional host-preservation premise only on that edge.</td>
+</tr>
+<tr>
+<td>Message completion</td>
+<td>C3 tracks the selected root's completion at the same Store's matching marker</td>
+<td>Associate the committed dynamic delivery with that root, consumer and completed cleanup before discharging it; unrelated work must remain represented.</td>
+</tr>
+<tr>
+<td>End and driver</td>
+<td>C3's normal return and suffix evidence</td>
+<td>Bind the genuine End reply to the correct activation, outer return destination and <code>finish_receive</code> predecessor.</td>
+</tr>
+<tr>
+<td>Budget</td>
+<td>The focused analysis charges its work to the existing Core budget</td>
+<td>Charge the added collector, identity checks and replay; establish the actual linked positive within its applicable source-derived allowance.</td>
+</tr>
+</tbody>
+</table>
+<p>The narrow <code>requested_interpreter</code> extension is implemented in the
+private scoped worker query. Its bounded source mapping has independent review
+and focused evidence; final assembled workspace verification and delivery
+acceptance remain separate gates.
+It retains boundary selection, the payload check, external-result handling and
+the return edge. The conditional transfer applies to the current request at
+the selected native boundary and focused Store, with the instantiated effect,
+authenticated symbol and checked ignored-Unit continuation. Under the ordinary
+host-preservation assumptions, the successful return preserves <strong>any incoming
+C3 work</strong>, including Pending and Unknown, while expiring stale case and Probe
+facts. Unknown, escaping, intercepted, failed and nonreturning paths supply no
+such transfer. Identity collection by itself neither establishes closure nor
+clears work. The query must replay all alternatives to final closure and charge
+this work before it publishes a result.</p>
+<p>A focused fixture diagnostic reached eligible native returns for one worker
+side under this conditional query. The ordinary unscoped, ineligible and
+resource-exhaustion paths still need their guard checks. This diagnostic does
+not issue a completion fact or establish the runtime binding and host premises.</p>
+<p>This pointwise work-preservation rule does not require a particular helper
+history or a matched helper frame. Existing C3 closure covers its callers and
+frames. Delivery retirement is a separate obligation: it must bind the actual
+committed delivery to the selected dynamic root, consumer and completed cleanup
+at the same Store, with the required caller and result evidence. A native
+identity or work-preserving return alone grants no retirement permission.</p>
+<p>The runtime association uses the existing
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/eval/machine.rs"><code>check_network_native_support</code></a>: it instantiates
+the admitted worker's native effects for the fresh Network activation, checks
+the registered symbol and selected root interpretation, and checks the installed
+binding. <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/foreign/source_bindings.rs"><code>try_copy_for_worker</code></a>
+retains that symbol identity and callback in each worker copy; invocation checks
+the identity again. These checks associate the selected binding. They do not
+prove its synchrony, nonreentry, visibility or Store, Network and dependency
+preservation, which remain conditional host assumptions. Callback failure is
+not a successful native return.</p>
+<p>The retained model's <code>callInputs</code> relation reads <code>(source, destination)</code> pairs;
+the Core collector's <code>existing_call_ports</code> gives <code>(callee destination, caller or creation source)</code>. The implementation-to-model mapping reverses these pairs
+in the same focus, preserving their contexts and charging the construction.
+Every actual closure and return alternative remains subject to the existing C3
+checks. This mapping is a trusted review boundary, not a theorem about Rust.</p>
+<p>The current linked checker also recognizes a narrow pure Unit helper and an
+ordered <code>(Worker&lt;N&gt;, Bytes)</code> receive-loop argument. It authenticates the actual
+helper and recursive target, the byte comparison, each argument and projection,
+and the matched top-level return. A recursive cycle alone supplies no return.
+For a restored call, the checker examines every aggregate at its actual
+creation context and authenticates the paired restored call and capture ports
+before reading the original callee's projections. The recursive carry must be
+the original expected-byte field. Generated tuple allocation preserves the
+focused work state only for the authenticated entry Region and its checked
+default return. Other Region routes remain conservative. These are bounded
+implementation checks; the retained model does not prove their Rust mapping.</p>
+<p>The modeled region checker uses bounded fuel and refuses cycles within its
+processing graph. The correspondence of linked definitions, selected evidence,
+transformed or imported control, message-derived value and capture propagation,
+failure edges, older frame suffix coverage and dynamic activation instantiation
+remains a review and testing obligation. The summary algebra uses abstract base
+and wrapping relations rather than exact linked call/return rules. The model's
+budget is not a measurement or proof of the cumulative Core budget.</p>
+<p>The structural evaluator checks the builtin receive operation and activation
+before reserving a receive. On Message, the guarded envelope survives through
+reply construction; <code>Frame::NetworkReceiveCommit</code> reserves receiver-held
+responsibility before committing the guard and rolls it back if commit fails.
+The current structural path can invoke the selected provider for byte storage,
+kind, tuple and Message construction, then invoke it again for a failure and
+result if commitment or held-obligation reservation fails. Failure replies must
+retain that selected context. The host End outcome also passes through reply
+construction: the modeled fact is created at its successful reply edge. The
+product still needs a proof relating that edge and allocation or reply failures
+to the actual evaluator.
+<code>Frame::RetainedRootCompletion</code> decrements the selected Store's active root at
+its actual pop. These observations are a mapping target, not a proof that Rust
+or native behavior refines the model.</p>
+<p>The retained <code>WorkerChannel</code> model has one active C1 capture per Store; actual
+runtime concurrency must be reconciled with that restriction. Actual native
+synchrony, copied-byte commit and wake behavior, linked-Core reconstruction,
+implementation tests, independent proof review and frozen gates remain
+separate requirements.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#modeled-result">Modeled result</a><a href="#model-limits-and-implementation-evidence">Model limits and implementation evidence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

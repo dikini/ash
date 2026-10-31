@@ -1,5 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#171c18"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Cnl9yVxH.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>Interfaces and Implementations Integration Evidence · Ash</title><meta name="description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta name="robots" content="index, follow"><meta property="og:title" content="Interfaces and Implementations Integration Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Interfaces and Implementations Integration Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/modular-ash/interfaces-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Interfaces and Implementations Integration Evidence","headline":"Interfaces and Implementations Integration Evidence","description":"This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/","@id":"https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/modular-ash/interfaces-evidence.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Interfaces and Implementations Integration Evidence · Ash</title><meta name="description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta name="robots" content="index, follow"><meta property="og:title" content="Interfaces and Implementations Integration Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Interfaces and Implementations Integration Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/modular-ash/interfaces-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Interfaces and Implementations Integration Evidence","headline":"Interfaces and Implementations Integration Evidence","description":"This report records implementation evidence for Modular Ash's interfaces and implementations increment. It is informative, not normative. The normative specification owns the current language. The retained interface…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/","@id":"https://dikini.github.io/ash/docs/design/modular-ash/interfaces-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/modular-ash/interfaces-evidence.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,7 +13,7 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="interfaces-and-implementations-integration-evidence" data-pagefind-meta="title">Interfaces and Implementations Integration Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/modular-ash/interfaces-evidence.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="interfaces-and-implementations-integration-evidence" data-pagefind-meta="title">Interfaces and Implementations Integration Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/modular-ash/interfaces-evidence.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
 <p>This report records implementation evidence for Modular Ash's interfaces and
 implementations increment. It is informative, not normative. The
 <a href="/ash/spec/">normative specification</a> owns the current language.
@@ -207,9 +207,9 @@ retained by the exact targets and named witnesses below. A target can contain
 additional boundary cases beyond the ones named here.</p>
 <h3 id="lexing-parsing-projection-recovery-and-malformed-forms">Lexing, parsing, projection, recovery, and malformed forms</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/lexer.rs"><code>tests/lexer.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/lexer.rs"><code>tests/lexer.rs</code></a>:
 <code>tests/lexer.rs::recognizes_interface_reserved_words_without_stealing_identifier_boundaries</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces_syntax.rs"><code>tests/interfaces_syntax.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces_syntax.rs"><code>tests/interfaces_syntax.rs</code></a>:
 <code>tests/interfaces_syntax.rs::projects_ordered_requirements_on_both_global_presentations</code>,
 <code>tests/interfaces_syntax.rs::projects_generic_impl_prerequisites_and_flat_method_equations</code>,
 <code>tests/interfaces_syntax.rs::malformed_interface_and_impl_heads_retain_exact_expected_forms</code>,
@@ -219,41 +219,41 @@ and <code>tests/interfaces_syntax.rs::preserves_interface_method_source_order</c
 </ul>
 <h3 id="stable-identities-namespaces-imports-aliases-routes-and-diamonds">Stable identities, namespaces, imports, aliases, routes, and diamonds</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/resolution.rs"><code>tests/resolution.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/resolution.rs"><code>tests/resolution.rs</code></a>:
 <code>tests/resolution.rs::resolves_local_interface_and_method_identities</code>,
 <code>tests/resolution.rs::derives_impl_method_identity_from_impl_and_interface_method</code>,
 and
 <code>tests/resolution.rs::resolved_constraint_occurrences_start_with_owned_empty_evidence_slots</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
 <code>tests/interface_modules.rs::qualified_public_interface_and_method_keep_their_defining_identities</code>,
 <code>tests/interface_modules.rs::targeted_same_spelled_interface_and_constructor_bind_distinct_namespaces</code>,
 and
 <code>tests/interface_modules.rs::alternate_direct_routes_to_one_impl_identity_do_not_self_overlap</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_identity_diamond.rs"><code>tests/interface_identity_diamond.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_identity_diamond.rs"><code>tests/interface_identity_diamond.rs</code></a>:
 <code>tests/interface_identity_diamond.rs::preserves_all_interface_identity_families_through_dependency_diamond</code>.</li>
 </ul>
 <h3 id="summary-atomicity-hidden-closure-direct-availability-and-no-re-export">Summary atomicity, hidden closure, direct availability, and no re-export</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
 <code>tests/implementations.rs::failed_public_impl_stages_never_produce_a_checked_summary</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/module_elaboration.rs"><code>tests/module_elaboration.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/module_elaboration.rs"><code>tests/module_elaboration.rs</code></a>:
 <code>tests/module_elaboration.rs::failed_module_body_never_publishes_an_export_summary</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
 <code>tests/interface_modules.rs::hidden_interface_metadata_in_a_constrained_summary_is_not_reexported</code>,
 <code>tests/interface_modules.rs::public_impl_fact_is_available_on_a_targeted_direct_import_edge</code>,
 <code>tests/interface_modules.rs::private_impl_fact_remains_local_to_its_defining_module</code>,
 <code>tests/interface_modules.rs::public_impl_retains_its_private_head_identity_as_hidden_metadata</code>,
 and
 <code>tests/interface_modules.rs::public_impls_are_not_reexported_through_an_intermediary</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_generic_summary.rs"><code>tests/interface_generic_summary.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_generic_summary.rs"><code>tests/interface_generic_summary.rs</code></a>:
 <code>tests/interface_generic_summary.rs::generic_checked_summary_binds_every_retained_parameter_occurrence</code>.</li>
 </ul>
 <h3 id="interface-exposure-method-shape-and-entry-boundaries">Interface exposure, method shape, and entry boundaries</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
 <code>tests/interface_modules.rs::private_interface_and_method_are_not_qualified_import_bindings</code>
 and <code>tests/interface_modules.rs::private_method_is_not_a_qualified_import_binding</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
 <code>tests/interfaces.rs::rejects_public_global_requirement_on_private_interface</code>,
 <code>tests/interfaces.rs::accepts_private_global_requirement_on_private_interface</code>,
 <code>tests/interfaces.rs::rejects_interface_method_without_function_arrow</code>,
@@ -263,60 +263,60 @@ and <code>tests/interface_modules.rs::private_method_is_not_a_qualified_import_b
 <code>tests/interfaces.rs::accepts_top_level_function_with_function_valued_codomain</code>,
 and
 <code>tests/interfaces.rs::top_level_function_with_nested_function_domain_completes_the_pipeline</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
 <code>tests/implementations.rs::rejects_public_impl_for_private_interface</code>,
 <code>tests/implementations.rs::rejects_public_impl_with_private_prerequisite</code>,
 and
 <code>tests/implementations.rs::rejects_invalid_interface_method_shape_before_impl_equation_arity</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
 <code>src/elaborate.rs::tests::invalid_outer_method_shape_has_an_exact_stack_safe_constraint_boundary</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/module_entry.rs"><code>tests/module_entry.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/module_entry.rs"><code>tests/module_entry.rs</code></a>:
 <code>tests/module_entry.rs::rejects_a_constrained_main_before_lowering_entry_evidence</code>
 and
 <code>tests/module_entry.rs::existing_entry_shape_failures_precede_main_constrained</code>.</li>
 </ul>
 <h3 id="implementation-ownership-overlap-route-deduplication-and-authentication">Implementation ownership, overlap, route deduplication, and authentication</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
 <code>tests/implementations.rs::accepts_impl_for_local_interface</code>,
 <code>tests/implementations.rs::accepts_impl_for_local_outer_nominal</code>,
 <code>tests/implementations.rs::rejects_bare_type_variable_impl_head</code>,
 <code>tests/implementations.rs::rejects_identity_equal_local_implementation_heads</code>,
 and
 <code>tests/implementations.rs::rejects_generic_local_overlap_after_pair_local_freshening</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
 <code>tests/interface_modules.rs::rejects_foreign_interface_and_foreign_nominal_impl_as_orphan</code>,
 <code>tests/interface_modules.rs::rejects_primitive_impl_for_foreign_interface_as_orphan</code>,
 and
 <code>tests/interface_modules.rs::alternate_direct_routes_to_one_impl_identity_do_not_self_overlap</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
 <code>src/elaborate.rs::tests::imported_overlap_uses_retained_route_order_and_exact_budget</code>.</li>
 </ul>
 <h3 id="prerequisite-termination-rigid-selection-abstract-priority-and-failures">Prerequisite termination, rigid selection, abstract priority, and failures</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
 <code>tests/implementations.rs::accepts_strict_subterm_prerequisite</code>,
 <code>tests/implementations.rs::rejects_expanding_prerequisite</code>, and
 <code>tests/implementations.rs::accepts_ground_prerequisite_without_subterm_decrease</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_selection.rs"><code>tests/interface_selection.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_selection.rs"><code>tests/interface_selection.rs</code></a>:
 <code>tests/interface_selection.rs::constrained_method_selects_its_exact_abstract_requirement_before_a_matching_impl</code>,
 <code>tests/interface_selection.rs::absent_candidate_reports_constraint_unsatisfied</code>,
 <code>tests/interface_selection.rs::undetermined_obligation_reports_constraint_ambiguous_without_type_guessing</code>,
 and
 <code>tests/interface_selection.rs::rejects_public_global_obligation_instead_of_inferring_exported_requirement</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
 <code>tests/interfaces.rs::ground_cross_interface_prerequisite_cycle_has_the_exact_reason</code>.</li>
 </ul>
 <h3 id="method-membership-typing-and-recursive-group-interactions">Method membership, typing, and recursive-group interactions</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/implementations.rs"><code>tests/implementations.rs</code></a>:
 <code>tests/implementations.rs::checked_membership_uses_interface_order_and_authenticates_source_groups</code>,
 <code>tests/implementations.rs::rejects_missing_impl_method</code>,
 <code>tests/implementations.rs::rejects_duplicate_impl_method_group</code>,
 <code>tests/implementations.rs::rejects_extra_impl_method</code>,
 <code>tests/implementations.rs::checks_impl_method_body_against_the_substituted_interface_signature</code>,
 and <code>tests/implementations.rs::rejects_wrong_impl_method_result_type</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/recursion.rs"><code>tests/recursion.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/recursion.rs"><code>tests/recursion.rs</code></a>:
 <code>tests/recursion.rs::implementation_method_recurses_through_current_evidence</code>,
 <code>tests/recursion.rs::implementation_methods_share_mutual_recursive_scope</code>,
 <code>tests/recursion.rs::earlier_global_and_later_implementation_method_share_recursive_scope</code>,
@@ -325,43 +325,43 @@ and
 </ul>
 <h3 id="constrained-exports-and-abstract-concrete-generic-and-higher-order-evidence">Constrained exports and abstract, concrete, generic, and higher-order evidence</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
 <code>tests/interfaces.rs::cross_module_constraint_lowers_to_method_evidence</code>,
 <code>tests/interfaces.rs::generic_option_impl_constructs_prerequisite_evidence</code>,
 <code>tests/interfaces.rs::generic_two_prerequisite_slots_preserve_declaration_order</code>,
 and
 <code>tests/interfaces.rs::generic_exact_current_self_carries_abstract_prerequisite_evidence</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
 <code>tests/interface_corpus.rs::higher_order_abstract_evidence_observes_true</code> and
 <code>tests/interface_corpus.rs::equational_and_operational_constraints_agree</code>.</li>
 </ul>
 <h3 id="hidden-and-opaque-carrier-implementations">Hidden and opaque carrier implementations</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
 <code>tests/interface_corpus.rs::hidden_carrier_composes_to_forty_two</code> and
 <code>tests/interface_corpus.rs::opaque_carrier_uses_public_operations</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>:
 <code>tests/interface_modules.rs::private_impl_head_spelling_and_constructor_remain_unavailable</code>
 and
 <code>tests/interface_modules.rs::rejects_external_opaque_constructor_and_pattern_in_impl_body</code>.</li>
 </ul>
 <h3 id="structural-occurrence-evidence-survives-checking-and-is-consumed-once">Structural occurrence evidence survives checking and is consumed once</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_selection.rs"><code>tests/interface_selection.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_selection.rs"><code>tests/interface_selection.rs</code></a>:
 <code>tests/interface_selection.rs::constrained_global_occurrence_retains_one_abstract_selection_per_requirement_in_source_order</code>,
 <code>tests/interface_selection.rs::concrete_candidate_retains_impl_substitution_prerequisite_and_ordered_method_identity</code>,
 and
 <code>tests/interface_selection.rs::link_modules_retains_the_checked_occurrences_evidence_selection</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
 <code>tests/interface_corpus.rs::one_method_occurrence_does_not_retain_unused_same_typed_evidence</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence.rs"><code>src/evidence.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence.rs"><code>src/evidence.rs</code></a>:
 <code>src/evidence.rs::tests::closure_zonks_then_fills_the_exact_structural_slot</code>.</li>
 </ul>
 <h3 id="pre-core-validation-rejects-corrupted-linked-evidence">Pre-Core validation rejects corrupted linked evidence</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_validation.rs"><code>tests/interface_validation.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_validation.rs"><code>tests/interface_validation.rs</code></a>:
 <code>tests/interface_validation.rs::validates_cross_module_concrete_selection_before_core</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
 <code>src/evidence_validation.rs::tests::rejects_wrong_generic_substitution_and_prerequisite_argument</code>,
 <code>src/evidence_validation.rs::tests::rejects_reordered_prerequisites_and_a_shared_prerequisite_child</code>,
 <code>src/evidence_validation.rs::tests::rejects_linked_implementation_type_scheme_and_provenance_corruption</code>,
@@ -372,25 +372,25 @@ and
 </ul>
 <h3 id="core-order-recursive-binders-validation-staging-and-closed-inventories">Core order, recursive binders, validation staging, and closed inventories</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
 <code>tests/interfaces.rs::generic_prerequisite_evidence_has_a_bounded_unspecialized_evaluation_trace</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/recursion.rs"><code>tests/recursion.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/recursion.rs"><code>tests/recursion.rs</code></a>:
 <code>tests/recursion.rs::implementation_methods_share_mutual_recursive_scope</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/architecture.rs"><code>tests/architecture.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/architecture.rs"><code>tests/architecture.rs</code></a>:
 <code>tests/architecture.rs::core_and_evaluator_keep_interface_evidence_outside_their_closed_inventories</code>
 and
 <code>tests/architecture.rs::synthesis_block_exit_releases_original_state_after_macro_shadow_drop</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
 <code>src/evidence_validation.rs::tests::validated_interface_capability_has_exact_resolved_program_payload</code>
 compiler-checks the capability's exhaustive payload shape.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/driver.rs"><code>src/driver.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/driver.rs"><code>src/driver.rs</code></a>:
 <code>src/driver.rs::tests::injected_evidence_failure_stops_before_core_synthesis_consumers</code>
 and
 <code>src/driver.rs::tests::independent_core_validation_starts_with_only_the_core_registry_owner</code>.</li>
 </ul>
 <h3 id="exact-end-to-end-observations">Exact end-to-end observations</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_corpus.rs"><code>tests/interface_corpus.rs</code></a>:
 <code>tests/interface_corpus.rs::local_equal_int_observes_true</code>,
 <code>tests/interface_corpus.rs::cross_module_constrained_equal_observes_true</code>,
 <code>tests/interface_corpus.rs::generic_option_evidence_observes_true</code>,
@@ -398,14 +398,14 @@ and
 <code>tests/interface_corpus.rs::opaque_carrier_uses_public_operations</code>,
 <code>tests/interface_corpus.rs::recursive_impl_method_computes_forty_two</code>, and
 <code>tests/interface_corpus.rs::mutual_impl_methods_compute_forty_two</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
 <code>tests/interfaces.rs::top_level_function_with_nested_function_domain_completes_the_pipeline</code>
 observes <code>42 : Int</code> after implementation checking, selection, lowering,
 validation, and evaluation.</li>
 </ul>
 <h3 id="deterministic-diagnostics-causal-labels-and-no-private-leak">Deterministic diagnostics, causal labels, and no private leak</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_diagnostics.rs"><code>tests/interface_diagnostics.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_diagnostics.rs"><code>tests/interface_diagnostics.rs</code></a>:
 <code>tests/interface_diagnostics.rs::imported_method_failure_relates_public_cause_without_leaking_private_impl</code>,
 <code>tests/interface_diagnostics.rs::constrained_import_failure_does_not_leak_a_transitive_impl_route</code>,
 <code>tests/interface_diagnostics.rs::qualified_method_failure_relates_the_import_alias_used_by_the_occurrence</code>,
@@ -413,45 +413,45 @@ validation, and evaluation.</li>
 <code>tests/interface_diagnostics.rs::nested_unsatisfied_failure_retains_the_selected_implementation_chain</code>,
 and
 <code>tests/interface_diagnostics.rs::concrete_prerequisite_cycle_retains_each_selected_implementation_chain</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/module_cli.rs"><code>tests/module_cli.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/module_cli.rs"><code>tests/module_cli.rs</code></a>:
 <code>tests/module_cli.rs::cli_renders_the_structured_interface_diagnostic_without_reclassifying_it</code>.</li>
 </ul>
 <h3 id="graph-wide-resources-exact-boundaries-cycles-and-stack-safety">Graph-wide resources, exact boundaries, cycles, and stack safety</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_resources.rs"><code>tests/interface_resources.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_resources.rs"><code>tests/interface_resources.rs</code></a>:
 <code>tests/interface_resources.rs::one_constraint_budget_persists_from_dependency_admission_through_validation</code>
 and
 <code>tests/interface_resources.rs::cycle_precedes_constraint_resource_exhaustion_after_import_admission</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/elaborate.rs"><code>src/elaborate.rs</code></a>:
 <code>src/elaborate.rs::tests::one_type_budget_spans_all_checked_modules</code>,
 <code>src/elaborate.rs::tests::one_constraint_budget_spans_all_checked_modules</code>,
 <code>src/elaborate.rs::tests::impl_method_substitution_uses_the_exact_constraint_budget</code>,
 <code>src/elaborate.rs::tests::imported_overlap_uses_retained_route_order_and_exact_budget</code>,
 and
 <code>src/elaborate.rs::tests::invalid_outer_method_shape_has_an_exact_stack_safe_constraint_boundary</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence.rs"><code>src/evidence.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence.rs"><code>src/evidence.rs</code></a>:
 <code>src/evidence.rs::tests::every_same_interface_candidate_inspection_is_constraint_bounded</code>,
 <code>src/evidence.rs::tests::ground_prerequisite_reentry_is_a_cycle_before_resource_exhaustion</code>,
 and
 <code>src/evidence.rs::tests::deep_ground_prerequisite_chain_selects_and_drops_on_a_small_stack</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_audit.rs"><code>src/evidence_audit.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_audit.rs"><code>src/evidence_audit.rs</code></a>:
 <code>src/evidence_audit.rs::tests::traversal_budget_has_an_exact_boundary_before_checked_wrapping</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>:
 <code>src/evidence_validation.rs::tests::one_constraint_budget_continues_from_linking_through_validation</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/interface.rs"><code>src/interface.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/interface.rs"><code>src/interface.rs</code></a>:
 <code>src/interface.rs::tests::evidence_builder_charges_nodes_and_ordered_slots_before_retention</code>
 and
 <code>src/interface.rs::tests::flat_evidence_plan_and_deep_substitution_drop_on_a_small_stack</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/core/dialect.rs"><code>src/core/dialect.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/core/dialect.rs"><code>src/core/dialect.rs</code></a>:
 <code>src/core/dialect.rs::tests::type_abstraction_binders_consume_the_exact_builder_budget</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/core/validate.rs"><code>src/core/validate.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/core/validate.rs"><code>src/core/validate.rs</code></a>:
 <code>src/core/validate.rs::tests::linear_type_scope_chain_uses_the_exact_proportional_budget</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
 <code>tests/interfaces.rs::deep_generic_prerequisite_chain_completes_the_pipeline_on_a_small_stack</code>.</li>
 </ul>
 <h3 id="normative-examples-and-bounded-baseline-trace">Normative examples and bounded baseline trace</h3>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/spec_examples.rs"><code>tests/spec_examples.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/spec_examples.rs"><code>tests/spec_examples.rs</code></a>:
 <code>tests/spec_examples.rs::overview_local_interface_evidence_example_is_executable</code>,
 <code>tests/spec_examples.rs::overview_cross_module_constrained_example_is_executable</code>,
 <code>tests/spec_examples.rs::static_semantics_generic_prerequisite_evidence_example_is_executable</code>,
@@ -459,7 +459,7 @@ and
 <code>tests/spec_examples.rs::resolution_opaque_carrier_interface_example_uses_public_operations</code>,
 <code>tests/spec_examples.rs::syntax_constrained_global_presentations_are_executable</code>,
 and <code>tests/spec_examples.rs::normative_document_manifest_is_complete</code>.</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>:
 <code>tests/interfaces.rs::generic_prerequisite_evidence_has_a_bounded_unspecialized_evaluation_trace</code>.</li>
 </ul>
 <h2 id="diagnostics-provenance-and-privacy">Diagnostics, provenance, and privacy</h2>
@@ -585,19 +585,19 @@ authentication.</p>
 <p>Interface-specific semantic machinery is concentrated in these production
 boundaries:</p>
 <ul>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/interface.rs"><code>src/interface.rs</code></a> owns identities, constrained
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/interface.rs"><code>src/interface.rs</code></a> owns identities, constrained
 schemes, flat plans, head matching, and their local resource accounting;</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/resolve.rs"><code>src/resolve.rs</code></a> and
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/resolved.rs"><code>src/resolved.rs</code></a> own namespace identity, summary
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/resolve.rs"><code>src/resolve.rs</code></a> and
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/resolved.rs"><code>src/resolved.rs</code></a> own namespace identity, summary
 closure, import availability, occurrence slots, and provenance;</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/elaborate.rs"><code>src/elaborate.rs</code></a> owns declaration and
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/elaborate.rs"><code>src/elaborate.rs</code></a> owns declaration and
 implementation checking, linking, and Core synthesis;</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence.rs"><code>src/evidence.rs</code></a> and
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_audit.rs"><code>src/evidence_audit.rs</code></a> own structural
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence.rs"><code>src/evidence.rs</code></a> and
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_audit.rs"><code>src/evidence_audit.rs</code></a> own structural
 selection and checked-body completeness;</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a> owns the
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a> owns the
 independent pre-Core authenticity boundary; and</li>
-<li><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/driver.rs"><code>src/driver.rs</code></a> orders linking, evidence validation,
+<li><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/driver.rs"><code>src/driver.rs</code></a> orders linking, evidence validation,
 Core synthesis, Core validation, and evaluation under the graph-wide budget.</li>
 </ul>
 <p>The stable maintenance search</p>

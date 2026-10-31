@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/diaries/working-on-ffi/  
 Authority: website-guidance  
-Source revision: 7e759686699a13ce32287c0d43f9c3c889b9fba6  
+Source revision: 2458febc3af7733631eb0d9abc1f9558c521ebbd  
 Published: 2026-10-29  
 Updated: 2026-10-29  
 Authors: Vlado

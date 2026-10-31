@@ -1,5 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#171c18"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Cnl9yVxH.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>Explicit Implementation Import and Re-export Evidence · Ash</title><meta name="description" content="This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…"><meta name="robots" content="index, follow"><meta property="og:title" content="Explicit Implementation Import and Re-export Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Explicit Implementation Import and Re-export Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/lib-ash/imports-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Explicit Implementation Import and Re-export Evidence","headline":"Explicit Implementation Import and Re-export Evidence","description":"This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/","@id":"https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/lib-ash/imports-evidence.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Explicit Implementation Import and Re-export Evidence · Ash</title><meta name="description" content="This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…"><meta name="robots" content="index, follow"><meta property="og:title" content="Explicit Implementation Import and Re-export Evidence · Ash"><meta property="og:description" content="This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Explicit Implementation Import and Re-export Evidence · Ash"><meta name="twitter:description" content="This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/lib-ash/imports-evidence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Explicit Implementation Import and Re-export Evidence","headline":"Explicit Implementation Import and Re-export Evidence","description":"This report records implementation evidence for the first lib-ash increment: explicit implementation imports and targeted name and implementation re-exports. It is informative, not normative. The Ash specification…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/","@id":"https://dikini.github.io/ash/docs/design/lib-ash/imports-evidence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/lib-ash/imports-evidence.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,7 +13,7 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="explicit-implementation-import-and-re-export-evidence" data-pagefind-meta="title">Explicit Implementation Import and Re-export Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/lib-ash/imports-evidence.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="explicit-implementation-import-and-re-export-evidence" data-pagefind-meta="title">Explicit Implementation Import and Re-export Evidence</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/lib-ash/imports-evidence.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
 <p>This report records implementation evidence for the first <code>lib-ash</code> increment:
 explicit implementation imports and targeted name and implementation
 re-exports. It is informative, not normative. The
@@ -68,7 +68,7 @@ the defining <code>ImplId</code>, implementation-method identity, method identit
 defining method binder. A facade adds a route to an existing fact; it does not
 copy a declaration, body, or implementation.</p>
 <h2 id="selector-and-facade-corpus">Selector and facade corpus</h2>
-<p><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/library_imports.rs"><code>tests/library_imports.rs</code></a> retains the
+<p><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/library_imports.rs"><code>tests/library_imports.rs</code></a> retains the
 primary matrix. It proves that:</p>
 <ul>
 <li>a name-only import resolves its names but leaves the method occurrence with
@@ -83,12 +83,12 @@ interface, method, and implementation channels under the selected spellings;</li
 explicit implementation selectors.</li>
 </ul>
 <p>Shortest implementation routes win deterministically. The separate rank and
-hop-key probes in <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/resolved.rs"><code>src/resolved.rs</code></a> prove that
+hop-key probes in <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/resolved.rs"><code>src/resolved.rs</code></a> prove that
 equal-length choices follow dependency, import, selector, and stable graph-local
 hop ordering without consulting process-global source allocation.</p>
 <p>The transitive and diamond cases in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a> and
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/library_imports.rs"><code>tests/library_imports.rs</code></a> reach one
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a> and
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/library_imports.rs"><code>tests/library_imports.rs</code></a> reach one
 defining implementation through several paths without changing or duplicating
 its identity. Effective local availability and public re-export authorization
 choose independent routes, so a private shortest local path cannot displace
@@ -106,11 +106,11 @@ authorization route. It does not retain a dependency source body, imported
 implementation body, method body, method fact, facade declaration, or complete
 export summary. The complete summaries are discarded before the linked program
 is exposed.</p>
-<p><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_validation.rs"><code>tests/interface_validation.rs</code></a>
+<p><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_validation.rs"><code>tests/interface_validation.rs</code></a>
 proves this boundary for the base, facade, and entry groups. Their public table
 routes have zero, one, and two hops respectively. The facade and entry retain
 no implementation bodies or complete implementation facts. The exact linked
-retention probe in <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/elaborate.rs"><code>src/elaborate.rs</code></a> generalizes
+retention probe in <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/elaborate.rs"><code>src/elaborate.rs</code></a> generalizes
 the result to eight public implementations per layer and checks that every
 layer retains the same defining identities.</p>
 <h2 id="coherence-privacy-opacity-and-diagnostics">Coherence, privacy, opacity, and diagnostics</h2>
@@ -119,7 +119,7 @@ selected implementations. Distinct overlapping facts fail at the first module
 whose closure combines them. The retained orphan rule and acyclic module graph
 make a valid sibling-source overlap fixture unreachable, so
 <code>distinct_reexported_implementations_conflict_at_the_first_combined_closure</code> in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/elaborate.rs"><code>src/elaborate.rs</code></a> assembles the checked structural
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/elaborate.rs"><code>src/elaborate.rs</code></a> assembles the checked structural
 boundary directly. It proves the exact primary route label, both defining
 locations, and every earlier and later authorization hop.</p>
 <p>Name re-export tests preserve private declarations, opaque constructor
@@ -128,14 +128,14 @@ interface closure, and owner-distinct opaque identities. An alias changes only
 the public spelling. It neither changes identity nor creates a facade body.
 Unavailable private or transitive implementation data remains absent from
 source diagnostics.</p>
-<p><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_diagnostics.rs"><code>tests/interface_diagnostics.rs</code></a>
+<p><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_diagnostics.rs"><code>tests/interface_diagnostics.rs</code></a>
 retains exact labels for unavailable selections, selected prerequisite chains,
 and concrete cycles. The structural overlap witness cited above owns the
 overlap-route labels. A selected facade prerequisite failure
 relates the source occurrence and declaration, the name import used by the
 occurrence, the interface declarations, every selected implementation route
 hop, the implementation declaration, and the supplying method. The CLI witness
-in <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/module_cli.rs"><code>tests/module_cli.rs</code></a> renders that same
+in <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/module_cli.rs"><code>tests/module_cli.rs</code></a> renders that same
 structured diagnostic without reclassification and preserves whether labels
 refer to the same or different source files.</p>
 <h2 id="exact-resources-and-small-stack-disposal">Exact resources and small-stack disposal</h2>
@@ -144,30 +144,30 @@ graph-wide interface-and-constraint budget. The retained exact-limit probes
 include:</p>
 <ul>
 <li><code>wide_implementation_selector_expansion_has_an_exact_constraint_limit</code> in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/resolve.rs"><code>src/resolve.rs</code></a>, which expands one selector over
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/resolve.rs"><code>src/resolve.rs</code></a>, which expands one selector over
 16 distinct nominal heads, admits the measured exact budget, and rejects one
 unit less at the selector-owned failure;</li>
 <li><code>implementation_authorization_prepend_has_an_exact_limit</code> in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/resolved.rs"><code>src/resolved.rs</code></a>, which charges one new hop plus
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/resolved.rs"><code>src/resolved.rs</code></a>, which charges one new hop plus
 the complete suffix atomically before allocation;</li>
 <li><code>linked_public_authorization_move_charges_two_records_plus_every_hop</code> in the
 same file, which proves the exact extraction formula
 <code>2 * entries + total_hops</code> for varying route lengths and leaves the complete
 summary undrained when one unit is missing;</li>
 <li><code>link_retains_public_authorization_tables_at_an_exact_limit</code> in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/elaborate.rs"><code>src/elaborate.rs</code></a>, which admits the measured
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/elaborate.rs"><code>src/elaborate.rs</code></a>, which admits the measured
 exact linked-table budget and rejects one unit less without retaining facade
 bodies or implementation facts; and</li>
 <li><code>deep_authorization_suffix_comparison_has_an_exact_limit</code> in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>, which
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a>, which
 compares a 20,000-hop suffix iteratively at its exact limit.</li>
 </ul>
 <p>The public-driver resource witness uses 48 facade layers and four
 implementations per layer. <code>deep_wide_public_routes_admit_and_reject_on_a_small_stack</code>
-in <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/driver.rs"><code>src/driver.rs</code></a> admits the measured exact budget,
+in <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/driver.rs"><code>src/driver.rs</code></a> admits the measured exact budget,
 rejects one unit less at linked evidence validation, and disposes both outcomes
 on a 256 KiB thread stack. The independent public integration witness in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_resources.rs"><code>tests/interface_resources.rs</code></a>
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_resources.rs"><code>tests/interface_resources.rs</code></a>
 admits and drops the same deep, wide shape on a 256 KiB stack.</p>
 <h2 id="linked-authentication-and-tampering">Linked authentication and tampering</h2>
 <p>Linked evidence validation authenticates every local public inventory, then
@@ -177,7 +177,7 @@ Core. Each imported route must start with the exact direct dependency edge and
 must match an already authenticated dependency suffix through to the defining
 owner.</p>
 <p>The mutation probes in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a> reject:</p>
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/evidence_validation.rs"><code>src/evidence_validation.rs</code></a> reject:</p>
 <ul>
 <li>a missing exact direct edge or a route that skips its immediate publisher;</li>
 <li>a forged intermediate suffix, first-hop span, or final owner;</li>
@@ -189,12 +189,12 @@ owner.</p>
 crate tests expose no public mutation hook. Integration tests exercise only
 source-reachable linked programs.</p>
 <h2 id="core-and-runtime-boundary">Core and runtime boundary</h2>
-<p><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a> proves that a facade
+<p><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a> proves that a facade
 selection completes the public pipeline, independently validates the resulting
 Core program, and lowers to the original defining implementation-method binder.
 The facade contributes no Core group or forwarding body. Type arguments,
 evidence, and value arguments remain ordinary type and term applications.</p>
-<p><a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/architecture.rs"><code>tests/architecture.rs</code></a> scans the closed Core
+<p><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/architecture.rs"><code>tests/architecture.rs</code></a> scans the closed Core
 and evaluator sources and rejects route, authorization, interface-evidence, or
 implementation-registry state there. The increment adds no Core node, runtime
 dictionary, implementation registry, registration, lookup, dispatch, or
@@ -235,19 +235,19 @@ constraint.</p>
 </table>
 <p>The transition changes no production Core or evaluator file. Its principal
 maintenance targets are
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/library_imports.rs"><code>tests/library_imports.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_validation.rs"><code>tests/interface_validation.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_resources.rs"><code>tests/interface_resources.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interface_diagnostics.rs"><code>tests/interface_diagnostics.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/module_cli.rs"><code>tests/module_cli.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>, and
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/architecture.rs"><code>tests/architecture.rs</code></a>. Parser, migration,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/library_imports.rs"><code>tests/library_imports.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_modules.rs"><code>tests/interface_modules.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_validation.rs"><code>tests/interface_validation.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_resources.rs"><code>tests/interface_resources.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interface_diagnostics.rs"><code>tests/interface_diagnostics.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/module_cli.rs"><code>tests/module_cli.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces.rs"><code>tests/interfaces.rs</code></a>, and
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/architecture.rs"><code>tests/architecture.rs</code></a>. Parser, migration,
 and normative-example coverage also lives in
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/interfaces_syntax.rs"><code>tests/interfaces_syntax.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/modules_syntax.rs"><code>tests/modules_syntax.rs</code></a>,
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/parser.rs"><code>tests/parser.rs</code></a>, and
-<a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/tests/spec_examples.rs"><code>tests/spec_examples.rs</code></a>.</p>
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/interfaces_syntax.rs"><code>tests/interfaces_syntax.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/modules_syntax.rs"><code>tests/modules_syntax.rs</code></a>,
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/parser.rs"><code>tests/parser.rs</code></a>, and
+<a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/spec_examples.rs"><code>tests/spec_examples.rs</code></a>.</p>
 <h2 id="verification-status">Verification status</h2>
 <p>The final pre-cleanup gate passes formatting, all-target and all-feature
 checking, the complete workspace test suite, clippy with warnings denied, the

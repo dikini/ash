@@ -4,7 +4,7 @@
 
 Page: https://dikini.github.io/ash/  
 Authority: website-guidance  
-Source revision: 7e759686699a13ce32287c0d43f9c3c889b9fba6
+Source revision: 2458febc3af7733631eb0d9abc1f9558c521ebbd
 
 The Ash programming language
 
@@ -130,7 +130,7 @@ Learn
 
 
 
-## Tour, Study, Specs
+## Look, learn, and see
 
 
 
@@ -143,6 +143,10 @@ Twenty minutes, a course of study, or the final word — choose your depth.
 [### Take the short tour Three complete programs covering functions, data, and effects. Assumes some programming experience. Read the tour](/ash/learn/tour/)[### Study Ash Work through connected lessons and worked cases, beginning with values and functions. Open the study guide](/ash/study/)[### Read the specification Look up syntax, type checking, and semantics in the language reference. Open the reference](/ash/spec/)
 
 
+
+![A European ash branch: compound leaves and hanging seeds](/ash/images/ash-foliage.jpg)
+
+The name, in leaf. [“Fraxinus excelsior”](https://commons.wikimedia.org/wiki/File:Fraxinus_excelsior.jpg) by MPF, [CC BY 2.5](https://creativecommons.org/licenses/by/2.5/), via Wikimedia Commons.
 
 
 

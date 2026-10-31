@@ -1,0 +1,315 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0052: Diag Ash Case Studies and Teaching · Ash</title><meta name="description" content="Which case studies can teach useful program design in Diag Ash while exposing concrete language, library, diagnostic and implementation pressure? How should ash-doc develop them without repeating its existing lessons…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0052: Diag Ash Case Studies and Teaching · Ash"><meta property="og:description" content="Which case studies can teach useful program design in Diag Ash while exposing concrete language, library, diagnostic and implementation pressure? How should ash-doc develop them without repeating its existing lessons…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0052: Diag Ash Case Studies and Teaching · Ash"><meta name="twitter:description" content="Which case studies can teach useful program design in Diag Ash while exposing concrete language, library, diagnostic and implementation pressure? How should ash-doc develop them without repeating its existing lessons…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0052-diag-ash-case-studies-and-teaching/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0052-diag-ash-case-studies-and-teaching/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0052-diag-ash-case-studies-and-teaching.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0052: Diag Ash Case Studies and Teaching","headline":"DN-0052: Diag Ash Case Studies and Teaching","description":"Which case studies can teach useful program design in Diag Ash while exposing concrete language, library, diagnostic and implementation pressure? How should ash-doc develop them without repeating its existing lessons…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0052-diag-ash-case-studies-and-teaching/","@id":"https://dikini.github.io/ash/docs/design/dn-0052-diag-ash-case-studies-and-teaching/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0052-diag-ash-case-studies-and-teaching.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0052-diag-ash-case-studies-and-teaching" data-pagefind-meta="title">DN-0052: Diag Ash Case Studies and Teaching</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0052-diag-ash-case-studies-and-teaching.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0052</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/">DN-0024: Executable Learning and Evidence Stream</a>,
+<a href="/ash/docs/design/dn-0013-session-and-resource-protocol-stress-tests/">DN-0013: Session and Resource Protocol Stress Tests</a>,
+<a href="/ash/docs/design/dn-0029-human-diagnostic-presentation/">DN-0029: Human Diagnostic Presentation</a>,
+<a href="/ash/docs/design/dn-0031-resource-composition-concept-map/">DN-0031: Resource Composition Concept Map</a>,
+<a href="/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/">DN-0041: Typed Serialization and Data Pipelines</a>,
+<a href="/ash/docs/design/dn-0047-ecs-and-open-heterogeneous-stores/">DN-0047: ECS and Open Heterogeneous Stores</a>,
+<a href="/ash/docs/decisions/ad-0010-human-diagnostic-presentation-and-localization/">AD-0010: Human Diagnostic Presentation and Localization</a></li>
+</ul>
+<blockquote>
+<p>This design note is informative. It guides the selection and development of
+ash-doc teaching material for an implemented checkpoint. It defines no Ash
+semantics, accepts no architecture, and reports no new executable case results.
+The proposed studies require development and verification in ash-doc.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Which case studies can teach useful program design in Diag Ash while exposing
+concrete language, library, diagnostic and implementation pressure? How should
+ash-doc develop them without repeating its existing lessons or presenting
+future Ash as available behavior?</p>
+<h2 id="context">Context</h2>
+<p>The target is <code>diag-ash</code>, commit
+<code>9ec5920e8c395f9a36125805ee93b7f58c0f4764</code>. This cumulative checkpoint includes
+Effect Ash, compiler repairs and improved diagnostics. Its <a href="https://github.com/dikini/ash-lang/blob/9ec5920e8c395f9a36125805ee93b7f58c0f4764/spec/README.md">specification</a>
+owns all language claims in these studies; its <a href="https://github.com/dikini/ash-lang/blob/9ec5920e8c395f9a36125805ee93b7f58c0f4764/docs/tools/ash.md">tool guide</a> owns the
+documented invocation and diagnostic controls. Newer <code>main</code> experiments and
+worktree implementations are outside this target.</p>
+<p>The inspected <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/README.md">ash-doc snapshot</a> is commit
+<code>0b6b9c8a9fba9e9b87f0c8c047001743e81682c1</code>. Its README reports thirteen Learn,
+eight Libraries, twelve Effects and twenty Cases lessons verified at the Diag
+Ash pin. This is an inventory of retained documentation evidence, not a fresh
+compiler or documentation test run. Its <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/cases/README.md">Cases index</a> already covers
+stateful traversal, requested prices, scripted sessions, search budgets,
+buffer-backed decoding and synchronous hook pipelines. Its <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/libraries/README.md">Libraries</a>
+and <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/effects/README.md">Effects</a> paths introduce their constituent language mechanisms.</p>
+<p>The opportunity is to develop interactions and application invariants. Cleanup
+lessons trace closing but do not collect typed cleanup failures alongside a
+primary outcome. Scoped-evidence lessons use small local examples. No existing
+Case develops sorting or a heterogeneous application world. A new decoder or
+hook example needs a distinct question beyond the existing pipeline mechanics.</p>
+<p>Historical discussions in the sibling <code>ash/docs</code> tree supply problem ideas.
+The <a href="https://github.com/dikini/ash/tree/f5316f952ee2c0fa7306d864d7f78edfe02d6d42/docs">historical source snapshot</a> is commit
+<code>f5316f952ee2c0fa7306d864d7f78edfe02d6d42</code>. Historical syntax, ownership claims,
+protocol rules and runtime facilities have no authority for this edition.
+Adapt the problem and comparison, then derive its Ash account from the pin.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Use the target's rank-1 values, nominal data, tuples, newtypes, interfaces,
+scoped exact evidence, passive modules, exact effects, one-shot handlers,
+builtin cells and native buffers, synchronous hooks and cleanup.</li>
+<li>Express bytes as checked integers and ordinary nominal collections. Do not
+depend on experimental <code>Bytes</code> or <code>String</code>, general foreign declarations,
+library-defined resources, Arena storage, files, networking or Float.</li>
+<li>Keep cell handles reusable and completion scope-owned. Neither an ordinary
+wrapper nor a handler establishes general linearity, borrowing, typestate
+consumption, proof authority or ownership transfer.</li>
+<li>Keep control synchronous. A worker or transaction simulation may use scripted
+decisions and checked discard; it supplies no scheduler, mailbox, escaping
+suspension, concurrent cancellation or native transaction guarantee.</li>
+<li>Derive each public operation's type from the chosen data and invariant.
+Prefer ordinary library definitions where the existing language suffices.
+Record a blocked design as pressure instead of changing the language locally.</li>
+<li>Separate static guarantees, runtime validation, application invariants and
+measured costs. A well-typed program can sort incorrectly, log a secret or
+implement an invalid protocol.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<p>Three formats merit comparison:</p>
+<ul>
+<li>A focused teaching extension isolates one new rule or diagnostic repair with
+few prerequisites. It can repeat an existing lesson without adding a
+program-design question.</li>
+<li>An application case study develops meaningful data, operations, invariants
+and interacting features. It can introduce too many mechanisms before the
+reader has a working model.</li>
+<li>A paired model and implementation compares a pure reference calculation with
+an effectful or alternative implementation. It needs an independent comparison
+and a clear account of what agreement establishes.</li>
+</ul>
+<p>The leading direction combines these formats: an application question owns the
+study, smaller examples introduce its unfamiliar boundary, and a reference
+model or contrasting implementation supplies evidence where useful. Diagnostics
+explain mistakes arising from that development rather than forming an unrelated
+catalogue of errors.</p>
+<h3 id="first-development-batch">First development batch</h3>
+<p>Start with cleanup reporting, scoped pricing and immutable ECS. They cover
+completion, local abstraction and application architecture with distinct
+questions. This is a suggested order; ash-doc owns assignments, lesson placement
+and acceptance. It is not an authorized implementation plan or a requirement to
+finish one family before starting another.</p>
+<h3 id="preserve-the-primary-outcome-when-cleanup-fails">Preserve the primary outcome when cleanup fails</h3>
+<p>Develop a batch calculation that returns an ordinary success or primary error
+while nested cleanup actions report their own failures. Retain the body outcome
+and ordered cleanup errors separately. For example, body failure <code>7</code> and reports
+<code>22</code>, then <code>11</code>, must preserve all three observations; a successful body must
+also survive those reports. Give a finite batch of domain commands a separate
+rejection type and name its modeled completion failures in ordinary ADTs.
+Develop the report API and its caller's error policy; the pinned tool already
+demonstrates the numerical reporting mechanism.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/9ec5920e8c395f9a36125805ee93b7f58c0f4764/spec/dynamic-semantics.md#typed-failure-reporting">specified reporting pattern</a> resumes each report so the
+running action and later actions can finish. Compare it with a reporting handler
+that attempts to discard required completion, and with a well-typed program
+that constructs an error value but never reports it. Capture the actual
+rejection for the former and explain the observed result of the latter.</p>
+<p>Use the <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/effects/running-cleanup/README.md">cleanup lesson</a> as a prerequisite. Check normal return,
+owned abandonment, no failures, several failures and distinct error categories
+combined through an explicit sum. Explain reporting separately from native
+release, retries and internal host termination. All completion effects in this
+first case are source-level models. The pressure is reusable error reporting and
+composition without losing the application's primary result.</p>
+<h3 id="supply-a-local-pricing-policy">Supply a local pricing policy</h3>
+<p>Extend <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/cases/supplying-order-prices/README.md">requested order prices</a> with distinct nominal money and
+quantity types, then a local nominal policy key whose exact methods capture
+configuration such as an integer tariff. Compare explicit function arguments,
+selected imported evidence and sequential local <code>with</code> evidence. An ordinary
+effect handler may supply configuration before that policy is established.</p>
+<p>Follow <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/libraries/supplying-scoped-evidence/README.md">scoped evidence</a> and the <a href="https://github.com/dikini/ash-lang/blob/9ec5920e8c395f9a36125805ee93b7f58c0f4764/spec/static-semantics.md">pinned static rules</a>.
+The complete evidence selection key must contain the active local nominal.
+Use scaled integer arithmetic with a documented domain; do not assume Float,
+division, units-of-measure inference or runtime-fresh nominal identity.
+An identity-free closure may retain already selected methods, but does not
+export an evidence fact for selection by its caller.</p>
+<p>Develop mistakes involving mixed nominal units, a constrained call before its
+local evidence is available, and an outward result exposing the local type.
+Return an ordinary quote whose type contains no local identity. Compare two
+configurations and a nested policy without treating lexical evidence as global
+implementation search. The <a href="https://github.com/dikini/ash/blob/f5316f952ee2c0fa7306d864d7f78edfe02d6d42/docs/notes/NOTE-026-NEWTYPE-AND-PHANTOM-TYPES.md">historical domain-primitives discussion</a>
+supplies motivation, not a newtype or proof contract.</p>
+<h3 id="query-an-immutable-ecs-world">Query an immutable ECS world</h3>
+<p>Represent a world with named position and velocity stores backed by ordinary
+immutable collections. Join by entity identifier, run a movement system and
+retain the original world as a snapshot. Use explicit component and query-result
+types. Begin with a small fixed schema whose expected rows are independently
+enumerated.</p>
+<p><a href="/ash/docs/design/dn-0047-ecs-and-open-heterogeneous-stores/#typed-immutable-stores-and-generic-systems">DN-0047</a>
+suggests a <code>StoreAccess&lt;W, C&gt;</code> relationship with both parameters in the key.
+One world has several component types, so a determination edge <code>W -&gt; C</code> would
+state the wrong relationship. The method argument or result context must fix
+the requested component type. Missing selected store evidence and mismatched
+component values are useful candidate diagnostic episodes.</p>
+<p>Compare direct world-specific functions with a generic system. Check absent
+components, identifier joins, preservation of the old world and repeated steps.
+Explain the lookup and rebuilding work of the actual representation. Automatic
+type-index search, associated-output projections, open registries, arbitrary
+mutable component stores and efficient packed layout remain outside this case.
+An optional heterogeneous-path extension must respect the pinned determination
+coverage and decreasing-prerequisite rules; it is not needed by the first world.</p>
+<h3 id="make-rollback-explicit-in-a-cancellable-journal">Make rollback explicit in a cancellable journal</h3>
+<p>Snapshot an integer cell, perform staged updates and either commit or request
+cancellation. An explicit cleanup action restores uncommitted state. Observe
+final state and closing order for normal completion, cancellation and nesting.
+The <a href="https://github.com/dikini/ash/blob/f5316f952ee2c0fa7306d864d7f78edfe02d6d42/docs/notes/NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md">historical state/error composition question</a> motivates comparing
+the same work under different handler placement.</p>
+<p>Use this to teach the difference between abandoning remaining control and
+undoing earlier mutation. Compare an action whose required interpreter remains
+around its owner with one depending on an interpreter removed by abandonment;
+develop the latter as a diagnostic repair. Start from the scoped-cell and
+cleanup lessons. This is an in-memory application protocol with explicit
+compensation, without database isolation or automatic rollback semantics.</p>
+<h3 id="redact-before-publishing-an-observable-event">Redact before publishing an observable event</h3>
+<p>Define internal and public event ADTs, project a public view and publish it
+through synchronous transformations. Compare audit collection before and after
+projection or redaction using a fixture whose sensitive field has an unmistakable
+value. Keep observations as returned ordinary data.</p>
+<p>The <a href="https://github.com/dikini/ash/blob/f5316f952ee2c0fa7306d864d7f78edfe02d6d42/docs/ideas/future/OBSERVABLE-STATE-AND-AUTHORIZED-CONTEXTS.md">historical observer/subject/view distinction</a> motivates the
+question. The existing <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/cases/controlling-a-hook-pipeline/README.md">hook pipeline</a> supplies prerequisites.
+The <a href="https://github.com/dikini/ash-lang/blob/9ec5920e8c395f9a36125805ee93b7f58c0f4764/spec/static-semantics.md#synchronous-typed-hooks">pinned hook contract</a> requires endomorphic publication. A proposed
+type-changing registration should instead project before publication or use a
+separate hook for the public type. Check ordering and nested-root isolation.</p>
+<p>Explain which module interfaces prevent passing an internal event to the public
+collector, and which redaction properties still depend on application code.
+Do not imply runtime introspection, observer grants or automatic secrecy. A
+well-typed collector installed too early is an important runtime counterexample.</p>
+<h3 id="check-a-workers-proposed-edits">Check a worker's proposed edits</h3>
+<p>Build a deterministic worker that proposes edits to an integer list and a
+controller that checks permitted positions and the resulting artifact. Compare
+accepted traces with an independent pure model. The <a href="https://github.com/dikini/ash/blob/f5316f952ee2c0fa7306d864d7f78edfe02d6d42/docs/ideas/otp/OTP-004-harnessed-worker-bisimulation-patterns.md">historical controlled-edit
+example</a> supplies the problem; a local script supplies all decisions.</p>
+<p>Develop allow, reject and cancellation branches. A continuation resumed twice,
+or left unconsumed on a normally completing branch, is a candidate diagnostic
+episode. Repair it using exactly one permitted resume or owned discard.
+Separately test a well-typed controller that approves an invalid edit: continuation
+safety does not establish the controller's policy.</p>
+<p>This extends the scripted-session idea with an independently checked artifact
+and an explicit authorization boundary. It simulates a worker/controller
+interaction; it executes no LLM, process, external tool, filesystem or sandbox.
+The pressure is how much of a useful control contract can remain ordinary data,
+functions, effects and tests before separate execution authority is needed.</p>
+<h3 id="cancel-a-stable-sorter-without-claiming-a-sorted-partial-result">Cancel a stable sorter without claiming a sorted partial result</h3>
+<p>Sort records with a finite priority and an identifier, preserving input order
+among equal priorities. A finite nominal priority avoids assuming additional
+primitive comparisons. Define a result that distinguishes a complete sorted
+sequence from cancellation. Supply permission through a synchronous scripted
+or budgeted handler and charge comparisons before performing them.</p>
+<p>Build on existing ordering, comparison-counting and search-budget cases. Compare
+with a pure reference sort, checking sorted order, permutation and stability.
+A well-typed unstable implementation should fail the stability examples. A
+handler that tries to resume twice to explore alternatives supplies a separate
+static mistake; alternatives must instead be ordinary data or fresh calls.</p>
+<p>Explain the work of the chosen algorithm and separate it from charged handler
+events and wall-clock measurements. The new question is the algorithm's
+invariant and result contract; adding only the existing budget handler to a new
+traversal would add little. Cancellation is synchronous and does not return a
+partial list labeled as sorted.</p>
+<h3 id="encode-and-decode-a-tagged-frame">Encode and decode a tagged frame</h3>
+<p>Extend <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/content/cases/reading-a-bounded-message/README.md">bounded message decoding</a> with several message
+constructors, explicit integer byte tags, encoding and decoding. Return copied
+ordinary message data from the native-buffer scope. State a small format profile
+and check round trips, malformed tags, truncation, invalid byte values and
+acquisition versus operation failures. Preserve nested outcomes where present.</p>
+<p><a href="/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/#expressibility-experiment">DN-0041</a>
+supplies pressure for explicit representation contracts and manual typed codecs.
+This study claims only its declared format. It supplies no String/Bytes API,
+standard JSON/BSON implementation, reflection or derivation facility.</p>
+<p>Compare a direct decoder with a small materialized representation only if that
+comparison answers a concrete question. A cursor closure that escapes its owner
+is a candidate rejection; decode while access remains live and return independent
+data as the repair. A deliberately inconsistent encoder/decoder pair supplies
+the semantic counterexample that successful typing alone cannot detect.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<h3 id="develop-the-explanation-from-the-problem">Develop the explanation from the problem</h3>
+<p>Use ash-doc's <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/.agents/skills/writing-ash-documentation/SKILL.md">writing guidance</a> and the teaching discipline in
+<a href="/ash/docs/design/dn-0024-executable-learning-and-evidence-stream/#make-code-executable">DN-0024</a>.
+Begin with a meaningful example and the reader's working model. Derive the
+data representation, invariants and public operation types, then develop the
+smaller calculations. Introduce one unfamiliar boundary at a time, drawing on
+the existing learning paths rather than repeating their complete explanations.</p>
+<p>Ask the reader to predict a result or diagnose a plausible attempt before
+explaining the observation. A diagnostic episode should connect the complete
+actual message and causal source labels to the violated contract and repair.
+Keep a discovery exercise's answer out of its displayed solution. Explain a
+well-typed runtime counterexample where types do not establish the invariant.</p>
+<p>End with what the example establishes, its costs and limitations, and an exercise
+that changes one meaningful assumption. Keep compiler pins, verification logs,
+coverage administration and future design pressure in project records rather
+than repeatedly inserting them into the reader's lesson.</p>
+<h3 id="verify-before-presenting-an-observation">Verify before presenting an observation</h3>
+<p>No proposed mistake or result in this note is a captured transcript or a new
+acceptance receipt. Develop and run each complete candidate at the exact pin.</p>
+<p>For an adopted study:</p>
+<ol>
+<li>Keep canonical source, explanatory prose and local checks together. Transclude
+runnable blocks or check exact source agreement. Mark sketches as sketches.</li>
+<li>Check successful values, types, stdout, stderr and exit status as applicable.
+Use independently specified examples or reference calculations for application
+invariants; do not derive every expectation from the implementation under test.</li>
+<li>Check intentional source rejections through structured JSON, including the
+reason and relevant causal locations. Capture complete English human output
+with the pinned tool's explicit format and locale. Normalize only the
+documented checkout prefix. Keep wording checks separate from semantic checks.</li>
+<li>Retain normal, rejection and runtime-failure cases relevant to the actual
+question. Distinguish a type rejection, a typed error result, an internal
+resource failure and an incorrect application result.</li>
+<li>Add a bounded scaled case when it answers a cost or analysis question. Report
+logical operations, compiler exhaustion and physical measurements separately.
+A finite successful run establishes no general complexity or soundness theorem.</li>
+<li>Verify changed navigation and source links. Update any affected family runner
+and coverage expectations; the inspected Cases runner fixes twenty destinations.
+Follow ash-doc's <a href="https://github.com/dikini/ash-doc/blob/0b6b9c8a9fba9e9b87f0c8c047001743e81682c1/docs/project/verification.md">verification policy</a> for the affected scope and
+for any later complete-edition verification or migration.</li>
+</ol>
+<p>Use hermetic inputs and deterministic scripts. Source failures should explain
+the promised boundary without needing a live service or experimental compiler.
+When a feature's ordinary behavior requires an unavailable capability, preserve
+the useful current-language kernel and record the missing boundary honestly.</p>
+<h3 id="compare-outcomes-and-retain-useful-findings">Compare outcomes and retain useful findings</h3>
+<p>The comparison question is whether these studies improve a reader's ability to
+design, predict and repair a program beyond the existing constituent lessons.
+Record prerequisite burden, duplication, explanatory gaps, independent positive
+and negative examples, and costs exposed by their combination. A case does not
+succeed merely because it uses many features or compiles.</p>
+<p>Retain a verified study when its application question, invariant and Ash-specific
+choices remain useful. Simplify it when several mechanisms obscure the same
+point. Revise or discard a duplicate or unsuccessful candidate while preserving
+any distinguishing counterexample as evidence. Keep incomplete studies out of
+active learning navigation under ash-doc's existing workflow.</p>
+<p>Classify discoveries through DN-0024's cooperative evidence flow: repair tutorial
+mistakes; minimize failures of specified behavior as potential Ash regressions;
+return unspecified behavior to design work; and retain library, diagnostic or
+performance pressure with the exact source and compiler commits. The fuller
+teaching case remains owned by ash-doc. Selecting it as upstream evidence does
+not make its entire implementation a language-conformance test.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which first-batch studies remain clear with their stated prerequisites, and
+which need a smaller teaching extension before the application?</li>
+<li>Which candidates should extend an existing Case, and which have enough of a
+distinct invariant and development arc to become separate studies?</li>
+<li>Does the scoped-policy application reveal a useful limit in rank-1 helper
+abstraction, or can explicit ordinary functions keep its API small?</li>
+<li>How much query abstraction improves the immutable ECS example before evidence
+plumbing hides the world and store invariants?</li>
+<li>Which composed cleanup or control examples reach the pinned compiler's work
+limits? An observed limit is evidence to classify, not permission to change it.</li>
+<li>Which diagnostic labels actually help readers find the cause, and which
+examples expose a message or explanation that needs improvement?</li>
+</ul></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/">← DN-0051: Userspace Concurrency and Scheduling</a><a rel="next" href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053: Scoped Generic Cells Without Native Owners →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

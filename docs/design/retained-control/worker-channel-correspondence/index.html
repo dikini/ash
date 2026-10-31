@@ -1,0 +1,182 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Bounded worker and channel model: correspondence obligations · Ash</title><meta name="description" content="WorkerChannel.lean is a candidate for independent review and the frozen AD-0012 gate. Local language-server diagnostics do not establish a retained proof result. This model is conditional evidence for CP-0027 and…"><meta name="robots" content="index, follow"><meta property="og:title" content="Bounded worker and channel model: correspondence obligations · Ash"><meta property="og:description" content="WorkerChannel.lean is a candidate for independent review and the frozen AD-0012 gate. Local language-server diagnostics do not establish a retained proof result. This model is conditional evidence for CP-0027 and…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Bounded worker and channel model: correspondence obligations · Ash"><meta name="twitter:description" content="WorkerChannel.lean is a candidate for independent review and the frozen AD-0012 gate. Local language-server diagnostics do not establish a retained proof result. This model is conditional evidence for CP-0027 and…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/retained-control/worker-channel-correspondence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/retained-control/worker-channel-correspondence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/worker-channel-correspondence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Bounded worker and channel model: correspondence obligations","headline":"Bounded worker and channel model: correspondence obligations","description":"WorkerChannel.lean is a candidate for independent review and the frozen AD-0012 gate. Local language-server diagnostics do not establish a retained proof result. This model is conditional evidence for CP-0027 and…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/retained-control/worker-channel-correspondence/","@id":"https://dikini.github.io/ash/docs/design/retained-control/worker-channel-correspondence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/worker-channel-correspondence.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="bounded-worker-and-channel-model-correspondence-obligations" data-pagefind-meta="title">Bounded worker and channel model: correspondence obligations</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/worker-channel-correspondence.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p><code>WorkerChannel.lean</code> is a candidate for independent review and the frozen
+AD-0012 gate. Local language-server diagnostics do not establish a retained
+proof result. This model is conditional evidence for CP-0027 and AD-0017, not a
+proof of the Rust implementation, operating system or Ash evaluator.</p>
+<h2 id="state-and-inductive-claims">State and inductive claims</h2>
+<p>There are exactly two worker identities. <code>DistinctStores</code> requires different
+C1 store and owner identities, and each worker's C1 <code>Unique</code>, <code>ContextSafe</code>,
+<code>SlotIdsUnique</code> and <code>GenerationBounded</code> properties are preserved by actual C1
+steps. The initial theorem requires those properties for both supplied stores.
+The actor for a local store step must equal its owner. A single commit requires
+both workers prepared; every execution, operation, registration and dispatch
+step requires that joint commit. Preparation can be aborted only before commit.</p>
+<p>Each direction retains ordered accepted, received and queued entries. Each
+entry contains an identity and its immutable byte snapshot. <code>Channel.Safe</code>
+requires distinct accepted identities, the FIFO equation and capacity bound,
+and a permutation from received entries to completed plus held entries. A
+send may introduce only an unused identity; receive transfers the exact head to
+held work. Failed preparation or copying is represented by a no-change step.
+Completion selects an exact whole held entry, and the invariant proves that a
+completed identity cannot also be live. Completions may occur out of order.</p>
+<p>Dispatch binds a held entry to the receiver's actual C1 <code>Step.launch</code>; its
+capture has the entry identity as both branch and owned identity. A dispatched
+fact remains linked to an actual held entry under every modeled transition.
+Finishing the selected entry requires the same identity and a matching active
+capture with C1 <code>ReadyToFinish</code>; it performs that capture's actual C1
+<code>Step.finish</code>, removes the selected entry and clears its dispatch fact. Generic
+local C1 steps cannot finish a dispatched capture outside this transition.
+Worker return requires C1 <code>NoWork</code>, a valid close phase and actual C1
+<code>Step.release</code>. The imported C1 theorem establishes the modeled cleanup and
+nested-control premises. The C3 correspondence must still establish that the
+actual source, handler suffixes and cleanup reach this specific C1 completion
+boundary; a name or fabricated status is not evidence.</p>
+<p>Each lane and interest has a finite keyed set of active registrations. Each
+registration has its own pending bit. Registration chooses a fresh generation
+without replacing other registrations. Readiness refresh sets the pending bit
+of every matching active registration, and repeated refreshes coalesce. Poll
+refreshes all interests, selects a pending registration and clears only that
+bit; other pending registrations remain accounted for. The model records an
+in-flight wake under a separate fresh callback identity until completion.
+Cancellation removes only its selected registration and pending bit; it does
+not erase an in-flight wake. The validity invariant bounds issued generations
+and callback identities, so old identities cannot become fresh. The two-watch
+lemmas cover repeated registration, simultaneous readiness, polling one and
+cancelling one without losing the other. Operations likewise occupy distinct,
+monotone identities and a channel step consumes the exact current operation
+for its owning polarity. The model uses unbounded naturals; native exhaustion
+must refuse rather than wrap.</p>
+<p>Send sealing and genuine receive End are distinct steps. End requires the send
+side sealed, the queue empty and the channel healthy; the inductive invariant
+then gives equality of accepted and received histories. End alone does not
+complete held receiver work. Each worker can return only after its own sender
+is sealed, its receiver has observed End, its receiver-held entries are
+finished and its C1 store actually closes. Normal backing release requires both
+workers returned, both directions sealed and End observed, queues and held
+entries empty, and all operations, active registrations, callback identities and
+dispatched facts absent. A released network has no further modeled transition.
+The release conditions inspect concrete state; no step assumes an arbitrary
+successor satisfies the global invariant.</p>
+<p>Terminal failure atomically marks both directions failed and rechecks all
+active watches. The failure invariant proves that no later step or finite
+trace accepts another send. Registration after failure observes terminal
+readiness and creates its wake even if no subsequent channel change occurs.
+Existing operations can be refused, watches cancelled, callbacks completed,
+and already-ready processing can finish. Normal release cannot occur after
+failure; support stays retained until a separately specified failure-disposal
+contract permits release. This model makes no successful-drain claim for that
+case.</p>
+<h2 id="implementation-correspondence-still-required">Implementation correspondence still required</h2>
+<p>The frozen model and actual implementation need independent comparison. Map
+every actual entry, operation, callback and failure transition to a matching
+model step or documented stutter; prove the initial C1 and distinct-store
+premises. In particular:</p>
+<ul>
+<li>Actual copied bytes must come from protected live source storage, preserve
+every byte, and be independently owned and visible before atomic acceptance.
+Receive must commit its local copy before moving the exact queue head into
+receiver responsibility. Failure before that commit keeps the original entry
+and obligation. This model does not prove native memory safety or visibility.</li>
+<li>Actual send and receive authorities must map to the fixed owner and polarity
+in the model; their operations and message identities cannot be duplicated or
+reused. FIFO and capacity changes must linearize to the modeled synchronized
+steps. The model selects atomic acceptance/publication; an uncertain native
+outcome is not a normal refusal and needs the accepted contract's retained
+reservation and resolution treatment.</li>
+<li>Associate each accepted message with the actual unique C1 root capture at
+dispatch. Verify that later resume, handler suffix and cleanup transitions
+preserve that identity, and that only the corresponding C3 actual-completion
+boundary uses <code>finishProcessing</code>. The <code>noDispatchedFinish</code> restriction on
+generic local steps must be checked against all real control successors. C1
+proof and source correspondence do not themselves prove Rust execution.</li>
+<li>Actual watch state, registration, poll, cancellation and callback lifetimes
+must match the finite keyed registrations, pending bits, in-flight wake
+identities and atomic level rechecks. A live native callback, registered wait,
+or operation may not disappear from the model before actual completion. Prove
+no future callback or access after settlement, including cancellation and
+stale-notification races.</li>
+<li>Show actual seal, End, worker return and backing destruction satisfy the
+modeled preconditions. Return requires actual worker and cleanup completion;
+a queue-empty observation, copied bytes or callback name cannot supply it.
+Partial entry and postcommit failure retain every owner and support obligation.</li>
+<li>Entry admission and private control-envelope origin, OS pinning, native join,
+synchronization, overflow refusal and byte visibility are separate checks or
+explicit host assumptions. Distinct abstract Store identities do not by
+themselves prove physical resource non-aliasing. Liveness, scheduling fairness,
+deadlock freedom, native memory safety and the N3 bidirectional ledger are
+outside this finite safety model.</li>
+</ul>
+<h2 id="transport-correspondence-at-f5ae9b6">Transport correspondence at <code>f5ae9b6</code></h2>
+<p>The private <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/src/eval/network_transport.rs">transport implementation</a>
+at <code>f5ae9b692b07dbd1396dbddb946a3fc2c8fbbf1d</code> is evidence for the following
+candidate mapping. These observations do not prove that every Rust transition
+refines the model or that higher-level worker completion exists.</p>
+<ul>
+<li>The host allocates <code>Shared</code> with fallible <code>triomphe::Arc::try_new</code>, assigns a
+checked activation identity and keeps a mutex around both directions and their
+watches. Admission, worker pinning and a C1 store are outside this transport.</li>
+<li><code>try_send</code> holds a per-direction <code>SendGuard</code>, makes a fallible byte copy,
+rechecks state under the mutex, then pushes the envelope and refreshes watches.
+The push is the candidate atomic acceptance/publication step. Full, closed,
+allocation failure and failed-state outcomes publish no envelope.</li>
+<li><code>reserve_receive</code> removes the head into an owned <code>ReceiveGuard</code> and marks a
+reservation. For the abstract FIFO, that guard-held original remains the
+queue head until <code>ReceiveGuard::commit</code>; capacity and readability include the
+reservation. <code>snapshot</code> is fallible, and dropping an uncommitted guard
+restores the original head. The guard retains an <code>Arc</code> to backing. Map the
+real operation and guard lifetime to the model's live operation identity;
+establish that a successful receiver-owned copy and <code>commit</code> correspond to
+receipt before discharging that operation.</li>
+<li>The host maintains one bounded vector of up to 64 watches across both sides
+and interests. Each has an activation, side, globally issued checked
+generation, interest and pending bit. The model permits any finite number of
+registrations, so it overapproximates this host limit; host refusal for the
+limit, allocation or exhaustion maps to <code>refuseWatch</code>, which publishes no
+registration. A refinement must assign each concrete registration to its
+lane and interest, preserve its stable identity across cancellation and poll,
+and account for the concrete global generation sequence versus the model's
+per-group sequence. Do not equate generation numbers without that mapping.</li>
+<li><code>refresh</code> scans all watches and sets each ready watch's pending bit; setting
+it repeatedly coalesces. <code>poll_wake</code> refreshes first, then selects and clears
+one pending watch for the requested side. <code>Network.advance</code>, <code>pollWake</code> and
+<code>pollEmpty</code> perform the matching global refresh and single-selection cases;
+the model does not impose the host cursor's selection order. The returned
+registration is a value: if its consumer retains or can access backing,
+represent that activity by the model's distinct in-flight wake until it has
+actually finished. If no such activity survives the return, it may discharge
+that conservative model obligation immediately.</li>
+<li><code>finish_send</code> seals a direction and refreshes readiness. <code>fail</code> marks terminal
+failure and refreshes watches when it obtains the lock. The host transport
+<code>settle</code> checks both seals, queue/reservation/send users and watch emptiness;
+it explicitly does not establish worker completion or receiver processing.
+The modeled release additionally requires genuine End and C1/C3 completion.
+The caller must compose these checks; transport settlement alone is not the
+network release proof. Lock poisoning and unsuccessful failure reporting
+require an explicit implementation correspondence, not an assumed wake.</li>
+</ul>
+<h2 id="proposed-frozen-closure">Proposed frozen closure</h2>
+<p>The new <code>WorkerChannel</code> module imports <code>Std</code> and the retained C1 <code>Ownership</code>
+module. Use the frozen C3 evidence as parent and retain its registered
+<code>Ownership</code>, <code>OwnershipExamples</code> and <code>DrainSafety</code> modules. A fresh runner
+configuration must pin the new source and review, the existing direct import,
+compiler/library and report list. The exact expected theorem names are the
+<code>#print axioms</code> declarations at the end of the model; the runner checks each
+and accepts only its standard axiom set. Source review precedes the frozen
+gate. An LSP workspace and its locally compiled import are development aids,
+not a gate receipt. Rust/native correspondence and the connected N-core gate
+remain separate.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#state-and-inductive-claims">State and inductive claims</a><a href="#implementation-correspondence-still-required">Implementation correspondence still required</a><a href="#transport-correspondence-at-f5ae9b6">Transport correspondence at f5ae9b6</a><a href="#proposed-frozen-closure">Proposed frozen closure</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

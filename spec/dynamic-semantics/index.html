@@ -1,5 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#171c18"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Cnl9yVxH.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>Dynamic Semantics · Ash</title><meta name="description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…"><meta name="robots" content="index, follow"><meta property="og:title" content="Dynamic Semantics · Ash"><meta property="og:description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Dynamic Semantics · Ash"><meta name="twitter:description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…"><meta property="og:url" content="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="canonical" href="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/spec/dynamic-semantics.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Dynamic Semantics","headline":"Dynamic Semantics","description":"Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation). Its Ash control transitions are deterministic relative to fixed admitted native bindings and…","inLanguage":"en","url":"https://dikini.github.io/ash/spec/dynamic-semantics/","@id":"https://dikini.github.io/ash/spec/dynamic-semantics/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/spec/dynamic-semantics.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>Dynamic Semantics · Ash</title><meta name="description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation; workers, transport). The last two components retain pinned-worker configurations and shared…"><meta name="robots" content="index, follow"><meta property="og:title" content="Dynamic Semantics · Ash"><meta property="og:description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation; workers, transport). The last two components retain pinned-worker configurations and shared…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Dynamic Semantics · Ash"><meta name="twitter:description" content="Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation; workers, transport). The last two components retain pinned-worker configurations and shared…"><meta property="og:url" content="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="canonical" href="https://dikini.github.io/ash/spec/dynamic-semantics/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/spec/dynamic-semantics.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"Dynamic Semantics","headline":"Dynamic Semantics","description":"Ash evaluation is defined by one small-step relation over configurations CONFIG(heap, environment, control, continuation; workers, transport). The last two components retain pinned-worker configurations and shared…","inLanguage":"en","url":"https://dikini.github.io/ash/spec/dynamic-semantics/","@id":"https://dikini.github.io/ash/spec/dynamic-semantics/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/spec/dynamic-semantics.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,11 +13,18 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Specification</p><h1 id="dynamic-semantics" data-pagefind-meta="title">Dynamic Semantics</h1><p class="spec-source">Development specification · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/spec/dynamic-semantics.md">ash-lang <code>67c79dd</code></a></p></header><nav class="spec-chapters" aria-label="Specification chapters"><a href="/ash/spec/">Overview</a><a href="/ash/spec/lexical-structure/">Lexical Structure</a><a href="/ash/spec/syntax/">Syntax</a><a href="/ash/spec/name-resolution/">Name Resolution</a><a href="/ash/spec/static-semantics/">Static Semantics</a><a href="/ash/spec/elaboration/">Elaboration</a><a href="/ash/spec/dynamic-semantics/" aria-current="page">Dynamic Semantics</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Specification</p><h1 id="dynamic-semantics" data-pagefind-meta="title">Dynamic Semantics</h1><p class="spec-source">Development specification · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/spec/dynamic-semantics.md">ash-lang <code>9a8b73b</code></a></p></header><nav class="spec-chapters" aria-label="Specification chapters"><a href="/ash/spec/">Overview</a><a href="/ash/spec/lexical-structure/">Lexical Structure</a><a href="/ash/spec/syntax/">Syntax</a><a href="/ash/spec/name-resolution/">Name Resolution</a><a href="/ash/spec/static-semantics/">Static Semantics</a><a href="/ash/spec/elaboration/">Elaboration</a><a href="/ash/spec/dynamic-semantics/" aria-current="page">Dynamic Semantics</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
 <p>Ash evaluation is defined by one small-step relation over configurations
-<code>CONFIG(heap, environment, control, continuation)</code>. Its Ash control transitions
-are deterministic relative to fixed admitted native bindings and the outcomes
-of their external calls; it does not determine or guarantee those outcomes.
+<code>CONFIG(heap, environment, control, continuation; workers, transport)</code>.
+The last two components retain pinned-worker configurations and shared channel
+state. They start empty; rules that do not access them leave them unchanged and
+omit them from the notation below. Each worker has its own heap, environment,
+control and continuation, with the same local rules.</p>
+<p>Sequential execution is deterministic relative to fixed admitted native bindings
+and external-call outcomes. Pinned-worker execution additionally depends on the
+interleaving of worker and transport steps. Ash does not fix that interleaving
+or promise fair scheduling. Fixing it and the external outcomes determines the
+corresponding Ash control steps.
 The heap is
 fresh for one evaluation and maps numeric locations to tuples, completed
 constructors, uninitialized slots for recursive data, or
@@ -150,6 +157,20 @@ and release remain the fixed ordinary pair of one successful region setup.</p>
 </tr>
 </tbody>
 </table>
+<p>The canonical <code>@builtin.integer.split_base256</code> uses ordinary call-by-value:
+the function and strict <code>Int</code> argument evaluate once before builtin entry. It
+then queries and saves the live caller-selected allocation context before
+reading the evaluated integer. For <code>n &lt; 0</code>, it constructs <code>Negative</code> in that
+context. For <code>n &gt;= 0</code>, it returns
+<code>Parts((q, r))</code> for the unique mathematical integers <code>n = 256*q + r</code>, <code>q &gt;= 0</code>
+and <code>0 &lt;= r &lt; 256</code>; zero yields <code>(0, 0)</code>, and positive <code>n</code> has <code>q &lt; n</code>.
+There is no native-word cutoff. It charges work and size before proportional
+traversal and allocation. For <code>Parts</code>, it initializes any needed quotient digit
+backing, the ordered pair and then the constructor in the saved context; the
+remainder is an immediate byte-valued integer. Each supplied record is fresh,
+compatible and fully initialized before publication. Input storage is unchanged.
+Declared allocation refusal follows ordinary effect/discard rules. Internal
+work, control or storage exhaustion is terminal and produces no normal result.</p>
 <p>A successful supplied layout includes the object's complete persistent
 representation: tuple fields, nominal discriminant/payload, actual closure
 captures, and persistent Bytes/String/large-Int backing where applicable.
@@ -456,6 +477,67 @@ heap unchanged.</p>
 over Boolean values. The left rules propagate a step in the left operand. The
 right rules apply only after the left operand is an integer value. The value
 rules compute the primitive result.</p>
+<h2 id="byte-and-string-execution">Byte and string execution</h2>
+<p>Canonical byte/string callables evaluate the function and argument once by the
+ordinary application rules. Tuple operands evaluate in source order. The value
+operation then selects the following result; it does not invoke user code.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Operation and evaluated input</th>
+<th>Selected result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Bytes.empty ()</code></td>
+<td>Empty Bytes.</td>
+</tr>
+<tr>
+<td><code>Bytes.length bytes</code></td>
+<td>The mathematical byte count.</td>
+</tr>
+<tr>
+<td><code>Bytes.equal (left, right)</code></td>
+<td>True exactly when both byte sequences are equal.</td>
+</tr>
+<tr>
+<td><code>Bytes.append_byte (bytes, n)</code></td>
+<td><code>BytesAppended</code> containing the original sequence followed by byte n when <code>0 &lt;= n &lt;= 255</code>; otherwise <code>InvalidByte</code>. The input is unchanged.</td>
+</tr>
+<tr>
+<td><code>Bytes.at (bytes, i)</code></td>
+<td><code>ByteAt(n)</code> for the unsigned byte at zero-based index i; otherwise <code>InvalidIndex</code>. Negative, unrepresentable and out-of-range indices are invalid.</td>
+</tr>
+<tr>
+<td><code>String.to_utf8 text</code></td>
+<td>Bytes containing exactly the text's UTF-8 encoding.</td>
+</tr>
+<tr>
+<td><code>String.from_utf8 bytes</code></td>
+<td><code>Decoded(text)</code> for valid UTF-8; otherwise <code>InvalidUtf8</code>. No replacement decoding occurs.</td>
+</tr>
+<tr>
+<td><code>String.byte_length text</code></td>
+<td>The UTF-8 byte count.</td>
+</tr>
+<tr>
+<td><code>String.equal (left, right)</code></td>
+<td>True exactly when the UTF-8 sequences are equal. No normalization occurs.</td>
+</tr>
+</tbody>
+</table>
+<p><code>Bytes</code> and <code>String</code> in this table name the canonical builtin modules, independent
+of import spelling. The operation retains its evaluated inputs and selected
+allocation context. Persistent output backing and result constructors then use
+the region request, pending initialization and publication steps above. Input
+evaluation and completed construction are not replayed after resume. Checked
+discard abandons only the unfinished construction and closes its owned control.
+Non-allocating primitive leaves return their immediate result directly.</p>
+<p>Complete traversal, size checks and result preparation are charged before
+publication. Declared allocation refusal follows ordinary effect/discard rules;
+internal work/storage exhaustion is terminal. Native invocation, foreign memory
+access and encoding conversion are not implicit in any of these operations.</p>
 <h2 id="native-symbol-execution">Native symbol execution</h2>
 <p>Write <code>a_p</code> for an Address value whose private data pointer is <code>p</code>, and <code>a_null</code>
 for the null Address. These are metavariables for existing opaque runtime values,
@@ -529,6 +611,124 @@ does not capture or infer this relation.</p>
 <p>No arbitrary memory read/write, Address-to-Bytes/String conversion, numeric ABI,
 out-pointer storage or compiler-managed foreign lifecycle is supplied. Ordinary
 cleanup and resource completion rules below continue to govern Ash control.</p>
+<h2 id="pinned-network-execution">Pinned network execution</h2>
+<p>The <code>workers</code> component records each carrier's local configuration and
+prepared, running, returned or terminal-held state. <code>transport</code> records each
+network's two FIFO directions, capacity, send/receive reservations, seals,
+receive closure, watches, generations, pending wakes and terminal state. The
+coordinator's continuation owns the network until settlement. Nested networks
+retain their own activations and owners.</p>
+<p>One step advances either an eligible local executor or one transport phase.
+The following table defines network phases of the same configuration relation;
+ordinary operand evaluation, source calls and result construction use the local
+rules between these phases. Atomic commit means the indicated state change
+cannot be observed halfway through by the other worker.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Step</th>
+<th>Preconditions and state change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NetworkPrepare</td>
+<td>Evaluate capacity, named entries and startup inputs before publication; prepare two carriers, two directions and independent startup copies. Failure publishes no successful network owner.</td>
+</tr>
+<tr>
+<td>WorkerStart</td>
+<td>After entry commit, establish that worker's root, global records and local entry application on its carrier. Preserve the other worker's state.</td>
+</tr>
+<tr>
+<td>WorkerStep</td>
+<td>Advance one eligible worker by an existing local rule. A local capture, retain, resume or cleanup step changes only that worker's control and Store ownership.</td>
+</tr>
+<tr>
+<td>SendPrepare</td>
+<td>Authenticate the worker and side; evaluate operands and reserve send support. Closed or Full accepts no message. Prepare the copied payload before acceptance.</td>
+</tr>
+<tr>
+<td>SendCommit</td>
+<td>Atomically append the copied envelope with its authenticated kind and sending side. Later result-allocation failure does not retract the accepted message.</td>
+</tr>
+<tr>
+<td>ReceiveReserve</td>
+<td>Authenticate the receiving side and reserve its incoming FIFO head. No other receipt removes that head while reserved. Empty and End follow the queue/seal state.</td>
+</tr>
+<tr>
+<td>ReceiveCommit</td>
+<td>After the complete receiver-owned result is initialized in the selected region, remove the reserved head atomically and return that result. Failed preparation restores the head.</td>
+</tr>
+<tr>
+<td>WatchPrepare/Publish</td>
+<td>Reserve a fresh generation-associated watch, recheck readiness under synchronization and publish the registration only after reply preparation. Roll back an unpublished registration on failure.</td>
+</tr>
+<tr>
+<td>Wake/Poll/Cancel</td>
+<td>Readiness marks a matching live registration pending. Poll consumes its pending notification; cancellation removes the registration and prevents new notifications. A stale generation is not a live registration.</td>
+</tr>
+<tr>
+<td>FinishSend</td>
+<td>After earlier operations resolve, seal that sending direction. Subsequent sends are Closed.</td>
+</tr>
+<tr>
+<td>FinishReceive</td>
+<td>Close only when the actual incoming direction is sealed and empty and no transport operation remains outstanding.</td>
+</tr>
+<tr>
+<td>WorkerReturn</td>
+<td>Record actual local return while retaining that worker's root, evaluator and native support on its carrier. This does not authorize teardown or release channel backing.</td>
+</tr>
+<tr>
+<td>CarrierTeardown</td>
+<td>After the coordinator observes both normal returns, finished endpoints and no transport users, authorize each carrier to dispose its own retained root and support and report its teardown result. A failed prerequisite retains that support.</td>
+</tr>
+<tr>
+<td>NetworkSettle</td>
+<td>Require both normal worker returns, finished endpoints, no outstanding operations or watches and completed local teardown; join carriers and release backing.</td>
+</tr>
+<tr>
+<td>NetworkFailure</td>
+<td>Mark transport terminal. If local completion cannot finish, retain the affected configuration and support on its carrier and report incomplete teardown. Do not report successful settlement.</td>
+</tr>
+</tbody>
+</table>
+<p>A network acquisition prepares two worker carriers and two positive-capacity
+FIFO byte channels. Each worker runs its own Ash root on one carrier thread; any local Stores
+remain on that carrier. A notification does not move a continuation or Store to
+the other worker. Startup inputs are independently copied. A capacity that cannot be
+represented or prepared fails acquisition without publishing the activation.</p>
+<p><code>try_send</code> publishes an Application envelope and <code>send_control</code> a Control
+envelope. A successful send commits a channel-owned copy of the whole <code>Bytes</code>
+snapshot; <code>Full</code> and <code>Closed</code> commit no message. Both envelope kinds share a
+FIFO in each direction. <code>try_receive</code> returns <code>Empty</code>, failure, <code>End</code>, or a
+<code>Message(kind, bytes)</code> whose kind and opposite sending side come from the
+channel. Before committing a receipt, the interpreter copies its whole bytes
+into the receiving worker's selected region. A failed copy leaves the FIFO head
+available. Transport origin does not establish the meaning or honesty of the
+bytes.</p>
+<p><code>finish_send</code> seals the sending polarity after its earlier operations resolve.
+<code>End</code> is available only after the opposite send polarity is sealed and its
+accepted queue is empty. <code>finish_receive</code> closes the receive polarity only when
+the actual incoming channel is sealed and empty, with no outstanding transport
+operation. This is a transport condition: it does not prove that each received
+message was processed or that its cleanup completed.</p>
+<p><code>watch</code> registers a generation-associated interest with a readiness recheck;
+<code>poll_wake</code> returns a notification or no wake, and <code>cancel_watch</code> prevents new
+notifications for the registration. A wake is a hint and its user rechecks the
+channel. Readable includes a message, End or failure; writable includes an
+available send, Closed or failure. A wake does not restore a different Store
+or confer protocol authority.</p>
+<p>A normal <code>settle</code> requires both workers to return normally, their endpoint and
+channel operations and registrations to settle, and their carrier-local teardown
+to finish before the carriers join and backing is released. Generic Store and
+cleanup rules still apply. An unfinished endpoint, worker or backing user cannot
+be converted to successful settlement by an ordinary Boolean or result value.
+Terminal failure can retain the affected worker and transport support and report
+incomplete teardown; it does not claim successful cleanup. Native bindings and
+host synchronization remain trusted boundaries. This execution does not promise
+fair scheduling, deadlock freedom, termination, worker recovery or native memory
+safety.</p>
 <h2 id="effect-handlers-and-completion">Effect handlers and completion</h2>
 <p><code>HANDLER(handler, instance, clauses, environment)</code> is an ordered lexical
 continuation boundary. <code>REQUEST(operation, instantiation)</code> and
@@ -703,6 +903,19 @@ for <code>a</code> and binds the rigid identity <code>R</code> to <code>a</code>
 does not place <code>n</code> in the value heap. The acquisition premise includes all
 capacity and fallible preparation, before publication.</p>
 <div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-resource-boundary-steps"><h3 id="sequent-family-resource-boundary-steps">resource-boundary-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Resource-Initialize</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment, resource cell&lt;R&gt; c = initializer { body }, continuation) → CONFIG(heap, environment, initializer, RESOURCE_INIT(R, c, body, environment) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">n is an integer</span><span class="sequent-formula">acquisition preparation succeeds &amp; fresh activation a</span><span class="sequent-formula">bind_cell(heap, resource_environment, R, c, a) = heap_1, body_environment</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Resource-Acquire</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, n, RESOURCE_INIT(R, c, body, resource_environment) :: continuation) → CONFIG(heap_1, body_environment, body, CELL(a, n) :: continuation)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Resource-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(heap, environment_value, value, CELL(a, n) :: continuation) → CONFIG(heap, environment_value, value, continuation)</span></figcaption></figure></div></div></section></div>
+<p>For generic cells, write <code>GCELL(a, T, payload)</code> for the corresponding owner
+frame. <code>GINIT</code> saves the checked payload type, body and preceding environment.
+<code>bind_generic</code> installs the fresh identity, handle, lexical instantiation and
+complete provider relation. <code>select_generic</code> searches in ordinary boundary order;
+it succeeds only for the exact instantiated <code>Ops&lt;R,T&gt;</code> and actual handle.
+<code>prepare_reply</code> includes fallible checking, copying and trace preparation before
+any payload replacement.</p>
+<div class="sequent-document"><section class="sequent-family" aria-labelledby="sequent-family-generic-cell-steps"><h3 id="sequent-family-generic-cell-steps">generic-cell-steps</h3><div class="sequent-family-grid"><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Generic-Initialize</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(H, E, resource Cell.Cell&lt;R,T&gt; c = initializer { body }, K) → CONFIG(H, E, initializer, GINIT(R, T, c, body, E) :: K)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">payload has the checked fixed type T</span><span class="sequent-formula">acquisition preparation succeeds &amp; fresh activation a</span><span class="sequent-formula">bind_generic(E_scope, R, T, c, a) = E_body</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Generic-Acquire</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(H, E_value, payload, GINIT(R, T, c, body, E_scope) :: K) → CONFIG(H, E_body, body, GCELL(a, T, payload) :: K)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">select_generic(K, operation, instantiation, operand) = read, a, T, payload</span><span class="sequent-formula">prepare_reply(payload) succeeds</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Generic-Read</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(H, E, operand, REQUEST(operation, instantiation) :: K) → CONFIG(H, E, payload, K)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"><span class="sequent-formula">select_generic(K, operation, instantiation, operand) = write, a, T, old</span><span class="sequent-formula">operand is the authenticated pair of handle a and replacement</span><span class="sequent-formula">prepare_reply_and_replacement(replacement) succeeds</span><span class="sequent-formula">K_new replaces only GCELL(a, T, old) in K &amp; GCELL(a, T, replacement)</span></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Generic-Write</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(H, E, operand, REQUEST(operation, instantiation) :: K) → CONFIG(H, E, (), K_new)</span></figcaption></figure></div><div class="sequent-proof-container" tabindex="0" role="region" aria-label="Inference rule"><figure class="sequent-proof"><div class="sequent-premises"></div><div class="sequent-inference"><span class="sequent-bar"></span><span class="sequent-rule-label">E-Generic-Return</span></div><figcaption class="sequent-conclusion"><span class="sequent-formula">CONFIG(H, E, value, GCELL(a, T, payload) :: K) → CONFIG(H, E, value, K)</span></figcaption></figure></div></div></section></div>
+<p>These rules preserve the current shared payload value on read and change only
+the selected root on write. A nearer exact source handler selects its clause
+instead. Preparation failure leaves the slot unchanged; internal disposal failure
+after replacement terminates execution as described below. The alias <code>Cell</code> in
+the initialization rule denotes the canonical generic-cell family.</p>
 <p>Static checking ensures that the returning value does not depend on <code>a</code>.
 An inner return releases the inner cell before continuing inside its outer
 scope. An escaped independent snapshot retains its ordinary shared value after
@@ -820,6 +1033,47 @@ and callback work. Added scans and retained relationships charge the existing
 evaluator work ledger. There is no machine-global registry, copied whole-chain
 snapshot, priority sort or second callback evaluator. Hook-free Pure execution
 allocates no registration owner or live-registration storage.</p>
+<p>The lowered registration control uses the following steps of the same relation.
+Handler requests and callback applications between these steps use the existing
+request, resume and application rules.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Step</th>
+<th>Preconditions and state change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HookEnter</td>
+<td>Install the exact identity handler for the qualifying publish operation. Ordinary handler return removes it.</td>
+</tr>
+<tr>
+<td>RegisterInitialize</td>
+<td>Evaluate the transformer once before acquiring any registration owner.</td>
+</tr>
+<tr>
+<td>RegisterAcquire</td>
+<td>After complete preparation, create a fresh owner retaining the transformer and enter its body under the generated exact handler.</td>
+</tr>
+<tr>
+<td>PublishForward</td>
+<td>The generated clause requests the older chain through ordinary nearest-boundary selection. The selected older registration's owner remains outside its capture; younger registration owners and pending publication control may move into that capture.</td>
+</tr>
+<tr>
+<td>PublishTransform</td>
+<td>After the older chain returns, apply the retained transformer once, then resume the publisher with that result.</td>
+</tr>
+<tr>
+<td>RegisterReturn</td>
+<td>Remove the completed owner's entry once and pass the saved body result outward.</td>
+</tr>
+<tr>
+<td>RegisterDiscard</td>
+<td>At the owner's structural close position, remove its entry without invoking an abandoned transformer or publication suffix.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="scoped-cleanup-actions">Scoped cleanup actions</h2>
 <p>A cleanup expression evaluates its action once in the preceding environment.
 Only after this initialization and fallible acquisition preparation succeed
@@ -841,6 +1095,39 @@ nested scopes through the same rules.</p>
 release. Internal exhaustion or termination provides no source-cleanup
 guarantee. Host teardown remains iterative, does not replay completed actions
 and does not roll back effects already performed.</p>
+<p>The invocation owner moves through these explicit phases. Ordinary application
+steps evaluate the action between <code>CleanupStart</code> and <code>CleanupFinish</code>; capture
+and resume preserve its current phase and saved value.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Step</th>
+<th>Preconditions and state change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CleanupInitialize</td>
+<td>Evaluate the action once in the preceding context; acquire no invocation obligation yet.</td>
+</tr>
+<tr>
+<td>CleanupAcquire</td>
+<td>Complete preparation and retain the action with its selected allocation context; publish one armed owner and enter the body.</td>
+</tr>
+<tr>
+<td>CleanupStart</td>
+<td>On normal body return or admitted owned close, change the armed owner to running, save any normal body result and invoke the action with Unit under its required surviving context.</td>
+</tr>
+<tr>
+<td>CleanupFinish</td>
+<td>After the action returns Unit, discharge the running owner. Restore the saved normal body value, or advance the owned close to its next structural owner.</td>
+</tr>
+</tbody>
+</table>
+<p>An owner enters <code>CleanupStart</code> at most once. A running owner and unfinished
+owned close remain required completion and cannot be discarded. Removed source
+handlers are not restored to execute the action. Internal failure is terminal
+and does not promise that remaining armed actions will run.</p>
 <h3 id="typed-failure-reporting">Typed failure reporting</h3>
 <p>Recoverable cleanup failure uses ordinary source effects and data. An explicit
 <code>CloseResult&lt;E&gt;</code> with alternatives <code>Closed</code> and <code>CloseFailed(E)</code> can feed a
@@ -1056,4 +1343,4 @@ and restores <code>Mark</code> inside it. The resumed <code>Mark.mark 2</code> r
 selects <code>Mark</code>; its clause resumes with <code>12</code>. <code>E-Clause-Return</code> first returns
 from the <code>Mark</code> clause and then from the <code>Ask</code> clause after the final addition,
 producing <code>112</code>. The executable trace asserts this exact selection,
-restoration, request, resume, and clause-return order.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#initial-configuration">Initial configuration</a><a href="#region-construction-and-close-steps">Region construction and close steps</a><a href="#type-instantiation-and-erasure">Type instantiation and erasure</a><a href="#generated-interface-evidence">Generated interface evidence</a><a href="#bindings">Bindings</a><a href="#recursive-bindings">Recursive bindings</a><a href="#application">Application</a><a href="#tuples-constructors-and-matches">Tuples, constructors, and matches</a><a href="#primitive-operations">Primitive operations</a><a href="#native-symbol-execution">Native symbol execution</a><a href="#effect-handlers-and-completion">Effect handlers and completion</a><a href="#scoped-retained-control-execution">Scoped retained-control execution</a><a href="#scoped-cell-execution">Scoped cell execution</a><a href="#synchronous-hook-execution">Synchronous hook execution</a><a href="#scoped-cleanup-actions">Scoped cleanup actions</a><a href="#observation">Observation</a><a href="#derived-multi-step-notation">Derived multi-step notation</a><a href="#representative-derivations">Representative derivations</a></nav><div class="aside-note"><p>These rules describe the source revision linked above.</p><a href="/ash/docs/tools/ash/">Read the ash tool guide ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent specification chapters"><a rel="prev" href="/ash/spec/elaboration/">← Elaboration</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>
+restoration, request, resume, and clause-return order.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#initial-configuration">Initial configuration</a><a href="#region-construction-and-close-steps">Region construction and close steps</a><a href="#type-instantiation-and-erasure">Type instantiation and erasure</a><a href="#generated-interface-evidence">Generated interface evidence</a><a href="#bindings">Bindings</a><a href="#recursive-bindings">Recursive bindings</a><a href="#application">Application</a><a href="#tuples-constructors-and-matches">Tuples, constructors, and matches</a><a href="#primitive-operations">Primitive operations</a><a href="#byte-and-string-execution">Byte and string execution</a><a href="#native-symbol-execution">Native symbol execution</a><a href="#pinned-network-execution">Pinned network execution</a><a href="#effect-handlers-and-completion">Effect handlers and completion</a><a href="#scoped-retained-control-execution">Scoped retained-control execution</a><a href="#scoped-cell-execution">Scoped cell execution</a><a href="#synchronous-hook-execution">Synchronous hook execution</a><a href="#scoped-cleanup-actions">Scoped cleanup actions</a><a href="#observation">Observation</a><a href="#derived-multi-step-notation">Derived multi-step notation</a><a href="#representative-derivations">Representative derivations</a></nav><div class="aside-note"><p>These rules describe the source revision linked above.</p><a href="/ash/docs/tools/ash/">Read the ash tool guide ↗</a><p><a href="/ash/docs/design/">Explore the design notes ↗</a></p><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent specification chapters"><a rel="prev" href="/ash/spec/elaboration/">← Elaboration</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

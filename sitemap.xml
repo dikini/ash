@@ -22,6 +22,7 @@
   <url><loc>https://dikini.github.io/ash/docs/decisions/ad-0012-proof-development-feedback-and-build-reuse/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/decisions/ad-0013-generated-native-bridges-and-program-builds/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/decisions/ad-0014-rust-verification-stage-reuse/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/decisions/ad-0017-pinned-worker-host-and-transport/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/decisions/template/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/direct-effects/one-shot/</loc></url>
@@ -72,13 +73,16 @@
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0046-agent-semantic-exploration-and-feedback/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0047-ecs-and-open-heterogeneous-stores/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0048-pure-core-kernels-and-parallel-lowering/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/dn-0049-native-storage-access-and-packed-data-shapes/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0050-native-program-gas-estimates/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/dn-0052-diag-ash-case-studies-and-teaching/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0054-base-lexical-region-memory-contracts/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/dn-0057-checked-ffi-module-boundaries/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/dn-0058-pinned-worker-host-and-channel/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/capture-discard-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/local-newtype-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/milestone-closure-evidence/</loc></url>
@@ -89,6 +93,7 @@
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/resume-required-effect-kernel-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/scoped-evidence-evidence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/effect-ash/synchronous-hooks-evidence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/ffi-ash/closure/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/checked-ffi-evidence-map/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/dn-0036-readiness/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/foreign-authoring/linux-inprocess-probe/</loc></url>
@@ -183,6 +188,12 @@
   <url><loc>https://dikini.github.io/ash/docs/design/retained-control/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/retained-control/correspondence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/retained-control/drain-correspondence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/network-call-lowering/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/network-ledger-correspondence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/network-ledger-proof-assignment/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/one-way-completion-correspondence/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/one-way-completion-proof-assignment/</loc></url>
+  <url><loc>https://dikini.github.io/ash/docs/design/retained-control/worker-channel-correspondence/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/design/template/</loc></url>
   <url><loc>https://dikini.github.io/ash/docs/install/</loc><lastmod>2026-10-18</lastmod></url>
   <url><loc>https://dikini.github.io/ash/docs/tools/</loc></url>

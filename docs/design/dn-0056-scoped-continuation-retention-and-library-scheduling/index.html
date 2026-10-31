@@ -1,5 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#171c18"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Cnl9yVxH.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
-</style><title>DN-0056: Scoped Continuation Retention and Library Scheduling · Ash</title><meta name="description" content="The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0056: Scoped Continuation Retention and Library Scheduling · Ash"><meta property="og:description" content="The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0056: Scoped Continuation Retention and Library Scheduling · Ash"><meta name="twitter:description" content="The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0056: Scoped Continuation Retention and Library Scheduling","headline":"DN-0056: Scoped Continuation Retention and Library Scheduling","description":"The local sequential subset is implemented and specified on the M3 milestone. The retained product evidence records its bounded proofs and tests. The worker, migration and network discussions in this note remain…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/","@id":"https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md","version":"67c79ddc32a813cc0c9ddab2962f9e2aa849b028"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0056: Scoped Continuation Retention and Library Scheduling · Ash</title><meta name="description" content="Scoped continuation retention and library scheduling are accepted and implemented on main as part of ffi-ash. Stores own retained control; keys are non-owning; restoration is one-shot; active branch suffixes and…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0056: Scoped Continuation Retention and Library Scheduling · Ash"><meta property="og:description" content="Scoped continuation retention and library scheduling are accepted and implemented on main as part of ffi-ash. Stores own retained control; keys are non-owning; restoration is one-shot; active branch suffixes and…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0056: Scoped Continuation Retention and Library Scheduling · Ash"><meta name="twitter:description" content="Scoped continuation retention and library scheduling are accepted and implemented on main as part of ffi-ash. Stores own retained control; keys are non-owning; restoration is one-shot; active branch suffixes and…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0056: Scoped Continuation Retention and Library Scheduling","headline":"DN-0056: Scoped Continuation Retention and Library Scheduling","description":"Scoped continuation retention and library scheduling are accepted and implemented on main as part of ffi-ash. Stores own retained control; keys are non-owning; restoration is one-shot; active branch suffixes and…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/","@id":"https://dikini.github.io/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"accepted","isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
 .sequent-document { display: grid; gap: 1.5rem; }
 .sequent-family { display: grid; gap: .75rem; }
 .sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
@@ -13,10 +13,10 @@
 .sequent-formula { white-space: pre-wrap; }
 .sequent-proof-container { overflow-x: auto; }
 .sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
-</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0056-scoped-continuation-retention-and-library-scheduling" data-pagefind-meta="title">DN-0056: Scoped Continuation Retention and Library Scheduling</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/67c79ddc32a813cc0c9ddab2962f9e2aa849b028/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md">ash-lang <code>67c79dd</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0056-scoped-continuation-retention-and-library-scheduling" data-pagefind-meta="title">DN-0056: Scoped Continuation Retention and Library Scheduling</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0056-scoped-continuation-retention-and-library-scheduling.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
 <ul>
 <li>ID: <code>DN-0056</code></li>
-<li>Status: exploring</li>
+<li>Status: accepted</li>
 <li>Related: <a href="/ash/docs/design/dn-0033-direct-effects-and-continuation-capabilities/">DN-0033</a>,
 <a href="/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/">DN-0051</a>,
 <a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
@@ -25,17 +25,26 @@
 <a href="/ash/docs/decisions/ad-0007-typed-core-dialects/">AD-0007</a>,
 <a href="/ash/docs/decisions/ad-0008-explicit-evaluator-machine/">AD-0008</a></li>
 </ul>
-<blockquote>
-<p>This design note is informative. It defines no current Ash semantics,
-accepts no architecture, and authorizes no product implementation. The
-bounded proof assignment below is experimental evidence. The rules below are
-candidate obligations, not an established soundness result.</p>
-</blockquote>
-<p>The local sequential subset is implemented and specified on the M3 milestone.
-The <a href="/ash/docs/design/retained-control/">retained product evidence</a> records its bounded
-proofs and tests. The worker, migration and network discussions in this note
-remain design exploration, not implemented language contracts. Main delivery is
-separate from the retained milestone.</p>
+<h2 id="accepted-and-implemented">Accepted and implemented</h2>
+<p>Scoped continuation retention and library scheduling are accepted and implemented
+on <code>main</code> as part of <code>ffi-ash</code>. Stores own retained control; keys are non-owning;
+restoration is one-shot; active branch suffixes and cleanup count as unfinished
+work. Admission checks support and interpreter identity. Normal-return analysis
+and fresh Store-selected Probe facts govern release.</p>
+<p><a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/libraries/scheduling.ash">Scheduling.ash</a> implements coroutine selection,
+drain and cooperative FIFO scheduling. The <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/fixtures/scheduling/gas.ash">gas safe-point example</a>
+and <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/scheduling.rs">scheduling tests</a> implement explicit charged yielding. The fixed
+two-worker host and copied FIFO channels are also implemented under
+<a href="/ash/docs/decisions/ad-0017-pinned-worker-host-and-transport/">AD-0017</a>. Work/Ack
+accounting and its error paths are ordinary Ash library code.</p>
+<p>The <a href="/ash/spec/static-semantics/#scoped-retained-control">specification</a>
+defines the accepted control contract. <a href="/ash/docs/design/retained-control/">Retained product evidence</a>
+records the models, implementation, tests and Main integration.</p>
+<p>Worker migration, shared Stores, general cancellation, automatic checkpoint
+insertion and source proof-plan integration are not implemented. The former
+protocol-specific compiler checker and one-way completion checker are retired.
+Their derivations below are historical; the current compiler does not certify
+Work/Ack bookkeeping or per-message processing completion.</p>
 <h2 id="question">Question</h2>
 <p>Can existing resource scopes and cleanup express the lifetime and completion
 gate of an executor-owned continuation store? What additional typed Core
@@ -54,8 +63,8 @@ task scope or runtime scheduling loop is not required by this derivation.</li>
 <li>Cleanup alone proves neither quiescence nor eventual completion. Its
 ordinary <code>Unit -&gt; Unit</code> callback type cannot certify that the callback drained
 retained control. A finite-execution induction proves quiescence on normal
-return for the simple recursive drain below. A candidate finite analysis uses
-recursive normal-return summaries and authenticated, fresh probe facts,
+return for the simple recursive drain below. The implemented finite analysis
+uses recursive normal-return summaries and authenticated, fresh probe facts,
 without a new gate primitive.</li>
 <li>At the start of this study, Ash could not put its hidden continuation
 capability in storage. The retained local extension transfers owned control
@@ -95,8 +104,8 @@ transition preservation and current-state flow, and revalidates after
 transformations. No general proof search or executable proof primitive is
 required; the restricted checking rules still need a soundness argument.</li>
 </ul>
-<p>These are design findings. They do not make a source library implementable
-using only today's public Ash APIs.</p>
+<p>The local Store and scheduling findings are implemented. The restricted proof
+integration and wider ownership extensions are not implemented.</p>
 <h2 id="context">Context</h2>
 <p>Current <a href="/ash/spec/dynamic-semantics/#effect-handlers-and-completion">handler execution</a>
 moves the selected continuation segment, including the selected handler, into
@@ -134,7 +143,7 @@ and completion at an owning destination. Its sequential proof evidence does
 not establish retained execution. <a href="/ash/docs/design/dn-0051-userspace-concurrency-and-scheduling/">DN-0051</a>
 records broader task, wait, cancellation, and parallel execution questions.
 This note tests a smaller mechanism without adopting a primitive task model.</p>
-<p>The generic cell candidate in <a href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053</a>
+<p>The implemented generic cell in <a href="/ash/docs/design/dn-0053-scoped-generic-cells-without-native-owners/">DN-0053</a>
 stores reusable, discardable ordinary values. It explicitly excludes restricted
 payload ownership. Replacing its payload type with a continuation does not
 establish the transfer or completion rules required here.</p>
@@ -185,7 +194,7 @@ shared-store scheduling remain separate extensions.</li>
 </tr>
 <tr>
 <td>Owning resource, cleanup, checked drain</td>
-<td>Preferred candidate.</td>
+<td>Accepted and implemented.</td>
 </tr>
 <tr>
 <td>Cell of functions or explicit states</td>
@@ -297,15 +306,12 @@ postcondition. No new runtime gate or scheduling loop is needed for this case.
 Outer abandonment still needs the interpreter and completion proof described
 above; normal-return partial correctness alone does not admit that path.</p>
 <h3 id="required-analysis-extension">Required analysis extension</h3>
-<p>The mathematical proof does not make quiescence a fact that today's checker
-already knows. Current structural capability states describe available and
-consumed continuation owners. Current cleanup analysis does not infer arbitrary
-facts about resource contents from ordinary returned constructors.</p>
-<p>The following candidate extends inferred completion summaries over existing
-Core control. It is not an implemented analysis or a proved soundness result.
-Its scope is the first local store fragment, with exclusive executor control.
-The later <a href="#protocol-aware-completion-analysis">protocol analysis</a> adds the
-facts needed to compose those local proofs across the two-worker network.</p>
+<p>The local Store analysis is implemented. It tracks normal returns, recursive
+call summaries and current authenticated Probe observations, including branch
+suffixes and cleanup. The <a href="/ash/spec/static-semantics/#scoped-retained-control">static rules</a>
+and <a href="/ash/docs/design/retained-control/drain-correspondence/">C3 correspondence</a> record the
+delivered analysis. Ordinary constructors do not certify arbitrary resource
+contents. The later protocol-aware analysis is retired.</p>
 <h4 id="store-state-and-normal-return-summaries">Store-state and normal-return summaries</h4>
 <p>For each relevant store identity N, distinguish two states:</p>
 <pre tabindex="0"><code class="language-text">E = W(N) is empty
@@ -607,8 +613,8 @@ deadlock freedom in the presence of joins and other waits by themselves.</p>
 <h3 id="kernel-thread-baseline-pinned-workers">Kernel-thread baseline: pinned workers</h3>
 <p>Kernel threads supply execution for library executors. The baseline gives each
 worker exclusive control of its own store and keeps its computations on that
-worker. Pinning here does not require CPU affinity. This is a candidate host
-composition, not a capability implemented by current Ash.</p>
+worker. Pinning here does not require CPU affinity. This host composition is
+implemented for the fixed two-worker network under AD-0017.</p>
 <p>The following tree shows ownership and placement, rather than Ash syntax:</p>
 <pre tabindex="0"><code class="language-text">network owner
     kernel thread K1
@@ -648,15 +654,13 @@ safe waiter registration, stale-notification handling, and backing protection
 through the last possible access. The baseline does not require synchronization
 on ordinary worker-local store operations. It does require synchronization at
 these cross-thread boundaries and for any runtime representation actually shared
-between workers. No concurrent memory model or channel algorithm is established
-by this note.</p>
+between workers. The implemented copied-byte transport uses synchronized FIFO
+state, generation-checked watches and readiness rechecks. Region transfer and
+shared ordinary graphs are not implemented.</p>
 <p>A blocking host call occupies its worker, preventing that executor from running
-its other computations until the call returns. An admitted adapter can instead
-retain the waiter locally and submit fresh blocking work to another thread.
-Its inputs and resource obligations remain live through actual completion;
-notification returns to the owning executor for restoration. This requires its
-own host-operation contract, rather than arbitrary transfer of an active Ash
-or native stack.</p>
+its other computations until the call returns. A general blocking-work adapter
+that submits work to another thread and restores a local waiter is not
+implemented. Active Ash and native stacks are not transferred between workers.</p>
 <h4 id="local-quiescence-and-network-completion">Local quiescence and network completion</h4>
 <p>The recursive drain proof applies to each local store while its exclusive-control
 and observation-stability premises hold. Notifications for existing pending
@@ -865,8 +869,11 @@ and their enclosing lifetime. Each worker processes messages sequentially, and
 handling a message may send further messages through its send endpoint. Messages
 still carry copied, resource-free application data.
 There is no endpoint migration or shared ordinary application resource authority.</p>
-<p>This is a candidate normal-completion protocol. Its accounting laws must be
-verified or admitted; current Ash does not already implement or check them.
+<p>The <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/libraries/network_protocol.ash">ordinary Work/Ack library</a> implements
+bidirectional accounting and error handling. The protocol-specific compiler
+checks discussed below were superseded on 2026-10-31 and are retired. The host
+authenticates transport origin and kind; it does not certify honest acknowledgements
+or per-message processing completion.
 An application activation below means an ordinary invocation of message-handling
 code, not a new task value or Core control form.</p>
 <h4 id="why-local-emptiness-and-end-of-input-are-insufficient">Why local emptiness and end-of-input are insufficient</h4>
@@ -1039,7 +1046,8 @@ and cancellation still need separate completion and interpreter proofs.</p>
 normal-return summaries already derived for local stores. It checks library
 orchestration against small accounting and transport contracts. It does not
 infer that an arbitrary map or counter represents all unfinished work.</p>
-<p>This is an analysis design, not an implemented checker or soundness result.
+<p>The protocol-specific checker is retired. This section records its historical
+design; it is not a requirement of the implemented ordinary Work/Ack library.
 The current <a href="/ash/spec/elaboration/#effect-core-lowering">control summaries</a>
 and <a href="/ash/spec/elaboration/#validation-boundary">independent validation</a>
 provide the basis. They do not already establish these protocol facts or admit
@@ -1533,9 +1541,9 @@ reconstruction after imports, specialization, and Core transformations.</li>
 </ol>
 <p>Ordinary privacy, callback types, or source assertions cannot supply those
 proofs. The <a href="#restricted-proof-integration-at-the-core-validation-boundary">restricted integration mechanism</a>
-below is a candidate for checking them against Core. Its exact rule set and
-soundness remain open; the paper proof cannot yet replace admission in a
-checked program. A transform that changes removal, dispatch, or state flow
+below proposes checking them against Core and is not implemented. Its rule set
+and soundness questions are separate from the implemented ordinary protocol.
+A transform that changes removal, dispatch, or state flow
 must re-establish the affected lemmas and completion facts.</p>
 <p>With that integration, ledger-specific admission can be removed. The remaining
 external contracts concern:</p>
@@ -2093,12 +2101,9 @@ gap. Neither outcome establishes compiler or runtime correctness, external
 provider laws, termination, or the wider network claims in this note.</p>
 <p>The <a href="/ash/docs/design/retained-control/">C1 model</a> checks its selected ownership
 transitions under explicit premises; it does not prove the compiler or
-evaluator correspondence. This
-note's recursive drain argument remains a paper derivation against the linked
-current specification, with no checked drain proof, executable retention
-implementation, benchmark, or new current-language example. Existing one-shot,
-cleanup, and resource evidence transfers only to the sequential invariants it
-actually tests.</p>
+evaluator correspondence. The C3 drain model, executable Store implementation
+and scheduling examples are delivered and recorded in the same evidence index.
+No scheduling benchmark or whole-compiler correctness proof is supplied.</p>
 <p>The bidirectional accounting comparison draws on Dijkstra and Scholten's
 <a href="https://www.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD687a.html">termination detection for diffusing computations</a>.
 Their signalling scheme accounts for delegated work across a network that may
@@ -2106,11 +2111,10 @@ contain cycles, while maintaining a rooted completion relationship. This is
 conceptual evidence for separating physical communication from completion
 dependencies. It is not a transferred proof of Ash's retained continuations,
 resource authority, cleanup, passivity restrictions, or provider contracts.</p>
-<p>The next comparison should exercise the same control under coroutine selection,
-cooperative queue selection, and guarded gas selection. It should use an
-owning resource plus existing cleanup as the baseline against a dedicated
-runtime closing loop. Compare semantic obligations and required Core/runtime
-changes before comparing performance.</p>
+<p>The <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/tests/scheduling.rs">scheduling tests</a> exercise coroutine selection,
+cooperative queue selection and guarded gas selection using the owning Store
+and existing cleanup. A performance comparison with a dedicated runtime closing
+loop has not been implemented.</p>
 <p>Required positive cases include:</p>
 <ul>
 <li>R waits for P, continues with Q retained, and exits only after the enclosing
@@ -2242,25 +2246,18 @@ owned capture forest, slot generations, branch authority, and closing execution.
 Each move must preserve unique ownership and completion phase. A progress result
 must state its library/host assumptions rather than infer termination from
 these safety properties.</p>
-<p>Any later disposable prototype needs separate authorization. Its question is
-whether resource-plus-cleanup composition can validate these cases with less
-new machinery than a dedicated task or closing-scope node. Retain a bounded
-comparison and counterexamples as design evidence; discard experimental runtime
-machinery unless a later proposal explicitly selects it for product delivery.</p>
+<p>Resource-plus-cleanup composition, Store moves and local drain checking are
+implemented. The counterexamples for those features are covered by the linked
+product tests. Wider proof integration, migration and cancellation cases remain
+unimplemented.</p>
 <h2 id="open-questions">Open questions</h2>
 <ol>
-<li>Is the candidate finite return relation sound and sufficiently precise for
-store aliases, mutual recursion, imported control, and handler reinstatement?
-How should validation bound its state space and retain probe freshness facts
-through callback substitution and specialization?</li>
-<li>How should fresh root admission and retained control carry branch authority
-without adding a general task primitive or assuming that duplicable resource
-handles are safe to share between concurrent processes?</li>
-<li>Which external interpreter contexts can remain protected during normal drain
-and outer abandonment, and what restrictions give the smallest useful case?</li>
-<li>What authenticated resource payload and operations admit owned captures while
-preserving slot capacity, failure atomicity, administrative back-references,
-and nonescape? Generic cell semantics do not answer this question.</li>
+<li>Which additional programs justify improving the precision or cost of the
+implemented finite normal-return analysis?</li>
+<li>What additional authority rules would permit migration or shared Stores?</li>
+<li>Which additional interpreter contexts should a future extension admit?</li>
+<li>What additional resource payloads should extend the implemented Store
+operations and their scope, capacity and failure rules?</li>
 <li>Which typed checkpoint coverage contracts would justify stronger gas or
 latency bounds, independently of source syntax and insertion machinery?</li>
 <li>Which wait, channel, and host-operation settlement contracts are needed
@@ -2283,4 +2280,4 @@ theorem be established from the local checking rules and structural induction?
 How should bounded normalization, plan dependencies, and transformations
 preserve checkability without general proof search? The candidate needs an
 implemented checker; its metadata and remaining claim schemas stay open.</li>
-</ol></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#findings">Findings</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/">← DN-0055: Algebra of Regions, Lifetimes, and Ownership</a><a rel="next" href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057: Checked FFI Module Boundaries →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>
+</ol></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#accepted-and-implemented">Accepted and implemented</a><a href="#question">Question</a><a href="#findings">Findings</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0055-algebra-of-regions-lifetimes-and-ownership/">← DN-0055: Algebra of Regions, Lifetimes, and Ownership</a><a rel="next" href="/ash/docs/design/dn-0057-checked-ffi-module-boundaries/">DN-0057: Checked FFI Module Boundaries →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

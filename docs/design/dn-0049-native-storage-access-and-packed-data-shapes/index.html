@@ -1,0 +1,267 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>DN-0049: Native Storage, Access, and Packed Data Shapes · Ash</title><meta name="description" content="Can Ash libraries use native allocation through FFI to implement heap-like storage, packed collections, and shapes over memory, with usable sharing, borrowing, and mutation? What common checked operations let new…"><meta name="robots" content="index, follow"><meta property="og:title" content="DN-0049: Native Storage, Access, and Packed Data Shapes · Ash"><meta property="og:description" content="Can Ash libraries use native allocation through FFI to implement heap-like storage, packed collections, and shapes over memory, with usable sharing, borrowing, and mutation? What common checked operations let new…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="DN-0049: Native Storage, Access, and Packed Data Shapes · Ash"><meta name="twitter:description" content="Can Ash libraries use native allocation through FFI to implement heap-like storage, packed collections, and shapes over memory, with usable sharing, borrowing, and mutation? What common checked operations let new…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/dn-0049-native-storage-access-and-packed-data-shapes/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/dn-0049-native-storage-access-and-packed-data-shapes/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0049-native-storage-access-and-packed-data-shapes.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"DN-0049: Native Storage, Access, and Packed Data Shapes","headline":"DN-0049: Native Storage, Access, and Packed Data Shapes","description":"Can Ash libraries use native allocation through FFI to implement heap-like storage, packed collections, and shapes over memory, with usable sharing, borrowing, and mutation? What common checked operations let new…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/dn-0049-native-storage-access-and-packed-data-shapes/","@id":"https://dikini.github.io/ash/docs/design/dn-0049-native-storage-access-and-packed-data-shapes/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"creativeWorkStatus":"exploring","isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0049-native-storage-access-and-packed-data-shapes.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="dn-0049-native-storage-access-and-packed-data-shapes" data-pagefind-meta="title">DN-0049: Native Storage, Access, and Packed Data Shapes</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/DN-0049-native-storage-access-and-packed-data-shapes.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<ul>
+<li>ID: <code>DN-0049</code></li>
+<li>Status: exploring</li>
+<li>Related: <a href="/ash/docs/design/dn-0035-region-memory-management-and-verified-providers/">DN-0035</a>,
+<a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a>,
+<a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a>,
+<a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>,
+<a href="/ash/docs/design/dn-0039-files-and-filesystem-resources/">DN-0039</a>,
+<a href="/ash/docs/design/dn-0041-typed-serialization-and-data-pipelines/">DN-0041</a>,
+<a href="/ash/docs/design/dn-0042-native-interaction-and-efficient-data/">DN-0042</a>,
+<a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a></li>
+</ul>
+<blockquote>
+<p>This note records an agreed planning direction. It defines no current Ash
+semantics, accepts no implementation architecture, and authorizes no product
+implementation or prototype. Access rules, layout contracts, and the generic
+memory-operation boundary remain design questions.</p>
+</blockquote>
+<h2 id="question">Question</h2>
+<p>Can Ash libraries use native allocation through FFI to implement heap-like
+storage, packed collections, and shapes over memory, with usable sharing,
+borrowing, and mutation? What common checked operations let new allocators and
+data structures reuse those foundations without handwritten Rust support for
+each library or representation?</p>
+<h2 id="context">Context</h2>
+<p>The <a href="/ash/spec/dynamic-semantics/">current dynamic semantics</a> define an
+evaluation heap, reusable ordinary values, closures, and guarded cyclic data.
+The <a href="/ash/spec/static-semantics/#lexical-regions-and-construction-dependencies">lexical region rules</a>
+provide selected construction storage and retain residency and field/capture
+dependencies. The <a href="/ash/spec/static-semantics/#scoped-cells-and-resource-dependencies">resource rules</a>
+separate non-owning handles from scope-owned completion. These mechanisms do
+not establish general borrowing or packed typed layouts. The current
+<a href="/ash/spec/static-semantics/#source-foreign-declarations">foreign boundary</a>
+does not expose general native-memory reads and writes.</p>
+<p><a href="/ash/docs/design/dn-0037-ash-authored-foreign-library-interfaces/">DN-0037</a> explores access to
+libc and other native libraries through Ash-authored declarations and generic
+bridges. For the native-backed storage route considered here, that FFI is a
+prerequisite: it supplies backing allocation and release. Ash libraries would
+define storage and collection policy; generic checking and memory operations
+would preserve the required authority and validity relationships.</p>
+<p><a href="/ash/docs/design/dn-0036-foreign-library-and-memory-provider-experiments/">DN-0036</a> supplies
+experimental packed bytes/text and scalar Arena evidence. Its
+<a href="/ash/docs/design/provider-experiments/arena-results/#regression-only-scope-and-deferred-work-2026-10-09">wider Arena results</a>
+record incomplete layouts, references, and graph work. Those experiments do not
+establish the general memory model proposed here. Their
+<a href="/ash/docs/design/provider-experiments/semantics/#layout-and-publication">private aggregate encoding</a>
+also must not be assumed to be a C layout or array element stride.</p>
+<h2 id="constraints">Constraints</h2>
+<ul>
+<li>Keep region placement and allocation, ownership, lifetimes, reclamation,
+representation, access permissions, and shape distinct, while checking their
+relationships. Lexical scope is the first ownership scheme, not a region's
+defining property.</li>
+<li>Treat sharing, borrowing, and mutation as initial usability concerns for these
+libraries. Existing scope liveness alone does not establish valid views,
+exclusivity, or disjoint access.</li>
+<li>Preserve ordinary immutable sharing and resource dependencies through fields,
+closures, selected methods, requests, and captured control. An immutable outer
+value does not establish immutable reachable state.</li>
+<li>Publish readable typed access only after its representation is initialized
+and valid. Distinguish reserved capacity from initialized contents.</li>
+<li>Check size and offset arithmetic, allocation bounds, alignment, and native
+conversions before the corresponding memory access.</li>
+<li>Keep mathematical <code>Int</code> semantics. A selected bounded storage encoding needs
+explicit conversion and failure behavior.</li>
+<li>Account for allocation failure, partial initialization, growth failure, and
+completion without losing earlier values or duplicating release authority.</li>
+<li>Keep foreign allocator assumptions explicit. A signature, layout descriptor,
+ordinary interface implementation, or calculated offset alone grants no
+native memory authority.</li>
+</ul>
+<h2 id="candidate-directions">Candidate directions</h2>
+<h3 id="agreed-decomposition">Agreed decomposition</h3>
+<p>The following layers describe responsibilities and dependencies. Concrete
+collection and shape examples should pressure their contracts together and may
+develop alongside them.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Layer</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Native allocation through FFI</td>
+<td>Obtain and release backing storage under declared size, alignment, failure, and ownership contracts.</td>
+</tr>
+<tr>
+<td>Region placement and allocation</td>
+<td>Select storage and obtain initialized allocation extents under size, alignment, capacity, and failure contracts.</td>
+</tr>
+<tr>
+<td>Ownership and lifetimes</td>
+<td>Determine who owns the region and its objects and the region's lifetime; keep storage valid for every permitted object use. Lexical scope is the first ownership scheme.</td>
+</tr>
+<tr>
+<td>Reclamation</td>
+<td>A region type may specify earlier object reclamation that preserves required object lifetimes. Reclaiming the region reclaims all remaining objects together after required completion.</td>
+</tr>
+<tr>
+<td>Representation and layout</td>
+<td>Define encodings, occupied extents, alignment, element strides, and field offsets.</td>
+</tr>
+<tr>
+<td>Access discipline</td>
+<td>Establish compatible aliases, read and mutation permissions, borrowing intervals, and invalidation.</td>
+</tr>
+<tr>
+<td>Collections and shapes</td>
+<td>Build packed arrays, vectors, strings, records, and indexed views using the same foundations.</td>
+</tr>
+</tbody>
+</table>
+<p>Allocator and data-structure policy belongs in Ash libraries over a common
+checked boundary, whose implementation may remain in the compiler and runtime.
+The compiler implementation language and a future native backend remain separate
+choices. Adding a shape should reuse the common memory operations.</p>
+<p>An arena can compose region allocation with lexical ownership and bulk release.
+A region-specific collector could reclaim dead objects while the region remains
+available. Its roots, cross-region references, and possible relocation need
+additional contracts. Allocating a mutable cell or immutable value in the same
+region does not unify their access rules or extend a cell's logical lifetime.</p>
+<h3 id="packed-collections-and-calculated-positions">Packed collections and calculated positions</h3>
+<p>Packed arrays and vectors store element representations inline with a defined
+stride and alignment. Occupied extent and element stride can differ because
+successive elements must remain aligned. Contiguity alone supplies neither a
+particular encoding nor permission to reinterpret bytes as an arbitrary Ash type.</p>
+<p>A representation can be selected independently of its source type. For example,
+a mathematical <code>Int</code> could use a checked signed-64 storage encoding that refuses
+out-of-range values. A fixed-width source type is another possible design.
+Reference-containing elements additionally need a validity and dependency
+account; a numeric layout descriptor does not establish it.</p>
+<p>A shape maps logical coordinates or fields onto offsets in backing storage.
+The following equations illustrate byte offsets, not Ash syntax:</p>
+<pre tabindex="0"><code class="language-text">array:   offset(i)       = origin + i * element_stride
+matrix:  offset(row,col) = origin + row * row_stride + col * column_stride
+record:  offset(field)   = origin + field_offset(field)
+</code></pre>
+<p>Dimensions, strides, field metadata, and position calculations can largely be
+ordinary library code. Slicing can adjust origin and dimensions; transposition
+can exchange dimensions and strides. A view can therefore be strided even when
+its backing allocation is contiguous. Arrays of records and separate field
+columns provide further comparisons without requiring a new owner model.</p>
+<p>Variable-sized inline elements need another indexing contract, such as an offset
+table; they do not automatically support constant-stride access. UTF-8 strings
+also distinguish byte offsets from scalar traversal, and text views must
+preserve valid encoding boundaries.</p>
+<p>Checked memory operations must connect a shape's calculated range to a live
+allocation, valid representation, initialized contents, and sufficient access
+permission. Mutable views that overlap need an explicit mediation rule;
+independent mutation cannot follow merely from distinct view values.</p>
+<h3 id="sharing-borrowing-and-mutation">Sharing, borrowing, and mutation</h3>
+<p>Compare mediated shared mutation with checked exclusive access using the models
+in <a href="/ash/docs/design/dn-0038-resource-properties-and-mutable-variable-usage/">DN-0038</a>.
+Specify shared readers, mutable views, disjoint ranges, permission recovery,
+freezing, and transfer where required. Returning a view retains its backing
+dependencies. Growth, refill, reset, or release must account for outstanding
+access, including access retained by captured control.</p>
+<p>Freezing ends the relevant mutation authority before immutable sharing. It does
+not itself choose arena ownership, counting, or tracing. Earlier reclamation,
+cycle behavior, and retention of a large allocation by a small view need their
+own policy and cost contracts.</p>
+<h3 id="generic-checked-boundary-and-library-policy">Generic checked boundary and library policy</h3>
+<p>Compare two starting points before selecting primitives:</p>
+<ul>
+<li>Checked byte-memory operations with library-defined encodings and shape
+calculations. This offers a small common access surface but needs an account
+of typed decoding, initialization, and reference-containing representations.</li>
+<li>Typed memory operations using independently validated layout and access facts.
+This may expose more information for checking and lowering, but needs an
+account of fact construction, composition, and preservation.</li>
+</ul>
+<p>Either route must explain which operations remain trusted and how library
+implementations establish their obligations. Ordinary interface evidence is not
+proof of arbitrary allocator or layout laws. Preserve defining identities and
+dependencies through imports, specialization, Core validation, and execution.</p>
+<p>An explicit heap library first manages its own values. Current lexical regions
+already select storage for ordinary construction; extending that mechanism to
+new packed representations and native-backed access remains a separate question.
+The broader runtime-service alternatives are explored in
+<a href="/ash/docs/design/dn-0044-no-default-runtime/">DN-0044</a>. The first storage study need not solve
+that whole transition, introduce concurrent sharing, or supply a native backend.
+It adds no requirements to the implemented copying FFI boundary.</p>
+<h2 id="evidence-and-experiments">Evidence and experiments</h2>
+<p>The first proposed connected study obtains native backing, constructs a packed
+array, creates shared shaped views, performs mutation under the admitted access
+rules, and releases the owner once. It should compare the generic memory-boundary
+candidates on the same cases before selecting their mechanisms.</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Case</th>
+<th>Required observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Native storage</td>
+<td>Actual native allocation backs the payload; construction and access do not depend on a hidden evaluator copy of that payload. Account separately for evaluator and metadata storage.</td>
+</tr>
+<tr>
+<td>Packed array and padded elements</td>
+<td>Values occupy the declared positions; every repeated element remains aligned, including where extent differs from stride.</td>
+</tr>
+<tr>
+<td>Matrix and subview</td>
+<td>Calculated positions read the intended elements; views share backing under declared retention and copy costs.</td>
+</tr>
+<tr>
+<td>Shared access and mutation</td>
+<td>Compatible readers work; conflicting mutation, stale access, and unsupported overlapping mutable views reject or refuse before access.</td>
+</tr>
+<tr>
+<td>Growth and initialization</td>
+<td>Failed allocation or initialization preserves established values; no readable view exposes uninitialized capacity.</td>
+</tr>
+<tr>
+<td>Lifetime and control</td>
+<td>Escape beyond a closing backing owner through aggregates, closures, or requests rejects; resume preserves authority and discard completes the owned storage correctly.</td>
+</tr>
+<tr>
+<td>Completion</td>
+<td>Normal completion and owned abandonment release once, after dependent cleanup; internal failure remains distinct from successful source completion.</td>
+</tr>
+</tbody>
+</table>
+<p>Record native calls, payload and metadata allocations, bytes copied, retained
+backing storage, access-check work, and completion order. Include bounds,
+misalignment, overflow, invalid encoding, and invalidation failures. Compare
+useful accepted programs and required annotations as well as rejection behavior.</p>
+<p>Before any prototype, give it a bounded assignment with exact contracts and
+comparison inputs. Retain successful source libraries and results as design
+evidence; discard or revise mechanisms that require per-shape compiler support,
+conceal payload copies, or fail the access and lifetime cases. Product adoption
+requires the proposal or decision and task workflow.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What minimum memory operations and admitted facts support both byte encodings
+and typed layouts without letting ordinary values forge authority?</li>
+<li>How do layout, initialization, and element dependencies compose for nested or
+reference-containing representations?</li>
+<li>Which alias rules support shared reads, mediated mutation, exclusive views,
+disjoint splits, and captured control with usable source annotations?</li>
+<li>Which offset and shape facts can be established statically, and which require
+checks at view construction or each access?</li>
+<li>How do growth, freezing, and transfer preserve values and outstanding access
+without hidden copies or lost completion obligations?</li>
+<li>Which reclamation and allocation-failure policies are needed by the first
+useful workloads before ordinary-construction lowering is considered?</li>
+</ul></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question">Question</a><a href="#context">Context</a><a href="#constraints">Constraints</a><a href="#candidate-directions">Candidate directions</a><a href="#evidence-and-experiments">Evidence and experiments</a><a href="#open-questions">Open questions</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div><nav class="spec-pagination" aria-label="Adjacent design notes"><a rel="prev" href="/ash/docs/design/dn-0048-pure-core-kernels-and-parallel-lowering/">← DN-0048: Pure Core Kernels and Parallel Lowering</a><a rel="next" href="/ash/docs/design/dn-0050-native-program-gas-estimates/">DN-0050: Native program gas estimates →</a></nav></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

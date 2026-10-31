@@ -1,0 +1,155 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>N3 network ledger and checker proof assignment · Ash</title><meta name="description" content="This bounded assignment supported the then-accepted CP-0028 and historical TASK-0058. It is not current language semantics or evidence that a theorem has been proved. DN-0056 supplies the paper argument and DN-0058…"><meta name="robots" content="index, follow"><meta property="og:title" content="N3 network ledger and checker proof assignment · Ash"><meta property="og:description" content="This bounded assignment supported the then-accepted CP-0028 and historical TASK-0058. It is not current language semantics or evidence that a theorem has been proved. DN-0056 supplies the paper argument and DN-0058…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="N3 network ledger and checker proof assignment · Ash"><meta name="twitter:description" content="This bounded assignment supported the then-accepted CP-0028 and historical TASK-0058. It is not current language semantics or evidence that a theorem has been proved. DN-0056 supplies the paper argument and DN-0058…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/retained-control/network-ledger-proof-assignment/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/retained-control/network-ledger-proof-assignment/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/network-ledger-proof-assignment.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"N3 network ledger and checker proof assignment","headline":"N3 network ledger and checker proof assignment","description":"This bounded assignment supported the then-accepted CP-0028 and historical TASK-0058. It is not current language semantics or evidence that a theorem has been proved. DN-0056 supplies the paper argument and DN-0058…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/retained-control/network-ledger-proof-assignment/","@id":"https://dikini.github.io/ash/docs/design/retained-control/network-ledger-proof-assignment/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/network-ledger-proof-assignment.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="n3-network-ledger-and-checker-proof-assignment" data-pagefind-meta="title">N3 network ledger and checker proof assignment</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/network-ledger-proof-assignment.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<blockquote>
+<p>Historical assignment: the protocol-specific compiler checker was
+superseded on 2026-10-31 and is not a current product requirement.</p>
+</blockquote>
+<p>This bounded assignment supported the then-accepted <a href="https://github.com/dikini/ash-lang/blob/b3e16b7c31d55850ab6f879286a594b4f6cb2540/docs/proposals/CP-0028-checked-functional-network-ledger.md">CP-0028</a> and <a href="https://github.com/dikini/ash-lang/blob/b5c62bf25b87bc1c2ce9f87e4efc3ca0e0107c9a/docs/tasks/TASK-0058-pinned-worker-network.md">historical TASK-0058</a>. It is not current language semantics or evidence that a theorem has been proved. <a href="/ash/docs/design/dn-0056-scoped-continuation-retention-and-library-scheduling/#minimal-library-core-ledger-and-inductive-invariant">DN-0056</a> supplies the paper argument and <a href="/ash/docs/design/dn-0058-pinned-worker-host-and-channel/#proof-and-verification-obligations">DN-0058</a> sets the four N3 obligations. The then-proposed product implementation required an active assignment and the required evidence.</p>
+<h2 id="question-and-comparison">Question and comparison</h2>
+<p>Can a bounded checker reconstruct the finite functional ledger laws and
+successor-state facts from actual linked ordinary Ash definitions, and can its
+accepted derivations be shown sound for modeled Core evaluation? Compare a
+valid implementation with mutants that keep the same types and names but
+change results, fields, control, dependencies, identities or state flow.
+Success requires the complete laws and the checker soundness theorem below;
+accepting the valid removal function alone is insufficient. Rejecting an
+unsupported but correct implementation is permitted, provided the product
+pipeline preserves a checkable form or refuses it. Retain the model and the
+correspondence only if independently reviewed and reproducibly checked at a
+frozen input; otherwise keep it as explicitly provisional evidence or discard
+it. No experimental result alone authorizes product behavior.</p>
+<h2 id="model-and-theorem-obligations">Model and theorem obligations</h2>
+<p>Use finite mathematical sequences of whole values for records, children and
+outputs. Model nominal constructors and IDs, unique fixed worker allocator
+labels within an activation, and unbounded integers. Define equality, lookup,
+insert, update, <code>erase</code>, result status and ledger transitions explicitly. Do
+not equate Ash's recursive type with finiteness: the correspondence must prove
+that actual initialized state and each admitted successor have finite acyclic
+representations. State the connection between modeled sequence equality and
+actual whole-entry values without assuming decidable equality of payloads.</p>
+<p>Prove the following, naming all preconditions in the theorem statements:</p>
+<ol>
+<li><strong>Collections.</strong> For finite unique keys, lookup returns precisely the
+matching whole entry. Removal returns the ordered whole-entry sequence
+<code>erase</code>, Found iff membership and Missing iff absence, preserves finiteness
+and uniqueness, and changes no unrelated entry. Prove corresponding
+insertion and update frame, membership, uniqueness and order laws. Include
+empty, head, tail, missing and duplicate-input precondition cases.</li>
+<li><strong>Local ledger.</strong> Initialization establishes the invariant. Every modeled
+registration, close, retirement and acknowledgement branch preserves it.
+Accepted registration installs a fresh child and matching output together;
+missing or closed parents do not change state. Closure preserves all
+unrelated fields and cannot reopen. Retirement removes only a non-root
+closed childless record and queues its correct acknowledgement. Wrong-peer,
+unknown and duplicate acknowledgements preserve the whole state. A matching
+acknowledgement removes exactly the intended child. Nonnegative serials,
+unique allocator labels and checked successor increments establish no
+reuse over finite histories, including retired IDs. Distinct activations remain distinct authority domains,
+even if their copied numeric IDs coincide.</li>
+<li><strong>Network coverage.</strong> Define a finite interleaving of workers, pending
+outputs, accepted and delivered transport and active or retained control.
+State the initial root and preservation invariant for rooted coverage and
+uniqueness of logical ownership. Prove by induction through reservation,
+publication, receipt, dispatch, actual completion, retirement, in-flight
+acknowledgement and matching removal. Explicitly assume actual local
+completion and source emission discipline, honest codec, authenticated peer,
+faithful transport and at-most-once dispatch. Prove stable AppQuiet from
+current root Closed/empty plus closed independent admission and absence of
+unaccounted producers. List precisely which premises supply each step; do
+not derive them from ledger functions. AppQuiet is not backing settlement.</li>
+<li><strong>Restricted checker.</strong> Define modeled syntax, well-formed linked
+definitions, call-by-value evaluation including nominal constructor match,
+verified equality and checked dependency closure, plan binding, rule judgments,
+reachable branches and actual returns. Prove each rule preserves its semantic
+interpretation. Prove that acceptance of <code>RemoveById</code> for the <em>bound actual
+body</em>, with finite unique input, implies every normal return satisfies all
+clauses of CP-0028. Use induction on the finite input and show that the
+recursive call has the checked proper tail and instantiated arguments and
+premises. Include checked helper calls and acyclic dependency ordering.
+Model actual Effect Core allocation and canonical integer increment, including
+authenticated default allocation selection, nonreentry and failure; prove
+that successful allocation preserves modeled state and resumes once. Refuse
+unsupported local providers, handlers or unknown selection rather than
+treating an empty row or erased allocation as purity.
+No assumed certificate may state the theorem being proved. Model nonreturn
+separately; normal-return soundness is not termination. Prove the same
+acceptance-to-evaluation theorem for <em>every</em> other schema able to publish a
+fact: equality, lookup, insertion, update, initialization, registration,
+closure, retirement and acknowledgement. Each theorem quantifies over the
+actual linked target and instantiation, admitted input and every normal
+return; it establishes every corresponding CP-0028 status, whole-entry,
+invariant, counter, output-envelope and frame clause on the returned value.
+Prove equality and checked helper dependency closure and establish each helper
+precondition at each call, then compose those theorems in acyclic order.
+The transition theorem must derive actual returned fields and envelope
+operands from checked evaluation, not substitute an ideal transition.</li>
+<li><strong>State and control hook.</strong> Define the relation between actual owner,
+activation, current input and returned successor at each control point.
+Prove checked transitions move currentness to the actual successor, no-op
+equality permits only its justified reuse, and possible mutation, stale
+captures, reentry and joins invalidate old observations. Show how retained
+exclusive control carries this relation as an explicit premise, and identify
+the N4 checks needed to establish that premise on linked programs. Model
+budget exhaustion as rejection with no published partial claim or permission.
+Prove acceptance-to-control-step simulation for each rule publishing a
+currentness, successor, equality, observation or invalidation fact. It must
+relate actual linked execution and returned successor values to the fact,
+and cover captures, calls, returns, reentry and joins, not merely prove a
+hand-written successor stream preserves an invariant.</li>
+</ol>
+<p>A model that assumes its checker correct, restricts away difficult reachable
+branches, omits helper purity or concludes completion from a Closed flag does
+not satisfy the assignment. A model of an idealized evaluation is useful only
+with an explicit, reviewed correspondence to the actual Core fragment.</p>
+<h2 id="correspondence-and-implementation-evidence">Correspondence and implementation evidence</h2>
+<p>Map each modeled construct, branch and premise to actual linked Core identity,
+type, binder, scope, evaluation rule, call target, selected evidence, capture,
+return and checker operation. Explain unsupported forms and prove or test that
+they reject before any fact is consumed. Map plan decoding and candidate
+discovery to untrusted inputs; show that actual bodies, not producer claims,
+establish each fact. Document how constructor and equality semantics, finite
+representation and actual output values correspond, and identify conditional
+codec premises. Map the public sealed operation and the untrusted per-activation driver nominations to actual entry,
+call and capture closure, including imported, indirect and reexported paths.
+Show that unchecked raw send, receive, Control results and capability escape
+reject, while ordinary N2 one-way operation remains admitted. Show how
+imports, specialization, inlining and other transforms are rechecked at each
+validation boundary, and how budget accounting charges all work and retention
+before the operation. The proof does not by itself prove Rust, the evaluator or
+native channel code; record the remaining trusted and external assumptions.</p>
+<p>Run focused linked-Core tests on a valid ordinary Ash driver and ledger with
+renamed binders, and independent imports and supported transformations. Include
+mutants for altered retained phase/parent/children/destination, reordered or
+dropped entries, wrong result tag, wrong key projection, whole-input recursion,
+changed recursive arguments, cyclic or arbitrary list input, unverified or
+handled-effect helper, circular dependencies, forged nominal identities and
+same-typed changed bodies. Check missing/default arms, branch joins, no-op and
+actual successor, rollback, reentry, stale observation, unresolved captures,
+wrong or duplicate acknowledgements, mismatched envelope fields and peer,
+application/control confusion. Codec-dependent admission remains disabled until
+a separately accepted codec contract and its malformed/trailing-byte tests
+exist. Check exact,
+one-short and already-spent budgets, failed retries and no partial publication.
+Tests must exercise the independently linked validator, not only a helper's
+unit function. The valid alternative outside the fragment must reject rather
+than inherit a prior fact.</p>
+<p>Freeze source, proof toolchain, configuration and relevant linked inputs before
+verification; record commands, outputs, hashes and review at the same pin.
+The proof and connected implementation require independent review and the
+N-proof gate. The N3 result is a conditional hook for N4; N4 must separately
+verify actual local completion, source emission, raw publication confinement,
+codec, transport and recursive application drain. N5 must establish settlement.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#question-and-comparison">Question and comparison</a><a href="#model-and-theorem-obligations">Model and theorem obligations</a><a href="#correspondence-and-implementation-evidence">Correspondence and implementation evidence</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f3ec"><link rel="icon" type="image/svg+xml" href="/ash/favicon.svg?v=ash-tree"><link rel="preload" href="/ash/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin=""><link rel="preload" href="/ash/fonts/texgyrepagella-regular.otf" as="font" type="font/otf" crossorigin=""><link rel="stylesheet" href="/ash/theme.css"><link rel="stylesheet" href="/ash/navigation.css"><script type="module" src="/ash/navigation.js"></script><link rel="stylesheet" href="/ash/_astro/Site.Io2IEcIe.css"><style>.spec-source{margin-top:var(--space-5);color:var(--muted);font-size:var(--text-sm)}.spec-source code{font-family:var(--mono)}.design-status,.decision-status{border-left:2px solid var(--accent);font-size:var(--text-base);margin-top:1.5rem;padding-left:1rem}.reference-support li{margin-block:1rem}.reference-support li span{overflow-wrap:anywhere;font:var(--text-sm)/1.6 var(--mono);color:var(--muted);display:block}.spec-notation-source>p{font-size:var(--text-sm);color:var(--muted)}.spec-chapters{border-top:1px solid var(--line);font-size:var(--text-sm);flex-wrap:wrap;gap:.4rem 1.25rem;padding-block:1rem;display:flex}.spec-chapters a{padding-block:.6rem}.spec-chapters a[aria-current]{color:var(--accent);font-weight:var(--weight-semibold)}.spec-prose pre{margin-block:1.5rem}.spec-prose table{border-collapse:collapse;max-width:100%;font-size:var(--text-base);margin-block:1.5rem;display:block;overflow-x:auto}.spec-prose th,.spec-prose td{border:1px solid var(--line);text-align:left;padding:.6rem}.spec-prose .rrd-diagram{max-width:100%;margin-block:1.5rem;padding:.5rem;overflow-x:auto}.spec-prose .rrd-diagram figcaption{font:14px var(--mono);font-weight:var(--weight-semibold);margin-bottom:.75rem}.spec-prose .rrd-diagram svg{max-width:none;display:block}.spec-prose .rrd-diagram .librrd-rail,.spec-prose .rrd-diagram .librrd-station rect,.spec-prose .rrd-diagram path{fill:none;stroke:var(--ink);stroke-width:1px}.spec-prose .rrd-diagram text{fill:var(--ink)}.spec-prose .sequent-document{font:14px/1.6 var(--mono);margin-block:1.5rem}.spec-prose .sequent-proof-container{min-width:0;max-width:100%}.spec-prose details{font-size:var(--text-base);margin-block:1.5rem}.spec-prose summary{cursor:pointer;padding-block:.5rem}.spec-pagination{border-top:1px solid var(--line);font-size:var(--text-base);justify-content:space-between;gap:1.5rem;margin-top:3rem;padding-block:1.5rem 3rem;display:flex}
+</style><title>N3 modeled closure: correspondence for independent review · Ash</title><meta name="description" content="Status: provisional. This note maps a frozen source candidate to modeled rules; it is not a proof of Rust, the production evaluator, N4 premises, or a published network-completion permission. The N3 proof and this…"><meta name="robots" content="index, follow"><meta property="og:title" content="N3 modeled closure: correspondence for independent review · Ash"><meta property="og:description" content="Status: provisional. This note maps a frozen source candidate to modeled rules; it is not a proof of Rust, the production evaluator, N4 premises, or a published network-completion permission. The N3 proof and this…"><meta property="og:type" content="article"><meta property="og:site_name" content="Ash"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="N3 modeled closure: correspondence for independent review · Ash"><meta name="twitter:description" content="Status: provisional. This note maps a frozen source candidate to modeled rules; it is not a proof of Rust, the production evaluator, N4 premises, or a published network-completion permission. The N3 proof and this…"><meta property="og:url" content="https://dikini.github.io/ash/docs/design/retained-control/network-ledger-correspondence/"><link rel="canonical" href="https://dikini.github.io/ash/docs/design/retained-control/network-ledger-correspondence/"><link rel="alternate" type="text/markdown" href="https://raw.githubusercontent.com/dikini/ash-lang/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/network-ledger-correspondence.md" title="Markdown"><link rel="describedby" type="application/json" href="/ash/content-index.json" data-ash-discovery=""><link rel="alternate" type="text/plain" href="/ash/llms.txt" title="Agent guide" data-ash-discovery=""><link rel="sitemap" type="application/xml" href="/ash/sitemap.xml"><script type="application/ld+json" data-ash-discovery="">{"@context":"https://schema.org","@type":"TechArticle","name":"N3 modeled closure: correspondence for independent review","headline":"N3 modeled closure: correspondence for independent review","description":"Status: provisional. This note maps a frozen source candidate to modeled rules; it is not a proof of Rust, the production evaluator, N4 premises, or a published network-completion permission. The N3 proof and this…","inLanguage":"en","url":"https://dikini.github.io/ash/docs/design/retained-control/network-ledger-correspondence/","@id":"https://dikini.github.io/ash/docs/design/retained-control/network-ledger-correspondence/#document","isPartOf":{"@type":"WebSite","@id":"https://dikini.github.io/ash/#website","name":"Ash","url":"https://dikini.github.io/ash/"},"isBasedOn":"https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/network-ledger-correspondence.md","version":"9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b"}</script></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ash-tree" viewBox="0 0 64 64"><g fill="currentColor"><path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z" /><path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z" /><path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z" /><path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z" /><path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z" /><path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z" /></g><path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></symbol></svg><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><a class="wordmark" href="/ash/" aria-label="Ash home"><img class="brand-icon" src="/ash/favicon.svg?v=ash-tree" width="32" height="32" alt="" aria-hidden="true"><span>ash</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a></nav><div class="header-tools"><a class="search-link" href="/ash/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>Search</span></a><a class="source-link" href="https://github.com/dikini/ash-lang">Source <img src="/ash/github.svg" width="16" height="16" alt="" aria-hidden="true"></a></div><details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav class="ash-page-menu" aria-label="Mobile navigation"><a href="/ash/discover/">Discover</a><a href="/ash/learn/">Learn</a><a href="/ash/docs/" aria-current="true">Docs</a><a href="/ash/status/">Status</a><a href="/ash/updates/">Updates</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a></nav></details></header><main id="main" tabindex="-1"><style>
+.sequent-document { display: grid; gap: 1.5rem; }
+.sequent-family { display: grid; gap: .75rem; }
+.sequent-family > h3 { margin: 0; font: inherit; font-weight: 600; }
+.sequent-family-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sequent-family-min-width, 22rem)), 1fr)); }
+.sequent-proof { display: grid; grid-template-columns: max-content auto; width: max-content; margin: 0; padding: .5rem; }
+.sequent-premises { grid-column: 1; grid-row: 1; display: flex; align-items: end; justify-content: center; gap: 1rem; }
+.sequent-inference { display: contents; }
+.sequent-bar { grid-column: 1; grid-row: 2; align-self: center; width: 100%; border-top: 1px solid currentColor; min-width: 3rem; }
+.sequent-rule-label { grid-column: 2; grid-row: 2; align-self: center; margin-left: .5rem; font-style: italic; white-space: nowrap; }
+.sequent-conclusion { grid-column: 1; grid-row: 3; justify-self: center; margin-top: .25rem; white-space: pre-wrap; }
+.sequent-formula { white-space: pre-wrap; }
+.sequent-proof-container { overflow-x: auto; }
+.sequent-diagnostic { border-left: .25rem solid #b42318; background: #fff1f0; color: #5c1111; padding: .75rem; white-space: pre-wrap; }
+</style><div class="article-shell spec-reading"><header class="article-heading"><p class="eyebrow"><a href="/ash/docs/">Documentation</a> / Design notes</p><h1 id="n3-modeled-closure-correspondence-for-independent-review" data-pagefind-meta="title">N3 modeled closure: correspondence for independent review</h1><p class="spec-source">Development design notes · <a href="https://github.com/dikini/ash-lang/blob/9a8b73bb6495612cbd1521a3b1cc6e0c3e1b1c9b/docs/design/retained-control/network-ledger-correspondence.md">ash-lang <code>9a8b73b</code></a></p><p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/ash/spec/">language specification</a> for current rules.</p></header><nav class="spec-chapters" aria-label="Design notes"><a href="/ash/docs/design/">All design notes</a></nav><div class="article-grid"><article class="prose spec-prose" data-pagefind-body="">
+<p>Status: provisional. This note maps a frozen source candidate to modeled rules;
+it is not a proof of Rust, the production evaluator, N4 premises, or a
+published network-completion permission. The N3 proof and this correspondence
+require independent review together on the final integrated source pin.</p>
+<p>The current source candidate is <code>target/ash-m4-evidence/n3-pr-checkout</code>.
+The architecture test used input manifest <code>n3-architecture-r7-before.sha256</code>,
+SHA-256 <code>4c08f89f3e8cec3cdfabd5a95784660242c590bc497582f89bf517d261b921e1</code>;
+that manifest predates this evidence-note update. The earlier focused import
+and transformation tests used manifest
+<code>n3-import-transform-before.sha256</code>, SHA-256
+<code>5e118d3663d939b5a2ca2dd364c2932915f4e3df27b0926ce41f5331e60f2992</code>.
+The final integrated gate must pin the resulting full tree. Selected current
+source files are:</p>
+<table tabindex="0">
+<thead>
+<tr>
+<th>Relative source path</th>
+<th>SHA-256</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/core/ledger_checker.rs</code></td>
+<td><code>495c9f121f1cba5520a487340e41e032e9aac9b481f2678a3413175522314e03</code></td>
+</tr>
+<tr>
+<td><code>src/core/closure.rs</code></td>
+<td><code>0285157d7f22cc93f56708a95672ae087a6bc37fe2a72022ad638f774884fccf</code></td>
+</tr>
+<tr>
+<td><code>src/core/retirement.rs</code></td>
+<td><code>a76201a676252e4d3f189db2a1d4e711431df9b6acab3d4b2aec5fd65da07f7a</code></td>
+</tr>
+<tr>
+<td><code>src/core/acknowledgement.rs</code></td>
+<td><code>813e02527ed441b44b48fa29c2900d9fc82c31a4da08cd8c1b58e650ef3538dc</code></td>
+</tr>
+<tr>
+<td><code>src/core/capture/network_ledger.rs</code></td>
+<td><code>46eb6d644eeb1660ecf8ceba70cbee116e29f3fd9bcc3047a7b9c25838e2de0d</code></td>
+</tr>
+<tr>
+<td><code>src/core/capture/transition_observation.rs</code></td>
+<td><code>23fac1c47a4d1b13e6b93ce5841448e8ee219d144ce1d1d09f8aa29636437b0f</code></td>
+</tr>
+<tr>
+<td><code>src/core/capture/network_end.rs</code></td>
+<td><code>312f545d63faf96b9e939685494f684d98361ce1fed63b8890af9779cd580341</code></td>
+</tr>
+<tr>
+<td><code>src/core/capture/network_completion.rs</code></td>
+<td><code>5ca27be5de34e319ff5372dd7686d63b045e8a59674642116f1dc01e14b811e6</code></td>
+</tr>
+<tr>
+<td><code>src/core/driver.rs</code></td>
+<td><code>a989bc4fa0052ac7593de8958e1df744419206a876cdc2a5826af7f8c576351b</code></td>
+</tr>
+<tr>
+<td><code>src/core/validate.rs</code></td>
+<td><code>360a5b6eee116f9d2bb61fe9666397ade406b21735c35f5aa95ef27fbed0debf</code></td>
+</tr>
+<tr>
+<td><code>tests/fixtures/n3-ledger-transitions.ash</code></td>
+<td><code>984ac68351cc955845344acb298933686277861c196a65492a7636629c02018f</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="data-and-evaluation-boundary">Data and evaluation boundary</h2>
+<p>A nominated plan is untrusted. <code>linked_initializer</code>, candidate uniqueness,
+nominal checks and <code>stage</code> in the transition checkers bind actual linked
+stored closures, their captures and arguments. Helper checks bind the same
+comparison and projection dependencies; <code>require_distinct</code> and exact captures
+exclude ordinary dependency cycles in these shapes. The reviewer must check
+that each actual selected closure and all transitive helper captures are those
+bound values. The modeled <code>Checker.checkLinkedSchema</code> resolves one definition
+and its actual modeled body; its rank-checked dependency rules are separate
+from Rust and require the correspondence just described.</p>
+<p>The relation to a modeled ledger must decode finite acyclic whole record,
+child and output sequences, preserving their values and order. It must prove
+unique keys, nonnegative serial and fixed unique allocator identities from
+checked initialization and every current successor. Model <code>Nat</code> worker and peer
+values correspond only to nonnegative representable source integers with
+equality preserved; the model's serial is a mathematical <code>Int</code>. Nominal IDs,
+phases, result and list constructors correspond by linked identity, not name.
+An arbitrary source copy or matching type does not establish this relation.
+Linked checker witnesses compare the address of their borrowed Core arena;
+trait-object vtable identity is not used as arena identity. Separate checks
+still bind the linked program and each arena-local node.
+<code>observe_ledger_plan</code> checks a fixed, nonnegative literal allocator across the
+nominated registrations (<code>network_ledger.rs:3780</code>); <code>validate.rs:3242</code>
+compares the fixed values and Root/Worker roles when both sides of the same
+owner are present. A one-sided observation retains the peer-allocator and
+history premise. These source checks do not establish the finite issued
+history or authorization in a different activation.
+Registration and root initialization have existing <code>CoreRecordRegistration</code>
+and <code>CoreRootInitialization</code> derivations for their admitted Core shapes.</p>
+<p>The correspondence must establish actual left-to-right call-by-value
+execution, complete reached nominal/equality arms, exact substitutions and
+normal return. It must establish the same captured default Region allocator for
+all allocating operations: successful allocation preserves existing values,
+creates fresh initialized storage and resumes once; refusal or failure has no
+normal return. Unknown or intercepted provider, local handler, unproved callback
+or unsupported operand must reject, not be treated as pure by an empty effect
+row. <code>CoreEval</code> and <code>CoreRegion</code> give the modeled allocation and stored-value
+laws, but do not prove their Rust implementation. Linked finite lookup,
+update, removal and insertion must use the actual nominated bodies and exact
+arguments; finite/unique inputs and projected-key equality must be established
+at each helper call. A helper call's normal return, not a producer annotation,
+supplies its modeled result. Sufficient modeled fuel says nothing about actual
+termination or allocation success.</p>
+<p><code>ClosureCheck</code>, <code>RetirementCheck</code> and <code>AcknowledgementCheck</code> each resolve a
+modeled linked body, check the relevant helper bodies, evaluate its reachable
+branches, and prove every normal returned model value equals <code>close</code>, <code>retire</code>
+or <code>acknowledge</code>, respectively. These are schema-specific modeled evaluators.
+Mapping an actual return to a modeled evaluation is a substantive review
+obligation; assuming the desired ideal transition is not a substitute.</p>
+<h2 id="exact-transition-correspondence">Exact transition correspondence</h2>
+<ul>
+<li><strong>Close</strong>: <code>check_nominated_closure_call</code> checks <code>(ledger, wanted)</code> and the
+entry and finish closures. <code>check_conditional_closure</code> checks Record lookup
+and update, actual constructor tags, binding identities and arguments.
+Missing lookup and already-Closed return the original input. For Open, the
+replacement contains the actual record ID, parent, Closed tag and original
+children; the Ledger contains original counter, updated records and original
+outputs. The selected update uses the actual key and whole record list.</li>
+<li><strong>Retire</strong>: <code>check_nominated_retirement_call</code> checks <code>(ledger, wanted)</code> and
+the entry, work, found, parent, phase, children and commit stages, plus
+Record lookup/removal and output append. Root, absent record, absent parent,
+Open record and nonempty children return the original input. Closed,
+childless Work with a parent returns original counter, the exact removal
+result and original outputs appended with <code>Ack(actual parent, wanted)</code>.
+Rust's Root fast path corresponds to a model-only lookup stutter: model
+lookup followed by the root guard also returns the original input. No actual
+lookup is assumed on the fast path.</li>
+<li><strong>Ack</strong>: <code>check_nominated_acknowledgement_call</code> checks ordered
+<code>(ledger, parent, child, peer)</code> plus record/child lookup, child removal and
+record update. Missing parent, missing child and destination/peer mismatch
+return the original input; duplicate acknowledgement is missing-child only
+when the actual current successor is used. On a match, removal receives the
+requested child and the selected record's actual children. The replacement
+retains the whole selected record's ID, parent and phase, and uses the exact
+removal result; the returned Ledger retains its actual counter and outputs.
+Authentication of the exact peer and envelope is a separate N4 premise.</li>
+</ul>
+<p>Each successful helper result is the actual evaluated value in the same
+checked call; the representation and helper laws derive the model's branch,
+fields and frame, including all no-op outcomes. The matched return and checked
+constructor operands must be independently audited at this pin. The
+<code>successor_fields</code>, <code>replacement_fields</code> and <code>returns</code> node coordinates are
+witnesses to check, not semantic facts on their own.</p>
+<h2 id="control-and-history-boundary">Control and history boundary</h2>
+<p><code>NetworkLedgerHistoryControl</code> composes the four linked modeled checker
+soundness theorems with <code>Tracked.run</code> and <code>Tracked.runAll</code>. Its <code>State</code> fixes
+activation and owner, stores the modeled Core environment and current value,
+and requires the role's actual environment lookup to return that same value.
+The represented value is related to the tracked ledger by <code>rep</code>; the linked
+<code>Program</code> is a parameter of the whole trace and cannot change between steps.</p>
+<p><code>returned</code> checks actual Core normal evaluation and a linked modeled return,
+updates tracked history, and places the actual result and projected ledger in
+a pending state. It removes the current port. A direct Core <code>bind</code>, or the
+reached <code>Selected</code> two-field result match, must bind that exact pending value
+before it becomes current. The result-match rule requires the first nominated
+ledger binder to occur in the new arm bindings, with distinct ledger and
+status binders; lookup cannot fall through to an inherited caller binding.
+<code>bindAlias</code> requires an actual variable read from the prior current role.
+<code>enterCall</code> checks the actual Apply node, function and argument evaluation,
+stored <code>CallTarget</code>, the resolved stored tuple, its ordinary field view, and a
+selected formal tuple match. The same in-range index selects the actual
+current value and the newly bound ledger formal for an arbitrary positive
+arity and ledger position. It does not require distinct runtime values for
+distinct source ports. Exact linked-call argument association remains
+<code>inputAt</code>, an explicit
+trusted correspondence premise. The model does not prove the C3-to-event
+relation, and a pending result cannot publish a current fact before binding.</p>
+<p><code>source_position</code>, <code>entered_call</code>, <code>matched_source_return</code>,
+<code>returned_ledger_port</code>, <code>entered_driver</code> and <code>advance_successor</code> are the source
+operations to audit against these steps. Registration uses the actual returned
+pair's reached match arm; the other transitions return a Ledger. Binder
+matching must use the actual result from the same call, not an old input or
+copied coordinate. Recursive entry binds the actual current successor through
+the checked call, evaluated argument tuple and selected formal projection.
+<code>observe</code> requires the exact current value; a returned successor invalidates
+the old observation. Reuse of an old value after a no-op requires actual
+returned value equality or a separately established equality.</p>
+<p><code>driver.rs:29</code> accepts any positive arity and in-range ledger field;
+<code>driver_formal_projection</code> (<code>network_ledger.rs:1394</code>) checks each field.
+The reviewed V5 rule covers those modeled choices by the same actual/formal
+index. Its concrete stored tuple, matching and binding must be independently
+compared with C3 port identity. The Rust checks on extra source ports and
+captures remain additional conservative source restrictions; they do not imply
+that different ports or binders have unequal runtime values. The actual Rust
+and C3 mapping remains a trusted correspondence; the modeled rule alone does
+not prove it.</p>
+<p>The candidate's <code>network_end.rs:53</code> allows an ordinary checked processing
+prefix before a tail-recursive non-End path. At <code>:111</code> the prefix must be a
+single Match arm whose pattern is either a wildcard or a nonempty flat tuple
+of binders and wildcards. The tuple field scan is charged to the same budget;
+nested, refutable or multiple arms reject. The checker still requires the
+actual End arm to return true, non-End arms to return false or reach the
+nominated recursive binder, and the existing worker/owner, finish and matched
+return checks. This shape change permits evaluating the processing expression
+before the recursive call; it is not evidence that processing or retained
+control has completed. <code>CoreEval</code> uses left-to-right evaluation, <code>Attempt</code> and
+<code>Selected</code> for reached matches, and the generalized <code>enterCall</code> checks the
+actual recursive tuple and selected ledger field. The Rust-to-model mapping
+must connect those checked source nodes, environments and normal returns. The
+N2 End, worker and finish checks retain their own evidence obligations.</p>
+<p>The <code>callReturn</code> rule restores the caller only after an actual Core call
+normal return, an exact caller Bind, the same tracked state and current value,
+a surviving caller binding and a matched C3 return witness. The trusted
+<code>returnMatch</code> relation must mean the very same entered call, frame, caller and
+callee contexts and return, not merely matching numbers. Unsupported or
+mutating calls must invalidate the old current fact.</p>
+<p><code>joinKeep</code> requires both paths to agree on activation, owner, tracked state,
+current value, point, context and role, plus a correspondence to the actual
+join. Unknown capture, reentry and joins map to <code>invalidate</code>, which clears
+current and pending values. <code>receive</code> requires exclusive control and a modeled
+ordered flow: observed Message, commit, reply and matched return; observed
+non-Message, matching reply and return; or observed Message followed by
+Failure, failure reply and return. <code>receiveActual</code> connects the witness, call,
+ordered events and the exact before/after modeled state to C3; it must prove
+the actual outcome, checked operation/owner/side, message commit, reply and
+matching frame restoration. The model does not derive this relation from
+coordinates. The concrete source mapping starts with <code>entered_call</code> (<code>network_ledger.rs:1088</code>)
+and <code>checked_context_capture</code> (<code>:523</code>) for the nominated closure, caller and
+selected Region origin. The source must select the expected receive operation
+and worker owner/side (<code>:2523</code>), then check the exact stage sequence
+(<code>:2528</code>), and <code>matched_source_return</code> (<code>:1133</code>) must restore the saved
+caller context, role and current port under the same call witness. A received
+message may allocate buffers or other storage. V5's receive rule holds its
+modeled <code>Store</code> fixed; the correspondence must interpret that store as the
+ledger-reachable projection, or provide a retained-representation relation,
+so that those fresh allocations preserve every reachable ledger value and
+subsequent modeled allocation remains fresh under a consistent location
+mapping. It must not assert that the complete concrete runtime heap or its
+allocator counter is unchanged. This projection, selected provider behavior,
+nonreentry and actual matched restoration are explicit premises, not proved by
+the presence of coordinates. N4 must establish exclusive ownership through
+suspension and restoration and exclude reentry, mutation and unknown joins.</p>
+<p>Budget exhaustion must reject before publication, with no partial fact. The
+existing abstract <code>NetworkLedgerBudget</code> models atomic publication only; the
+actual cumulative charges, retries, and N3 publication boundary require
+source-level evidence. <code>PendingLedgerObservation</code> (<code>network_ledger.rs:3558</code>) remains provisional,
+stores source coordinates for revalidation in the same worker focus and
+carries requirements for issued history, peer allocator, exclusive update and
+peer authentication. The production worklist checks call returns, successor
+bindings and joins in <code>network_ledger.rs</code>. The test-only observer in
+<code>transition_observation.rs:174</code> separately follows a checked successor;
+at <code>:915</code> it matches the normal return, and at <code>:934</code> it checks incoming
+edges for the same witness, result and caller context. These observations do
+not publish a dynamic current ledger by themselves.</p>
+<p><code>with_observed_ledger_plan</code> (<code>network_ledger.rs:3724</code>) also provides a scoped
+<code>SameFocusLedger</code> query (<code>:3578</code>). <code>checked_input</code> (<code>:3613</code>) ties a nominated
+source site and variable binder to the same reached state, caller context and
+must-joined current port, without exporting the port. A caller must separately
+bind that variable to its actual call or field. The callback result remains
+conditional and must be discarded if any subsequent full validation fails;
+its source coordinates and recorded closure targets are requests for
+revalidation, not a return-value, output-envelope or network permission. The
+actual activation is the live worker focus, not a runtime activation ID. N4
+must independently establish exclusive update, peer and output relationships.</p>
+<h2 id="linked-fixture-and-budget-evidence">Linked fixture and budget evidence</h2>
+<p>The source candidate includes <code>retirement_successor_is_acknowledgement_input_and_old_alias_is_stale</code>
+(<code>network_ledger.rs:4131</code>), whose linked production path nominates actual
+registration, Close, Retire and Ack calls and checks their observation
+identities. In the fixture's modeled execution, Close and Retire target a missing Work
+record and are no-ops, while Ack removes a matching Root child. The linked
+validation test checks the call and result identities; it is not a native
+execution receipt. The fixture does not exercise successful retirement or
+Ack output emission. The stale variant tests rejection of an
+old successor input. <code>requested_ledger_plan_runs_inside_full_linked_validation</code>
+(<code>:4147</code>) adds a renamed-binder case. The shared-budget test (<code>:4248</code>)
+measures the observer on one settled linked focus, then checks the exact
+allowance, one unit short, a pre-spent allowance and retries without resetting
+the exhausted budgets. A separate full-validator query with a pre-spent
+allowance expects Resource and returns no observation. The focused r2 batch
+passed seven of eight cases, including the mixed and budget cases; its sole
+failure was the receive negative test harness. The r3 test-only repair passed
+the canonical receive case, including that negative. The r2 raw log SHA-256
+is <code>490a6c574113b79894f6a5a2cc7b6186777ee652b5cb13a37bfe967ab89a6d53</code>;
+the r3 raw log SHA-256 is
+<code>c7e97c23f5aacd5801663ae699f00d6c1689a124b9099bb8f051f0172847078f</code>.
+The <code>imported_ledger_and_transformed_core_are_rechecked</code> case (<code>:4186</code>)
+passed with a separately imported ledger module on the full linked-validator
+path and rejected a same-typed changed helper before publication. The existing
+Network transform returns <code>InvalidValidatedInput</code>, which the test expects before
+any observation. The ledger-only <code>linked_registration_counter_uses_the_returned_successor_field</code>
+case (<code>ledger_checker.rs:5163</code>) passed after a supported identity traversal:
+the rebuilt Core has a fresh arena, rejects the old nomination, independently
+validates with linked evidence, and reconstructs the call, result and helper
+relationships. These two focused cases passed in the raw log SHA-256
+<code>585ed648a112e698dcdd2e97da493fe7bf81911febca976abddd6074977328bb</code>.
+The complete integrated gate remains pending. Full coverage of successful retirement emission, wrong-peer and duplicate
+acknowledgements, linked mutations, transforms, failed retries and the governing
+assignment's other cases remains subject to the combined evidence and review.</p>
+<h2 id="network-boundary">Network boundary</h2>
+<p>The reused <code>NetworkLedgerProtocol</code> models initialized workers, actual modeled
+ledger actions, pending outputs, work/ack flights and replacement of one
+tracked ledger. <code>initialized_protocol_graph_rooted</code> proves rooted graph
+coverage, <code>initialized_protocol_token_invariants</code> token uniqueness and
+coverage, and <code>initialized_protocol_quiet_trace_stable</code> stable quiet for
+finite model traces. <code>NetworkLedgerCoverageClosure.stable_app_quiet</code> adds an
+explicit conditional correspondence from each real step to a protocol trace,
+a current-root probe relation, and coverage of each active real item by a
+modeled token. It requires distinct owners and names actual completion, honest
+codec, authenticated peer, faithful transport, disciplined emission,
+at-most-once dispatch, closed admission and absence of unaccounted producers.</p>
+<p>These are not discharged by the ledger. The correspondence must justify
+reservation before publication; exact codec and peer on receipt; installation
+before dispatch; retained control and actual local completion before close;
+retirement and ack emission; and matching removal only after authentic
+receipt. Protocol close itself does not establish local completion; that is a
+real-step mapping premise. Any uncontrolled raw endpoint, unregistered
+producer, forged or duplicate dispatch, lost/misdecoded message or stale root
+observation invalidates the mapping. AppQuiet is not backing or endpoint
+settlement. No N4 or N5 permission is established here.</p>
+<h2 id="open-gates">Open gates</h2>
+<p>Independent review must audit this mapping against the final retained source,
+actual linked tests and frozen proof/toolchain. The V5 Lean closure receipt is
+<code>n3-proof-closure-v5/lean/verification-v5.log</code>, SHA-256
+<code>8d8f2430587fcb1dda0629065105b8fc48a3f01d5c141b8a76f7887437055e68</code>;
+its before/after source manifests both hash to
+<code>8ea99806d97ad6a0dd6827c8f0514ed6e70548773db59639a2e72870363dd643</code>, and
+its tool pins match. The named theorem axiom inventory contains only
+<code>propext</code>, <code>Classical.choice</code> and <code>Quot.sound</code>. Independent review cleared the
+modeled V5 delta and its receipt; that review does not discharge the trusted
+actual-source correspondence. Independent review and the fresh integrated
+proof and workspace gates remain required on the final source.</p>
+<p>The conditional currentness and network premises remain undischarged until N4.
+Runtime/evaluator/Rust correctness, resource-failure and codec/transport
+correspondence remain trusted or separately verified according to their owning
+tasks. This note is not a source integration receipt or Main gate.</p></article><aside class="article-aside"><nav class="ash-contents" aria-label="On this page"><p class="eyebrow">On this page</p><a href="#data-and-evaluation-boundary">Data and evaluation boundary</a><a href="#exact-transition-correspondence">Exact transition correspondence</a><a href="#control-and-history-boundary">Control and history boundary</a><a href="#linked-fixture-and-budget-evidence">Linked fixture and budget evidence</a><a href="#network-boundary">Network boundary</a><a href="#open-gates">Open gates</a></nav><div class="aside-note"><p>These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.</p><a href="/ash/spec/">Read the language specification ↗</a><p><a href="/ash/docs/decisions/">Read the architectural decisions ↗</a></p><p><a href="/ash/docs/install/">Build the website’s example checkpoint ↗</a></p></div></aside></div></div></main><footer class="site-footer"><div class="footer-inner"><div><a class="footer-brand" href="/ash/" aria-label="Ash home"><svg class="brand-icon" width="32" height="32" aria-hidden="true"><use href="#ash-tree" /></svg><span>ash</span></a><p>Typed functional programming.<br>Parametric effects and scoped resources.</p></div><div class="footer-links"><a href="/ash/diaries/">Developer diaries</a><a href="/ash/study/">Study Ash</a><a href="/ash/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub</a><a href="/ash/status/">Project status</a></div><p class="footer-note">Implementation, documentation,<br>and open language research.</p><svg class="footer-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#ash-tree" /></svg></div></footer></body></html>

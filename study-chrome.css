@@ -78,8 +78,10 @@ details.on-this-page > summary { color: var(--muted) !important; font-family: va
 .quarto-page-breadcrumbs a { display: inline-block; min-height: 24px; }
 @media (min-width: 992px) {
   body #quarto-content.page-columns {
-    grid-template-columns: [screen-start screen-start-inset page-start page-start-inset] minmax(180px, 1fr) [body-start-outset] 24px [body-start body-content-start] minmax(0, var(--layout-article)) [body-content-end body-end] 24px [body-end-outset page-end-inset] minmax(160px, 1fr) [page-end screen-end-inset screen-end];
+    grid-template-columns: [screen-start screen-start-inset page-start page-start-inset] minmax(180px, 1fr) [body-start-outset] var(--space-8) [body-start body-content-start] minmax(0, var(--layout-article)) [body-content-end body-end] 24px [body-end-outset page-end-inset] minmax(160px, 1fr) [page-end screen-end-inset screen-end];
   }
+  /* Leave the gutter outside the scrolling navigation, including its scrollbar. */
+  body #quarto-sidebar { grid-column: page-start / body-start-outset; }
   #quarto-document-content { width: 100%; max-width: var(--layout-article); }
 }
 /* Full-width chapters and nested sections share the shell's named reading and

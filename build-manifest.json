@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-31T17:12:26.424Z",
+  "generatedAt": "2026-10-31T17:23:19.333Z",
   "site": {
-    "revision": "0d7497f101091ca57579e67539d24bbd4a56cb76",
+    "revision": "e86e095237103057afb0e94320f2b45cbec09874",
     "dirty": false
   },
   "trigger": {
     "event": "manual",
-    "reason": "Fix hosted full-width study overlap and add shared favicon"
+    "reason": "Reserve 32px study navigation gutter"
   },
   "inputs": {
     "sourceConfigSha256": "b01ad89201482f0d3dba6c3d330c82e192bf8b4b9d6f0703aa284545d06700ef",
@@ -117,9 +117,9 @@
     "baseUrl": "https://dikini.github.io/ash",
     "pageCount": 285,
     "generatedMarkdownCount": 14,
-    "catalogueSha256": "cb8b5b71ede4b88534b7f1a5dd3e1621b34ac217a29fe361a7c621eef72a86a0",
+    "catalogueSha256": "e59428aa09c7e370a192a209198547d1eaae9aac82d4510d9d659a3986a71cda",
     "llmsSha256": "0a9240fe04743b0870b3f212f1273ca4dac1f55cb8df737cd6187d327b201fc0",
-    "markdownSetSha256": "beb1e0e6294fc1801b1153609f10107c7c0fceb44ab944cf80d87b768200c575"
+    "markdownSetSha256": "06afb528e4d6cf078d262479e20828e5e1cb9a39d9c9a75ee2819be8f08e780d"
   },
   "hosting": {
     "provider": "github-pages",
